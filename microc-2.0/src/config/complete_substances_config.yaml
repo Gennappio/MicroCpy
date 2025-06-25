@@ -1,0 +1,238 @@
+# Complete Substance Configuration
+# Based on parameters/diffusion-parameters.txt, associations.txt, and input-parameters.txt
+
+domain:
+  size_x: 800.0
+  size_x_unit: "μm"
+  size_y: 800.0  
+  size_y_unit: "μm"
+  nx: 40
+  ny: 40
+  dimensions: 2
+
+time:
+  dt: 0.01
+  end_time: 2.0
+  diffusion_step: 5
+  intracellular_step: 1
+  intercellular_step: 10
+
+# All substances from diffusion-parameters.txt
+substances:
+  # Growth factors and signaling molecules
+  FGF:
+    diffusion_coeff: 2.2e-10  # m²/s
+    production_rate: 0.0e-21  # mol/s/cell
+    uptake_rate: 2.0e-18      # mol/s/cell (consumption)
+    initial_value: 0.0e-6     # mM
+    boundary_value: 0.0e-6    # mM
+    boundary_type: "fixed"
+    
+  TGFA:
+    diffusion_coeff: 5.18e-11
+    production_rate: 2.0e-20
+    uptake_rate: 2.0e-17
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+    
+  HGF:
+    diffusion_coeff: 8.50e-11
+    production_rate: 0.0e-21
+    uptake_rate: 2.0e-18
+    initial_value: 2.0e-6
+    boundary_value: 2.0e-6
+    boundary_type: "fixed"
+    
+  GI:  # Growth Inhibitor
+    diffusion_coeff: 5.18e-11
+    production_rate: 0.0e-20
+    uptake_rate: 2.0e-17
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+
+  # Receptor drugs/inhibitors
+  EGFRD:  # EGFR Drug
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    
+  FGFRD:  # FGFR Drug
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    
+  cMETD:  # cMET Drug
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    
+  MCT1D:  # MCT1 Drug
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    
+  GLUT1D:  # GLUT1 Drug
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+
+  # Essential metabolites
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.00
+    uptake_rate: 3.0e-17
+    initial_value: 0.07
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.00
+    uptake_rate: 3.0e-15
+    initial_value: 5.00
+    boundary_value: 5.00
+    boundary_type: "fixed"
+    
+  Lactate:
+    diffusion_coeff: 6.70e-11
+    production_rate: 3.0e-15
+    uptake_rate: 0.0e-15
+    initial_value: 5.00
+    boundary_value: 1.00
+    boundary_type: "fixed"
+    
+  H:  # Hydrogen ions
+    diffusion_coeff: 1.0e-9
+    production_rate: 2.0e-20
+    uptake_rate: 3.0e-15
+    initial_value: 4e-5
+    boundary_value: 4e-5
+    boundary_type: "fixed"
+    
+  pH:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 7.4
+    boundary_value: 7.4
+    boundary_type: "fixed"
+
+# Substance-to-gene network associations from associations.txt
+associations:
+  # Growth factor stimuli
+  FGF: "FGFR_stimulus"
+  TGFA: "EGFR_stimulus"
+  HGF: "cMET_stimulus"
+  
+  # Drug inhibitions
+  EGFRD: "EGFRI"
+  FGFRD: "FGFRI"
+  cMETD: "cMETI"
+  MCT1D: "MCT1I"
+  GLUT1D: "GLUT1I"
+  
+  # Essential metabolites
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "MCT1_stimulus"
+  
+  # Growth inhibition
+  GI: "Growth_Inhibitor"
+  
+  # pH regulation (no direct association)
+  H: "NA"
+  pH: "NA"
+
+# Thresholds from input-parameters.txt
+thresholds:
+  # Damage and stress
+  DNA_damage:
+    initial: 0
+    threshold: 0.5
+    
+  # Growth factor stimuli
+  EGFR_stimulus:
+    initial: 0
+    threshold: 1.0e-6
+    
+  TGFBR_stimulus:
+    initial: 0
+    threshold: 0.5
+    
+  FGFR_stimulus:
+    initial: 0
+    threshold: 1.0e-6
+    
+  cMET_stimulus:
+    initial: 0
+    threshold: 1.0e-6
+    
+  # Essential metabolites
+  Oxygen_supply:
+    initial: 0.10
+    threshold: 0.022
+    
+  Glucose_supply:
+    initial: 5.0
+    threshold: 4.0
+    
+  # Growth inhibition
+  Growth_Inhibitor:
+    initial: 0.0
+    threshold: 5e-5
+    
+  # Drug inhibitions
+  EGFRI:
+    initial: 0
+    threshold: 5e-3
+    
+  FGFRI:
+    initial: 0
+    threshold: 5e-3
+    
+  cMETI:
+    initial: 0
+    threshold: 5e-3
+    
+  MCT1I:
+    initial: 0
+    threshold: 17.0e-6
+    
+  MCT4I:
+    initial: 0
+    threshold: 1.0
+    
+  GLUT1I:
+    initial: 0
+    threshold: 4.0e-6
+    
+  # pH regulation
+  pH_min:
+    initial: 8.0
+    threshold: 6.0
+    
+  MCT1_stimulus:
+    initial: 5.0
+    threshold: 1.5
+
+output_dir: "results/complete_substances"
+plots_dir: "plots/complete_substances"
+data_dir: "data/complete_substances"
+custom_functions_path: "config/custom_functions.py"

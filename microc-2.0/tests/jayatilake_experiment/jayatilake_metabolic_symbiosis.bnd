@@ -1,0 +1,46 @@
+# Jayatilake Metabolic Symbiosis Gene Network
+# Based on: Jayatilake et al. "A computational model of metabolic symbiosis in cancer"
+# NetLogo model: microC_Metabolic_Symbiosis.nlogo3d
+
+# Input nodes (environmental sensors)
+Oxygen_supply
+Glucose_supply
+MCT1_stimulus
+Proton_level
+FGFR_stimulus
+EGFR_stimulus
+cMET_stimulus
+
+# Intermediate nodes
+HIF1, Oxygen_supply
+HIF1 = NOT Oxygen_supply
+
+# Metabolic output nodes
+glycoATP, Glucose_supply & Oxygen_supply & HIF1
+glycoATP = Glucose_supply AND (NOT Oxygen_supply OR HIF1)
+
+mitoATP, Oxygen_supply & Glucose_supply & HIF1
+mitoATP = Oxygen_supply AND Glucose_supply AND NOT HIF1
+
+# Transporter nodes
+GLUT1, HIF1 & Glucose_supply
+GLUT1 = HIF1 OR Glucose_supply
+
+MCT1, HIF1 & MCT1_stimulus
+MCT1 = NOT HIF1 AND MCT1_stimulus
+
+MCT4, HIF1 & glycoATP
+MCT4 = HIF1 OR glycoATP
+
+# Phenotype output nodes
+Necrosis, Oxygen_supply & Glucose_supply
+Necrosis = NOT Oxygen_supply AND NOT Glucose_supply
+
+Apoptosis, Oxygen_supply & Glucose_supply
+Apoptosis = NOT Oxygen_supply AND Glucose_supply
+
+Growth_Arrest, Oxygen_supply & Glucose_supply
+Growth_Arrest = Oxygen_supply AND NOT Glucose_supply
+
+Proliferation, Oxygen_supply & Glucose_supply & glycoATP
+Proliferation = Oxygen_supply AND Glucose_supply AND glycoATP

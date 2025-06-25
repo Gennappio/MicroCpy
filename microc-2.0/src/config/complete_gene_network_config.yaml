@@ -1,0 +1,203 @@
+# Complete Gene Network Configuration
+# All gene network logic is configurable here - no hardcoded logic in code!
+
+domain:
+  size_x: 400.0
+  size_x_unit: "μm"
+  size_y: 400.0
+  size_y_unit: "μm"
+  nx: 20
+  ny: 20
+  dimensions: 2
+  cell_height: 20.0          # Biological cell height/thickness
+  cell_height_unit: "μm"     # Can be changed to make cells thicker/thinner
+
+time:
+  dt: 0.01
+  end_time: 1.0
+  diffusion_step: 5
+  intracellular_step: 1
+  intercellular_step: 10
+
+# Diffusion solver configuration
+diffusion:
+  max_iterations: 1000
+  tolerance: 1e-6
+  solver_type: "steady_state"
+  twodimensional_adjustment_coefficient: 1.0  # No adjustment needed (mesh volume already includes thickness)
+
+# Essential substances
+substances:
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 3.0e-17
+    initial_value: 0.07
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.0
+    uptake_rate: 3.0e-15
+    initial_value: 5.0
+    boundary_value: 5.0
+    boundary_type: "fixed"
+
+# Substance to gene associations
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+
+# Gene activation thresholds
+thresholds:
+  Oxygen_supply:
+    initial: 0.07
+    threshold: 0.022
+  Glucose_supply:
+    initial: 5.0
+    threshold: 4.0
+
+# COMPLETE GENE NETWORK CONFIGURATION
+# All logic is configurable here!
+gene_network:
+  # Input nodes (environmental signals)
+  input_nodes:
+    - "Oxygen_supply"
+    - "Glucose_supply" 
+    - "ATP_Production_Rate"
+    - "FGFR_stimulus"
+    - "EGFR_stimulus"
+    - "cMET_stimulus"
+    - "MCT1_stimulus"
+    - "EGFRI"
+    - "FGFRI"
+    - "cMETI"
+    - "MCT1I"
+    - "GLUT1I"
+    - "Growth_Inhibitor"
+  
+  # Output nodes (phenotypes)
+  output_nodes:
+    - "Necrosis"
+    - "Apoptosis"
+    - "Growth_Arrest"
+    - "Proliferation"
+  
+  # All gene nodes with configurable logic
+  nodes:
+    # INPUT NODES
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+      
+    Glucose_supply:
+      is_input: true
+      default_state: true
+      
+    ATP_Production_Rate:
+      is_input: true
+      default_state: false
+      
+    FGFR_stimulus:
+      is_input: true
+      default_state: false
+      
+    EGFR_stimulus:
+      is_input: true
+      default_state: false
+      
+    cMET_stimulus:
+      is_input: true
+      default_state: false
+      
+    MCT1_stimulus:
+      is_input: true
+      default_state: false
+      
+    EGFRI:
+      is_input: true
+      default_state: false
+      
+    FGFRI:
+      is_input: true
+      default_state: false
+      
+    cMETI:
+      is_input: true
+      default_state: false
+      
+    MCT1I:
+      is_input: true
+      default_state: false
+      
+    GLUT1I:
+      is_input: true
+      default_state: false
+      
+    Growth_Inhibitor:
+      is_input: true
+      default_state: false
+    
+    # INTERNAL REGULATORY NODES
+    p53:
+      inputs: ["Oxygen_supply", "Glucose_supply", "Growth_Inhibitor"]
+      logic: "not Oxygen_supply or not Glucose_supply or Growth_Inhibitor"
+      default_state: false
+      
+    p21:
+      inputs: ["p53"]
+      logic: "p53"
+      default_state: false
+      
+    BCL2:
+      inputs: ["Oxygen_supply", "EGFR_stimulus"]
+      logic: "Oxygen_supply and EGFR_stimulus"
+      default_state: false
+      
+    ERK:
+      inputs: ["EGFR_stimulus", "FGFR_stimulus", "cMET_stimulus", "EGFRI", "FGFRI", "cMETI"]
+      logic: "(EGFR_stimulus and not EGFRI) or (FGFR_stimulus and not FGFRI) or (cMET_stimulus and not cMETI)"
+      default_state: false
+      
+    FOXO3:
+      inputs: ["Oxygen_supply", "ERK"]
+      logic: "not Oxygen_supply and not ERK"
+      default_state: false
+      
+    MYC:
+      inputs: ["ERK", "Growth_Inhibitor"]
+      logic: "ERK and not Growth_Inhibitor"
+      default_state: false
+      
+    p70:
+      inputs: ["ERK", "ATP_Production_Rate"]
+      logic: "ERK and ATP_Production_Rate"
+      default_state: false
+    
+    # OUTPUT NODES (PHENOTYPES)
+    Necrosis:
+      inputs: ["Oxygen_supply", "Glucose_supply"]
+      logic: "not Oxygen_supply and not Glucose_supply"
+      is_output: true
+      default_state: false
+      
+    Apoptosis:
+      inputs: ["BCL2", "ERK", "FOXO3", "p53"]
+      logic: "not BCL2 and not ERK and FOXO3 and p53"
+      is_output: true
+      default_state: false
+      
+    Growth_Arrest:
+      inputs: ["p21"]
+      logic: "p21"
+      is_output: true
+      default_state: false
+      
+    Proliferation:
+      inputs: ["p70", "MYC", "p21", "ATP_Production_Rate"]
+      logic: "p70 and MYC and not p21 and ATP_Production_Rate"
+      is_output: true
+      default_state: false
+
+output_dir: "results"

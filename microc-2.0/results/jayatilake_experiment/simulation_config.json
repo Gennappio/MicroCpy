@@ -1,0 +1,28 @@
+{
+  "domain": {
+    "nx": 40,
+    "ny": 40,
+    "size_x": 400.0,
+    "size_y": 400.0
+  },
+  "substances": [
+    "Oxygen",
+    "Glucose",
+    "Lactate",
+    "H",
+    "FGF",
+    "TGFA",
+    "HGF"
+  ],
+  "associations": {
+    "Oxygen": "Oxygen_supply",
+    "Glucose": "Glucose_supply",
+    "Lactate": "MCT1_stimulus",
+    "H": "Proton_level",
+    "FGF": "FGFR_stimulus",
+    "TGFA": "EGFR_stimulus",
+    "HGF": "cMET_stimulus"
+  },
+  "num_steps": 3,
+  "dt": 0.1
+}
