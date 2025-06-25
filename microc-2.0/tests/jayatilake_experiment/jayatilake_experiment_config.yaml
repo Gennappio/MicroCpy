@@ -1,0 +1,301 @@
+# Jayatilake Metabolic Symbiosis Experiment Configuration
+# Based on: Jayatilake et al. "A computational model of metabolic symbiosis in cancer"
+# Replicates the NetLogo model parameters and gene network logic
+
+# Domain configuration - 3D spheroid simulation
+domain:
+  size_x: 600.0
+  size_x_unit: "μm"
+  size_y: 600.0
+  size_y_unit: "μm"
+  nx: 40
+  ny: 40
+  dimensions: 2
+  cell_height: 40.0          # Biological cell height/thickness (testing position changes)
+  cell_height_unit: "μm"     # Can be changed to make cells thicker/thinner
+
+# Time configuration with multi-timescale orchestration
+time:
+  dt: 0.1
+  end_time: 10.0
+  diffusion_step: 2      # Update diffusion every 2 steps (medium speed)
+  intracellular_step: 1  # Update gene networks every step (fast)
+  intercellular_step: 5  # Update cell interactions every 5 steps (slow)
+
+# Diffusion solver configuration - time stepping for stability testing
+diffusion:
+  max_iterations: 1000        # Maximum iterations for steady state convergence
+  tolerance: 1e-6             # Convergence tolerance for steady state solver
+  solver_type: "time_stepping" # Use time stepping solver for stability
+  twodimensional_adjustment_coefficient: 4000.0  
+
+# Output and saving configuration
+output:
+  save_data_interval: 100     # Save data every 10 steps
+  save_plots_interval: 2      # Generate plots every 2 steps (for testing)
+  save_final_plots: true     # Always save plots at the end
+  save_initial_plots: true   # Always save plots at the beginning
+  status_print_interval: 10  # Print detailed status every 10 steps
+
+# Substances - from diffusion-parameters.txt
+substances:
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 3.0e-17
+    initial_value: 0.07
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.0
+    uptake_rate: 3.0e-15
+    initial_value: 5.0
+    boundary_value: 5.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Lactate:
+    diffusion_coeff: 6.70e-10  # Increased diffusion coefficient for better stability
+    production_rate: 0.0       # Let custom metabolism functions handle all production
+    uptake_rate: 0.0
+    initial_value: 1.0         # Start with boundary value
+    boundary_value: 1.0        # Keep boundary at physiological level
+    boundary_type: "fixed"
+    unit: "mM"
+
+  H:
+    diffusion_coeff: 1.0e-9
+    production_rate: 2.0e-20
+    uptake_rate: 3.0e-15
+    initial_value: 4.0e-5
+    boundary_value: 4.0e-5
+    boundary_type: "fixed"
+    unit: "mM"
+
+  FGF:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 2.0e-18
+    initial_value: 0.0
+    boundary_value: 0.0
+    boundary_type: "fixed"
+    unit: "μM"
+
+  TGFA:
+    diffusion_coeff: 5.18e-11
+    production_rate: 2.0e-17
+    uptake_rate: 2.0e-20
+    initial_value: 0.0
+    boundary_value: 0.0
+    boundary_type: "fixed"
+    unit: "μM"
+
+  HGF:
+    diffusion_coeff: 8.50e-11
+    production_rate: 0.0
+    uptake_rate: 2.0e-18
+    initial_value: 2.0e-6
+    boundary_value: 2.0e-6
+    boundary_type: "fixed"
+    unit: "μM"
+
+# Gene input associations - from associations.txt
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "MCT1_stimulus"
+  H: "Proton_level"
+  FGF: "FGFR_stimulus"
+  TGFA: "EGFR_stimulus"
+  HGF: "cMET_stimulus"
+
+# Gene input thresholds - from input-parameters.txt
+thresholds:
+  Oxygen_supply:
+    initial: 0.07
+    threshold: 0.022
+  Glucose_supply:
+    initial: 5.0
+    threshold: 1.0
+  MCT1_stimulus:
+    initial: 1.0
+    threshold: 1.5
+  Proton_level:
+    initial: 4.0e-5
+    threshold: 8.0e-5
+  FGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  EGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  cMET_stimulus:
+    initial: 2.0e-6
+    threshold: 1.0e-6
+
+# No composite genes needed - all logic implemented in custom functions
+# The complex metabolic logic is handled in jayatilake_experiment_custom_functions.py
+
+# Gene network propagation steps
+gene_network_steps: 50
+
+# Gene network configuration - Metabolic symbiosis network
+gene_network:
+  # Path to the .bnd file containing the gene network logic
+  bnd_file: "tests/jayatilake_experiment/jayatilake_metabolic_symbiosis.bnd"
+
+  # input_nodes removed - automatically identified from .bnd file and nodes section
+  # output_nodes removed - .bnd file defines which nodes are outputs
+
+  nodes:
+    # Input nodes - all substance-associated nodes
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+    Glucose_supply:
+      is_input: true
+      default_state: true
+    MCT1_stimulus:
+      is_input: true
+      default_state: true
+    Proton_level:
+      is_input: true
+      default_state: false
+    FGFR_stimulus:
+      is_input: true
+      default_state: false
+    EGFR_stimulus:
+      is_input: true
+      default_state: false
+    cMET_stimulus:
+      is_input: true
+      default_state: false
+
+    # All gene network logic is defined in the .bnd file
+    # Config only specifies input node properties (default states)
+    # Output nodes are listed in output_nodes section above
+
+# Environment configuration
+environment:
+  ph: 7.4
+
+# Direct top-level parameters (precise paths required)
+# Cell behavior parameters
+cell_cycle_time: 240                      # Minimum time for cell division (240 iterations = 24 hours at dt=0.1)
+max_cell_age: 500.0                       # Maximum cell age in hours before death
+# Phenotype behaviors (dividing, death, persistent) are now default behaviors
+# Custom experiments can override these in custom functions if needed
+
+# Metabolic rates by phenotype (REQUIRED at top level) USED IN DEFAULT FUNCTIONS
+default_metabolic_rates:
+  Proliferation:
+    oxygen_consumption_rate: 3.0e-17    # High consumption for growth
+    glucose_consumption_rate: 2.0e-17
+    lactate_production_rate: 1.0e-17
+  Growth_Arrest:
+    oxygen_consumption_rate: 1.0e-17    # Reduced consumption
+    glucose_consumption_rate: 0.5e-17
+    lactate_production_rate: 0.3e-17
+  Apoptosis:
+    oxygen_consumption_rate: 0.1e-17    # Minimal consumption
+    glucose_consumption_rate: 0.1e-17
+    lactate_production_rate: 0.0
+  Necrosis:
+    oxygen_consumption_rate: 0.0        # No consumption
+    glucose_consumption_rate: 0.0
+    lactate_production_rate: 0.0
+
+
+# Custom parameters (for custom functions - config agnostic)
+custom_parameters:
+  # ATP parameters
+  max_atp: 30                    # Maximum ATP per glucose molecule
+  atp_threshold: 0.8             # ATP threshold for proliferation
+
+  # Metabolic parameters
+  glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
+  proton_coefficient: 0.01       # Proton production coefficient
+  glucose_factor: 2              # Glucose consumption factor
+
+  # Michaelis constants (from Jayathilake et al. 2024)
+  KG: 0.5                        # Michaelis constant for glucose (mM)
+  KO2: 0.01                      # Michaelis constant for oxygen (mM)
+  KL: 1.0                        # Michaelis constant for lactate (mM)
+
+  # Metabolic rate constants
+  mu_o2: 1.0e-15                 # Oxygen utilization rate (mol/s/cell)
+  A0: 30.0                       # Reference ATP yield factor
+  beta: 0.1                      # Proportionality constant for proton release
+  K_glyco: 0.5                   # Weighting factor for glycoATP contribution to oxygen consumption
+
+  # Growth factor rate constants
+  gamma_sc: 1.0e-18              # Growth factor consumption rate constant
+  gamma_sp: 1.0e-19              # Growth factor production rate constant
+
+  # Metabolism exception thresholds (from Jayathilake et al. 2024, pages 5-7)
+  min_glucose_for_glycolysis: 0.1      # Minimum glucose for glycolysis (mM)
+  min_oxygen_for_oxphos: 0.01          # Minimum oxygen for OXPHOS (mM)
+  min_lactate_for_consumption: 0.1     # Minimum lactate for consumption (mM)
+  glucose_depletion_threshold: 0.05    # Glucose depletion threshold (mM)
+  lactate_saturation_threshold: 8.0    # Lactate saturation threshold (mM)
+  oxygen_switch_threshold: 0.015       # Oxygen threshold for metabolic switch (mM)
+  ph_inhibition_threshold: 1.0e-4      # H+ concentration for pH inhibition (mM)
+
+  # Cell cycle parameters
+  cell_decay_time: 100           # Dead cell decay time
+
+  # Necrosis thresholds
+  necrosis_threshold_oxygen: 0.011
+  necrosis_threshold_glucose: 0.23
+
+  # Spheroid parameters
+  initial_cell_count: 200
+  maximum_cell_count: 5000
+
+  # Shedding parameters
+  shedding_rate: 0.01
+  shedding_starting_time: 0
+
+# Detailed metabolism parameters (from Jayathilake et al. 2024)
+metabolism:
+  # Base consumption/production rates (per cell per time step) - in mM units
+  base_oxygen_consumption: 3.0e-17   # Base oxygen consumption rate (original scale)
+  base_glucose_consumption: 3.0e-17  # Base glucose consumption rate (original scale)
+  base_lactate_production: 3.0e-17   # Base lactate production rate (original scale)
+  base_lactate_consumption: 2.0e-17  # Base lactate consumption rate
+  base_h_production: 1.0e-18         # Base H+ production rate
+  base_h_consumption: 5.0e-19        # Base H+ consumption rate
+
+  # Metabolic thresholds and constraints (from article pages 5-7)
+  min_glucose_for_glycolysis: 0.1     # Minimum glucose needed for glycolysis
+  min_oxygen_for_oxphos: 0.01         # Minimum oxygen needed for OXPHOS
+  min_lactate_for_consumption: 0.1    # Minimum lactate needed for consumption
+  max_lactate_inhibition: 10.0        # Lactate level that inhibits metabolism
+
+  # ATP production rates (stoichiometric from article)
+  glycolytic_atp_per_glucose: 2       # ATP molecules per glucose via glycolysis
+  oxphos_atp_per_glucose: 36          # ATP molecules per glucose via OXPHOS
+  oxphos_atp_per_lactate: 18          # ATP molecules per lactate via OXPHOS
+
+  # Metabolic efficiency factors
+  oxphos_efficiency: 1.0              # OXPHOS efficiency factor
+  glycolysis_efficiency: 1.0          # Glycolysis efficiency factor
+  lactate_metabolism_efficiency: 0.8  # Lactate metabolism efficiency
+
+  # Metabolic state thresholds
+  atp_threshold_for_proliferation: 0.8  # Fraction of max ATP needed for proliferation
+  hypoxia_threshold: 0.02             # Oxygen level below which cells are hypoxic
+
+  # Metabolic exceptions (from article methodology)
+  glucose_depletion_threshold: 0.05   # Below this, switch to lactate metabolism
+  lactate_saturation_threshold: 8.0   # Above this, lactate inhibits glycolysis
+  oxygen_switch_threshold: 0.015      # Oxygen level for metabolic switching
+  ph_inhibition_threshold: 6.5        # pH below which metabolism is inhibited
+
+output_dir: "results/jayatilake_experiment"
+plots_dir: "plots/jayatilake_experiment"
+data_dir: "data/jayatilake_experiment"
+custom_functions_path: "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py"

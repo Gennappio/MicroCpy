@@ -1,0 +1,94 @@
+# Test 1: Basic Functionality Test
+# Tests basic initialization, single cell behavior, and simple interactions
+
+domain:
+  size_x: 200.0
+  size_x_unit: "μm"
+  size_y: 200.0  
+  size_y_unit: "μm"
+  nx: 10
+  ny: 10
+  dimensions: 2
+
+time:
+  dt: 0.1
+  end_time: 1.0
+  diffusion_step: 2
+  intracellular_step: 1
+  intercellular_step: 5
+
+# Diffusion solver configuration
+diffusion:
+  max_iterations: 1000
+  tolerance: 1e-6
+  solver_type: "steady_state"
+
+# Output and saving configuration
+output:
+  save_data_interval: 1      # Save data every step (for testing)
+  save_plots_interval: 25    # Generate plots every 25 steps
+  save_final_plots: true     # Always save plots at the end
+  save_initial_plots: true   # Always save plots at the beginning
+  status_print_interval: 5   # Print detailed status every 5 steps
+
+# Basic substances for testing
+substances:
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 1.0e-17
+    initial_value: 0.05
+    boundary_value: 0.05
+    boundary_type: "fixed"
+    
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.0
+    uptake_rate: 1.0e-15
+    initial_value: 3.0
+    boundary_value: 3.0
+    boundary_type: "fixed"
+    
+  Lactate:
+    diffusion_coeff: 6.70e-11
+    production_rate: 1.0e-15
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.5
+    boundary_type: "fixed"
+
+# Simple associations for testing
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "Lactate_level"
+
+# Test thresholds
+thresholds:
+  Oxygen_supply:
+    initial: 0.05
+    threshold: 0.02
+  Glucose_supply:
+    initial: 3.0
+    threshold: 1.0
+  Lactate_level:
+    initial: 0.5
+    threshold: 2.0
+
+# Composite gene logic (no more hardcoded ATP logic!)
+composite_genes:
+  - name: "ATP_Production_Rate"
+    inputs: ["Oxygen_supply", "Glucose_supply"]
+    logic: "AND"
+
+# Gene network propagation steps (no more hardcoded 3!)
+gene_network_steps: 3
+
+# Environment configuration (no more hardcoded pH!)
+environment:
+  ph: 7.4
+
+output_dir: "results/test1"
+plots_dir: "plots/test1"
+data_dir: "data/test1"
+custom_functions_path: "tests/test1/test1_custom_functions.py"
