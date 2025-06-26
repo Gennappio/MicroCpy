@@ -207,7 +207,7 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
         return [var for var in variables if var not in boolean_ops]
     
     def _create_update_function(self, expression: str) -> Callable:
-        """Create update function from Boolean expression - IDENTICAL to gene_simulator.py"""
+        """Create update function from Boolean expression - FIXED NOT operator handling"""
         def update_func(input_states: Dict[str, bool]) -> bool:
             if not expression:
                 return False
@@ -215,20 +215,23 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             # Create a copy of the expression for evaluation
             expr = expression
 
-            # Replace node names with their states (identical to gene_simulator.py)
+            # Replace node names with their states
             for node_name, state in input_states.items():
                 # Make sure we replace whole words only (not substrings)
                 expr = re.sub(r'\b' + re.escape(node_name) + r'\b', 'True' if state else 'False', expr)
 
             # Replace logical operators - handle both symbols and words
-            expr = expr.replace('&', ' and ').replace('|', ' or ').replace('!', ' not ')
+            # FIXED: Handle ! operator more carefully
+            expr = expr.replace('&', ' and ').replace('|', ' or ')
+            # Replace ! with not, but be careful about spacing
+            expr = re.sub(r'!\s*', 'not ', expr)  # Replace ! followed by optional whitespace
             expr = expr.replace('AND', ' and ').replace('OR', ' or ').replace('NOT', ' not ')
 
             try:
-                # Evaluate the expression (identical to gene_simulator.py)
+                # Evaluate the expression
                 return eval(expr)
             except Exception as e:
-                # Silently handle errors and return False (identical to gene_simulator.py)
+                # Silently handle errors and return False
                 return False
 
         return update_func
