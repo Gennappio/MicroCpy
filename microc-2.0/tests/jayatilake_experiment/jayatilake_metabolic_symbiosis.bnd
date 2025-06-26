@@ -17,10 +17,10 @@ HIF1 = NOT Oxygen_supply
 
 # Metabolic output nodes
 glycoATP, Glucose_supply & Oxygen_supply & HIF1
-glycoATP = Glucose_supply AND (NOT Oxygen_supply OR HIF1)
+glycoATP = Glucose_supply
 
 mitoATP, Oxygen_supply & Glucose_supply & HIF1
-mitoATP = Oxygen_supply AND Glucose_supply AND NOT HIF1
+mitoATP = Oxygen_supply AND Glucose_supply
 
 # Transporter nodes
 GLUT1, HIF1 & Glucose_supply
@@ -43,4 +43,4 @@ Growth_Arrest, Oxygen_supply & Glucose_supply
 Growth_Arrest = Oxygen_supply AND NOT Glucose_supply
 
 Proliferation, Oxygen_supply & Glucose_supply & glycoATP
-Proliferation = Oxygen_supply AND Glucose_supply AND glycoATP
+Proliferation = Glucose_supply AND (glycoATP OR mitoATP)
