@@ -53,66 +53,19 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             self._create_minimal_network()
     
     def _load_from_bnd_file(self, bnd_file: Path):
-        """Load network from .bnd file format"""
+        """Load network from .bnd file format (supports both simple and MaBoSS formats)"""
         try:
             with open(bnd_file, 'r') as f:
-                lines = f.readlines()
+                content = f.read()
 
             nodes_created = 0
             input_nodes_found = set()
 
-            for line in lines:
-                line = line.strip()
-
-                # Skip comments and empty lines
-                if not line or line.startswith('#'):
-                    continue
-
-                # Check for simple node definition: node_name = expression
-                if '=' in line:
-                    parts = line.split('=', 1)
-                    if len(parts) == 2:
-                        node_name = parts[0].strip()
-                        expression = parts[1].strip()
-
-                        # Skip empty expressions
-                        if not expression:
-                            continue
-
-                        # Extract input nodes from expression
-                        inputs = self._extract_inputs_from_expression(expression)
-
-                        # Create update function from expression
-                        update_func = self._create_update_function(expression)
-
-                        # Create node
-                        self.nodes[node_name] = NetworkNode(
-                            name=node_name,
-                            update_function=update_func,
-                            inputs=inputs
-                        )
-                        nodes_created += 1
-
-                        # Track input nodes referenced in expressions
-                        input_nodes_found.update(inputs)
-
-                else:
-                    # Check for standalone node names (input nodes)
-                    node_name = line.strip()
-                    # Skip dependency lines (contain commas) and lines with operators
-                    if (node_name and
-                        not any(op in node_name for op in ['=', '&', '|', '(', ')', ',']) and
-                        not node_name.startswith('#')):
-                        # This is likely an input node
-                        if node_name not in self.nodes:
-                            self.nodes[node_name] = NetworkNode(
-                                name=node_name,
-                                update_function=None,
-                                inputs=[],
-                                is_input=True
-                            )
-                            nodes_created += 1
-                            input_nodes_found.add(node_name)
+            # Check if this is MaBoSS format (contains "node" keyword)
+            if 'node ' in content:
+                nodes_created = self._parse_maboss_format(content, input_nodes_found)
+            else:
+                nodes_created = self._parse_simple_format(content, input_nodes_found)
 
             # Create any missing input nodes that were referenced but not defined
             for input_name in input_nodes_found:
@@ -134,6 +87,116 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             print(f"❌ Error loading .bnd file {bnd_file}: {e}")
             import traceback
             traceback.print_exc()
+
+    def _parse_maboss_format(self, content: str, input_nodes_found: set) -> int:
+        """Parse MaBoSS format .bnd file"""
+        nodes_created = 0
+
+        # Split into node blocks
+        node_blocks = re.split(r'node\s+(\w+)\s*{', content)[1:]  # Skip first empty element
+
+        for i in range(0, len(node_blocks), 2):
+            if i + 1 >= len(node_blocks):
+                break
+
+            node_name = node_blocks[i].strip()
+            node_content = node_blocks[i + 1].split('}')[0]  # Get content before closing brace
+
+            # Look for logic line
+            logic_match = re.search(r'logic\s*=\s*([^;]+);', node_content)
+
+            if logic_match:
+                expression = logic_match.group(1).strip()
+
+                # Extract input nodes from expression
+                inputs = self._extract_inputs_from_expression(expression)
+
+                # Create update function from expression
+                update_func = self._create_update_function(expression)
+
+                # Create node
+                self.nodes[node_name] = NetworkNode(
+                    name=node_name,
+                    update_function=update_func,
+                    inputs=inputs
+                )
+                nodes_created += 1
+
+                # Track input nodes referenced in expressions
+                input_nodes_found.update(inputs)
+            else:
+                # Check if this is an input node (has rate_up = 0; rate_down = 0;)
+                if 'rate_up = 0;' in node_content and 'rate_down = 0;' in node_content:
+                    self.nodes[node_name] = NetworkNode(
+                        name=node_name,
+                        update_function=None,
+                        inputs=[],
+                        is_input=True
+                    )
+                    nodes_created += 1
+                    input_nodes_found.add(node_name)
+
+        return nodes_created
+
+    def _parse_simple_format(self, content: str, input_nodes_found: set) -> int:
+        """Parse simple format .bnd file (original logic)"""
+        nodes_created = 0
+        lines = content.split('\n')
+
+        for line in lines:
+            line = line.strip()
+
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+
+            # Check for simple node definition: node_name = expression
+            if '=' in line:
+                parts = line.split('=', 1)
+                if len(parts) == 2:
+                    node_name = parts[0].strip()
+                    expression = parts[1].strip()
+
+                    # Skip empty expressions
+                    if not expression:
+                        continue
+
+                    # Extract input nodes from expression
+                    inputs = self._extract_inputs_from_expression(expression)
+
+                    # Create update function from expression
+                    update_func = self._create_update_function(expression)
+
+                    # Create node
+                    self.nodes[node_name] = NetworkNode(
+                        name=node_name,
+                        update_function=update_func,
+                        inputs=inputs
+                    )
+                    nodes_created += 1
+
+                    # Track input nodes referenced in expressions
+                    input_nodes_found.update(inputs)
+
+            else:
+                # Check for standalone node names (input nodes)
+                node_name = line.strip()
+                # Skip dependency lines (contain commas) and lines with operators
+                if (node_name and
+                    not any(op in node_name for op in ['=', '&', '|', '(', ')', ',']) and
+                    not node_name.startswith('#')):
+                    # This is likely an input node
+                    if node_name not in self.nodes:
+                        self.nodes[node_name] = NetworkNode(
+                            name=node_name,
+                            update_function=None,
+                            inputs=[],
+                            is_input=True
+                        )
+                        nodes_created += 1
+                        input_nodes_found.add(node_name)
+
+        return nodes_created
     
     def _extract_inputs_from_expression(self, expression: str) -> List[str]:
         """Extract input node names from Boolean expression"""

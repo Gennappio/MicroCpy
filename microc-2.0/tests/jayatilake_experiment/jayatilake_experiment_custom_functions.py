@@ -38,9 +38,8 @@ def get_parameter_from_config(config, param_name: str, default_value=None, secti
         default_value: Default value if parameter not found
         section: Optional section name (e.g., 'metabolism', 'custom_parameters')
     """
-    # If no config provided, try to get global config from simulation context
+    # If no config provided, return default
     if not config:
-        # For now, return default - in future could access global config
         return default_value
 
     # If section specified, look in that section first
@@ -49,13 +48,19 @@ def get_parameter_from_config(config, param_name: str, default_value=None, secti
         if isinstance(section_data, dict) and param_name in section_data:
             return section_data[param_name]
 
-    # Only look in custom_parameters section - no fallbacks or searching
+    # Look in custom_parameters section first (for custom function parameters)
     custom_params = getattr(config, 'custom_parameters', {})
     if isinstance(custom_params, dict) and param_name in custom_params:
         return custom_params[param_name]
 
-    # Parameter not found - fail hard
-    raise KeyError(f"Required parameter '{param_name}' not found in custom_parameters section of config")
+    # Look at top level of config (for general parameters like cell_cycle_time)
+    if hasattr(config, param_name):
+        return getattr(config, param_name)
+    elif isinstance(config, dict) and param_name in config:
+        return config[param_name]
+
+    # If still not found, return default value
+    return default_value
 
 
 @dataclass
