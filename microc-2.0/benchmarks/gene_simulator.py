@@ -76,8 +76,10 @@ class BooleanExpression:
             # Make sure we replace whole words only (not substrings)
             expr = re.sub(r'\b' + re.escape(node_name) + r'\b', 'True' if state else 'False', expr)
 
-        # Replace logical operators
-        expr = expr.replace('&', ' and ').replace('|', ' or ').replace('!', ' not ')
+        # Replace logical operators - FIXED: Handle ! operator more carefully
+        expr = expr.replace('&', ' and ').replace('|', ' or ')
+        # Replace ! with not, but be careful about spacing
+        expr = re.sub(r'!\s*', 'not ', expr)  # Replace ! followed by optional whitespace
 
         try:
             # Evaluate the expression
