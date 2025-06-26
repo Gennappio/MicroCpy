@@ -102,6 +102,70 @@ substances:
     boundary_type: "fixed"
     unit: "μM"
 
+  # Missing substances from diffusion-parameters.txt
+  EGFRD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  FGFRD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  GI:
+    diffusion_coeff: 5.18e-11
+    production_rate: 0.0e-20
+    uptake_rate: 2.0e-17
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+    unit: "mM"
+
+  cMETD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  pH:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 7.4
+    boundary_value: 7.4
+    boundary_type: "fixed"
+    unit: "pH"
+
+  MCT1D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "μM"
+
+  MCT4D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "μM"
+
 # Gene input associations - from associations.txt
 associations:
   Oxygen: "Oxygen_supply"
@@ -111,6 +175,14 @@ associations:
   FGF: "FGFR_stimulus"
   TGFA: "EGFR_stimulus"
   HGF: "cMET_stimulus"
+  # Drug inhibitions
+  EGFRD: "EGFRI"
+  FGFRD: "FGFRI"
+  GI: "Growth_Inhibitor"
+  cMETD: "cMETI"
+  MCT1D: "MCT1I"
+  MCT4D: "MCT4I"
+  # pH has no direct association (NA in associations.txt)
 
 # Gene input thresholds - from input-parameters.txt
 thresholds:
@@ -119,7 +191,7 @@ thresholds:
     threshold: 0.022
   Glucose_supply:
     initial: 5.0
-    threshold: 1.0
+    threshold: 4.0
   MCT1_stimulus:
     initial: 1.0
     threshold: 1.5
@@ -137,13 +209,38 @@ thresholds:
     threshold: 1.0e-6
   Growth_Inhibitor:
     initial: 0.0
-    threshold: 0.5
+    threshold: 0.00005
   DNA_damage:
     initial: 0.0
     threshold: 0.5
   TGFBR_stimulus:
     initial: 0.0
     threshold: 1.0e-6
+  GLUT1I:
+    initial: 0.0
+    threshold: 4.0e-6
+  GLUT1D:
+    initial: 0.0
+    threshold: 0.5
+  # Missing thresholds from input-parameters.txt
+  EGFRI:
+    initial: 0.0
+    threshold: 0.005
+  FGFRI:
+    initial: 0.0
+    threshold: 0.005
+  cMETI:
+    initial: 0.0
+    threshold: 0.005
+  MCT1I:
+    initial: 0.0
+    threshold: 1.7e-5
+  MCT4I:
+    initial: 0.0
+    threshold: 1.0
+  pH_min:
+    initial: 8.0
+    threshold: 6.0
 
 # No composite genes needed - all logic implemented in custom functions
 # The complex metabolic logic is handled in jayatilake_experiment_custom_functions.py
@@ -189,6 +286,28 @@ gene_network:
       is_input: true
       default_state: false
     TGFBR_stimulus:
+      is_input: true
+      default_state: false
+    GLUT1I:
+      is_input: true
+      default_state: false
+    GLUT1D:
+      is_input: true
+      default_state: false
+    # Missing input nodes from associations.txt
+    EGFRI:
+      is_input: true
+      default_state: false
+    FGFRI:
+      is_input: true
+      default_state: false
+    cMETI:
+      is_input: true
+      default_state: false
+    MCT1I:
+      is_input: true
+      default_state: false
+    MCT4I:
       is_input: true
       default_state: false
 
