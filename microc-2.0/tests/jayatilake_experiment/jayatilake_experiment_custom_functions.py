@@ -101,6 +101,10 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
     print(f"   Biological cell size: {cell_height_um} μm")
 
+    # Track coordinate collisions
+    used_positions = set()
+    collision_count = 0
+
     # Use biological cell grid for placement
     center_x, center_y = bio_nx // 2, bio_ny // 2
 
@@ -131,6 +135,20 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
                     fipy_x = max(0, min(fipy_nx - 1, fipy_x))
                     fipy_y = max(0, min(fipy_ny - 1, fipy_y))
 
+                    # Check for coordinate collisions
+                    fipy_pos = (fipy_x, fipy_y)
+                    if fipy_pos in used_positions:
+                        collision_count += 1
+                        if collision_count <= 5:
+                            print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) → fipy({fipy_x},{fipy_y}) already used!")
+                        continue  # Skip this cell to avoid overwriting
+
+                    used_positions.add(fipy_pos)
+
+                    # Debug coordinate mapping for first few cells
+                    if cells_placed < 5:
+                        print(f"   Cell {cells_placed}: bio({x},{y}) → fipy({fipy_x},{fipy_y})")
+
                     # No randomness - all cells start as Proliferation
                     phenotype = "Proliferation"
 
@@ -146,7 +164,10 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
                 break
         
         radius += 1
-    
+
+    # Summary
+    print(f"   📊 Placement summary: {len(placements)} cells placed, {collision_count} collisions avoided")
+
     return placements
 
 
@@ -273,24 +294,28 @@ def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Di
             phenotype == "Proliferation")
 
 
-def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
-    """
-    Determine if cell should die based on gene network state and environmental conditions.
-    """
-    # Get gene states from cell state
-    gene_states = cell_state.get('gene_states', {})
+# def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
+#     """
+#     Determine if cell should die based on gene network state and environmental conditions.
+#     """
+#     # Get gene states from cell state
+#     gene_states = cell_state.get('gene_states', {})
 
-    # Cell dies if Necrosis or Apoptosis genes are active
-    if gene_states.get('Necrosis', False) or gene_states.get('Apoptosis', False):
-        return True
+#     # Cell dies if Necrosis or Apoptosis genes are active
+#     necrosis = gene_states.get('Necrosis', False)
+#     apoptosis = gene_states.get('Apoptosis', False)
 
-    # Additional death conditions could be added here
-    # For example, extreme hypoxia, nutrient starvation, etc.
-    oxygen = local_environment.get('Oxygen', 0.0)
-    if oxygen < 0.001:  # Severe hypoxia
-        return True
+#     if necrosis or apoptosis:
+#         return True
 
-    return False
+#     # Additional death conditions could be added here
+#     # For example, extreme hypoxia, nutrient starvation, etc.
+#     # Use lowercase 'oxygen' key (FIXED)
+#     oxygen = local_environment.get('oxygen', 0.0)
+#     if oxygen < 0.001:  # Severe hypoxia
+#         return True
+
+#     return False
 
 
 # NOTE: custom_get_substance_reactions was removed because it was redundant

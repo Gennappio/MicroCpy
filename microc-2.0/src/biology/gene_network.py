@@ -108,11 +108,24 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             if logic_match:
                 expression = logic_match.group(1).strip()
 
+                # Debug Apoptosis node specifically
+                if node_name == 'Apoptosis':
+                    print(f"🔍 APOPTOSIS NODE PARSING:")
+                    print(f"   Raw expression: '{expression}'")
+
                 # Extract input nodes from expression
                 inputs = self._extract_inputs_from_expression(expression)
 
                 # Create update function from expression
                 update_func = self._create_update_function(expression)
+
+                # Debug Apoptosis node specifically
+                if node_name == 'Apoptosis':
+                    print(f"   Inputs: {inputs}")
+                    # Test the function with all False inputs
+                    test_inputs = {inp: False for inp in inputs}
+                    test_result = update_func(test_inputs)
+                    print(f"   Test with all False: {test_result}")
 
                 # Create node
                 self.nodes[node_name] = NetworkNode(
@@ -416,44 +429,79 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             return self._default_step(num_steps)
     
     def _default_step(self, num_steps: int = 1) -> Dict[str, bool]:
-        """Default network update logic - IDENTICAL to gene_simulator.py"""
+        """NetLogo-style gene network update: single gene per step"""
+        for step in range(num_steps):
+            # NetLogo approach: update only ONE gene per step
+            self._netlogo_single_gene_update()
+
+        # Return ALL states, not just output states (needed for ATP genes)
+        return self.get_all_states()
+
+    def _netlogo_single_gene_update(self):
+        """
+        NetLogo-style gene network update: update only ONE gene per step.
+
+        Based on NetLogo's -DOWNSTREAM-CHANGE-590 and -INFLUENCE-LINK-END-WITH-LOGGING--36:
+        1. Find all genes that have active upstream inputs
+        2. Randomly select ONE gene to update
+        3. Evaluate only that gene's rule
+        4. Update only that gene's state
+        """
         import random
 
-        for step in range(num_steps):
-            # Create a list of ALL nodes - IDENTICAL to gene_simulator.py
-            nodes_to_update = list(self.nodes.keys())
+        # Find all non-input genes that could potentially be updated
+        updatable_genes = []
 
-            # Update nodes one by one in random order until all have been updated
-            # This matches gene_simulator.py's asynchronous update strategy EXACTLY
-            while nodes_to_update:
-                # Pick a random node to update
-                node_index = random.randrange(len(nodes_to_update))
-                node_name = nodes_to_update.pop(node_index)
-                node = self.nodes[node_name]
+        for gene_name, gene_node in self.nodes.items():
+            # Skip input nodes (they're set externally)
+            if gene_node.is_input:
+                continue
 
-                # Skip input nodes (identical to gene_simulator.py logic)
-                if node.is_input:
-                    continue
+            # Skip nodes without update functions
+            if not gene_node.update_function:
+                continue
 
-                # Skip nodes without update functions
-                if not node.update_function:
-                    continue
+            # Check if this gene has any active upstream inputs
+            # (NetLogo updates genes that have "incoming links" from active nodes)
+            has_active_inputs = False
+            for input_name in gene_node.inputs:
+                if input_name in self.nodes and self.nodes[input_name].current_state:
+                    has_active_inputs = True
+                    break
 
-                # Get current states of all nodes for logic evaluation
-                node_states = {n: self.nodes[n].current_state for n in self.nodes}
+            # Add to updatable list if it has active inputs OR if it's currently active
+            # (NetLogo can update active genes to turn them off)
+            if has_active_inputs or gene_node.current_state:
+                updatable_genes.append(gene_name)
 
-                # Evaluate the logic rule using current states
-                # Get input states for this node
-                input_states = {
-                    input_name: node_states[input_name]
-                    for input_name in node.inputs
-                    if input_name in node_states
-                }
+        # If no genes can be updated, return (network is stable)
+        if not updatable_genes:
+            return
 
-                # Update the node state immediately (asynchronous)
-                node.current_state = node.update_function(input_states)
+        # NetLogo approach: randomly select ONE gene to update
+        selected_gene = random.choice(updatable_genes)
+        gene_node = self.nodes[selected_gene]
 
-        return self.get_output_states()
+        # Get current states of all nodes for logic evaluation
+        current_states = {name: node.current_state for name, node in self.nodes.items()}
+
+        # Get input states for this specific gene
+        input_states = {
+            input_name: current_states[input_name]
+            for input_name in gene_node.inputs
+            if input_name in current_states
+        }
+
+        # Evaluate the gene's rule and update ONLY this gene
+        new_state = gene_node.update_function(input_states)
+
+        # Update only this one gene (NetLogo style)
+        if gene_node.current_state != new_state:
+            gene_node.current_state = new_state
+
+            # Debug output for ATP genes only
+            if selected_gene in ['mitoATP', 'glycoATP', 'ATP_Production_Rate']:
+                print(f"🔍 NetLogo update: {selected_gene} → {new_state}")
     
     def get_output_states(self) -> Dict[str, bool]:
         """Get current output node states"""
@@ -467,11 +515,29 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
         """Get all node states"""
         return {name: node.current_state for name, node in self.nodes.items()}
     
-    def reset(self):
-        """Reset all nodes to False state"""
+    def reset(self, random_init: bool = False):
+        """Reset nodes to False or random states (NetLogo-style)"""
+        # Define output/fate nodes that should always start as False
+        fate_nodes = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
+
         for node in self.nodes.values():
-            node.current_state = False
-            node.next_state = False
+            if node.is_input:
+                # Input nodes keep their externally set states
+                continue
+            elif node.name in fate_nodes:
+                # Fate nodes always start as False (biologically correct)
+                node.current_state = False
+                node.next_state = False
+            elif random_init:
+                # NetLogo-style: 50% chance True/False for non-fate genes
+                import random
+                state = random.choice([True, False])
+                node.current_state = state
+                node.next_state = state
+            else:
+                # Default: all genes start as False
+                node.current_state = False
+                node.next_state = False
     
     def get_network_info(self) -> Dict[str, any]:
         """Get information about the network structure"""

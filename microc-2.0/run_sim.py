@@ -402,6 +402,9 @@ def run_simulation(config, simulator, gene_network, population, args):
             # Update phenotypes based on gene states
             population.update_phenotypes()
 
+            # Remove dead cells
+            population.remove_dead_cells()
+
         # Update intercellular processes (slow: migration, division, signaling)
         if updates['intercellular']:
             intercellular_start = time.time()
@@ -463,6 +466,8 @@ def run_simulation(config, simulator, gene_network, population, args):
                               not args.verbose)  # Don't duplicate if already verbose
         if should_print_status:
             print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time)
+            # Print ATP statistics at status intervals
+            population.print_atp_statistics()
 
         # Progress reporting
         if args.verbose or (step + 1) % max(1, num_steps // 10) == 0:

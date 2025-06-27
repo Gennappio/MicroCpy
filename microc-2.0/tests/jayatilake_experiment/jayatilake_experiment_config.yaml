@@ -35,7 +35,7 @@ output:
   save_plots_interval: 500      # Generate plots every 2 steps (for testing)
   save_final_plots: true     # Always save plots at the end
   save_initial_plots: true   # Always save plots at the beginning
-  status_print_interval: 10  # Print detailed status every 10 steps
+  status_print_interval: 100  # Print detailed status every 10 steps
 
 # Substances - from diffusion-parameters.txt
 substances:
@@ -79,8 +79,17 @@ substances:
     diffusion_coeff: 2.2e-10
     production_rate: 0.0
     uptake_rate: 2.0e-18
-    initial_value: 0.0
-    boundary_value: 0.0
+    initial_value: 2.0e-6
+    boundary_value: 2.0e-6
+    boundary_type: "fixed"
+    unit: "μM"
+
+  EGF:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 2.0e-18
+    initial_value: 2.0e-6
+    boundary_value: 2.0e-6
     boundary_type: "fixed"
     unit: "μM"
 
@@ -166,6 +175,15 @@ substances:
     boundary_type: "fixed"
     unit: "μM"
 
+  GLUT1D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "μM"
+
 # Gene input associations - from associations.txt
 associations:
   Oxygen: "Oxygen_supply"
@@ -173,7 +191,7 @@ associations:
   Lactate: "MCT1_stimulus"
   H: "Proton_level"
   FGF: "FGFR_stimulus"
-  TGFA: "EGFR_stimulus"
+  EGF: "EGFR_stimulus"
   HGF: "cMET_stimulus"
   # Drug inhibitions
   EGFRD: "EGFRI"
@@ -182,6 +200,7 @@ associations:
   cMETD: "cMETI"
   MCT1D: "MCT1I"
   MCT4D: "MCT4I"
+  GLUT1D: "GLUT1I"
   # pH has no direct association (NA in associations.txt)
 
 # Gene input thresholds - from input-parameters.txt
@@ -245,16 +264,22 @@ thresholds:
 # No composite genes needed - all logic implemented in custom functions
 # The complex metabolic logic is handled in jayatilake_experiment_custom_functions.py
 
-# Gene network propagation steps
-gene_network_steps: 100
-
 # Gene network configuration - Metabolic symbiosis network
 gene_network:
   # Path to the .bnd file containing the gene network logic
   bnd_file: "tests/jayatilake_experiment/jaya_microc.bnd"
 
-  # Explicitly specify output nodes (phenotype nodes)
-  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
+  # Gene network propagation steps (NetLogo-style: sparse updates for realistic behavior)
+  # Based on analysis: 10-50 steps gives realistic apoptosis rates (0-2%)
+  # 100+ steps leads to over-convergence and excessive apoptosis
+  propagation_steps: 50
+
+  # NetLogo-style random initialization (50% chance True/False for non-fate genes)
+  # Fate nodes (Apoptosis, Proliferation, Growth_Arrest, Necrosis) always start as False
+  random_initialization: true
+
+  # Explicitly specify output nodes (phenotype + metabolic nodes)
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis", "mitoATP", "glycoATP", "ATP_Production_Rate"]
 
   nodes:
     # Input nodes - all substance-associated nodes
@@ -308,6 +333,9 @@ gene_network:
       is_input: true
       default_state: false
     MCT4I:
+      is_input: true
+      default_state: false
+    GLUT1D:
       is_input: true
       default_state: false
 
