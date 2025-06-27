@@ -216,33 +216,65 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
     def remove_dead_cells(self) -> List[str]:
         """Remove dead cells and return their IDs"""
         dead_cell_ids = []
-        
+
+        # Debug: Track cell death and population changes
+        if not hasattr(self, '_death_debug_count'):
+            self._death_debug_count = 0
+
+        # Always print current cell count
+        current_count = len(self.state.cells)
+        if not hasattr(self, '_last_cell_count'):
+            self._last_cell_count = current_count
+
+        if current_count != self._last_cell_count:
+            print(f"📊 CELL COUNT CHANGE: {self._last_cell_count} → {current_count}")
+            self._last_cell_count = current_count
+
         # Find dead cells
         for cell_id, cell in self.state.cells.items():
             # Get local environment for death check
             local_env = self._get_local_environment(cell.state.position)
-            
-            if cell.should_die(local_env, self.config):
+
+            # Check death condition with detailed logging
+            should_die = cell.should_die(local_env, self.config)
+
+            if should_die:
                 dead_cell_ids.append(cell_id)
-        
+                # Debug ALL deaths
+                print(f"💀 DEATH: Cell {cell_id[:8]} at {cell.state.position}")
+                print(f"   O2={local_env.get('oxygen', 'N/A'):.3f}, Glc={local_env.get('glucose', 'N/A'):.1f}, Age={cell.state.age}, Pheno={cell.state.phenotype}")
+                if hasattr(cell, 'state') and hasattr(cell.state, 'gene_states'):
+                    gs = cell.state.gene_states
+                    print(f"   Genes: Necr={gs.get('Necrosis', 'N/A')}, Apop={gs.get('Apoptosis', 'N/A')}")
+                self._death_debug_count += 1
+
         if not dead_cell_ids:
+            # Print cell count periodically to track population
+            if not hasattr(self, '_cell_count_debug_counter'):
+                self._cell_count_debug_counter = 0
+            self._cell_count_debug_counter += 1
+            if self._cell_count_debug_counter % 10 == 1:  # Every 10 calls
+                print(f"📊 Population stable: {len(self.state.cells)} cells")
             return []
-        
+
+        # Debug: Report cell deaths
+        print(f"💀 Removing {len(dead_cell_ids)} dead cells. Remaining: {len(self.state.cells) - len(dead_cell_ids)}")
+
         # Remove dead cells
         new_cells = self.state.cells.copy()
         new_spatial_grid = self.state.spatial_grid.copy()
-        
+
         for cell_id in dead_cell_ids:
             cell = new_cells[cell_id]
             del new_cells[cell_id]
             del new_spatial_grid[cell.state.position]
-        
+
         self.state = self.state.with_updates(
             cells=new_cells,
             spatial_grid=new_spatial_grid,
             total_cells=self.state.total_cells - len(dead_cell_ids)
         )
-        
+
         return dead_cell_ids
 
     def _calculate_gene_inputs(self, local_env: Dict[str, float]) -> Dict[str, bool]:
@@ -274,16 +306,10 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             # Gene input is TRUE if concentration exceeds threshold
             gene_inputs[gene_input_name] = substance_conc > threshold_config.threshold
 
-            # Debug output for first few cells
-            if not hasattr(self, '_gene_input_debug_count'):
-                self._gene_input_debug_count = 0
-            self._gene_input_debug_count += 1
-
-            if self._gene_input_debug_count <= 10:  # Show more debug info
-                print(f"🔍 GENE INPUT DEBUG (call {self._gene_input_debug_count}):")
-                print(f"   {substance_name} concentration: {substance_conc:.6f}")
-                print(f"   {gene_input_name} threshold: {threshold_config.threshold}")
-                print(f"   {gene_input_name} = {gene_inputs[gene_input_name]} ({substance_conc} > {threshold_config.threshold})")
+            # Compact debug for gene inputs (only first call)
+            if not hasattr(self, '_gene_input_debug_shown'):
+                print(f"🔍 Gene thresholds: {substance_name}>{threshold_config.threshold}={gene_inputs[gene_input_name]}")
+                self._gene_input_debug_shown = True
 
         # Handle composite gene inputs using configuration
         if hasattr(self.config, 'composite_genes') and self.config.composite_genes: #TODO: revise
@@ -408,65 +434,171 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             local_env = self._get_local_environment(cell.state.position)
 
             # Update substance concentrations IF PROVIDED
-            if not hasattr(self, '_substance_debug_count'):
-                self._substance_debug_count = 0
-            self._substance_debug_count += 1
-
-            if self._substance_debug_count <= 3:
-                print(f"🔍 SUBSTANCE CONCENTRATION DEBUG (cell {self._substance_debug_count}):")
-                print(f"   Position: {cell.state.position}")
-                print(f"   Initial local_env: {local_env}")
-                print(f"   substance_concentrations keys: {list(substance_concentrations.keys())}")
-
             for substance_name, conc_field in substance_concentrations.items():
                 if cell.state.position in conc_field:
                     # Update both capitalized and lowercase keys to ensure consistency
-                    old_value = local_env.get(substance_name.lower(), 'NOT_FOUND')
                     local_env[substance_name.lower()] = conc_field[cell.state.position]  # lowercase for gene inputs
                     local_env[substance_name] = conc_field[cell.state.position]  # capitalized for compatibility
-                    if self._substance_debug_count <= 3:
-                        print(f"   Updated {substance_name.lower()}: {old_value} → {conc_field[cell.state.position]}")
-                else:
-                    if self._substance_debug_count <= 3:
-                        print(f"   Position {cell.state.position} not found in {substance_name} field")
 
-            if self._substance_debug_count <= 3:
-                print(f"   Final local_env: {local_env}")
+            # RESET gene network to ensure clean state for each cell
+            # Use NetLogo-style random initialization if configured
+            random_init = getattr(self.config.gene_network, 'random_initialization', False)
+            self.gene_network.reset(random_init=random_init)
 
             # Update gene network using configuration-based thresholds
             gene_inputs = self._calculate_gene_inputs(local_env)
             self.gene_network.set_input_states(gene_inputs)
 
-            # Get propagation steps from configuration - NO hardcoded values
-            if self.config.gene_network and hasattr(self.config.gene_network, 'propagation_steps'):
-                steps = self.config.gene_network.propagation_steps
-            else:
-                steps = self.config.gene_network_steps
+            # Get propagation steps from gene network configuration
+            if not (self.config.gene_network and hasattr(self.config.gene_network, 'propagation_steps')):
+                raise ValueError("gene_network.propagation_steps must be configured")
+
+            steps = self.config.gene_network.propagation_steps
 
             gene_states = self.gene_network.step(steps)
+
+            # Collect ATP statistics for all cells
+            if not hasattr(self, '_atp_stats'):
+                self._atp_stats = {
+                    'total_cells': 0,
+                    'mito_only': 0,
+                    'glyco_only': 0,
+                    'both_atp': 0,
+                    'no_atp': 0,
+                    'atp_production_rate_true': 0
+                }
+
+            # Get all gene network states for ATP analysis
+            all_states = self.gene_network.get_all_states()
+            atp_rate = all_states.get('ATP_Production_Rate', False)
+            mito_atp = all_states.get('mitoATP', False)
+            glyco_atp = all_states.get('glycoATP', False)
+
+            # Update ATP statistics
+            self._atp_stats['total_cells'] += 1
+            if atp_rate:
+                self._atp_stats['atp_production_rate_true'] += 1
+
+            if mito_atp and glyco_atp:
+                self._atp_stats['both_atp'] += 1
+            elif mito_atp and not glyco_atp:
+                self._atp_stats['mito_only'] += 1
+            elif not mito_atp and glyco_atp:
+                self._atp_stats['glyco_only'] += 1
+            else:
+                self._atp_stats['no_atp'] += 1
 
             # Debug output for first few cells
             if not hasattr(self, '_gene_output_debug_count'):
                 self._gene_output_debug_count = 0
             self._gene_output_debug_count += 1
 
-            if self._gene_output_debug_count <= 3:
-                print(f"🔍 GENE NETWORK OUTPUT DEBUG (cell {self._gene_output_debug_count}):")
-                print(f"   Position: {cell.state.position}")
-                print(f"   Local environment: oxygen={local_env.get('oxygen', 'N/A'):.6f}, glucose={local_env.get('glucose', 'N/A'):.6f}")
+            # Debug apoptosis cases specifically
+            apoptosis = gene_states.get('Apoptosis', False)
+            if apoptosis:
+                pos = cell.state.position
+                oxygen = local_env.get('oxygen', 0.0)
+                glucose = local_env.get('glucose', 0.0)
+                print(f"🚨 APOPTOSIS CELL at {pos}: O2={oxygen:.3f}, Gluc={glucose:.3f}")
                 print(f"   Gene inputs: {gene_inputs}")
-                print(f"   Gene outputs: {gene_states}")
-                if 'mitoATP' in gene_states and 'glycoATP' in gene_states:
-                    print(f"   → mitoATP: {gene_states['mitoATP']}, glycoATP: {gene_states['glycoATP']}")
 
-            # Store gene states in cell for phenotype update
+                # Debug apoptosis pathway components
+                bcl2 = gene_states.get('BCL2', False)
+                erk = gene_states.get('ERK', False)
+                foxo3 = gene_states.get('FOXO3', False)
+                p53 = gene_states.get('p53', False)
+                print(f"   Apoptosis logic: !BCL2({bcl2}) & !ERK({erk}) & FOXO3({foxo3}) & p53({p53})")
+                print(f"   = !{bcl2} & !{erk} & {foxo3} & {p53} = {not bcl2 and not erk and foxo3 and p53}")
+
+                # Debug what's driving p53 and FOXO3
+                dna_damage = gene_states.get('DNA_damage', False)
+                atm = gene_states.get('ATM', False)
+                growth_inhibitor = gene_inputs.get('Growth_Inhibitor', False)
+                print(f"   p53 drivers: DNA_damage={dna_damage}, ATM={atm}")
+                print(f"   FOXO3 drivers: Growth_Inhibitor={growth_inhibitor}")
+
+                # Debug what's blocking BCL2 and ERK (survival signals)
+                akt = gene_states.get('AKT', False)
+                pi3k = gene_states.get('PI3K', False)
+                egfr = gene_states.get('EGFR', False)
+                fgfr = gene_states.get('FGFR', False)
+                cmet = gene_states.get('cMET', False)
+                print(f"   Survival signals: AKT={akt}, PI3K={pi3k}, EGFR={egfr}, FGFR={fgfr}, cMET={cmet}")
+
+                # Debug the apoptosis pathway in detail
+                print(f"   Growth factor inputs: FGFR_stimulus={gene_inputs.get('FGFR_stimulus', False)}, EGFR_stimulus={gene_inputs.get('EGFR_stimulus', False)}, cMET_stimulus={gene_inputs.get('cMET_stimulus', False)}")
+
+                # Test apoptosis function directly
+                apoptosis_node = self.gene_network.nodes.get('Apoptosis')
+                if apoptosis_node and apoptosis_node.update_function:
+                    test_inputs = {'BCL2': bcl2, 'ERK': erk, 'FOXO3': foxo3, 'p53': p53}
+                    direct_result = apoptosis_node.update_function(test_inputs)
+                    print(f"   Apoptosis direct test: {direct_result}, actual state: {apoptosis}")
+
+                # Only show first few apoptosis cases to avoid spam
+                if not hasattr(self, '_apoptosis_debug_count'):
+                    self._apoptosis_debug_count = 0
+                self._apoptosis_debug_count += 1
+                if self._apoptosis_debug_count >= 3:
+                    print(f"   ... (showing only first 3 apoptosis cases)")
+                    return  # Stop showing more
+
+                # Debug ATP production for this apoptotic cell
+                atp_rate = gene_states.get('ATP_Production_Rate', False)
+                mito_atp = gene_states.get('mitoATP', False)
+                glyco_atp = gene_states.get('glycoATP', False)
+                print(f"   ATP status: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+
+            # Debug ATP gene outputs for first cell
+            elif self._gene_output_debug_count == 1:
+                atp_rate = gene_states.get('ATP_Production_Rate', False)
+                mito_atp = gene_states.get('mitoATP', False)
+                glyco_atp = gene_states.get('glycoATP', False)
+                print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+                print(f"   Environmental: Oxygen_supply={gene_inputs.get('Oxygen_supply', False)}, Glucose_supply={gene_inputs.get('Glucose_supply', False)}")
+
+            # Store gene states in cell for phenotype update (FIXED INDENTATION)
             cell._cached_gene_states = gene_states
             cell._cached_local_env = local_env
 
             updated_cells[cell_id] = cell
 
+        # Print ATP statistics summary after processing all cells (only at status_print_interval)
+        if hasattr(self, '_atp_stats') and self._atp_stats['total_cells'] == len(self.state.cells):
+            # Store stats for potential printing
+            self._current_atp_stats = self._atp_stats.copy()
+            # Reset stats for next time step
+            self._atp_stats = {
+                'total_cells': 0,
+                'mito_only': 0,
+                'glyco_only': 0,
+                'both_atp': 0,
+                'no_atp': 0,
+                'atp_production_rate_true': 0
+            }
+
+
         # Update state
         self.state = self.state.with_updates(cells=updated_cells)
+
+    def print_atp_statistics(self):
+        """Print ATP statistics - called only at status_print_interval"""
+        if hasattr(self, '_current_atp_stats'):
+            stats = self._current_atp_stats
+            total = stats['total_cells']
+
+            # Avoid division by zero
+            if total == 0:
+                print(f"\n📊 ATP PRODUCTION STATISTICS: No cells to analyze")
+                return
+
+            print(f"\n📊 ATP PRODUCTION STATISTICS (Total cells: {total}):")
+            print(f"   🔋 ATP_Production_Rate=TRUE: {stats['atp_production_rate_true']} cells ({stats['atp_production_rate_true']/total*100:.1f}%)")
+            print(f"   ⚡ mitoATP only: {stats['mito_only']} cells ({stats['mito_only']/total*100:.1f}%)")
+            print(f"   🍯 glycoATP only: {stats['glyco_only']} cells ({stats['glyco_only']/total*100:.1f}%)")
+            print(f"   🚀 Both mitoATP & glycoATP: {stats['both_atp']} cells ({stats['both_atp']/total*100:.1f}%)")
+            print(f"   💀 No ATP production: {stats['no_atp']} cells ({stats['no_atp']/total*100:.1f}%)")
+            print()
 
     def update_phenotypes(self):
         """
@@ -475,15 +607,32 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         """
         updated_cells = {}
 
+        # Compact phenotype tracking
+        if not hasattr(self, '_phenotype_debug_count'):
+            self._phenotype_debug_count = 0
+
+        phenotype_changes = {}
         for cell_id, cell in self.state.cells.items():
             # Use cached gene states and environment from gene network update
             if hasattr(cell, '_cached_gene_states') and hasattr(cell, '_cached_local_env'):
-                cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
+                old_phenotype = cell.state.phenotype
+                new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
+
+                # Track phenotype changes compactly
+                if old_phenotype != new_phenotype:
+                    change_key = f"{old_phenotype}→{new_phenotype}"
+                    phenotype_changes[change_key] = phenotype_changes.get(change_key, 0) + 1
+
                 # Clean up cache
                 delattr(cell, '_cached_gene_states')
                 delattr(cell, '_cached_local_env')
 
             updated_cells[cell_id] = cell
+
+        # Print compact phenotype summary
+        if phenotype_changes:
+            changes_str = ", ".join([f"{k}:{v}" for k, v in phenotype_changes.items()])
+            print(f"🧬 Phenotype changes: {changes_str}")
 
         # Update state
         self.state = self.state.with_updates(cells=updated_cells)
