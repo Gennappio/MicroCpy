@@ -109,8 +109,8 @@ class Cell(ICell, CustomizableComponent):
         elif gene_states.get('Growth_Arrest', False):
             new_phenotype = "Growth_Arrest"
         else:
-            # If no phenotype gene is active, maintain current phenotype
-            new_phenotype = self.state.phenotype
+            # If no phenotype gene is active, default to quiescent state
+            new_phenotype = "Quiescent"
 
         # Update state
         self.state = self.state.with_updates(
@@ -208,9 +208,9 @@ class Cell(ICell, CustomizableComponent):
 
         except NotImplementedError:
             # Fall back to default implementation
-            return self._default_should_die(local_environment, config)
+            return self._default_check_cell_death(local_environment, config)
     
-    def _default_should_die(self, local_environment: Dict[str, float], config=None) -> bool:
+    def _default_check_cell_death(self, local_environment: Dict[str, float], config=None) -> bool:
         """Default death logic - uses biological default behaviors"""
 
         # Default biological behaviors:
