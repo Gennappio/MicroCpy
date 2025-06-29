@@ -99,18 +99,16 @@ class Cell(ICell, CustomizableComponent):
         # 2. Apoptosis (programmed death)
         # 3. Proliferation (active growth)
         # 4. Growth_Arrest (quiescent state)
-
+        new_phenotype = "Quiescent"
+       
+        if gene_states.get('Apoptosis', False):
+            new_phenotype = "Apoptosis"
+        if gene_states.get('Proliferation', False):
+            new_phenotype = "Proliferation"
+        if gene_states.get('Growth_Arrest', False):
+            new_phenotype = "Growth_Arrest"
         if gene_states.get('Necrosis', False):
             new_phenotype = "Necrosis"
-        elif gene_states.get('Apoptosis', False):
-            new_phenotype = "Apoptosis"
-        elif gene_states.get('Proliferation', False):
-            new_phenotype = "Proliferation"
-        elif gene_states.get('Growth_Arrest', False):
-            new_phenotype = "Growth_Arrest"
-        else:
-            # If no phenotype gene is active, default to quiescent state
-            new_phenotype = "Quiescent"
 
         # Update state
         self.state = self.state.with_updates(

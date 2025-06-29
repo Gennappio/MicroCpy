@@ -194,8 +194,8 @@ class MultiSubstanceSimulator:
 
             if iteration >= max_iterations:
                 print(f"Warning: {name} diffusion did not converge after {max_iterations} iterations (residual: {residual:.2e})")
-            else:
-                print(f"✅ {name} converged in {iteration} iterations (residual: {residual:.2e})")
+            # else:
+            #     print(f"✅ {name} converged in {iteration} iterations (residual: {residual:.2e})")
 
             # Update our state
             substance_state.concentrations = np.array(var.value).reshape(
