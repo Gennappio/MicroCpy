@@ -99,6 +99,7 @@ class GeneNetworkConfig:
     output_nodes: List[str] = field(default_factory=list)
     propagation_steps: int = 3  # Number of steps for signal propagation
     bnd_file: Optional[str] = None  # Path to .bnd file for Boolean network definition
+    random_initialization: bool = True  # NetLogo-style random gene initialization (default: True to match NetLogo)
 
 @dataclass
 class CompositeGeneConfig:

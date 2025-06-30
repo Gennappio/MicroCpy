@@ -52,6 +52,9 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         # Initialize empty population state
         self.state = PopulationState()
 
+        # Initialize gene network for population (will be used for new cells)
+        self._initialize_population_gene_network()
+
         # Default parameters
         self.default_params = {
             'max_cells_per_position': 1,  # Spatial exclusion
@@ -116,8 +119,11 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             return False
         
         # Create new cell
-        cell = Cell(position=position, phenotype=phenotype, 
+        cell = Cell(position=position, phenotype=phenotype,
                    custom_functions_module=self.custom_functions)
+
+        # Initialize gene network for new cell (NetLogo-style random initialization)
+        self._initialize_cell_gene_network(cell)
         
         # Update state
         new_cells = self.state.cells.copy()
@@ -166,6 +172,9 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         # Create daughter cell
         daughter_cell = parent_cell.divide()
         daughter_cell.move_to(target_position)
+
+        # Initialize gene network for daughter cell (NetLogo-style random initialization)
+        self._initialize_cell_gene_network(daughter_cell)
         
         # Update state
         new_cells = self.state.cells.copy()
@@ -276,6 +285,32 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         )
 
         return dead_cell_ids
+
+    def _initialize_cell_gene_network(self, cell):
+        """
+        Initialize gene network for a new cell (creation or division).
+
+        This method implements NetLogo-style gene initialization:
+        - Called ONLY during cell creation and division
+        - NOT called during regular gene network updates
+        - Provides each new cell with random initial gene states
+        - Fate nodes (Apoptosis, Proliferation, etc.) always start as False
+        """
+        # Use NetLogo-style random initialization if configured
+        random_init = getattr(self.config.gene_network, 'random_initialization', False)
+
+        # Reset gene network with random initialization for new cells only
+        self.gene_network.reset(random_init=random_init)
+
+        # Get initial gene states and store them in the cell
+        initial_gene_states = self.gene_network.get_all_states()
+        cell.state = cell.state.with_updates(gene_states=initial_gene_states)
+
+    def _initialize_population_gene_network(self):
+        """Initialize the population's gene network at simulation start"""
+        # This ensures the gene network is properly set up before any cells are created
+        # Individual cells will get their own random initialization when created
+        pass  # Gene network is already initialized in constructor
 
     def _calculate_gene_inputs(self, local_env: Dict[str, float]) -> Dict[str, bool]:
         """
@@ -440,10 +475,8 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                     local_env[substance_name.lower()] = conc_field[cell.state.position]  # lowercase for gene inputs
                     local_env[substance_name] = conc_field[cell.state.position]  # capitalized for compatibility
 
-            # RESET gene network to ensure clean state for each cell
-            # Use NetLogo-style random initialization if configured
-            random_init = getattr(self.config.gene_network, 'random_initialization', False)
-            self.gene_network.reset(random_init=random_init)
+            # DO NOT RESET gene network during regular updates - this destroys gene dynamics!
+            # Gene network should only be reset during cell creation, not every update
 
             # Update gene network using configuration-based thresholds
             gene_inputs = self._calculate_gene_inputs(local_env)
