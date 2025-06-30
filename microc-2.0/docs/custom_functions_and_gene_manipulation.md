@@ -1,376 +1,294 @@
-# Custom Functions and Gene Manipulation Guide
+# Custom Functions Guide
 
 ## Overview
 
-MicroC supports custom functions for specialized simulation behaviors, including gene knockdown, overexpression, and dynamic interventions. This guide covers implementation and gene manipulation techniques.
+MicroC supports custom functions to modify simulation behaviors like cell metabolism, division conditions, and gene network updates. This guide shows how to use the existing custom function system with practical examples.
 
-## Custom Function Framework
+## How Custom Functions Work
 
-### Function Registration
-Custom functions are registered via the hook system and can override default behaviors.
+Custom functions are Python functions that override default simulation behaviors. They are defined in a separate Python file and loaded via the configuration.
+
+### Basic Structure
 
 ```python
-from interfaces.hooks import get_hook_manager
-
-@get_hook_manager().register("custom_update_gene_network")
-def my_gene_network_function(current_states, inputs, network_params):
-    """Custom gene network update function."""
+# In your custom_functions.py file
+def custom_calculate_cell_metabolism(local_environment, cell_state):
+    """Override default metabolism calculation."""
     # Your custom logic here
-    return updated_states
-```
-
-### Available Hook Points
-- `custom_update_gene_network` - Gene network updates
-- `custom_cell_division` - Cell division logic
-- `custom_cell_death` - Cell death conditions
-- `custom_substance_production` - Metabolite production
-- `custom_phenotype_transition` - Phenotype changes
-
-## Gene Manipulation Techniques
-
-### 1. Gene Knockdown (Silencing)
-
-#### Method 1: Fixed Node States
-```python
-@get_hook_manager().register("custom_update_gene_network")
-def gene_knockdown(current_states, inputs, network_params):
-    """Knockdown specific genes by fixing them to False."""
-    
-    # Define knocked down genes
-    knockdown_genes = ['p53', 'PTEN', 'FOXO3']
-    
-    # Standard network update
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    # Force knockdown genes to False
-    for gene in knockdown_genes:
-        if gene in updated_states:
-            updated_states[gene] = False
-    
-    return updated_states
-```
-
-#### Method 2: Probability-Based Knockdown
-```python
-import random
-
-@get_hook_manager().register("custom_update_gene_network")
-def probabilistic_knockdown(current_states, inputs, network_params):
-    """Knockdown with specified efficiency."""
-    
-    knockdown_config = {
-        'p53': 0.9,      # 90% knockdown efficiency
-        'PTEN': 0.8,     # 80% knockdown efficiency
-        'BCL2': 0.95     # 95% knockdown efficiency
+    return {
+        'oxygen_consumption_rate': 1.0e-17,
+        'glucose_consumption_rate': 0.5e-17,
+        'lactate_production_rate': 0.3e-17
     }
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    for gene, efficiency in knockdown_config.items():
-        if gene in updated_states and updated_states[gene]:
-            # Chance to silence active gene
-            if random.random() < efficiency:
-                updated_states[gene] = False
-    
-    return updated_states
 ```
 
-### 2. Gene Overexpression (Enrichment)
+### Available Custom Functions
+- `custom_calculate_cell_metabolism` - Cell metabolism rates
+- `custom_should_divide` - Cell division conditions
+- `custom_check_cell_division` - Additional division checks
+- `custom_update_phenotype` - Phenotype transitions
 
-#### Method 1: Constitutive Expression
+## Example 1: Custom Metabolism Based on Phenotype
+
 ```python
-@get_hook_manager().register("custom_update_gene_network")
-def gene_overexpression(current_states, inputs, network_params):
-    """Force specific genes to be constitutively active."""
-    
-    # Define overexpressed genes
-    overexpressed_genes = ['BCL2', 'AKT', 'ERK', 'MYC']
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    # Force overexpressed genes to True
-    for gene in overexpressed_genes:
-        if gene in updated_states:
-            updated_states[gene] = True
-    
-    return updated_states
+# custom_functions.py
+def custom_calculate_cell_metabolism(local_environment, cell_state):
+    """Calculate metabolism rates based on cell phenotype and environment."""
+
+    phenotype = cell_state.get('phenotype', 'Growth_Arrest')
+    oxygen = local_environment.get('oxygen', 0.21)  # Default atmospheric oxygen
+    glucose = local_environment.get('glucose', 5.0)  # Default glucose level
+
+    if phenotype == "Proliferation":
+        # High metabolic activity for proliferating cells
+        return {
+            'oxygen_consumption_rate': 2.0e-17 * min(oxygen/0.1, 1.0),
+            'glucose_consumption_rate': 1.5e-17 * min(glucose/1.0, 1.0),
+            'lactate_production_rate': 0.8e-17
+        }
+    elif phenotype == "Apoptosis":
+        # Reduced metabolism for dying cells
+        return {
+            'oxygen_consumption_rate': 0.2e-17,
+            'glucose_consumption_rate': 0.1e-17,
+            'lactate_production_rate': 0.05e-17
+        }
+    else:  # Growth_Arrest or other
+        # Baseline metabolism
+        return {
+            'oxygen_consumption_rate': 0.8e-17,
+            'glucose_consumption_rate': 0.4e-17,
+            'lactate_production_rate': 0.2e-17
+        }
 ```
 
-#### Method 2: Enhanced Expression Probability
+## Example 2: Custom Division Conditions
+
 ```python
-@get_hook_manager().register("custom_update_gene_network")
-def enhanced_expression(current_states, inputs, network_params):
-    """Increase probability of gene activation."""
-    
-    enhancement_config = {
-        'BCL2': 0.8,     # 80% chance to activate if conditions met
-        'ERK': 0.9,      # 90% chance to activate
-        'AKT': 0.85      # 85% chance to activate
-    }
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    for gene, prob in enhancement_config.items():
-        if gene in updated_states and not updated_states[gene]:
-            # Chance to activate inactive gene
-            if random.random() < prob:
-                updated_states[gene] = True
-    
-    return updated_states
+def custom_should_divide(cell, config) -> bool:
+    """Custom cell division logic with multiple conditions."""
+
+    # Basic phenotype check
+    if cell.state.phenotype != "Proliferation":
+        return False
+
+    # Age requirement
+    cell_cycle_time = config.get('cell_cycle_time', 240)
+    if cell.state.age < cell_cycle_time:
+        return False
+
+    # Space availability check (simple version)
+    if hasattr(cell.state, 'local_density'):
+        max_density = config.get('max_local_density', 0.8)
+        if cell.state.local_density > max_density:
+            return False
+
+    # Energy requirement
+    if hasattr(cell.state, 'atp_level'):
+        min_atp = config.get('min_atp_for_division', 0.7)
+        if cell.state.atp_level < min_atp:
+            return False
+
+    return True
+
+def custom_check_cell_division(cell, config) -> bool:
+    """Additional checks before division proceeds."""
+
+    # Check if cell has enough resources
+    if hasattr(cell.state, 'glucose_level'):
+        min_glucose = config.get('min_glucose_for_division', 0.5)
+        if cell.state.glucose_level < min_glucose:
+            return False
+
+    # Check oxygen availability
+    if hasattr(cell.state, 'oxygen_level'):
+        min_oxygen = config.get('min_oxygen_for_division', 0.1)
+        if cell.state.oxygen_level < min_oxygen:
+            return False
+
+    return True
 ```
 
-### 3. Conditional Gene Manipulation
+## Example 3: Custom Phenotype Transitions
 
-#### Time-Dependent Interventions
 ```python
-@get_hook_manager().register("custom_update_gene_network")
-def time_dependent_knockdown(current_states, inputs, network_params):
-    """Apply gene manipulation at specific time points."""
-    
-    current_time = network_params.get('current_time', 0)
-    
-    # Apply p53 knockdown after time 5.0
-    if current_time > 5.0:
-        knockdown_genes = ['p53', 'FOXO3']
+def custom_update_phenotype(cell, local_environment, config):
+    """Custom logic for phenotype transitions based on environment and gene states."""
+
+    current_phenotype = cell.state.phenotype
+    gene_states = getattr(cell.state, 'gene_states', {})
+
+    # Get environmental conditions
+    oxygen = local_environment.get('oxygen', 0.21)
+    glucose = local_environment.get('glucose', 5.0)
+
+    # Stress conditions
+    hypoxic = oxygen < 0.05
+    glucose_starved = glucose < 0.5
+
+    # Gene-based decisions (if gene network is available)
+    apoptosis_active = gene_states.get('Apoptosis', False)
+    proliferation_active = gene_states.get('Proliferation', False)
+
+    # Phenotype transition logic
+    if apoptosis_active or (hypoxic and glucose_starved):
+        return "Apoptosis"
+    elif proliferation_active and oxygen > 0.1 and glucose > 1.0:
+        return "Proliferation"
+    elif hypoxic or glucose_starved:
+        return "Growth_Arrest"
     else:
-        knockdown_genes = []
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    for gene in knockdown_genes:
-        if gene in updated_states:
-            updated_states[gene] = False
-    
-    return updated_states
+        # Default behavior - stay in current phenotype or go to growth arrest
+        if current_phenotype in ["Apoptosis", "Necrosis"]:
+            return current_phenotype  # Terminal states
+        else:
+            return "Growth_Arrest"  # Default safe state
 ```
 
-#### Environment-Dependent Manipulation
+## Example 4: Advanced Metabolism with Gene Network Integration
+
 ```python
-@get_hook_manager().register("custom_update_gene_network")
-def stress_response_modification(current_states, inputs, network_params):
-    """Modify gene expression based on environmental stress."""
-    
-    # Check oxygen levels
-    oxygen_low = inputs.get('Oxygen_supply', True) == False
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    if oxygen_low:
-        # Under hypoxia, enhance HIF1 and suppress p53
-        updated_states['HIF1'] = True
-        updated_states['p53'] = False
-        updated_states['VEGF'] = True
+def custom_calculate_cell_metabolism(local_environment, cell_state):
+    """Advanced metabolism calculation using gene network states."""
+
+    # Get gene states if available
+    gene_states = getattr(cell_state, 'gene_states', {})
+
+    # Base metabolic rates
+    base_oxygen = 1.0e-17
+    base_glucose = 0.8e-17
+    base_lactate = 0.4e-17
+
+    # Environmental factors
+    oxygen = local_environment.get('oxygen', 0.21)
+    glucose = local_environment.get('glucose', 5.0)
+
+    # Gene-based modulation
+    if gene_states.get('mitoATP', False):
+        # Mitochondrial respiration active - high oxygen consumption
+        oxygen_rate = base_oxygen * 2.0 * min(oxygen/0.1, 1.0)
+        glucose_rate = base_glucose * 1.5 * min(glucose/1.0, 1.0)
+        lactate_rate = base_lactate * 0.5  # Less lactate in OXPHOS
+    elif gene_states.get('glycoATP', False):
+        # Glycolysis active - high glucose consumption, more lactate
+        oxygen_rate = base_oxygen * 0.5
+        glucose_rate = base_glucose * 2.0 * min(glucose/1.0, 1.0)
+        lactate_rate = base_lactate * 2.0  # More lactate in glycolysis
     else:
-        # Normal conditions, allow normal p53 function
-        pass
-    
-    return updated_states
-```
+        # Default metabolism
+        oxygen_rate = base_oxygen * min(oxygen/0.1, 1.0)
+        glucose_rate = base_glucose * min(glucose/1.0, 1.0)
+        lactate_rate = base_lactate
 
-### 4. Drug Simulation
+    # Phenotype modulation
+    phenotype = cell_state.get('phenotype', 'Growth_Arrest')
+    if phenotype == "Proliferation":
+        oxygen_rate *= 1.5
+        glucose_rate *= 1.8
+        lactate_rate *= 1.3
+    elif phenotype == "Apoptosis":
+        oxygen_rate *= 0.3
+        glucose_rate *= 0.2
+        lactate_rate *= 0.1
 
-#### Targeted Therapy Simulation
-```python
-@get_hook_manager().register("custom_update_gene_network")
-def drug_treatment(current_states, inputs, network_params):
-    """Simulate targeted drug effects."""
-    
-    # Drug concentrations from environment
-    egfr_inhibitor = inputs.get('EGFRI', False)
-    pi3k_inhibitor = inputs.get('PI3KI', False)
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    # EGFR inhibitor effects
-    if egfr_inhibitor:
-        updated_states['EGFR'] = False
-        updated_states['ERK'] = False  # Downstream effect
-    
-    # PI3K inhibitor effects
-    if pi3k_inhibitor:
-        updated_states['PI3K'] = False
-        updated_states['AKT'] = False  # Downstream effect
-        updated_states['BCL2'] = False  # Further downstream
-    
-    return updated_states
-```
-
-## Configuration-Based Gene Manipulation
-
-### Mutation Files
-Create mutation files to specify gene states:
-
-```
-# mutations_p53_knockout.txt
-Gene_Name    Group1    Group2    Group3
-p53          0.0       0.0       0.0      # Complete knockdown
-PTEN         0.1       0.1       0.1      # Partial knockdown
-BCL2         0.9       0.9       0.9      # Overexpression
-AKT          0.8       0.8       0.8      # Enhanced expression
-```
-
-### Configuration Integration
-```yaml
-gene_network:
-  bnd_file: "network.bnd"
-  mutation_file: "mutations_p53_knockout.txt"
-  propagation_steps: 50
-  
-  # Custom gene manipulations
-  knockdown_genes: ["p53", "PTEN"]
-  overexpressed_genes: ["BCL2", "MYC"]
-  
-  # Time-dependent interventions
-  interventions:
-    - time: 5.0
-      action: "knockdown"
-      genes: ["p53"]
-    - time: 10.0
-      action: "overexpress"
-      genes: ["BCL2"]
-```
-
-## Advanced Gene Manipulation
-
-### 1. Pathway-Level Interventions
-```python
-@get_hook_manager().register("custom_update_gene_network")
-def pathway_manipulation(current_states, inputs, network_params):
-    """Manipulate entire pathways."""
-    
-    intervention = network_params.get('pathway_intervention', None)
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    if intervention == "block_apoptosis":
-        # Block entire apoptosis pathway
-        apoptosis_genes = ['p53', 'FOXO3', 'BAX', 'PUMA']
-        for gene in apoptosis_genes:
-            if gene in updated_states:
-                updated_states[gene] = False
-        
-        # Enhance survival pathway
-        survival_genes = ['BCL2', 'AKT', 'ERK']
-        for gene in survival_genes:
-            if gene in updated_states:
-                updated_states[gene] = True
-    
-    elif intervention == "enhance_proliferation":
-        # Enhance proliferation pathway
-        prolif_genes = ['MYC', 'p70', 'ERK']
-        for gene in prolif_genes:
-            if gene in updated_states:
-                updated_states[gene] = True
-        
-        # Suppress growth arrest
-        arrest_genes = ['p21', 'p53']
-        for gene in arrest_genes:
-            if gene in updated_states:
-                updated_states[gene] = False
-    
-    return updated_states
-```
-
-### 2. Stochastic Gene Editing
-```python
-@get_hook_manager().register("custom_update_gene_network")
-def crispr_simulation(current_states, inputs, network_params):
-    """Simulate CRISPR-like gene editing with efficiency."""
-    
-    editing_targets = {
-        'p53': {'efficiency': 0.95, 'action': 'knockout'},
-        'BCL2': {'efficiency': 0.90, 'action': 'enhance'},
-        'PTEN': {'efficiency': 0.85, 'action': 'knockout'}
+    return {
+        'oxygen_consumption_rate': oxygen_rate,
+        'glucose_consumption_rate': glucose_rate,
+        'lactate_production_rate': lactate_rate
     }
-    
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    for gene, config in editing_targets.items():
-        if gene in updated_states and random.random() < config['efficiency']:
-            if config['action'] == 'knockout':
-                updated_states[gene] = False
-            elif config['action'] == 'enhance':
-                updated_states[gene] = True
-    
-    return updated_states
 ```
 
-## Implementation Example
+## How to Use Custom Functions
 
-### Complete Custom Function File
+### Step 1: Create Your Custom Functions File
+
+Create a Python file (e.g., `my_custom_functions.py`) with your custom functions:
+
 ```python
-# custom_gene_functions.py
-from interfaces.hooks import get_hook_manager
-import random
+# my_custom_functions.py
 
-class GeneManipulator:
-    def __init__(self, config):
-        self.knockdown_genes = config.get('knockdown_genes', [])
-        self.overexpressed_genes = config.get('overexpressed_genes', [])
-        self.interventions = config.get('interventions', [])
-        self.current_time = 0
-    
-    def update_time(self, time):
-        self.current_time = time
-    
-    def apply_interventions(self, states):
-        """Apply time-dependent interventions."""
-        for intervention in self.interventions:
-            if self.current_time >= intervention['time']:
-                if intervention['action'] == 'knockdown':
-                    for gene in intervention['genes']:
-                        if gene in states:
-                            states[gene] = False
-                elif intervention['action'] == 'overexpress':
-                    for gene in intervention['genes']:
-                        if gene in states:
-                            states[gene] = True
-        return states
+def custom_calculate_cell_metabolism(local_environment, cell_state):
+    """Your custom metabolism logic here."""
+    phenotype = cell_state.get('phenotype', 'Growth_Arrest')
 
-# Global manipulator instance
-gene_manipulator = None
+    if phenotype == "Proliferation":
+        return {
+            'oxygen_consumption_rate': 2.0e-17,
+            'glucose_consumption_rate': 1.5e-17,
+            'lactate_production_rate': 0.8e-17
+        }
+    else:
+        return {
+            'oxygen_consumption_rate': 0.8e-17,
+            'glucose_consumption_rate': 0.4e-17,
+            'lactate_production_rate': 0.2e-17
+        }
 
-@get_hook_manager().register("custom_update_gene_network")
-def comprehensive_gene_manipulation(current_states, inputs, network_params):
-    """Comprehensive gene manipulation system."""
-    global gene_manipulator
-    
-    if gene_manipulator is None:
-        gene_manipulator = GeneManipulator(network_params)
-    
-    # Update time
-    gene_manipulator.update_time(network_params.get('current_time', 0))
-    
-    # Standard update
-    updated_states = default_gene_network_update(current_states, inputs, network_params)
-    
-    # Apply knockdowns
-    for gene in gene_manipulator.knockdown_genes:
-        if gene in updated_states:
-            updated_states[gene] = False
-    
-    # Apply overexpression
-    for gene in gene_manipulator.overexpressed_genes:
-        if gene in updated_states:
-            updated_states[gene] = True
-    
-    # Apply time-dependent interventions
-    updated_states = gene_manipulator.apply_interventions(updated_states)
-    
-    return updated_states
+def custom_should_divide(cell, config) -> bool:
+    """Your custom division logic here."""
+    if cell.state.phenotype != "Proliferation":
+        return False
+
+    cell_cycle_time = config.get('cell_cycle_time', 240)
+    return cell.state.age >= cell_cycle_time
 ```
 
-### Usage in Configuration
+### Step 2: Configure Your Simulation
+
+In your YAML configuration file, specify the custom functions module:
+
 ```yaml
+# config.yaml
+simulation:
+  custom_functions_module: "my_custom_functions"  # Name of your Python file (without .py)
+
+population:
+  cell_cycle_time: 240
+  max_local_density: 0.8
+  min_atp_for_division: 0.7
+
 gene_network:
-  bnd_file: "network.bnd"
-  custom_functions: ["custom_gene_functions.py"]
-  knockdown_genes: ["p53", "PTEN"]
-  overexpressed_genes: ["BCL2", "AKT"]
-  interventions:
-    - time: 5.0
-      action: "knockdown"
-      genes: ["MYC"]
+  bnd_file: "path/to/your/network.bnd"
+  propagation_steps: 3
+  random_initialization: true
 ```
 
-This framework provides comprehensive control over gene expression for modeling various biological scenarios including disease states, drug treatments, and genetic modifications.
+### Step 3: Run Your Simulation
+
+```python
+# run_simulation.py
+from simulation.simulation import Simulation
+from config.config_loader import load_config
+
+# Load configuration
+config = load_config("config.yaml")
+
+# Create and run simulation
+sim = Simulation(config)
+sim.run(num_steps=1000)
+```
+
+## Available Parameters in Custom Functions
+
+### In `custom_calculate_cell_metabolism`:
+- `local_environment`: Dict with 'oxygen', 'glucose', 'lactate', etc.
+- `cell_state`: Object with 'phenotype', 'age', 'gene_states', etc.
+
+### In `custom_should_divide`:
+- `cell`: Cell object with state information
+- `config`: Configuration parameters
+
+### In `custom_update_phenotype`:
+- `cell`: Cell object with current state
+- `local_environment`: Environmental conditions
+- `config`: Configuration parameters
+
+## Tips for Writing Custom Functions
+
+1. **Always return the expected data type** (dict for metabolism, bool for division, string for phenotype)
+2. **Handle missing data gracefully** using `.get()` with defaults
+3. **Test your functions** with simple cases first
+4. **Use meaningful variable names** and add comments
+5. **Check the existing examples** in `src/config/custom_functions.py` for reference
+
+This system allows you to customize MicroC behavior for your specific research needs while keeping the core simulation engine intact.
