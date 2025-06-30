@@ -5,12 +5,53 @@ Supports Boolean networks with .bnd file format and custom update functions.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional, Callable
+from typing import Dict, List, Set, Optional, Callable, Any
 from pathlib import Path
+from collections import defaultdict
+import os
+import random
 import re
 
 from interfaces.base import IGeneNetwork, CustomizableComponent
 from interfaces.hooks import get_hook_manager
+
+
+class BooleanExpression:
+    """Evaluates boolean expressions with gene states (matches standalone version)."""
+
+    def __init__(self, expression: str):
+        self.expression = expression.strip()
+
+    def __call__(self, gene_states: Dict[str, bool]) -> bool:
+        """Make callable to match update_function interface."""
+        return self.evaluate(gene_states)
+
+    def evaluate(self, gene_states: Dict[str, bool]) -> bool:
+        """Evaluate the boolean expression given current gene states."""
+        if not self.expression:
+            return False
+
+        # Replace gene names with their boolean values
+        expr = self.expression
+
+        # Sort gene names by length (longest first) to avoid partial replacements
+        gene_names = sorted(gene_states.keys(), key=len, reverse=True)
+
+        for gene_name in gene_names:
+            if gene_name in expr:
+                value = "True" if gene_states[gene_name] else "False"
+                # Use word boundaries to avoid partial replacements
+                expr = re.sub(r'\b' + re.escape(gene_name) + r'\b', value, expr)
+
+        # Replace logical operators
+        expr = expr.replace('&', ' and ')
+        expr = expr.replace('|', ' or ')
+        expr = expr.replace('!', ' not ')
+
+        try:
+            return bool(eval(expr))
+        except:
+            return False
 
 @dataclass
 class NetworkNode:
@@ -61,12 +102,8 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             nodes_created = 0
             input_nodes_found = set()
 
-            # Check if this is MaBoSS format (contains "node" keyword)
-            if 'node ' in content:
-                nodes_created = self._parse_maboss_format(content, input_nodes_found)
-            else:
-                nodes_created = self._parse_simple_format(content, input_nodes_found)
-
+            nodes_created = self._parse_maboss_format(content, input_nodes_found) 
+        
             # Create any missing input nodes that were referenced but not defined
             for input_name in input_nodes_found:
                 if input_name not in self.nodes:
@@ -108,24 +145,11 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
             if logic_match:
                 expression = logic_match.group(1).strip()
 
-                # Debug Apoptosis node specifically
-                if node_name == 'Apoptosis':
-                    print(f"🔍 APOPTOSIS NODE PARSING:")
-                    print(f"   Raw expression: '{expression}'")
-
                 # Extract input nodes from expression
                 inputs = self._extract_inputs_from_expression(expression)
 
                 # Create update function from expression
                 update_func = self._create_update_function(expression)
-
-                # Debug Apoptosis node specifically
-                if node_name == 'Apoptosis':
-                    print(f"   Inputs: {inputs}")
-                    # Test the function with all False inputs
-                    test_inputs = {inp: False for inp in inputs}
-                    test_result = update_func(test_inputs)
-                    print(f"   Test with all False: {test_result}")
 
                 # Create node
                 self.nodes[node_name] = NetworkNode(
@@ -150,66 +174,6 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
                     input_nodes_found.add(node_name)
 
         return nodes_created
-
-    def _parse_simple_format(self, content: str, input_nodes_found: set) -> int:
-        """Parse simple format .bnd file (original logic)"""
-        nodes_created = 0
-        lines = content.split('\n')
-
-        for line in lines:
-            line = line.strip()
-
-            # Skip comments and empty lines
-            if not line or line.startswith('#'):
-                continue
-
-            # Check for simple node definition: node_name = expression
-            if '=' in line:
-                parts = line.split('=', 1)
-                if len(parts) == 2:
-                    node_name = parts[0].strip()
-                    expression = parts[1].strip()
-
-                    # Skip empty expressions
-                    if not expression:
-                        continue
-
-                    # Extract input nodes from expression
-                    inputs = self._extract_inputs_from_expression(expression)
-
-                    # Create update function from expression
-                    update_func = self._create_update_function(expression)
-
-                    # Create node
-                    self.nodes[node_name] = NetworkNode(
-                        name=node_name,
-                        update_function=update_func,
-                        inputs=inputs
-                    )
-                    nodes_created += 1
-
-                    # Track input nodes referenced in expressions
-                    input_nodes_found.update(inputs)
-
-            else:
-                # Check for standalone node names (input nodes)
-                node_name = line.strip()
-                # Skip dependency lines (contain commas) and lines with operators
-                if (node_name and
-                    not any(op in node_name for op in ['=', '&', '|', '(', ')', ',']) and
-                    not node_name.startswith('#')):
-                    # This is likely an input node
-                    if node_name not in self.nodes:
-                        self.nodes[node_name] = NetworkNode(
-                            name=node_name,
-                            update_function=None,
-                            inputs=[],
-                            is_input=True
-                        )
-                        nodes_created += 1
-                        input_nodes_found.add(node_name)
-
-        return nodes_created
     
     def _extract_inputs_from_expression(self, expression: str) -> List[str]:
         """Extract input node names from Boolean expression"""
@@ -220,34 +184,8 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
         return [var for var in variables if var not in boolean_ops]
     
     def _create_update_function(self, expression: str) -> Callable:
-        """Create update function from Boolean expression - FIXED NOT operator handling"""
-        def update_func(input_states: Dict[str, bool]) -> bool:
-            if not expression:
-                return False
-
-            # Create a copy of the expression for evaluation
-            expr = expression
-
-            # Replace node names with their states
-            for node_name, state in input_states.items():
-                # Make sure we replace whole words only (not substrings)
-                expr = re.sub(r'\b' + re.escape(node_name) + r'\b', 'True' if state else 'False', expr)
-
-            # Replace logical operators - handle both symbols and words
-            # FIXED: Handle ! operator more carefully
-            expr = expr.replace('&', ' and ').replace('|', ' or ')
-            # Replace ! with not, but be careful about spacing
-            expr = re.sub(r'!\s*', 'not ', expr)  # Replace ! followed by optional whitespace
-            expr = expr.replace('AND', ' and ').replace('OR', ' or ').replace('NOT', ' not ')
-
-            try:
-                # Evaluate the expression
-                return eval(expr)
-            except Exception as e:
-                # Silently handle errors and return False
-                return False
-
-        return update_func
+        """Create update function from Boolean expression using BooleanExpression class"""
+        return BooleanExpression(expression) # TODO: why _create_update_function? just call BooleanExpression in the _load_from_config
     
     def _identify_input_output_nodes(self):
         """Identify input and output nodes based on network structure"""
@@ -439,69 +377,40 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
 
     def _netlogo_single_gene_update(self):
         """
-        NetLogo-style gene network update: update only ONE gene per step.
+        TRUE NetLogo-style gene network update: randomly select ONE gene and update it.
 
-        Based on NetLogo's -DOWNSTREAM-CHANGE-590 and -INFLUENCE-LINK-END-WITH-LOGGING--36:
-        1. Find all genes that have active upstream inputs
-        2. Randomly select ONE gene to update
-        3. Evaluate only that gene's rule
+        This matches the standalone version exactly:
+        1. Get all non-input genes with update functions
+        2. Randomly select ONE gene (no eligibility checking)
+        3. Evaluate the gene's rule with ALL current states
         4. Update only that gene's state
         """
         import random
 
-        # Find all non-input genes that could potentially be updated
-        updatable_genes = []
+        # Get all non-input genes (TRUE NetLogo approach - no eligibility checking)
+        non_input_genes = [name for name, gene_node in self.nodes.items()
+                          if not gene_node.is_input and gene_node.update_function]
 
-        for gene_name, gene_node in self.nodes.items():
-            # Skip input nodes (they're set externally)
-            if gene_node.is_input:
-                continue
+        if not non_input_genes:
+            return None
 
-            # Skip nodes without update functions
-            if not gene_node.update_function:
-                continue
-
-            # Check if this gene has any active upstream inputs
-            # (NetLogo updates genes that have "incoming links" from active nodes)
-            has_active_inputs = False
-            for input_name in gene_node.inputs:
-                if input_name in self.nodes and self.nodes[input_name].current_state:
-                    has_active_inputs = True
-                    break
-
-            # Add to updatable list if it has active inputs OR if it's currently active
-            # (NetLogo can update active genes to turn them off)
-            if has_active_inputs or gene_node.current_state:
-                updatable_genes.append(gene_name)
-
-        # If no genes can be updated, return (network is stable)
-        if not updatable_genes:
-            return
-
-        # NetLogo approach: randomly select ONE gene to update
-        selected_gene = random.choice(updatable_genes)
+        # TRUE NetLogo approach: randomly select ONE gene (no eligibility checking)
+        selected_gene = random.choice(non_input_genes)
         gene_node = self.nodes[selected_gene]
 
         # Get current states of all nodes for logic evaluation
         current_states = {name: node.current_state for name, node in self.nodes.items()}
 
-        # Get input states for this specific gene
-        input_states = {
-            input_name: current_states[input_name]
-            for input_name in gene_node.inputs
-            if input_name in current_states
-        }
-
         # Evaluate the gene's rule and update ONLY this gene
-        new_state = gene_node.update_function(input_states)
+        # Pass ALL current states (like standalone version)
+        new_state = gene_node.update_function(current_states)
 
         # Update only this one gene (NetLogo style)
-        if gene_node.current_state != new_state:
+        if gene_node.current_state != new_state: # TODO: why this if? just write it
             gene_node.current_state = new_state
+            return selected_gene  # Return which gene was updated
 
-            # Debug output for ATP genes only
-            if selected_gene in ['mitoATP', 'glycoATP', 'ATP_Production_Rate']:
-                print(f"🔍 NetLogo update: {selected_gene} → {new_state}")
+        return None  # No state change
     
     def get_output_states(self) -> Dict[str, bool]:
         """Get current output node states"""
