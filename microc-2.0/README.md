@@ -57,16 +57,32 @@ MicroC 2.0 is a multi-scale biological simulation framework that integrates:
 
 ## 📦 Installation
 
+### Quick Installation
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd microc-2.0
 
-# Install dependencies
-pip install fipy numpy scipy matplotlib pyyaml psutil
+# Install with all dependencies
+pip install -e ".[dev,docs,jupyter,performance,visualization]"
+
+# Or minimal installation
+pip install -e .
 
 # Verify installation
-python -m pytest tests/ -v
+make test
+```
+
+### Development Setup
+```bash
+# Setup development environment
+make install-dev
+
+# Run all quality checks
+make ci-test
+
+# Build documentation
+make docs
 ```
 
 ## 🏃‍♂️ Quick Start
@@ -247,6 +263,57 @@ MicroC 2.0 has been validated against:
    monitor = PerformanceMonitor()
    monitor.set_threshold('memory_mb', 1000.0)  # Alert at 1GB
    ```
+
+## 🛠️ Development and Build System
+
+### Make Commands
+```bash
+# Development setup
+make install-dev        # Install with all dev dependencies
+make test               # Run all tests
+make test-fast          # Run fast tests only
+make test-coverage      # Run tests with coverage report
+
+# Code quality
+make format             # Format code with black and isort
+make lint               # Run linting (flake8, mypy)
+make ci-test            # Run all CI checks
+
+# Documentation
+make docs               # Build documentation
+make serve-docs         # Serve docs locally
+
+# Build and distribution
+make build              # Build distribution packages
+make clean              # Clean build artifacts
+```
+
+### Project Structure
+```
+microc-2.0/
+├── src/microc/          # Main package code
+├── tests/               # Test suite
+├── docs/                # Documentation
+├── examples/            # Example configurations
+├── setup.py             # Setup script
+├── pyproject.toml       # Modern Python packaging
+├── requirements.txt     # Dependencies
+├── Makefile            # Development commands
+└── README.md           # This file
+```
+
+### Documentation
+- [Running Simulations](docs/running_simulations.md)
+- [Custom Functions and Gene Manipulation](docs/custom_functions_and_gene_manipulation.md)
+- [Building and Development](docs/building_and_development.md)
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Building and Development Guide](docs/building_and_development.md) for details on:
+- Setting up development environment
+- Code standards and formatting
+- Testing requirements
+- Documentation guidelines
 
 ## 📄 License
 
