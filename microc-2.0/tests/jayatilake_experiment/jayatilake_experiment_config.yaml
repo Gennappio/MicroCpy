@@ -279,7 +279,7 @@ gene_network:
   random_initialization: true
 
   # Explicitly specify output nodes (phenotype + metabolic nodes)
-  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis", "mitoATP", "glycoATP", "ATP_Production_Rate"]
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
 
   nodes:
     # Input nodes - all substance-associated nodes
@@ -319,7 +319,6 @@ gene_network:
     GLUT1D:
       is_input: true
       default_state: false
-    # Missing input nodes from associations.txt
     EGFRI:
       is_input: true
       default_state: false
@@ -353,25 +352,6 @@ cell_cycle_time: 240                      # Minimum time for cell division (240 
 max_cell_age: 500.0                       # Maximum cell age in hours before death
 # Phenotype behaviors (dividing, death, persistent) are now default behaviors
 # Custom experiments can override these in custom functions if needed
-
-# Metabolic rates by phenotype (REQUIRED at top level) USED IN DEFAULT FUNCTIONS
-default_metabolic_rates:
-  Proliferation:
-    oxygen_consumption_rate: 3.0e-17    # High consumption for growth
-    glucose_consumption_rate: 2.0e-17
-    lactate_production_rate: 1.0e-17
-  Growth_Arrest:
-    oxygen_consumption_rate: 1.0e-17    # Reduced consumption
-    glucose_consumption_rate: 0.5e-17
-    lactate_production_rate: 0.3e-17
-  Apoptosis:
-    oxygen_consumption_rate: 0.1e-17    # Minimal consumption
-    glucose_consumption_rate: 0.1e-17
-    lactate_production_rate: 0.0
-  Necrosis:
-    oxygen_consumption_rate: 0.0        # No consumption
-    glucose_consumption_rate: 0.0
-    lactate_production_rate: 0.0
 
 
 # Custom parameters (for custom functions - config agnostic)
@@ -409,9 +389,6 @@ custom_parameters:
   oxygen_switch_threshold: 0.015       # Oxygen threshold for metabolic switch (mM)
   ph_inhibition_threshold: 1.0e-4      # H+ concentration for pH inhibition (mM)
 
-  # Cell cycle parameters
-  cell_decay_time: 100           # Dead cell decay time
-
   # Necrosis thresholds
   necrosis_threshold_oxygen: 0.011
   necrosis_threshold_glucose: 0.23
@@ -423,42 +400,6 @@ custom_parameters:
   # Shedding parameters
   shedding_rate: 0.01
   shedding_starting_time: 0
-
-# Detailed metabolism parameters (from Jayathilake et al. 2024)
-metabolism:
-  # Base consumption/production rates (per cell per time step) - in mM units
-  base_oxygen_consumption: 3.0e-17   # Base oxygen consumption rate (original scale)
-  base_glucose_consumption: 3.0e-17  # Base glucose consumption rate (original scale)
-  base_lactate_production: 3.0e-17   # Base lactate production rate (original scale)
-  base_lactate_consumption: 2.0e-17  # Base lactate consumption rate
-  base_h_production: 1.0e-18         # Base H+ production rate
-  base_h_consumption: 5.0e-19        # Base H+ consumption rate
-
-  # Metabolic thresholds and constraints (from article pages 5-7)
-  min_glucose_for_glycolysis: 0.1     # Minimum glucose needed for glycolysis
-  min_oxygen_for_oxphos: 0.01         # Minimum oxygen needed for OXPHOS
-  min_lactate_for_consumption: 0.1    # Minimum lactate needed for consumption
-  max_lactate_inhibition: 10.0        # Lactate level that inhibits metabolism
-
-  # ATP production rates (stoichiometric from article)
-  glycolytic_atp_per_glucose: 2       # ATP molecules per glucose via glycolysis
-  oxphos_atp_per_glucose: 36          # ATP molecules per glucose via OXPHOS
-  oxphos_atp_per_lactate: 18          # ATP molecules per lactate via OXPHOS
-
-  # Metabolic efficiency factors
-  oxphos_efficiency: 1.0              # OXPHOS efficiency factor
-  glycolysis_efficiency: 1.0          # Glycolysis efficiency factor
-  lactate_metabolism_efficiency: 0.8  # Lactate metabolism efficiency
-
-  # Metabolic state thresholds
-  atp_threshold_for_proliferation: 0.8  # Fraction of max ATP needed for proliferation
-  hypoxia_threshold: 0.02             # Oxygen level below which cells are hypoxic
-
-  # Metabolic exceptions (from article methodology)
-  glucose_depletion_threshold: 0.05   # Below this, switch to lactate metabolism
-  lactate_saturation_threshold: 8.0   # Above this, lactate inhibits glycolysis
-  oxygen_switch_threshold: 0.015      # Oxygen level for metabolic switching
-  ph_inhibition_threshold: 6.5        # pH below which metabolism is inhibited
 
 output_dir: "results/jayatilake_experiment"
 plots_dir: "plots/jayatilake_experiment"
