@@ -383,9 +383,22 @@ custom_parameters:
   beta: 0.1                      # Proportionality constant for proton release
   K_glyco: 0.5                   # Weighting factor for glycoATP contribution to oxygen consumption
 
-  # Growth factor rate constants
-  gamma_sc: 1.0e-18              # Growth factor consumption rate constant
-  gamma_sp: 1.0e-19              # Growth factor production rate constant
+  # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
+  # TGFA (Growth factor of EGFR)
+  # Note: These rates are defined here (not in diffusion-parameters.txt) because:
+  # - diffusion-parameters.txt only has consumption/production rates for basic diffusion
+  # - Custom metabolism functions need specific kinetic parameters from Jayatilake paper
+  # - These values override/supplement the basic diffusion parameters for cellular metabolism
+  tgfa_consumption_rate: 2.0e-17  # TGFA consumption rate (mol/s/cell) - from Jayatilake Table
+  tgfa_production_rate: 2.0e-20   # TGFA production rate (mol/s/cell) - from Jayatilake Table
+
+  # HGF (Growth factor of cMET)
+  hgf_consumption_rate: 2.0e-18   # HGF consumption rate (mol/s/cell) - from Jayatilake Table
+  hgf_production_rate: 0.0        # HGF production rate (mol/s/cell) - from Jayatilake Table
+
+  # FGF (from diffusion-parameters.txt)
+  fgf_consumption_rate: 2.0e-18   # FGF consumption rate (mol/s/cell)
+  fgf_production_rate: 0.0        # FGF production rate (mol/s/cell)
 
   # Metabolism exception thresholds (from Jayathilake et al. 2024, pages 5-7)
   min_glucose_for_glycolysis: 0.1      # Minimum glucose for glycolysis (mM)

@@ -177,17 +177,13 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     - Metabolic switching based on gene network states
     """
     # Check if metabolism functions are available
-    if not METABOLISM_FUNCTIONS_AVAILABLE: # TODO: remove. just fail gently
-        # Fallback to simple metabolism if functions not available
-        return {
-            'Oxygen': -1e-16,
-            'Glucose': -1e-16,
-            'Lactate': 0.0,
-            'H': 0.0,
-            'FGF': 0.0,
-            'TGFA': 0.0,
-            'HGF': 0.0
-        }
+    if not METABOLISM_FUNCTIONS_AVAILABLE:
+        # Fail gently - return empty reactions if metabolism functions not available
+        print("Warning: Metabolism functions not available, skipping metabolism calculations")
+        return {substance: 0.0 for substance in [
+            'Oxygen', 'Glucose', 'Lactate', 'H', 'pH', 'FGF', 'TGFA', 'HGF', 'GI',
+            'EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D'
+        ]}
 
     # Get gene states from cell state (they should be stored there after gene network update)
     gene_states = cell_state.get('gene_states', {})
@@ -207,19 +203,35 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     max_atp = get_parameter_from_config(config, 'max_atp', 30)                      # Maximum ATP per glucose
     proton_coefficient = get_parameter_from_config(config, 'proton_coefficient', 0.01)  # Proton production coefficient
 
-    # Growth factor rate constants (Jayatilake et al. 2024)
-    gamma_sc = get_parameter_from_config(config, 'gamma_sc', 1.0e-18)               # Growth factor consumption rate constant
-    gamma_sp = get_parameter_from_config(config, 'gamma_sp', 1.0e-19)               # Growth factor production rate constant
+    # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
+    tgfa_consumption = get_parameter_from_config(config, 'tgfa_consumption_rate', 2.0e-17)  # TGFA consumption rate
+    tgfa_production = get_parameter_from_config(config, 'tgfa_production_rate', 2.0e-20)    # TGFA production rate
+    hgf_consumption = get_parameter_from_config(config, 'hgf_consumption_rate', 2.0e-18)    # HGF consumption rate
+    hgf_production = get_parameter_from_config(config, 'hgf_production_rate', 0.0)          # HGF production rate
+    fgf_consumption = get_parameter_from_config(config, 'fgf_consumption_rate', 2.0e-18)    # FGF consumption rate
+    fgf_production = get_parameter_from_config(config, 'fgf_production_rate', 0.0)          # FGF production rate
 
-    # Initialize reactions
+    # Initialize reactions for all substances (from diffusion-parameters.txt)
     reactions = {
+        # Metabolic substances (Michaelis-Menten kinetics)
         'Oxygen': 0.0,
         'Glucose': 0.0,
         'Lactate': 0.0,
         'H': 0.0,
+        'pH': 0.0,  # Derived from H+ concentration
+
+        # Growth factors (γS,C × CS consumption, γS,P production)
         'FGF': 0.0,
         'TGFA': 0.0,
-        'HGF': 0.0
+        'HGF': 0.0,
+        'GI': 0.0,  # Growth inhibitor
+
+        # Drug inhibitors (passive consumption)
+        'EGFRD': 0.0,
+        'FGFRD': 0.0,
+        'cMETD': 0.0,
+        'MCT1D': 0.0,
+        'GLUT1D': 0.0
     }
 
     # Only consume/produce if cell is alive (not necrotic)
@@ -278,13 +290,45 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
         atp_rate += glucose_consumption_glyco * 2  # 2 ATP per glucose in glycolysis
 
         # Small oxygen consumption even in glycolysis (NetLogo style)
-        reactions['Oxygen'] += -vmax_oxygen * 0.1 * oxygen_mm_factor  # 10% of normal oxygen consumption TODO: according to paper K=0.5, not 0.1
+        reactions['Oxygen'] += -vmax_oxygen * 0.5 * oxygen_mm_factor  # K=0.5 according to paper
 
     # Store ATP rate in cell state for division decisions
     cell_state['atp_rate'] = atp_rate
 
+    # Growth factor kinetics (Jayatilake et al. 2024: RS = γS,C × CS for consumption, RS = γS,P for production)
+
+    # TGFA - specific table values
+    tgfa_conc = local_environment.get('TGFA', 0.0)
+    reactions['TGFA'] = -tgfa_consumption * tgfa_conc + tgfa_production
+
+    # HGF - specific table values (no production)
+    hgf_conc = local_environment.get('HGF', 0.0)
+    reactions['HGF'] = -hgf_consumption * hgf_conc + hgf_production
+
+    # FGF - from diffusion-parameters.txt
+    fgf_conc = local_environment.get('FGF', 0.0)
+    reactions['FGF'] = -fgf_consumption * fgf_conc + fgf_production
+
+    # Growth inhibitor kinetics (from diffusion-parameters.txt: GI consumption=2.0e-17, production=0.0e-20)
+    gi_conc = local_environment.get('GI', 0.0)
+    reactions['GI'] = -2.0e-17 * gi_conc  # Only consumption, no production
+
+    # Drug inhibitor kinetics (from diffusion-parameters.txt: all have consumption=4.0e-17, production=0.0)
+    drug_inhibitors = ['EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D']
+    for drug in drug_inhibitors:
+        local_conc = local_environment.get(drug, 0.0)
+        reactions[drug] = -4.0e-17 * local_conc  # From diffusion-parameters.txt
+
+    # pH calculation (Jayatilake et al. 2024: pH = -log10([H+]))
+    h_conc = local_environment.get('H', 1e-7)  # Default to neutral pH
+    if h_conc > 0:
+        import math
+        ph_value = -math.log10(h_conc)
+        # pH doesn't have a "reaction rate" - it's a derived quantity
+        reactions['pH'] = 0.0  # pH is calculated from H+, not produced/consumed directly
+
     # Apply environmental constraints - don't consume more than available
-    for substance in ['Oxygen', 'Glucose', 'Lactate']:
+    for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
         local_conc = local_environment.get(substance, 0.0)
         if reactions[substance] < 0:  # Consumption
             max_consumption = abs(reactions[substance])
