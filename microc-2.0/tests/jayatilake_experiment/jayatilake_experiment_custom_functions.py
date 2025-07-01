@@ -22,11 +22,6 @@ except ImportError as e:
 
 
 
-# ============================================================================
-# END OF INTEGRATED CUSTOM METABOLISM FUNCTIONS
-# ============================================================================
-
-
 def get_parameter_from_config(config, param_name: str, default_value=None, section=None):
     """
     Config-agnostic parameter lookup - works with any configuration structure.
@@ -171,102 +166,133 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     return placements
 
 
-# def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
-#     """
-#     Calculate substance consumption/production rates using Jayathilake metabolism functions.
-#     Uses gene states (glycoATP, mitoATP, GLUT1, MCT1, MCT4) and Michaelis kinetics.
+def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
+    """
+    Calculate substance consumption/production rates using NetLogo-style Michaelis-Menten kinetics.
+    Uses gene states (glycoATP, mitoATP, GLUT1, MCT1, MCT4) and NetLogo-compatible parameters.
 
-#     Implements metabolic symbiosis model from Jayathilake et al. 2024 with metabolism exceptions:
-#     - OXPHOS cells consume lactate and oxygen, produce minimal lactate
-#     - Glycolytic cells consume glucose, produce lactate
-#     - Metabolic switching based on oxygen and nutrient availability
-#     """
-#     # Check if metabolism functions are available
-#     if not METABOLISM_FUNCTIONS_AVAILABLE:
-#         # Fallback to simple metabolism if functions not available
-#         return {
-#             'Oxygen': -1e-16,
-#             'Glucose': -1e-16,
-#             'Lactate': 0.0,
-#             'H': 0.0,
-#             'FGF': 0.0,
-#             'TGFA': 0.0,
-#             'HGF': 0.0
-#         }
-#         # No custom metabolism functions available - fail hard
-#         raise ImportError("Custom metabolism functions not available and no fallback implemented")
+    Implements NetLogo MicroC reaction term calculations with Michaelis-Menten kinetics:
+    - OXPHOS cells consume lactate and oxygen, produce minimal lactate
+    - Glycolytic cells consume glucose, produce lactate and protons
+    - Metabolic switching based on gene network states
+    """
+    # Check if metabolism functions are available
+    if not METABOLISM_FUNCTIONS_AVAILABLE: # TODO: remove. just fail gently
+        # Fallback to simple metabolism if functions not available
+        return {
+            'Oxygen': -1e-16,
+            'Glucose': -1e-16,
+            'Lactate': 0.0,
+            'H': 0.0,
+            'FGF': 0.0,
+            'TGFA': 0.0,
+            'HGF': 0.0
+        }
 
-#     # Get gene states from cell state (they should be stored there after gene network update)
-#     gene_states = cell_state.get('gene_states', {})
+    # Get gene states from cell state (they should be stored there after gene network update)
+    gene_states = cell_state.get('gene_states', {})
 
-#     # Get local concentrations
-#     local_oxygen = local_environment.get('Oxygen', 0.0)
-#     local_glucose = local_environment.get('Glucose', 0.0)
-#     local_lactate = local_environment.get('Lactate', 0.0)
-#     local_h = local_environment.get('H', 0.0)
+    # Get local concentrations
+    local_oxygen = local_environment.get('Oxygen', 0.0)
+    local_glucose = local_environment.get('Glucose', 0.0)
+    local_lactate = local_environment.get('Lactate', 0.0)
+    local_h = local_environment.get('H', 0.0)
 
-#     # Get Michaelis constants and metabolic parameters from config
-#     KG = get_parameter_from_config(config, 'KG')           # Michaelis constant for glucose
-#     KO2 = get_parameter_from_config(config, 'KO2')         # Michaelis constant for oxygen
-#     KL = get_parameter_from_config(config, 'KL')           # Michaelis constant for lactate
-#     mu_o2 = get_parameter_from_config(config, 'mu_o2')     # Oxygen utilization rate
-#     A0 = get_parameter_from_config(config, 'A0')           # Reference ATP yield factor
-#     beta = get_parameter_from_config(config, 'beta')       # Proton production coefficient
-#     K_glyco = get_parameter_from_config(config, 'K_glyco') # Glycolysis oxygen factor
+    # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
+    km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen', 0.005)      # NetLogo Km for oxygen
+    km_glucose = get_parameter_from_config(config, 'the_optimal_glucose', 0.04)     # NetLogo Km for glucose
+    km_lactate = get_parameter_from_config(config, 'the_optimal_lactate', 0.04)     # NetLogo Km for lactate
+    vmax_oxygen = get_parameter_from_config(config, 'oxygen_vmax', 3.0e-17)         # NetLogo Vmax for oxygen
+    vmax_glucose = get_parameter_from_config(config, 'glucose_vmax', 3.0e-15)       # NetLogo Vmax for glucose
+    max_atp = get_parameter_from_config(config, 'max_atp', 30)                      # Maximum ATP per glucose
+    proton_coefficient = get_parameter_from_config(config, 'proton_coefficient', 0.01)  # Proton production coefficient
 
-#     # Metabolic thresholds (from article pages 5-7) - removed as per TODO
-#     # Metabolism is now purely defined by Michaelis-Menten kinetics, no arbitrary thresholds
+    # Growth factor rate constants (Jayatilake et al. 2024)
+    gamma_sc = get_parameter_from_config(config, 'gamma_sc', 1.0e-18)               # Growth factor consumption rate constant
+    gamma_sp = get_parameter_from_config(config, 'gamma_sp', 1.0e-19)               # Growth factor production rate constant
 
-#     # Initialize reactions
-#     reactions = {
-#         'Oxygen': 0.0,
-#         'Glucose': 0.0,
-#         'Lactate': 0.0,
-#         'H': 0.0,
-#         'FGF': 0.0,
-#         'TGFA': 0.0,
-#         'HGF': 0.0
-#     }
+    # Initialize reactions
+    reactions = {
+        'Oxygen': 0.0,
+        'Glucose': 0.0,
+        'Lactate': 0.0,
+        'H': 0.0,
+        'FGF': 0.0,
+        'TGFA': 0.0,
+        'HGF': 0.0
+    }
 
-#     # Only consume/produce if cell is alive (not necrotic)
-#     if gene_states.get('Necrosis', False):
-#         return reactions
+    # Only consume/produce if cell is alive (not necrotic)
+    if gene_states.get('Necrosis', False):
+        return reactions
 
-#     # Get gene states
-#     mito_atp = 1.0 if gene_states.get('mitoATP', False) else 0.0
-#     glyco_atp = 1.0 if gene_states.get('glycoATP', False) else 0.0
+    # Get gene states
+    mito_atp = 1.0 if gene_states.get('mitoATP', False) else 0.0
+    glyco_atp = 1.0 if gene_states.get('glycoATP', False) else 0.0
 
-#     atp_rate = metabolism.atp_production(mu_o2, A0, local_oxygen, KO2, local_glucose, KG, mito_atp, glyco_atp)
+    # NetLogo-style reaction term calculations using Michaelis-Menten kinetics
+    # Based on NetLogo MicroC implementation (lines 2788, 2998, 3054, 3161)
 
-#     # Store ATP rate in cell state for division decisions
-#     cell_state['atp_rate'] = atp_rate
+    # Calculate ATP rate using NetLogo-style kinetics
+    atp_rate = 0.0
 
-#     # Metabolic pathway selection based purely on gene states and Michaelis-Menten kinetics
-#     if mito_atp > 0:
-#         # OXPHOS pathway active
-#         reactions['Lactate'] = -metabolism.lactate_consumption(mu_o2, local_oxygen, KO2, local_lactate, KL, mito_atp)
-#         reactions['Oxygen'] = -metabolism.oxygen_consumption(mu_o2, local_oxygen, KO2, mito_atp, 0.0, K_glyco)
-#         # Proton consumption during OXPHOS
-#         reactions['H'] = -metabolism.proton_production(beta, A0, mu_o2, local_glucose, KG, 0.0)
+    # OXPHOS pathway (mitoATP active) - consumes oxygen and glucose/lactate
+    if mito_atp > 0:
+        # Oxygen consumption with Michaelis-Menten kinetics (NetLogo style)
+        oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen)
+        reactions['Oxygen'] = -vmax_oxygen * oxygen_mm_factor
 
-#     if glyco_atp > 0:
-#         # Glycolysis pathway active (when glycoATP gene active and GLUT1 transporter present)
-#         reactions['Glucose'] = -metabolism.glucose_consumption(mu_o2, A0, local_oxygen, KO2, local_glucose, KG, 0.0, glyco_atp)
-#         reactions['Lactate'] = metabolism.lactate_production(mu_o2, A0, local_glucose, KG, glyco_atp)
-#         reactions['H'] = metabolism.proton_production(beta, A0, mu_o2, local_glucose, KG, glyco_atp)
-#         reactions['Oxygen'] = -metabolism.oxygen_consumption(mu_o2, local_oxygen, KO2, 0.0, glyco_atp, K_glyco)
+        # Glucose consumption for OXPHOS (NetLogo line 2998)
+        glucose_mm_factor = local_glucose / (km_glucose + local_glucose)
+        glucose_consumption = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
+        reactions['Glucose'] = -glucose_consumption
 
+        # Lactate consumption for OXPHOS (NetLogo line 3054)
+        lactate_mm_factor = local_lactate / (km_lactate + local_lactate)
+        lactate_consumption = (vmax_oxygen * 2.0 / 6) * lactate_mm_factor * oxygen_mm_factor
+        reactions['Lactate'] = -lactate_consumption
 
-#     # Apply environmental constraints - don't consume more than available
-#     for substance in ['Oxygen', 'Glucose', 'Lactate']:
-#         local_conc = local_environment.get(substance, 0.0)
-#         if reactions[substance] < 0:  # Consumption
-#             max_consumption = abs(reactions[substance])
-#             available = local_conc
-#             if available < max_consumption:
-#                 reactions[substance] = -available * 0.9  # Leave some residual
+        # ATP production from OXPHOS
+        atp_rate += glucose_consumption * max_atp + lactate_consumption * (max_atp / 2)
 
-#     return reactions
+        # Proton consumption during OXPHOS (negative H production)
+        reactions['H'] = -glucose_consumption * proton_coefficient
+
+    # Glycolysis pathway (glycoATP active) - consumes glucose, produces lactate
+    if glyco_atp > 0:
+        # Glucose consumption for glycolysis (NetLogo line 3161)
+        glucose_mm_factor = local_glucose / (km_glucose + local_glucose)
+        oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen)
+        glucose_consumption_glyco = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
+        reactions['Glucose'] += -glucose_consumption_glyco
+
+        # Lactate production from glycolysis (NetLogo line 3660)
+        lactate_production = (vmax_oxygen * 2.0 / 6) * (max_atp / 2) * glucose_mm_factor
+        reactions['Lactate'] += lactate_production
+
+        # Proton production from glycolysis (NetLogo line 3429)
+        proton_production = (vmax_oxygen * 2.0 / 6) * proton_coefficient * (max_atp / 2) * glucose_mm_factor
+        reactions['H'] += proton_production
+
+        # ATP production from glycolysis
+        atp_rate += glucose_consumption_glyco * 2  # 2 ATP per glucose in glycolysis
+
+        # Small oxygen consumption even in glycolysis (NetLogo style)
+        reactions['Oxygen'] += -vmax_oxygen * 0.1 * oxygen_mm_factor  # 10% of normal oxygen consumption TODO: according to paper K=0.5, not 0.1
+
+    # Store ATP rate in cell state for division decisions
+    cell_state['atp_rate'] = atp_rate
+
+    # Apply environmental constraints - don't consume more than available
+    for substance in ['Oxygen', 'Glucose', 'Lactate']:
+        local_conc = local_environment.get(substance, 0.0)
+        if reactions[substance] < 0:  # Consumption
+            max_consumption = abs(reactions[substance])
+            available = local_conc
+            if available < max_consumption:
+                reactions[substance] = -available * 0.9  # Leave some residual
+
+    return reactions
 
 
 def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any = None) -> bool:
@@ -316,11 +342,6 @@ def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Di
 #         return True
 
 #     return False
-
-
-# NOTE: custom_get_substance_reactions was removed because it was redundant
-# with custom_calculate_cell_metabolism. Both functions did the same thing.
-# The system now uses custom_calculate_cell_metabolism via cell.calculate_metabolism().
 
 
 def custom_should_divide(cell, config: Any) -> bool:
