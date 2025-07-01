@@ -370,6 +370,13 @@ custom_parameters:
   KO2: 0.01                      # Michaelis constant for oxygen (mM)
   KL: 1.0                        # Michaelis constant for lactate (mM)
 
+  # NetLogo-compatible Michaelis-Menten parameters (from NetLogo MicroC)
+  the_optimal_oxygen: 0.005      # Km for oxygen uptake (mM) - NetLogo value
+  the_optimal_glucose: 0.04      # Km for glucose uptake (mM) - NetLogo value
+  the_optimal_lactate: 0.04      # Km for lactate uptake (mM) - NetLogo value
+  oxygen_vmax: 3.0e-17           # Maximum oxygen consumption rate (mol/cell/s) - NetLogo value
+  glucose_vmax: 3.0e-15          # Maximum glucose consumption rate (mol/cell/s) - NetLogo value
+
   # Metabolic rate constants
   mu_o2: 1.0e-15                 # Oxygen utilization rate (mol/s/cell)
   A0: 30.0                       # Reference ATP yield factor
