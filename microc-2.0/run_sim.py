@@ -383,8 +383,11 @@ def run_simulation(config, simulator, gene_network, population, args):
         if updates['diffusion']:
             diffusion_start = time.time()
 
-            # Get reactions from population (calls custom metabolism functions)
-            substance_reactions = population.get_substance_reactions()
+            # Get current substance concentrations for metabolism calculation
+            current_concentrations = simulator.get_substance_concentrations()
+
+            # Get reactions from population (calls custom metabolism functions with current concentrations)
+            substance_reactions = population.get_substance_reactions(current_concentrations)
 
             # Update substance diffusion with reactions (steady state - no dt needed)
             simulator.update(substance_reactions)
@@ -623,6 +626,43 @@ def main():
         generated_plots = generate_plots(config, results, simulator, population, args)
     else:
         generated_plots = []
+
+    # Generate final cell metabolic report if custom function is available
+    try:
+        hook_manager = get_hook_manager()
+        custom_final_report_func = hook_manager.loader.get_function('custom_final_report')
+        if custom_final_report_func:
+            # Get final local environments for each cell using the state method
+            final_local_environments = {}
+            for cell in population.cells:
+                # Convert cell position to grid coordinates
+                grid_pos = (int(cell.x), int(cell.y))
+                # Get local environment using the state method
+                local_env = simulator.state.get_local_environment(grid_pos)
+                # Convert to the format expected by the custom function
+                final_local_environments[cell.cell_id] = {
+                    'Oxygen': local_env.get('oxygen_concentration', 0.0),
+                    'Glucose': local_env.get('glucose_concentration', 0.0),
+                    'Lactate': local_env.get('lactate_concentration', 0.0),
+                    'H': local_env.get('h_concentration', 0.0),
+                    'FGF': local_env.get('fgf_concentration', 0.0),
+                    'EGF': local_env.get('egf_concentration', 0.0),
+                    'TGFA': local_env.get('tgfa_concentration', 0.0),
+                    'HGF': local_env.get('hgf_concentration', 0.0),
+                    'EGFRD': local_env.get('egfrd_concentration', 0.0),
+                    'FGFRD': local_env.get('fgfrd_concentration', 0.0),
+                    'GI': local_env.get('gi_concentration', 0.0),
+                    'cMETD': local_env.get('cmetd_concentration', 0.0),
+                    'pH': local_env.get('ph_concentration', 0.0),
+                    'MCT1D': local_env.get('mct1d_concentration', 0.0),
+                    'MCT4D': local_env.get('mct4d_concentration', 0.0),
+                    'GLUT1D': local_env.get('glut1d_concentration', 0.0)
+                }
+            custom_final_report_func(population, final_local_environments, config)
+    except Exception as e:
+        print(f"⚠️  Could not generate final report: {e}")
+        import traceback
+        traceback.print_exc()
 
     print(f"\n" + "=" * 50)
     print("✅ SIMULATION COMPLETED SUCCESSFULLY!")

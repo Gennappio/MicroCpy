@@ -405,14 +405,22 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
 
         return local_env
     
-    def get_substance_reactions(self) -> Dict[Tuple[float, float], Dict[str, float]]:
+    def get_substance_reactions(self, substance_concentrations: Optional[Dict[str, Dict[Tuple[int, int], float]]] = None) -> Dict[Tuple[float, float], Dict[str, float]]:
         """Get all cell reactions for substances"""
-       
+
         reactions = {}
 
         for cell in self.state.cells.values():
-            # Get local environment
+            # Get local environment (initial values)
             local_env = self._get_local_environment(cell.state.position)
+
+            # Update with current substance concentrations if provided
+            if substance_concentrations:
+                for substance_name, conc_field in substance_concentrations.items():
+                    if cell.state.position in conc_field:
+                        # Update both capitalized and lowercase keys for compatibility
+                        local_env[substance_name.lower()] = conc_field[cell.state.position]
+                        local_env[substance_name] = conc_field[cell.state.position]
 
             # Use cell's metabolism calculation (which handles custom hooks internally)
             metabolism = cell.calculate_metabolism(local_env, self.config)

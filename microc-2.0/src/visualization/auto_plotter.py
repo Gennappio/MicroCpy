@@ -68,6 +68,13 @@ class AutoPlotter:
         vmin = concentrations.min()
         vmax = concentrations.max()
 
+        # Fix for uniform data: add small epsilon to prevent vmin=vmax colormap issues
+        if vmax - vmin < 1e-10:  # Essentially uniform data
+            epsilon = max(abs(vmin) * 1e-6, 1e-10)  # Small relative epsilon
+            vmin = vmin - epsilon
+            vmax = vmax + epsilon
+            print(f"   ⚠️  Uniform data detected, adding epsilon: ±{epsilon:.2e}")
+
         # Additional debugging for the plotting values
         print(f"   Plot vmin: {vmin:.8f}")
         print(f"   Plot vmax: {vmax:.8f}")
@@ -84,12 +91,11 @@ class AutoPlotter:
         # FORCE the colorbar to show the correct range using the mappable
         im.set_clim(vmin, vmax)
 
-        # Set explicit ticks to ensure correct scaling
-        if vmax - vmin > 0:
-            # Create 5 evenly spaced ticks
-            tick_values = np.linspace(vmin, vmax, 5)
-            cbar.set_ticks(tick_values)
-            cbar.set_ticklabels([f'{val:.6f}' for val in tick_values])
+        # Set explicit ticks to ensure correct scaling (always set ticks, even for uniform data)
+        # Create 5 evenly spaced ticks
+        tick_values = np.linspace(vmin, vmax, 5)
+        cbar.set_ticks(tick_values)
+        cbar.set_ticklabels([f'{val:.6f}' for val in tick_values])
 
         # Add concentration range text on colorbar
         cbar.ax.text(1.15, 0.5, f'ACTUAL\nRange:\n{vmin:.6f}\nto\n{vmax:.6f}\nmM',
