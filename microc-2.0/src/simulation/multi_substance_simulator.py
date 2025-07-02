@@ -167,12 +167,19 @@ class MultiSubstanceSimulator:
             # Create source/sink terms from cell reactions
             source_field = self._create_source_field_from_reactions(name, substance_reactions)
 
+            # CRITICAL FIX: Negate source field for correct FiPy behavior
+            # In our convention: negative = consumption, positive = production
+            # In FiPy ImplicitSourceTerm: positive coeff = consumption, negative coeff = production
+            # So we need to negate our values: consumption (-) becomes (+) for FiPy
+            source_field = -source_field
+
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
 
             # Steady state diffusion equation (no TransientTerm)
             # 0 = ∇·(D∇C) - R*C where R > 0 for consumption
-            equation = (DiffusionTerm(coeff=config.diffusion_coeff) +
+            # Fixed: Use minus sign for ImplicitSourceTerm to get consumption behavior
+            equation = (DiffusionTerm(coeff=config.diffusion_coeff) -
                        ImplicitSourceTerm(coeff=source_var))
 
             # Solve for steady state
@@ -250,7 +257,8 @@ class MultiSubstanceSimulator:
         # Calculate mesh cell volume (grid spacing × grid spacing × configurable height)
         dx = self.config.domain.size_x.meters / self.config.domain.nx
         dy = self.config.domain.size_y.meters / self.config.domain.ny
-        mesh_cell_volume = dx * dy  # m³
+        cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
+        mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
 
         # Optional debug output for cell height effect (uncomment for debugging)
         # print(f"🔍 CELL HEIGHT DEBUG:")

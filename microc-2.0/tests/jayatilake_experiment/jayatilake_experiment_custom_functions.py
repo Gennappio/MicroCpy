@@ -12,11 +12,18 @@ try:
     if current_dir not in sys.path:
         sys.path.insert(0, current_dir)
 
+    # Also add tests/jayatilake_experiment to path for when running from main directory
+    tests_dir = os.path.join(os.getcwd(), 'tests', 'jayatilake_experiment')
+    if os.path.exists(tests_dir) and tests_dir not in sys.path:
+        sys.path.insert(0, tests_dir)
+
     import jayatilake_experiment_custom_metabolism as metabolism
     METABOLISM_FUNCTIONS_AVAILABLE = True
     print("✅ Imported custom metabolism functions from jayatilake_experiment_custom_metabolism.py")
 except ImportError as e:
     print(f"⚠️  Could not import custom metabolism functions: {e}")
+    print(f"   Current working directory: {os.getcwd()}")
+    print(f"   Python path: {sys.path[:3]}...")  # Show first 3 entries
     METABOLISM_FUNCTIONS_AVAILABLE = False
     metabolism = None
 
@@ -185,6 +192,13 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
             'EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D'
         ]}
 
+    # Debug metabolism for random cells at random times
+    import random
+    cell_id = cell_state.get('id', 'unknown')
+
+    # Random debugging: 1% chance to debug any cell
+    debug_this_cell = random.random() < 0.01
+
     # Get gene states from cell state (they should be stored there after gene network update)
     gene_states = cell_state.get('gene_states', {})
 
@@ -235,12 +249,26 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     }
 
     # Only consume/produce if cell is alive (not necrotic)
-    if gene_states.get('Necrosis', False):
+    is_necrotic = gene_states.get('Necrosis', False)
+    if is_necrotic:
+        if debug_this_cell:
+            print(f"\n🔬 NECROTIC CELL {cell_id[:8]}: No metabolism")
         return reactions
 
     # Get gene states
     mito_atp = 1.0 if gene_states.get('mitoATP', False) else 0.0
     glyco_atp = 1.0 if gene_states.get('glycoATP', False) else 0.0
+
+    # Determine cell type for debugging
+    cell_type = "UNKNOWN"
+    if mito_atp and not glyco_atp:
+        cell_type = "mitoATP"
+    elif glyco_atp and not mito_atp:
+        cell_type = "glycoATP"
+    elif mito_atp and glyco_atp:
+        cell_type = "BOTH_ATP"
+    else:
+        cell_type = "NO_ATP"
 
     # NetLogo-style reaction term calculations using Michaelis-Menten kinetics
     # Based on NetLogo MicroC implementation (lines 2788, 2998, 3054, 3161)
@@ -254,7 +282,7 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
         oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen)
         reactions['Oxygen'] = -vmax_oxygen * oxygen_mm_factor
 
-        # Glucose consumption for OXPHOS (NetLogo line 2998)
+        # Glucose consumption for OXPHOS (NetLogo line 2998) - REDUCED for mitoATP
         glucose_mm_factor = local_glucose / (km_glucose + local_glucose)
         glucose_consumption = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
         reactions['Glucose'] = -glucose_consumption
@@ -278,11 +306,16 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
         glucose_consumption_glyco = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
         reactions['Glucose'] += -glucose_consumption_glyco
 
-        # Lactate production from glycolysis (NetLogo line 3660)
+        # Lactate production from glycolysis using proper Michaelis-Menten kinetics
+        # Formula: R_L,p = (2*μ_O2*A_0/6) * (C_G/(2*K_G + C_G)) * (glycoATP)
+        # Where μ_O2*A_0 = vmax_oxygen, K_G = km_glucose, C_G = local_glucose
+                # Lactate production from glycolysis (NetLogo line 3660)
         lactate_production = (vmax_oxygen * 2.0 / 6) * (max_atp / 2) * glucose_mm_factor
+
         reactions['Lactate'] += lactate_production
 
         # Proton production from glycolysis (NetLogo line 3429)
+        # Proton production should be proportional to lactate production
         proton_production = (vmax_oxygen * 2.0 / 6) * proton_coefficient * (max_atp / 2) * glucose_mm_factor
         reactions['H'] += proton_production
 
@@ -335,6 +368,20 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
             available = local_conc
             if available < max_consumption:
                 reactions[substance] = -available * 0.9  # Leave some residual
+
+    # Optional debug output for metabolism results (uncomment for debugging)
+    # if debug_this_cell:
+    #     print(f"   METABOLISM RESULTS:")
+    # Comprehensive debugging output
+    if debug_this_cell:
+        print(f"\n🔬 CELL {cell_id[:8]} ({cell_type}) METABOLISM:")
+        print(f"  Environment: O2={local_environment.get('Oxygen', 0):.3f}, Glc={local_environment.get('Glucose', 0):.3f}, Lac={local_environment.get('Lactate', 0):.3f}")
+        print(f"  Gene states: mitoATP={mito_atp}, glycoATP={glyco_atp}")
+        print(f"  OXYGEN:  {reactions['Oxygen']:.2e} mol/s/cell")
+        print(f"  GLUCOSE: {reactions['Glucose']:.2e} mol/s/cell")
+        print(f"  LACTATE: {reactions['Lactate']:.2e} mol/s/cell")
+        print(f"  H+:      {reactions['H']:.2e} mol/s/cell")
+        print(f"  TGFA:    {reactions['TGFA']:.2e} mol/s/cell")
 
     return reactions
 
@@ -429,3 +476,150 @@ def custom_get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> st
         return "violet"     # Mixed metabolism
     else:
         return "gray"       # Quiescent
+
+
+def custom_final_report(population, local_environments, config: Any = None) -> None:
+    """
+    Print comprehensive final report of all cells with their metabolic rates and states.
+    Called at the end of simulation to provide detailed cell-by-cell analysis.
+    """
+    print("🔬 CUSTOM FINAL REPORT FUNCTION CALLED!")
+    print("\n" + "="*100)
+    print("🔬 FINAL CELL METABOLIC REPORT")
+    print("="*100)
+
+    # Group cells by metabolic state for summary
+    state_counts = {
+        'mitoATP': 0,
+        'glycoATP': 0,
+        'BOTH_ATP': 0,
+        'NO_ATP': 0,
+        'Necrotic': 0,
+        'Apoptotic': 0,
+        'Growth_Arrest': 0,
+        'Proliferation': 0
+    }
+
+    # Store detailed data for each cell
+    cell_data = []
+
+    for cell in population.cells:
+        # Get cell position
+        pos = f"({cell.x:.0f},{cell.y:.0f})"
+
+        # Get local environment
+        local_env = local_environments.get(cell.cell_id, {})
+        local_oxygen = local_env.get('Oxygen', 0.0)
+        local_glucose = local_env.get('Glucose', 0.0)
+        local_lactate = local_env.get('Lactate', 0.0)
+
+        # Calculate metabolism using the same function
+        reactions = custom_calculate_cell_metabolism(cell.state, local_env, config)
+
+        # Get metabolic rates
+        oxygen_rate = reactions.get('Oxygen', 0.0)
+        glucose_rate = reactions.get('Glucose', 0.0)
+        lactate_rate = reactions.get('Lactate', 0.0)
+
+        # Determine cell state
+        gene_states = cell.state.get('gene_states', {})
+
+        # Check fate genes first
+        if gene_states.get('Apoptosis', False):
+            cell_state = 'Apoptotic'
+            state_counts['Apoptotic'] += 1
+        elif gene_states.get('Necrosis', False):
+            cell_state = 'Necrotic'
+            state_counts['Necrotic'] += 1
+        elif gene_states.get('Growth_Arrest', False):
+            cell_state = 'Growth_Arrest'
+            state_counts['Growth_Arrest'] += 1
+        elif gene_states.get('Proliferation', False):
+            cell_state = 'Proliferation'
+            state_counts['Proliferation'] += 1
+        else:
+            # Check ATP genes
+            mito_atp = gene_states.get('mitoATP', False)
+            glyco_atp = gene_states.get('glycoATP', False)
+
+            if mito_atp and glyco_atp:
+                cell_state = 'BOTH_ATP'
+                state_counts['BOTH_ATP'] += 1
+            elif mito_atp:
+                cell_state = 'mitoATP'
+                state_counts['mitoATP'] += 1
+            elif glyco_atp:
+                cell_state = 'glycoATP'
+                state_counts['glycoATP'] += 1
+            else:
+                cell_state = 'NO_ATP'
+                state_counts['NO_ATP'] += 1
+
+        # Store cell data
+        cell_data.append({
+            'id': cell.cell_id[:8],
+            'pos': pos,
+            'state': cell_state,
+            'oxygen_env': local_oxygen,
+            'glucose_env': local_glucose,
+            'lactate_env': local_lactate,
+            'oxygen_rate': oxygen_rate,
+            'glucose_rate': glucose_rate,
+            'lactate_rate': lactate_rate
+        })
+
+    # Print summary statistics
+    print(f"\n📊 POPULATION SUMMARY ({len(population.cells)} total cells):")
+    for state, count in state_counts.items():
+        if count > 0:
+            percentage = (count / len(population.cells)) * 100
+            print(f"   • {state}: {count} cells ({percentage:.1f}%)")
+
+    # Print detailed cell-by-cell report
+    print(f"\n📋 DETAILED CELL REPORT:")
+    print(f"{'ID':<8} {'Pos':<10} {'State':<12} {'O2_env':<8} {'Glc_env':<8} {'Lac_env':<8} {'O2_rate':<12} {'Glc_rate':<12} {'Lac_rate':<12}")
+    print("-" * 120)
+
+    # Sort by cell state for easier reading
+    cell_data.sort(key=lambda x: x['state'])
+
+    for data in cell_data:
+        print(f"{data['id']:<8} {data['pos']:<10} {data['state']:<12} "
+              f"{data['oxygen_env']:<8.3f} {data['glucose_env']:<8.3f} {data['lactate_env']:<8.3f} "
+              f"{data['oxygen_rate']:<12.2e} {data['glucose_rate']:<12.2e} {data['lactate_rate']:<12.2e}")
+
+    # Print metabolic summary by state
+    print(f"\n🧬 METABOLIC SUMMARY BY STATE:")
+    state_metabolism = {}
+
+    for data in cell_data:
+        state = data['state']
+        if state not in state_metabolism:
+            state_metabolism[state] = {
+                'count': 0,
+                'total_oxygen': 0.0,
+                'total_glucose': 0.0,
+                'total_lactate': 0.0
+            }
+
+        state_metabolism[state]['count'] += 1
+        state_metabolism[state]['total_oxygen'] += data['oxygen_rate']
+        state_metabolism[state]['total_glucose'] += data['glucose_rate']
+        state_metabolism[state]['total_lactate'] += data['lactate_rate']
+
+    for state, metrics in state_metabolism.items():
+        if metrics['count'] > 0:
+            avg_o2 = metrics['total_oxygen'] / metrics['count']
+            avg_glc = metrics['total_glucose'] / metrics['count']
+            avg_lac = metrics['total_lactate'] / metrics['count']
+
+            print(f"   {state} ({metrics['count']} cells):")
+            print(f"     Average O2 rate:  {avg_o2:.2e} mol/s/cell")
+            print(f"     Average Glc rate: {avg_glc:.2e} mol/s/cell")
+            print(f"     Average Lac rate: {avg_lac:.2e} mol/s/cell")
+            print(f"     Total O2 flux:    {metrics['total_oxygen']:.2e} mol/s")
+            print(f"     Total Glc flux:   {metrics['total_glucose']:.2e} mol/s")
+            print(f"     Total Lac flux:   {metrics['total_lactate']:.2e} mol/s")
+            print()
+
+    print("="*100)
