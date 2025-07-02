@@ -167,11 +167,27 @@ class MultiSubstanceSimulator:
             # Create source/sink terms from cell reactions
             source_field = self._create_source_field_from_reactions(name, substance_reactions)
 
+            # DEBUG: Show source field before and after negation for lactate
+            if name == 'Lactate':
+                non_zero_indices = np.where(source_field != 0)[0]
+                if len(non_zero_indices) > 0:
+                    print(f"🔍 LACTATE SOURCE FIELD BEFORE NEGATION:")
+                    for idx in non_zero_indices[:5]:  # Show first 5 non-zero values
+                        print(f"   idx {idx}: {source_field[idx]:.2e} mM/s")
+
             # CRITICAL FIX: Negate source field for correct FiPy behavior
             # In our convention: negative = consumption, positive = production
             # In FiPy ImplicitSourceTerm: positive coeff = consumption, negative coeff = production
             # So we need to negate our values: consumption (-) becomes (+) for FiPy
             source_field = -source_field
+
+            # DEBUG: Show source field after negation for lactate
+            if name == 'Lactate':
+                non_zero_indices = np.where(source_field != 0)[0]
+                if len(non_zero_indices) > 0:
+                    print(f"🔍 LACTATE SOURCE FIELD AFTER NEGATION (to FiPy):")
+                    for idx in non_zero_indices[:5]:  # Show first 5 non-zero values
+                        print(f"   idx {idx}: {source_field[idx]:.2e} mM/s")
 
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
@@ -258,7 +274,7 @@ class MultiSubstanceSimulator:
         dx = self.config.domain.size_x.meters / self.config.domain.nx
         dy = self.config.domain.size_y.meters / self.config.domain.ny
         cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
-        mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
+        mesh_cell_volume = dx * dy  # m³ (area × height)
 
         # Optional debug output for cell height effect (uncomment for debugging)
         # print(f"🔍 CELL HEIGHT DEBUG:")
@@ -285,6 +301,16 @@ class MultiSubstanceSimulator:
                 # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
                 final_rate = volumetric_rate * 1000.0
                 source_field[fipy_idx] = final_rate
+
+                # DEBUG: Print reaction terms being passed to FiPy for lactate
+                if substance_name == 'Lactate' and reaction_rate != 0.0:
+                    print(f"🔍 FIPY SOURCE TERM {substance_name} at ({x},{y}):")
+                    print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
+                    print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
+                    print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")
+                    print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
+                    print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
+                    print(f"   fipy_idx: {fipy_idx}")
 
                 # Optional debug output for cell height effect on reaction rates (uncomment for debugging)
                 # if len([r for r in source_field if r != 0]) <= 3:
