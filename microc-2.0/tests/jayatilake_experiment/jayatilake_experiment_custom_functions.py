@@ -310,7 +310,7 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
         # Formula: R_L,p = (2*μ_O2*A_0/6) * (C_G/(2*K_G + C_G)) * (glycoATP)
         # Where μ_O2*A_0 = vmax_oxygen, K_G = km_glucose, C_G = local_glucose
                 # Lactate production from glycolysis (NetLogo line 3660)
-        lactate_production = (vmax_oxygen * 2.0 / 6) * (max_atp / 2) * glucose_mm_factor
+        lactate_production = 0.01*(vmax_oxygen * 2.0 / 6) * (max_atp / 2) * glucose_mm_factor
 
         reactions['Lactate'] += lactate_production
 
