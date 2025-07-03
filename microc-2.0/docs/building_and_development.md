@@ -15,7 +15,7 @@ This guide covers setting up the MicroC development environment, building the co
 ### Operating System Support
 - Linux (Ubuntu 18.04+, CentOS 7+)
 - macOS (10.14+)
-- Windows (10+, with WSL recommended)
+- Windows (10+, native support available)
 
 ## Quick Setup
 
@@ -57,6 +57,279 @@ make test
 # Run example simulation
 make run-example
 ```
+
+## Windows-Specific Setup
+
+### Overview
+MicroC was originally developed on macOS/Linux but has been successfully ported to Windows. This section covers Windows-specific setup procedures, common issues, and solutions discovered during the porting process.
+
+### Windows Prerequisites
+
+#### Required Software
+- **64-bit Python 3.9+** (Critical: 32-bit Python will not work)
+- **Git for Windows** or **GitHub Desktop**
+- **Visual Studio Build Tools** (for compiling scientific packages)
+- **Windows Terminal** (recommended for better command-line experience)
+
+#### Architecture Requirements
+⚠️ **Important**: MicroC requires **64-bit Python** on Windows. Modern scientific packages (SciPy, Matplotlib, FiPy) no longer provide 32-bit wheels and cannot be compiled on 32-bit Python installations.
+
+### Windows Installation Process
+
+#### Step 1: Install 64-bit Python
+```bash
+# Download from python.org
+# Choose "Windows installer (64-bit)" for Python 3.9+
+# During installation:
+# ✅ Check "Add Python to PATH"
+# ✅ Check "Install for all users" (optional but recommended)
+
+# Verify installation
+python --version
+python -c "import platform; print(platform.architecture())"
+# Should output: ('64bit', 'WindowsPE')
+```
+
+#### Step 2: Install Build Tools (if needed)
+```bash
+# Option 1: Visual Studio Build Tools (recommended)
+# Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+# Option 2: Full Visual Studio Community (includes build tools)
+# Download from: https://visualstudio.microsoft.com/vs/community/
+```
+
+#### Step 3: Clone and Setup
+```bash
+# Clone repository
+git clone https://github.com/microc/microc.git
+cd microc-2.0
+
+# Create virtual environment
+python -m venv microc-env
+microc-env\Scripts\activate
+
+# Upgrade pip (important for Windows)
+python -m pip install --upgrade pip
+```
+
+#### Step 4: Install Dependencies
+```bash
+# Option 1: Use Windows batch script (recommended)
+setup_windows.bat install-dev
+
+# Option 2: Direct pip installation
+python -m pip install -e ".[dev,docs,jupyter,performance]"
+
+# Option 3: Install core dependencies only
+python -m pip install -e .
+```
+
+#### Step 5: Handle Unicode Issues
+If you encounter encoding errors with configuration files:
+```bash
+# The project includes Unicode characters (μ for micrometers)
+# These have been replaced with ASCII equivalents (um) in Windows-compatible configs
+# Use the provided Windows-compatible configuration files
+```
+
+### Windows-Specific Tools
+
+#### Windows Batch Script
+A `setup_windows.bat` script replaces Unix Makefile functionality:
+
+```batch
+# Available commands:
+setup_windows.bat install          # Install MicroC in production mode
+setup_windows.bat install-dev      # Install MicroC in development mode
+setup_windows.bat install-minimal  # Install only core dependencies
+setup_windows.bat test             # Run all tests
+setup_windows.bat test-fast        # Run fast tests only
+setup_windows.bat clean            # Clean build artifacts
+setup_windows.bat run-example      # Run example simulation
+setup_windows.bat help             # Show all options
+```
+
+#### Command Equivalents
+| Unix/macOS Command | Windows Equivalent |
+|-------------------|-------------------|
+| `make install-dev` | `setup_windows.bat install-dev` |
+| `make test` | `setup_windows.bat test` |
+| `make clean` | `setup_windows.bat clean` |
+| `python3` | `python` |
+| `pip3` | `pip` |
+
+### Common Windows Issues and Solutions
+
+#### Issue 1: 32-bit Python Architecture Error
+**Error**: `Need python for x86_64, but found x86`
+
+**Cause**: Using 32-bit Python installation
+
+**Solution**:
+1. Uninstall 32-bit Python via Windows Settings → Apps
+2. Download and install 64-bit Python from python.org
+3. Verify with: `python -c "import platform; print(platform.architecture())"`
+
+#### Issue 2: Unicode Encoding Errors
+**Error**: `Invalid length unit: Î¼m` (corrupted μ character)
+
+**Cause**: Windows encoding issues with Unicode characters in config files
+
+**Solution**:
+- Unicode characters (μ) have been replaced with ASCII equivalents (um)
+- Use the provided Windows-compatible configuration files
+- If creating new configs, use "um" instead of "μm"
+
+#### Issue 3: Mayavi/VTK Installation Failures
+**Error**: Mayavi compilation errors during installation
+
+**Cause**: Complex 3D visualization dependencies don't compile well on Windows
+
+**Solution**:
+```bash
+# Install without problematic visualization dependencies
+python -m pip install -e ".[dev,docs,jupyter,performance]"
+# Note: excludes visualization extras that include Mayavi
+```
+
+#### Issue 4: Missing Build Tools
+**Error**: `Microsoft Visual C++ 14.0 is required`
+
+**Cause**: Missing C++ compiler for building scientific packages
+
+**Solution**:
+1. Install Visual Studio Build Tools
+2. Or install Visual Studio Community
+3. Restart command prompt after installation
+
+#### Issue 5: Path Separator Issues
+**Error**: File path errors with forward slashes
+
+**Cause**: Unix-style paths in originally Mac-developed code
+
+**Solution**:
+- The codebase has been updated to use `os.path.join()` and `pathlib`
+- Windows path separators are handled automatically
+
+### Windows Performance Considerations
+
+#### Memory Usage
+- Windows may use more memory than Unix systems for the same simulation
+- Consider reducing grid size for large simulations on Windows
+
+#### File I/O
+- Windows file I/O can be slower than Unix systems
+- Use SSD storage for better performance
+- Avoid deep directory nesting
+
+#### Parallel Processing
+- Windows handles multiprocessing differently than Unix
+- Some parallel features may have reduced performance
+- Test parallel settings on your specific Windows configuration
+
+### Windows Development Workflow
+
+#### Using Windows Terminal
+```bash
+# Install Windows Terminal from Microsoft Store
+# Configure for better development experience:
+# - Set default profile to Command Prompt or PowerShell
+# - Enable copy/paste with Ctrl+C/Ctrl+V
+# - Use Cascadia Code font for better readability
+```
+
+#### IDE Integration
+```bash
+# Visual Studio Code (recommended)
+# Install Python extension
+# Configure Python interpreter to use virtual environment
+# Set terminal to use activated environment
+
+# PyCharm
+# Configure Python interpreter
+# Set up run configurations for simulations
+```
+
+#### Testing on Windows
+```bash
+# Run Windows-specific tests
+setup_windows.bat test
+
+# Test with example simulation
+setup_windows.bat run-example
+
+# Verify Unicode handling
+python run_sim.py tests/jayatilake_experiment/jayatilake_experiment_config.yaml --steps 5
+```
+
+### Windows Deployment Notes
+
+#### Package Distribution
+- Windows wheels are built automatically for releases
+- Use `python -m build` to create Windows-compatible distributions
+- Test installations on clean Windows environments
+
+#### System Requirements for End Users
+- Windows 10 or later
+- 64-bit architecture
+- 4GB+ RAM (8GB+ recommended for large simulations)
+- 2GB+ free disk space
+
+### Troubleshooting Windows-Specific Issues
+
+#### Debug Information Collection
+```bash
+# Collect system information
+python -c "import platform; print(platform.platform())"
+python -c "import sys; print(sys.version)"
+python -c "import platform; print(platform.architecture())"
+
+# Check installed packages
+python -m pip list
+
+# Verify critical packages
+python -c "import numpy, scipy, matplotlib, pandas, yaml, fipy; print('All imports successful')"
+```
+
+#### Clean Reinstallation
+```bash
+# If issues persist, perform clean reinstallation:
+# 1. Deactivate virtual environment
+deactivate
+
+# 2. Remove virtual environment
+rmdir /s microc-env
+
+# 3. Create new environment
+python -m venv microc-env
+microc-env\Scripts\activate
+
+# 4. Reinstall
+python -m pip install --upgrade pip
+setup_windows.bat install-dev
+```
+
+### Windows Testing Results
+
+The Windows port has been successfully tested with:
+- ✅ Python 3.13.5 (64-bit)
+- ✅ All core scientific packages (NumPy, SciPy, Matplotlib, Pandas)
+- ✅ FiPy finite difference solver
+- ✅ Complete simulation workflows
+- ✅ Visualization and plotting
+- ✅ Gene network evaluation
+- ✅ Multi-substance diffusion
+- ✅ Cell biology simulation
+
+**Test Configuration**:
+- Domain: 600×600 μm
+- Grid: 60×60 cells
+- Substances: 16 tracked molecules
+- Cells: 100 biological cells
+- Simulation time: Successfully completed 5 time steps
+
+This Windows port maintains full compatibility with the original macOS/Linux functionality while providing Windows-specific tools and documentation for a smooth development experience.
 
 ## Development Workflow
 
@@ -379,16 +652,46 @@ sudo apt-get install build-essential python3-dev
 
 # Install system dependencies (macOS)
 xcode-select --install
+
+# Install system dependencies (Windows)
+# Download and install Visual Studio Build Tools
+# Or install Visual Studio Community Edition
 ```
 
 **Test Environment Issues**
 ```bash
-# Clean test environment
+# Clean test environment (Unix/macOS)
 make clean-all
 
-# Reinstall in clean environment
+# Clean test environment (Windows)
+setup_windows.bat clean
+
+# Reinstall in clean environment (Unix/macOS)
 pip uninstall microc
 make install-dev
+
+# Reinstall in clean environment (Windows)
+pip uninstall microc
+setup_windows.bat install-dev
+```
+
+**Windows-Specific Issues**
+```bash
+# 32-bit Python error
+# Solution: Install 64-bit Python from python.org
+
+# Unicode encoding errors
+# Solution: Use ASCII equivalents (um instead of μm)
+
+# Mayavi installation failures
+# Solution: Install without visualization extras
+python -m pip install -e ".[dev,docs,jupyter,performance]"
+
+# Path separator issues
+# Solution: Use setup_windows.bat instead of make commands
+
+# Missing Visual C++ compiler
+# Solution: Install Visual Studio Build Tools
 ```
 
 ### Getting Help
