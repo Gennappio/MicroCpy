@@ -15,6 +15,10 @@ Features:
 - Configurable simulation parameters
 """
 
+# Set matplotlib backend early to avoid GUI issues in batch mode
+import matplotlib
+matplotlib.use('Agg')
+
 import sys
 import argparse
 from pathlib import Path
@@ -180,10 +184,13 @@ def setup_simulation(config, args):
     
     try:
         # Try custom placement function with domain configuration
+        # Get initial_cell_count from config custom_parameters if available, otherwise use default
+        initial_cell_count = config.custom_parameters.get('initial_cell_count', 100)
+
         simulation_params = {
             'domain_size_um': config.domain.size_x.micrometers,  # Assume square domain
             'cell_height_um': config.domain.cell_height.micrometers,
-            'initial_cell_count': 100  # Default, can be overridden in config
+            'initial_cell_count': initial_cell_count
         }
 
         placements = hook_manager.call_hook(
