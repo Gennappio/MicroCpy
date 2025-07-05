@@ -646,18 +646,23 @@ Substance Initial Values:
                     generated_plots.append(plot_path)
                     print(f"   ✅ {substance} initial heatmap: {plot_path.name}")
 
-            # Plot final state if we have time points for all substances
+            # Plot final state - use current time from simulator or estimate from config
             if time_points:
                 final_time = time_points[-1]
-                for substance in all_substances:
-                    if substance in simulator.state.substances:
-                        concentrations = simulator.state.substances[substance].concentrations
+            else:
+                # If no time series data, estimate final time from current simulation state
+                # This happens when save_data_interval is larger than total steps
+                final_time = getattr(simulator, 'current_time', 0.5)  # Default fallback
 
-                        plot_path = self.plot_substance_heatmap(
-                            substance, concentrations, cell_positions, final_time, config_name, population
-                        )
-                        generated_plots.append(plot_path)
-                        print(f"   ✅ {substance} final heatmap: {plot_path.name}")
+            for substance in all_substances:
+                if substance in simulator.state.substances:
+                    concentrations = simulator.state.substances[substance].concentrations
+
+                    plot_path = self.plot_substance_heatmap(
+                        substance, concentrations, cell_positions, final_time, config_name, population
+                    )
+                    generated_plots.append(plot_path)
+                    print(f"   ✅ {substance} final heatmap: {plot_path.name}")
         
         # 3. Initial state summary plot
         if population:
