@@ -109,22 +109,167 @@ Examples:
     
     return parser.parse_args()
 
+def validate_configuration(config, config_path):
+    """Comprehensive configuration validation"""
+    print(f"🔍 Validating configuration...")
+
+    missing_params = []
+    warnings = []
+
+    # 1. Domain validation
+    try:
+        if not hasattr(config, 'domain'):
+            missing_params.append("domain section")
+        else:
+            domain = config.domain
+            if not hasattr(domain, 'size_x') or not hasattr(domain, 'size_y'):
+                missing_params.append("domain.size_x and domain.size_y")
+            if not hasattr(domain, 'nx') or not hasattr(domain, 'ny'):
+                missing_params.append("domain.nx and domain.ny")
+            if domain.nx <= 0 or domain.ny <= 0:
+                missing_params.append("domain.nx and domain.ny must be positive integers")
+
+            # Check grid spacing
+            if hasattr(domain, 'size_x') and hasattr(domain, 'nx'):
+                spacing = domain.size_x.micrometers / domain.nx
+                if spacing < 1.0 or spacing > 50.0:
+                    warnings.append(f"Grid spacing {spacing:.1f} μm is outside recommended range (1-50 μm)")
+    except Exception as e:
+        missing_params.append(f"domain configuration error: {e}")
+
+    # 2. Time configuration validation
+    try:
+        if not hasattr(config, 'time'):
+            missing_params.append("time section")
+        else:
+            time_cfg = config.time
+            required_time_params = ['dt', 'end_time', 'diffusion_step', 'intracellular_step', 'intercellular_step']
+            for param in required_time_params:
+                if not hasattr(time_cfg, param):
+                    missing_params.append(f"time.{param}")
+
+            # Validate time values
+            if hasattr(time_cfg, 'dt') and time_cfg.dt <= 0:
+                missing_params.append("time.dt must be positive")
+            if hasattr(time_cfg, 'end_time') and time_cfg.end_time <= 0:
+                missing_params.append("time.end_time must be positive")
+    except Exception as e:
+        missing_params.append(f"time configuration error: {e}")
+
+    # 3. Substances validation
+    try:
+        if not hasattr(config, 'substances') or not config.substances:
+            missing_params.append("substances section (at least one substance required)")
+        else:
+            for substance_name, substance in config.substances.items():
+                required_substance_params = ['diffusion_coeff', 'initial_value', 'boundary_value']
+                for param in required_substance_params:
+                    if not hasattr(substance, param):
+                        missing_params.append(f"substances.{substance_name}.{param}")
+
+                # Check for reasonable values
+                if hasattr(substance, 'diffusion_coeff') and substance.diffusion_coeff < 0:
+                    missing_params.append(f"substances.{substance_name}.diffusion_coeff must be non-negative")
+    except Exception as e:
+        missing_params.append(f"substances configuration error: {e}")
+
+    # 4. Gene network validation
+    try:
+        if hasattr(config, 'gene_network') and config.gene_network:
+            gene_net = config.gene_network
+            if hasattr(gene_net, 'bnd_file') and gene_net.bnd_file:
+                bnd_path = Path(gene_net.bnd_file)
+                if not bnd_path.exists():
+                    # Try relative to config file
+                    bnd_path = config_path.parent / gene_net.bnd_file
+                    if not bnd_path.exists():
+                        missing_params.append(f"gene_network.bnd_file not found: {gene_net.bnd_file}")
+        else:
+            warnings.append("No gene network configuration found - cells will have minimal behavior")
+    except Exception as e:
+        missing_params.append(f"gene_network configuration error: {e}")
+
+    # 5. Output configuration validation
+    try:
+        if not hasattr(config, 'output'):
+            warnings.append("No output configuration found - using defaults")
+        else:
+            output = config.output
+            if hasattr(output, 'save_data_interval') and output.save_data_interval <= 0:
+                missing_params.append("output.save_data_interval must be positive")
+    except Exception as e:
+        missing_params.append(f"output configuration error: {e}")
+
+    # 6. Custom functions validation
+    try:
+        if hasattr(config, 'custom_functions_path') and config.custom_functions_path:
+            custom_path = Path(config.custom_functions_path)
+            if not custom_path.exists():
+                # Try relative to config file
+                custom_path = config_path.parent / config.custom_functions_path
+                if not custom_path.exists():
+                    missing_params.append(f"custom_functions_path not found: {config.custom_functions_path}")
+    except Exception as e:
+        missing_params.append(f"custom_functions_path error: {e}")
+
+    # Report results
+    if missing_params:
+        print(f"❌ Configuration validation failed!")
+        print(f"   Missing or invalid parameters:")
+        for param in missing_params:
+            print(f"   • {param}")
+
+        print(f"\n💡 Configuration Help:")
+        print(f"   • Check example configurations in: tests/jayatilake_experiment/")
+        print(f"   • See complete reference: src/config/complete_substances_config.yaml")
+        print(f"   • Documentation: docs/running_simulations.md")
+        print(f"   • Required sections: domain, time, substances")
+        print(f"   • Optional sections: gene_network, associations, thresholds, output")
+        return False
+
+    if warnings:
+        print(f"⚠️  Configuration warnings:")
+        for warning in warnings:
+            print(f"   • {warning}")
+
+    print(f"✅ Configuration validation passed!")
+    return True
+
 def load_configuration(config_file, args):
     """Load and validate configuration"""
     config_path = Path(config_file)
-    
+
     if not config_path.exists():
         print(f"❌ Configuration file not found: {config_path}")
         print(f"   Current directory: {Path.cwd()}")
         sys.exit(1)
-    
+
     print(f"📁 Loading configuration: {config_path}")
-    
+
     try:
         config = MicroCConfig.load_from_yaml(config_path)
         print(f"✅ Configuration loaded successfully!")
+    except KeyError as e:
+        print(f"❌ Failed to load configuration - Missing required parameter: {e}")
+        print(f"   This parameter is required in your YAML configuration file.")
+        print(f"\n💡 Configuration Help:")
+        print(f"   • Check example configurations in: tests/jayatilake_experiment/")
+        print(f"   • See complete reference: src/config/complete_substances_config.yaml")
+        print(f"   • Required sections: domain, time, substances")
+        print(f"   • Each section has required parameters - see documentation")
+        sys.exit(1)
     except Exception as e:
         print(f"❌ Failed to load configuration: {e}")
+        print(f"   This usually indicates a YAML syntax error or missing required sections.")
+        print(f"   Please check your configuration file format.")
+        print(f"\n💡 Common issues:")
+        print(f"   • YAML indentation must be consistent (use spaces, not tabs)")
+        print(f"   • Missing required sections: domain, time, substances")
+        print(f"   • Invalid YAML syntax (check colons, quotes, etc.)")
+        sys.exit(1)
+
+    # Validate configuration
+    if not validate_configuration(config, config_path):
         sys.exit(1)
     
     # Apply command line overrides
