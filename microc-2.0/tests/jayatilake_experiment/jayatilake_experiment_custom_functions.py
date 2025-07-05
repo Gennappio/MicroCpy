@@ -102,6 +102,19 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     print(f"   Cell height: {cell_height_um} μm")
     print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
     print(f"   Biological cell size: {cell_height_um} μm")
+    # Get initial cell count from simulation parameters FIRST
+    initial_count = simulation_params.get('initial_cell_count', 100)
+
+    # print(f"🔍 BIOLOGICAL CELL GRID DEBUG:")
+    # print(f"   FiPy grid: {fipy_nx}×{fipy_ny}")
+    # print(f"   Domain size: {domain_size_um} μm")
+    # print(f"   Cell height: {cell_height_um} μm")
+    # print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
+    # print(f"   Biological cell size: {cell_height_um} μm")
+    # print(f"   Target cell count: {initial_count}")
+    # print(f"   Available simulation_params keys: {list(simulation_params.keys())}")
+    # print(f"   Raw initial_cell_count value: {simulation_params.get('initial_cell_count', 'NOT_FOUND')}")
+    # print(f"   All simulation_params: {simulation_params}")
 
     # Track coordinate collisions
     used_positions = set()
