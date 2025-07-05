@@ -341,10 +341,10 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             # Gene input is TRUE if concentration exceeds threshold
             gene_inputs[gene_input_name] = substance_conc > threshold_config.threshold
 
-            # Compact debug for gene inputs (only first call)
-            if not hasattr(self, '_gene_input_debug_shown'):
-                print(f"🔍 Gene thresholds: {substance_name}>{threshold_config.threshold}={gene_inputs[gene_input_name]}")
-                self._gene_input_debug_shown = True
+            # Compact debug for gene inputs (only first call) - TURNED OFF
+            # if not hasattr(self, '_gene_input_debug_shown'):
+            #     print(f"🔍 Gene thresholds: {substance_name}>{threshold_config.threshold}={gene_inputs[gene_input_name]}")
+            #     self._gene_input_debug_shown = True
 
         # Handle composite gene inputs using configuration
         if hasattr(self.config, 'composite_genes') and self.config.composite_genes: #TODO: revise
@@ -536,14 +536,15 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
 
             # Debug apoptosis cases specifically
             apoptosis = gene_states.get('Apoptosis', False)
-            if apoptosis:
-                pos = cell.state.position
-                oxygen = local_env.get('oxygen', 0.0)
-                glucose = local_env.get('glucose', 0.0)
-                print(f"🚨 APOPTOSIS CELL at {pos}: O2={oxygen:.3f}, Gluc={glucose:.3f}")
-                print(f"   Gene inputs: {gene_inputs}")
+            # if apoptosis:
+            #     pos = cell.state.position
+            #     oxygen = local_env.get('oxygen', 0.0)
+            #     glucose = local_env.get('glucose', 0.0)
+            #     print(f"🚨 APOPTOSIS CELL at {pos}: O2={oxygen:.3f}, Gluc={glucose:.3f}")
+            #     print(f"   Gene inputs: {gene_inputs}")
 
-                # Debug apoptosis pathway components
+            # Debug apoptosis pathway components - TURNED OFF
+            if apoptosis and False:  # Disabled debug output
                 bcl2 = gene_states.get('BCL2', False)
                 erk = gene_states.get('ERK', False)
                 foxo3 = gene_states.get('FOXO3', False)
@@ -590,8 +591,8 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 glyco_atp = gene_states.get('glycoATP', False)
                 print(f"   ATP status: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
 
-            # Debug ATP gene outputs for first cell
-            elif self._gene_output_debug_count == 1:
+            # Debug ATP gene outputs for first cell - TURNED OFF
+            elif False:  # self._gene_output_debug_count == 1:
                 atp_rate = gene_states.get('ATP_Production_Rate', False)
                 mito_atp = gene_states.get('mitoATP', False)
                 glyco_atp = gene_states.get('glycoATP', False)

@@ -54,13 +54,13 @@ class AutoPlotter:
         """Plot concentration heatmap for a single substance with detailed debugging"""
 
         # DEBUG: Print actual concentration values
-        print(f"🔍 DEBUG {substance_name} heatmap:")
-        print(f"   Array shape: {concentrations.shape}")
-        print(f"   Array dtype: {concentrations.dtype}")
-        print(f"   Raw min: {concentrations.min():.8f}")
-        print(f"   Raw max: {concentrations.max():.8f}")
-        print(f"   Raw mean: {concentrations.mean():.8f}")
-        print(f"   Sample values: {concentrations.flat[:5]}")
+        # print(f"🔍 DEBUG {substance_name} heatmap:")
+        # print(f"   Array shape: {concentrations.shape}")
+        # print(f"   Array dtype: {concentrations.dtype}")
+        # print(f"   Raw min: {concentrations.min():.8f}")
+        # print(f"   Raw max: {concentrations.max():.8f}")
+        # print(f"   Raw mean: {concentrations.mean():.8f}")
+        # print(f"   Sample values: {concentrations.flat[:5]}")
 
         fig, ax = plt.subplots(figsize=(12, 10))
 
@@ -436,8 +436,8 @@ Simulation Summary:
 
         # 1. Initial cell placement (top-left) - show raw placement without gene network colors
         cell_data = population.get_cell_positions()
+        cell_colors_used = {}  # Initialize outside the if block
         if cell_data:
-            cell_colors_used = {}
             for pos, phenotype in cell_data:
                 x, y = pos
 
