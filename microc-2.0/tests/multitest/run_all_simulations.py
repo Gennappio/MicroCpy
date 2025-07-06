@@ -45,11 +45,20 @@ def run_all_simulations():
     results = []
     total_start_time = time.time()
     
-    # Run all 16 combinations
-    for i in range(16):
-        config_file = f"tests/multitest/config_{i:02d}.yaml"
+    # Allow testing just a subset for debugging
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        test_range = range(3)  # Test only first 3 combinations
+        print("🧪 TEST MODE: Running only first 3 combinations\n")
+    else:
+        test_range = range(16)  # Run all combinations
+
+    # Run all combinations (or subset in test mode)
+    for i in test_range:
+        # Generate descriptive config filename
+        filename_desc = get_combination_filename(i)
+        config_file = f"tests/multitest/config_{filename_desc}.yaml"
         
-        print(f"\n📊 Running Combination {i:02d}/15")
+        print(f"\n📊 Running Combination {i:02d}/15 ({i+1}/16)")
         print(f"📁 Config: {config_file}")
         
         # Show what this combination represents
@@ -121,8 +130,9 @@ def run_all_simulations():
     
     # Show where results are saved
     print(f"\n📁 Results saved in:")
-    print(f"   plots/multitest/combination_XX/")
-    print(f"   results/multitest/combination_XX/")
+    print(f"   plots/multitest/O2{{level}}_Lac{{level}}_Gluc{{level}}_TGFA{{level}}/")
+    print(f"   results/multitest/O2{{level}}_Lac{{level}}_Gluc{{level}}_TGFA{{level}}/")
+    print(f"   data/multitest/O2{{level}}_Lac{{level}}_Gluc{{level}}_TGFA{{level}}/")
     
     if failed > 0:
         failed_ids = [r["id"] for r in results if not r["success"]]
@@ -131,7 +141,23 @@ def run_all_simulations():
         for fid in failed_ids:
             print(f"   python run_sim.py tests/multitest/config_{fid:02d}.yaml")
     
-    return successful == 16
+    # Return True if all attempted simulations succeeded
+    total_attempted = len(results)
+    return successful == total_attempted
+
+def get_combination_filename(combination_id):
+    """Get the filename format for this combination."""
+    oxygen_high = bool((combination_id >> 0) & 1)
+    lactate_high = bool((combination_id >> 1) & 1)
+    glucose_high = bool((combination_id >> 2) & 1)
+    tgfa_high = bool((combination_id >> 3) & 1)
+
+    oxygen_state = "high" if oxygen_high else "low"
+    lactate_state = "high" if lactate_high else "low"
+    glucose_state = "high" if glucose_high else "low"
+    tgfa_state = "high" if tgfa_high else "low"
+
+    return f"O2{oxygen_state}_Lac{lactate_state}_Gluc{glucose_state}_TGFA{tgfa_state}"
 
 def get_combination_description(combination_id):
     """Get a description of what this combination represents."""
@@ -139,15 +165,28 @@ def get_combination_description(combination_id):
     lactate_high = bool((combination_id >> 1) & 1)
     glucose_high = bool((combination_id >> 2) & 1)
     tgfa_high = bool((combination_id >> 3) & 1)
-    
+
     oxygen_state = "HIGH" if oxygen_high else "LOW"
     lactate_state = "HIGH" if lactate_high else "LOW"
     glucose_state = "HIGH" if glucose_high else "LOW"
     tgfa_state = "HIGH" if tgfa_high else "LOW"
-    
+
     return f"O2={oxygen_state}, Lac={lactate_state}, Gluc={glucose_state}, TGFA={tgfa_state}"
 
 if __name__ == "__main__":
+    # Show usage if help requested
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help", "help"]:
+        print("🧬 MicroC 2.0 - Multi-Test Runner")
+        print("=" * 50)
+        print("Usage:")
+        print("  python run_all_simulations.py        # Run all 16 combinations")
+        print("  python run_all_simulations.py test   # Run only first 3 combinations (for testing)")
+        print("  python run_all_simulations.py help   # Show this help message")
+        print()
+        print("This script runs all 16 combinations of oxygen/glucose/lactate/TGFA conditions")
+        print("to test the complete parameter space of the MicroC simulation.")
+        sys.exit(0)
+
     print("Starting multi-test simulation runner...")
     success = run_all_simulations()
     

@@ -1,12 +1,12 @@
 domain:
-  size_x: 40.0
+  size_x: 100.0
   size_x_unit: um
-  size_y: 40.0
+  size_y: 100.0
   size_y_unit: um
-  nx: 1
-  ny: 1
+  nx: 5
+  ny: 5
   dimensions: 2
-  cell_height: 40.0
+  cell_height: 20.0
   cell_height_unit: um
 time:
   dt: 0.1
@@ -46,8 +46,8 @@ substances:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 3.0
-    boundary_value: 3.0
+    initial_value: 0.5
+    boundary_value: 0.5
     boundary_type: fixed
     unit: mM
   H:
@@ -78,8 +78,8 @@ substances:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 2.0e-06
-    boundary_value: 2.0e-06
+    initial_value: 5.0e-07
+    boundary_value: 5.0e-07
     boundary_type: fixed
     unit: uM
   VEGF:
@@ -154,6 +154,14 @@ substances:
     boundary_value: 0.0
     boundary_type: fixed
     unit: "\u03BCM"
+  MCT4D:
+    diffusion_coeff: 0.0
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.0
+    boundary_value: 0.0
+    boundary_type: fixed
+    unit: uM
 associations:
   Oxygen: Oxygen_supply
   Glucose: Glucose_supply
@@ -169,6 +177,7 @@ associations:
   MCT1D: MCT1I
   GLUT1D: GLUT1I
   TGFA: EGFR_stimulus
+  MCT4D: MCT4I
 thresholds:
   Oxygen_supply:
     initial: 0.07
@@ -226,7 +235,7 @@ thresholds:
     threshold: 6.0
 gene_network:
   bnd_file: tests/jayatilake_experiment/jaya_microc.bnd
-  propagation_steps: 50
+  propagation_steps: 500
   random_initialization: true
   output_nodes:
   - Proliferation
@@ -285,6 +294,9 @@ gene_network:
     MCT4I:
       is_input: true
       default_state: false
+    MCT4D:
+      is_input: true
+      default_state: false
 environment:
   ph: 7.4
 cell_cycle_time: 240
@@ -301,7 +313,7 @@ custom_parameters:
   the_optimal_oxygen: 0.005
   the_optimal_glucose: 0.04
   the_optimal_lactate: 0.04
-  oxygen_vmax: 3.0e-17
+  oxygen_vmax: 1.0e-16
   glucose_vmax: 3.0e-15
   mu_o2: 1.0e-15
   A0: 30.0
@@ -326,6 +338,6 @@ custom_parameters:
   maximum_cell_count: 1
   shedding_rate: 0.0
   shedding_starting_time: 0
-output_dir: results/multitest/combination_10
-plots_dir: plots/multitest/combination_10
-data_dir: data/multitest/combination_10
+output_dir: results/multitest/O2low_Laclow_Gluclow_TGFAlow
+plots_dir: plots/multitest/O2low_Laclow_Gluclow_TGFAlow
+data_dir: data/multitest/O2low_Laclow_Gluclow_TGFAlow
