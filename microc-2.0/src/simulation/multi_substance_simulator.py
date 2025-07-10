@@ -138,14 +138,103 @@ class MultiSubstanceSimulator:
             # Create variable
             var = CellVariable(name=name, mesh=self.fipy_mesh, value=initial_value)
             
-            # Set boundary conditions
+            # Set boundary conditions with gradients
             if substance_state.config.boundary_type == "fixed":
-                var.constrain(boundary_value, self.fipy_mesh.facesTop | 
-                             self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft | 
-                             self.fipy_mesh.facesRight)
+                self._apply_gradient_boundary_conditions(var, name, boundary_value)
+            elif substance_state.config.boundary_type == "gradient":
+                # For gradient boundary type, use custom gradient setup
+                self._apply_custom_gradient_boundary_conditions(var, name)
             
             self.fipy_variables[name] = var
     
+    def _apply_gradient_boundary_conditions(self, var, substance_name, default_boundary_value):
+        """Apply gradient boundary conditions: 0 on left, 1 on right, gradients on top/bottom"""
+        
+        # Left side: 0
+        var.constrain(0.0, self.fipy_mesh.facesLeft)
+        
+        # Right side: 1  
+        var.constrain(1.0, self.fipy_mesh.facesRight)
+        
+        # Top and bottom: create linear gradients based on x-position
+        domain_width = self.config.domain.size_x.meters
+        face_centers_x = self.fipy_mesh.faceCenters[0]
+        face_centers_y = self.fipy_mesh.faceCenters[1]
+        
+        # Apply gradients to top and bottom faces
+        for face_id in range(self.fipy_mesh.numberOfFaces):
+            face_center_x = face_centers_x[face_id]
+            face_center_y = face_centers_y[face_id]
+            
+            # Check if this is a top or bottom face (not left or right)
+            is_top_face = self.fipy_mesh.facesTop[face_id]
+            is_bottom_face = self.fipy_mesh.facesBottom[face_id]
+            
+            if is_top_face or is_bottom_face:
+                # Create linear gradient based on x position (0 at left, 1 at right)
+                normalized_x = face_center_x / domain_width
+                gradient_value = max(0.0, min(1.0, normalized_x))  # Clamp to [0,1]
+                
+                # Create a mask for this specific face
+                face_mask = ((self.fipy_mesh.exteriorFaces == 1) & 
+                           (self.fipy_mesh.faceCenters[0] == face_center_x) & 
+                           (self.fipy_mesh.faceCenters[1] == face_center_y))
+                if face_mask.any():
+                    var.constrain(gradient_value, where=face_mask)
+    
+    def _apply_custom_gradient_boundary_conditions(self, var, substance_name):
+        """Apply fully custom gradient boundary conditions"""
+        
+        try:
+            # Apply custom boundary conditions face by face
+            face_centers_x = self.fipy_mesh.faceCenters[0]
+            face_centers_y = self.fipy_mesh.faceCenters[1]
+            
+            for face_id in range(self.fipy_mesh.numberOfFaces):
+                if self.fipy_mesh.exteriorFaces[face_id]:
+                    face_center_x = float(face_centers_x[face_id])
+                    face_center_y = float(face_centers_y[face_id])
+                    face_center = (face_center_x, face_center_y)
+                    
+                    try:
+                        boundary_value = self.hook_manager.call_hook(
+                            "custom_calculate_boundary_conditions",
+                            substance_name=substance_name,
+                            position=face_center,
+                            time=0.0  # For steady state, time doesn't matter
+                        )
+                        
+                        # Apply boundary condition to this specific face
+                        face_mask = ((self.fipy_mesh.exteriorFaces == 1) & 
+                                   (self.fipy_mesh.faceCenters[0] == face_center_x) & 
+                                   (self.fipy_mesh.faceCenters[1] == face_center_y))
+                        if face_mask.any():
+                            var.constrain(boundary_value, where=face_mask)
+                            
+                    except NotImplementedError:
+                        # If no custom function, fall back to default gradient for this face
+                        self._apply_default_gradient_for_face(var, face_center_x, face_center_y)
+                        
+        except Exception as e:
+            print(f"Warning: Custom boundary conditions failed for {substance_name}: {e}")
+            # Fall back to simple gradient
+            self._apply_gradient_boundary_conditions(var, substance_name, 0.5)
+    
+    def _apply_default_gradient_for_face(self, var, face_center_x, face_center_y):
+        """Apply default gradient boundary condition for a single face"""
+        domain_width = self.config.domain.size_x.meters
+        
+        # Create linear gradient based on x-position (0 at left, 1 at right)
+        normalized_x = face_center_x / domain_width
+        gradient_value = max(0.0, min(1.0, normalized_x))  # Clamp to [0,1]
+        
+        # Apply constraint to this specific face
+        face_mask = ((self.fipy_mesh.exteriorFaces == 1) & 
+                   (self.fipy_mesh.faceCenters[0] == face_center_x) & 
+                   (self.fipy_mesh.faceCenters[1] == face_center_y))
+        if face_mask.any():
+            var.constrain(gradient_value, where=face_mask)
+
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
         """Update all substances using steady state diffusion with cell reactions"""
 

@@ -1,0 +1,61 @@
+# Gradient Boundary Conditions Test Configuration
+# Demonstrates gradient boundary conditions: 0 on left, 1 on right, gradients on top/bottom
+
+domain:
+  size_x: 400.0
+  size_x_unit: "μm"
+  size_y: 400.0  
+  size_y_unit: "μm"
+  nx: 20
+  ny: 20
+  dimensions: 2
+
+time:
+  dt: 0.05
+  end_time: 2.0
+  diffusion_step: 5
+  intracellular_step: 1
+  intercellular_step: 10
+
+# Diffusion solver configuration
+diffusion:
+  max_iterations: 1000
+  tolerance: 1e-6
+  solver_type: "steady_state"
+  twodimensional_adjustment_coefficient: 1.0
+
+# Test substance with gradient boundary conditions
+substances:
+  TestSubstance:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.5  # This will be overridden by gradient
+    boundary_type: "fixed"  # Use "fixed" for the default gradient (0 left, 1 right, gradients top/bottom)
+    unit: "mM"
+    
+  # Alternative: use "gradient" boundary type for fully custom gradients
+  CustomGradientSubstance:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.5
+    boundary_type: "gradient"  # This will use custom gradient functions if available
+    unit: "mM"
+
+# Simple associations (optional)
+associations:
+  TestSubstance: "Test_input"
+
+# Simple thresholds (optional)
+thresholds:
+  Test_input:
+    initial: 0.5
+    threshold: 0.5
+
+output_dir: "results/gradient_test"
+plots_dir: "plots/gradient_test"
+data_dir: "data/gradient_test"
+custom_functions_path: "config/custom_functions.py" 
