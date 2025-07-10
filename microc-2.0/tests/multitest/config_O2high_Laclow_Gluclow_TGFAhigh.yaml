@@ -30,24 +30,24 @@ substances:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 0.01
-    boundary_value: 0.01
+    initial_value: 0.06
+    boundary_value: 0.06
     boundary_type: fixed
     unit: mM
   Glucose:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 6.0
-    boundary_value: 6.0
+    initial_value: 0.01
+    boundary_value: 0.01
     boundary_type: fixed
     unit: mM
   Lactate:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 1.0
-    boundary_value: 1.0
+    initial_value: 0.01
+    boundary_value: 0.01
     boundary_type: fixed
     unit: mM
   H:
@@ -78,8 +78,8 @@ substances:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 5.0e-07
-    boundary_value: 5.0e-07
+    initial_value: 2.0e-06
+    boundary_value: 2.0e-06
     boundary_type: fixed
     unit: uM
   VEGF:
@@ -339,6 +339,6 @@ custom_parameters:
   shedding_rate: 0.0
   shedding_starting_time: 0
 custom_functions_path: tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py
-output_dir: results/multitest/O2low_Lachigh_Gluchigh_TGFAlow
-plots_dir: plots/multitest/O2low_Lachigh_Gluchigh_TGFAlow
-data_dir: data/multitest/O2low_Lachigh_Gluchigh_TGFAlow
+output_dir: results/multitest/O2high_Laclow_Gluclow_TGFAhigh
+plots_dir: plots/multitest/O2high_Laclow_Gluclow_TGFAhigh
+data_dir: data/multitest/O2high_Laclow_Gluclow_TGFAhigh
