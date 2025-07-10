@@ -1,10 +1,10 @@
 domain:
-  size_x: 40.0
+  size_x: 100.0
   size_x_unit: um
-  size_y: 40.0
+  size_y: 100.0
   size_y_unit: um
-  nx: 1
-  ny: 1
+  nx: 5
+  ny: 5
   dimensions: 2
   cell_height: 20.0
   cell_height_unit: um
@@ -46,8 +46,8 @@ substances:
     diffusion_coeff: 0.0
     production_rate: 0.0
     uptake_rate: 0.0
-    initial_value: 0.5
-    boundary_value: 0.5
+    initial_value: 0.01
+    boundary_value: 0.01
     boundary_type: fixed
     unit: mM
   H:
@@ -187,7 +187,7 @@ thresholds:
     threshold: 4.0
   MCT1_stimulus:
     initial: 1.0
-    threshold: 1.5
+    threshold: 0.5
   Proton_level:
     initial: 4.0e-05
     threshold: 8.0e-05
@@ -338,6 +338,7 @@ custom_parameters:
   maximum_cell_count: 1
   shedding_rate: 0.0
   shedding_starting_time: 0
+custom_functions_path: tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py
 output_dir: results/multitest/O2low_Laclow_Gluchigh_TGFAhigh
 plots_dir: plots/multitest/O2low_Laclow_Gluchigh_TGFAhigh
 data_dir: data/multitest/O2low_Laclow_Gluchigh_TGFAhigh
