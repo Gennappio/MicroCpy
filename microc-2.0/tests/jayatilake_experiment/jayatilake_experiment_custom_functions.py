@@ -451,20 +451,34 @@ def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Di
 def custom_should_divide(cell, config: Any) -> bool:
     """
     Determine if cell should attempt division based on gene network state and cell conditions.
+    ALSO sets phenotype to "Proliferation" when metabolic conditions are met (ATP override).
     """
-    # Only proliferative cells can divide
-    if not hasattr(cell, 'state') or cell.state.phenotype != "Proliferation":
-        return False
+    # Get parameters using config-agnostic lookup
+    atp_threshold = get_parameter_from_config(config, 'atp_threshold', 0.8)
+    max_atp = get_parameter_from_config(config, 'max_atp', 30)
+    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 240)  # iterations
 
     # Check if cell has sufficient age (basic cell cycle time)
-    # Get cell cycle time using config-agnostic lookup
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 240)  # iterations
     if cell.state.age < cell_cycle_time:
         return False
 
-    # Additional checks could be added here based on gene states
-    # For now, use simple age-based division for proliferative cells
-    return True
+    # Check ATP rate from cell state (metabolic condition)
+    atp_rate = cell.state.metabolic_state.get('atp_rate', 0.0)
+    atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
+
+    # METABOLIC OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
+    # This ensures metabolic decisions override gene network phenotype decisions
+    if atp_rate_normalized > atp_threshold:
+        # Update cell phenotype to proliferation (override gene network decision)
+        cell.state = cell.state.with_updates(phenotype="Proliferation")
+        return True
+
+    # If ATP is insufficient, check if we're already in proliferation state
+    # (Allow continued proliferation if already started)
+    if cell.state.phenotype == "Proliferation":
+        return True
+
+    return False
 
 
 def custom_get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
