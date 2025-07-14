@@ -138,12 +138,18 @@ class MultiSubstanceSimulator:
             # Create variable
             var = CellVariable(name=name, mesh=self.fipy_mesh, value=initial_value)
             
-            # Set boundary conditions with gradients
+            # Set boundary conditions
             if substance_state.config.boundary_type == "fixed":
-                self._apply_gradient_boundary_conditions(var, name, boundary_value)
+                # Original fixed boundary behavior - constant value on all boundaries
+                var.constrain(boundary_value, self.fipy_mesh.facesTop | 
+                             self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft | 
+                             self.fipy_mesh.facesRight)
             elif substance_state.config.boundary_type == "gradient":
-                # For gradient boundary type, use custom gradient setup
+                # New gradient boundary type - custom gradient setup
                 self._apply_custom_gradient_boundary_conditions(var, name)
+            elif substance_state.config.boundary_type == "linear_gradient":
+                # Default linear gradient: 0 left, 1 right, gradients top/bottom
+                self._apply_gradient_boundary_conditions(var, name, boundary_value)
             
             self.fipy_variables[name] = var
     
