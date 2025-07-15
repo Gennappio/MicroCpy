@@ -7,11 +7,142 @@ Provides spatial population management with immutable state tracking.
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
 import numpy as np
+import os
+import time
+from pathlib import Path
 
 from interfaces.base import ICellPopulation, CustomizableComponent
 from interfaces.hooks import get_hook_manager
 from .cell import Cell, CellState
 from .gene_network import BooleanNetwork
+
+class PhenotypeLogger:
+    """Detailed logging system for cell phenotype debugging"""
+
+    def __init__(self, config=None, output_dir="logs"):
+        self.config = config
+        self.debug_enabled = getattr(config, 'debug_phenotype_detailed', False) if config else False
+        self.simulation_status_logging = getattr(config, 'log_simulation_status', False) if config else False
+        self.output_dir = Path(output_dir)
+        self.log_file = None
+        self.status_log_file = None
+        self.step_count = 0
+
+        if self.debug_enabled:
+            self.output_dir.mkdir(exist_ok=True)
+            log_filename = f"phenotype_debug_{int(time.time())}.log"
+            self.log_file = self.output_dir / log_filename
+
+            print(f"🐛 Creating debug log file: {self.log_file}")
+
+            # Write header
+            with open(self.log_file, 'w', encoding='utf-8') as f:
+                f.write("=== PHENOTYPE DEBUG LOG ===\n")
+                f.write(f"Started at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 50 + "\n\n")
+
+        if self.simulation_status_logging:
+            self.output_dir.mkdir(exist_ok=True)
+            self.status_log_file = self.output_dir / "log_simulation_status.txt"
+
+            # Write header for simulation status log
+            with open(self.status_log_file, 'w', encoding='utf-8') as f:
+                f.write("=== SIMULATION STATUS LOG ===\n")
+                f.write(f"Started at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write("Cell ID | Oxygen | Glucose | Lactate | TGFA | Oxygen_supply | Glucose_supply | MCT1_stimulus | EGFR_stimulus | Apoptosis | Proliferation | Necrosis | Growth_Arrest | mitoATP | glycoATP | Final Phenotype | Step\n")
+                f.write("-" * 150 + "\n")
+
+    def log_step_start(self, step):
+        """Log the start of a simulation step"""
+        self.step_count = step
+
+        if self.debug_enabled:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(f"\n{'='*20} STEP {step} {'='*20}\n")
+
+    def log_cell_substances_and_nodes(self, cell_id, position, local_env, gene_inputs, gene_states, phenotype):
+        """Log detailed cell information for each cell and phenotype update"""
+        if not self.debug_enabled:
+            return
+
+        # Important substances to track
+        important_substances = {
+            'Oxygen': 'Oxygen_supply',
+            'Glucose': 'Glucose_supply',
+            'Lactate': 'MCT1_stimulus',
+            'H': 'Proton_level',
+            'FGF': 'FGFR_stimulus',
+            'TGFA': 'EGFR_stimulus'
+        }
+
+        # Phenotype nodes to track
+        phenotype_nodes = ['Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis']
+
+        with open(self.log_file, 'a', encoding='utf-8') as f:
+            f.write(f"\nCELL {cell_id[:8]} at {position}:\n")
+
+            # Log important substances and their corresponding nodes
+            f.write("  Important Substances & Nodes:\n")
+            for substance, node in important_substances.items():
+                substance_val = local_env.get(substance.lower(), 'N/A')
+                node_state = gene_inputs.get(node, 'N/A')
+                f.write(f"    {substance}: {substance_val} -> {node}: {node_state}\n")
+
+            # Log phenotype nodes
+            f.write("  Phenotype Nodes:\n")
+            for node in phenotype_nodes:
+                state = gene_states.get(node, 'N/A')
+                f.write(f"    {node}: {state}\n")
+
+            # Log final phenotype
+            f.write(f"  Final Phenotype: {phenotype}\n")
+
+    def log_phenotype_update_end(self, phenotype_changes):
+        """Log summary at end of phenotype update"""
+        if not self.debug_enabled:
+            return
+
+        with open(self.log_file, 'a', encoding='utf-8') as f:
+            f.write(f"\nPHENOTYPE UPDATE SUMMARY:\n")
+            if phenotype_changes:
+                for change, count in phenotype_changes.items():
+                    f.write(f"  {change}: {count} cells\n")
+            else:
+                f.write("  No phenotype changes\n")
+
+    def log_simulation_status(self, cell_id, local_env, gene_states, phenotype, step=None):
+        """Log structured simulation status for each cell"""
+        if not self.simulation_status_logging:
+            return
+
+        # Use the step count from the logger if not provided
+        if step is None:
+            step = self.step_count
+
+        # Extract required values
+        oxygen = local_env.get('oxygen', 'N/A')
+        glucose = local_env.get('glucose', 'N/A')
+        lactate = local_env.get('lactate', 'N/A')
+        tgfa = local_env.get('tgfa', 'N/A')
+
+        # Extract gene node states
+        oxygen_supply = gene_states.get('Oxygen_supply', 'N/A')
+        glucose_supply = gene_states.get('Glucose_supply', 'N/A')
+        mct1_stimulus = gene_states.get('MCT1_stimulus', 'N/A')
+        egfr_stimulus = gene_states.get('EGFR_stimulus', 'N/A')
+
+        apoptosis = gene_states.get('Apoptosis', 'N/A')
+        proliferation = gene_states.get('Proliferation', 'N/A')
+        necrosis = gene_states.get('Necrosis', 'N/A')
+        growth_arrest = gene_states.get('Growth_Arrest', 'N/A')
+
+        mito_atp = gene_states.get('mitoATP', 'N/A')
+        glyco_atp = gene_states.get('glycoATP', 'N/A')
+
+        # Write to status log file
+        with open(self.status_log_file, 'a', encoding='utf-8') as f:
+            f.write(f"{cell_id[:8]} | {oxygen} | {glucose} | {lactate} | {tgfa} | {oxygen_supply} | {glucose_supply} | {mct1_stimulus} | {egfr_stimulus} | {apoptosis} | {proliferation} | {necrosis} | {growth_arrest} | {mito_atp} | {glyco_atp} | {phenotype} | {step}\n")
 
 @dataclass
 class PopulationState:
@@ -48,9 +179,16 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         self.gene_network = gene_network or BooleanNetwork()
         self.hook_manager = get_hook_manager()
         self.config = config  # Store config for threshold calculations
-        
+
+        # Initialize phenotype logger
+        output_dir = getattr(config, 'output_dir', 'logs') if config else 'logs'
+        self.phenotype_logger = PhenotypeLogger(config, output_dir)
+
         # Initialize empty population state
         self.state = PopulationState()
+
+        # Initialize step counter
+        self.step_count = 0
 
         # Initialize gene network for population (will be used for new cells)
         self._initialize_population_gene_network()
@@ -599,6 +737,12 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
                 print(f"   Environmental: Oxygen_supply={gene_inputs.get('Oxygen_supply', False)}, Glucose_supply={gene_inputs.get('Glucose_supply', False)}")
 
+            # Log detailed cell information for debugging
+            self.phenotype_logger.log_cell_substances_and_nodes(
+                cell_id, cell.state.position, local_env, gene_inputs,
+                gene_states, cell.state.phenotype
+            )
+
             # Store gene states in cell for phenotype update (FIXED INDENTATION)
             cell._cached_gene_states = gene_states
             cell._cached_local_env = local_env
@@ -660,6 +804,22 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 old_phenotype = cell.state.phenotype
                 new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
 
+                # Log detailed information for each phenotype update
+                if self.phenotype_logger.debug_enabled:
+                    # Re-calculate gene inputs for logging (since they're not cached)
+                    gene_inputs = self._calculate_gene_inputs(cell._cached_local_env)
+                    self.phenotype_logger.log_cell_substances_and_nodes(
+                        cell_id, cell.state.position, cell._cached_local_env,
+                        gene_inputs, cell._cached_gene_states, new_phenotype
+                    )
+
+                # Log structured simulation status
+                if self.phenotype_logger.simulation_status_logging:
+                    self.phenotype_logger.log_simulation_status(
+                        cell_id, cell._cached_local_env, cell._cached_gene_states,
+                        new_phenotype
+                    )
+
                 # Track phenotype changes compactly
                 if old_phenotype != new_phenotype:
                     change_key = f"{old_phenotype}→{new_phenotype}"
@@ -670,6 +830,9 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 delattr(cell, '_cached_local_env')
 
             updated_cells[cell_id] = cell
+
+        # Log phenotype update summary
+        self.phenotype_logger.log_phenotype_update_end(phenotype_changes)
 
         # Print compact phenotype summary
         if phenotype_changes:
