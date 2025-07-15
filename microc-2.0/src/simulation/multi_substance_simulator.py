@@ -337,6 +337,9 @@ class MultiSubstanceSimulator:
                 x, y = int(x_pos), int(y_pos)
                 if 0 <= x < self.config.domain.nx and 0 <= y < self.config.domain.ny:
                     # Get reaction rate for this substance
+                    # Some substances may not have reactions defined (e.g., EGF, TGFA)
+                    if name not in reactions:
+                        continue  # Skip substances with no reactions
                     reaction_rate = reactions[name]  # mol/s/cell
 
                     # Convert to concentration change (simplified)
@@ -387,6 +390,9 @@ class MultiSubstanceSimulator:
                 fipy_idx = x * ny + y
 
                 # Get reaction rate for this substance (from custom metabolism function)
+                # Some substances may not have reactions defined (e.g., EGF, TGFA)
+                if substance_name not in reactions:
+                    continue  # Skip substances with no reactions
                 reaction_rate = reactions[substance_name]  # mol/s/cell
 
                 # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume

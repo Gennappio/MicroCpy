@@ -723,7 +723,7 @@ def custom_update_cell_phenotype(cell_state: Dict[str, Any], local_environment: 
     return phenotype
 
 
-def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any) -> bool:
+def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
     """
     Determine if a cell should die based on its state and environment.
     For Jayatilake experiment: cells die if they have Apoptosis or Necrosis phenotype.

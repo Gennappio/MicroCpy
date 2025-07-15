@@ -783,8 +783,8 @@ def main():
     # Generate final cell metabolic report if custom function is available
     try:
         hook_manager = get_hook_manager()
-        custom_final_report_func = hook_manager.loader.get_function('custom_final_report')
-        if custom_final_report_func:
+        if hook_manager.loader.has_custom_function('custom_final_report'):
+            custom_final_report_func = hook_manager.loader.get_function('custom_final_report')
             # Get final local environments for each cell using the state method
             final_local_environments = {}
             for cell in population.cells:
