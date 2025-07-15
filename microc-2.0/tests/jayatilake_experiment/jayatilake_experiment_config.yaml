@@ -403,7 +403,7 @@ environment:
 
 # Direct top-level parameters (precise paths required)
 # Cell behavior parameters
-cell_cycle_time: 240                      # Minimum time for cell division (240 iterations = 24 hours at dt=0.1)
+cell_cycle_time: 2                        # Minimum time for cell division (2 iterations = 0.2 hours at dt=0.1) - FOR TESTING
 max_cell_age: 500.0                       # Maximum cell age in hours before death
 # Phenotype behaviors (dividing, death, persistent) are now default behaviors
 # Custom experiments can override these in custom functions if needed
@@ -412,8 +412,9 @@ max_cell_age: 500.0                       # Maximum cell age in hours before dea
 # Custom parameters (for custom functions - config agnostic)
 custom_parameters:
   # ATP parameters
-  max_atp: 30                    # Maximum ATP per glucose molecule
-  atp_threshold: 0.8             # ATP threshold for proliferation
+  max_atp_rate: 1.0e-14          # Maximum ATP production rate (mol/s/cell) for normalization
+  atp_threshold: 0.001           # ATP threshold for proliferation (normalized)
+  cell_cycle_time: 2             # Minimum time for cell division (2 iterations = 0.2 hours at dt=0.1) - FOR TESTING
 
   # Metabolic parameters
   glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
