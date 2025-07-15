@@ -147,8 +147,8 @@ class MicroCConfig:
             nx=data['domain']['nx'],
             ny=data['domain']['ny'],
             cell_height=Length(
-                data['domain'].get('cell_height', 20.0),
-                data['domain'].get('cell_height_unit', 'μm')
+                data['domain']['cell_height'],
+                data['domain']['cell_height_unit']
             )
         )
         
@@ -160,26 +160,22 @@ class MicroCConfig:
             intercellular_step=data['time']['intercellular_step']
         )
 
-        # Diffusion configuration (optional, with defaults)
-        diffusion = DiffusionConfig()
-        if 'diffusion' in data:
-            diffusion = DiffusionConfig(
-                max_iterations=data['diffusion'].get('max_iterations', 1000),
-                tolerance=data['diffusion'].get('tolerance', 1e-6),
-                solver_type=data['diffusion'].get('solver_type', 'steady_state'),
-                twodimensional_adjustment_coefficient=data['diffusion'].get('twodimensional_adjustment_coefficient', 1.0)
-            )
+        # Diffusion configuration (required)
+        diffusion = DiffusionConfig(
+            max_iterations=data['diffusion']['max_iterations'],
+            tolerance=data['diffusion']['tolerance'],
+            solver_type=data['diffusion']['solver_type'],
+            twodimensional_adjustment_coefficient=data['diffusion']['twodimensional_adjustment_coefficient']
+        )
 
-        # Output configuration (optional)
-        output = OutputConfig()
-        if 'output' in data:
-            output = OutputConfig(
-                save_data_interval=data['output'].get('save_data_interval', 1),
-                save_plots_interval=data['output'].get('save_plots_interval', 50),
-                save_final_plots=data['output'].get('save_final_plots', True),
-                save_initial_plots=data['output'].get('save_initial_plots', True),
-                status_print_interval=data['output'].get('status_print_interval', 10)
-            )
+        # Output configuration (required)
+        output = OutputConfig(
+            save_data_interval=data['output']['save_data_interval'],
+            save_plots_interval=data['output']['save_plots_interval'],
+            save_final_plots=data['output']['save_final_plots'],
+            save_initial_plots=data['output']['save_initial_plots'],
+            status_print_interval=data['output']['status_print_interval']
+        )
         
         substances = {}
         for name, sub_data in data['substances'].items():
@@ -194,11 +190,11 @@ class MicroCConfig:
             )
 
         # Load associations (substance -> gene_input mapping)
-        associations = data.get('associations', {})
+        associations = data['associations']
 
         # Load thresholds
         thresholds = {}
-        for name, thresh_data in data.get('thresholds', {}).items():
+        for name, thresh_data in data['thresholds'].items():
             thresholds[name] = ThresholdConfig(
                 name=name,
                 initial=thresh_data['initial'],
@@ -210,31 +206,37 @@ class MicroCConfig:
         if 'gene_network' in data:
             gene_net_data = data['gene_network']
             nodes = {}
-            for name, node_data in gene_net_data.get('nodes', {}).items():
+            for name, node_data in gene_net_data['nodes'].items():
+                # For nodes defined in .bnd files, inputs and logic are optional in YAML
+                inputs = node_data.get('inputs', []) if 'bnd_file' in gene_net_data else node_data['inputs']
+                logic = node_data.get('logic', '') if 'bnd_file' in gene_net_data else node_data['logic']
+                # is_output defaults to False if not specified (most nodes are not output nodes)
+                is_output = node_data.get('is_output', False)
+
                 nodes[name] = GeneNodeConfig(
                     name=name,
-                    inputs=node_data.get('inputs', []),
-                    logic=node_data.get('logic', ''),
-                    is_input=node_data.get('is_input', False),
-                    is_output=node_data.get('is_output', False),
-                    default_state=node_data.get('default_state', False)
+                    inputs=inputs,
+                    logic=logic,
+                    is_input=node_data['is_input'],
+                    is_output=is_output,
+                    default_state=node_data['default_state']
                 )
+
+            # Derive input_nodes from nodes marked as is_input=True if not explicitly specified
+            input_nodes = gene_net_data.get('input_nodes', [name for name, node in nodes.items() if node.is_input])
 
             gene_network = GeneNetworkConfig(
                 nodes=nodes,
-                input_nodes=gene_net_data.get('input_nodes', []),
-                output_nodes=gene_net_data.get('output_nodes', []),
-                propagation_steps=gene_net_data.get('propagation_steps', 3),
-                bnd_file=gene_net_data.get('bnd_file', None)
+                input_nodes=input_nodes,
+                output_nodes=gene_net_data['output_nodes'],
+                propagation_steps=gene_net_data['propagation_steps'],
+                bnd_file=gene_net_data['bnd_file']
             )
 
         # Load environment configuration
-        environment = EnvironmentConfig()
-        if 'environment' in data:
-            env_data = data['environment']
-            environment = EnvironmentConfig(
-                ph=env_data.get('ph', 7.4)
-            )
+        environment = EnvironmentConfig(
+            ph=data['environment']['ph']
+        )
 
         # Load composite gene configurations
         composite_genes = []
@@ -255,16 +257,16 @@ class MicroCConfig:
             thresholds=thresholds,
             composite_genes=composite_genes,
             gene_network=gene_network,
-            gene_network_steps=data.get('gene_network_steps', 3),
+            gene_network_steps=data.get('gene_network_steps', gene_network.propagation_steps if gene_network else 3),
             environment=environment,
             output=output,
-            output_dir=Path(data.get('output_dir', 'results')),
-            plots_dir=Path(data.get('plots_dir', 'plots')),
-            data_dir=Path(data.get('data_dir', 'data')),
-            custom_functions_path=data.get('custom_functions_path'),
-            custom_parameters=data.get('custom_parameters', {}),
-            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
-            log_simulation_status=data.get('log_simulation_status', False)
+            output_dir=Path(data['output_dir']),
+            plots_dir=Path(data['plots_dir']),
+            data_dir=Path(data['data_dir']),
+            custom_functions_path=data['custom_functions_path'],
+            custom_parameters=data['custom_parameters'],
+            debug_phenotype_detailed=data['debug_phenotype_detailed'],
+            log_simulation_status=data['log_simulation_status']
         )
 
     @classmethod
@@ -279,8 +281,8 @@ class MicroCConfig:
             ny=domain_data['ny'],
             dimensions=domain_data['dimensions'],
             cell_height=Length(
-                domain_data.get('cell_height', 20.0),
-                domain_data.get('cell_height_unit', 'μm')
+                domain_data['cell_height'],
+                domain_data['cell_height_unit']
             )
         )
 
@@ -294,15 +296,13 @@ class MicroCConfig:
             intercellular_step=time_data['intercellular_step']
         )
 
-        # Diffusion configuration (optional, with defaults)
-        diffusion = DiffusionConfig()
-        if 'diffusion' in data:
-            diffusion = DiffusionConfig(
-                max_iterations=data['diffusion'].get('max_iterations', 1000),
-                tolerance=data['diffusion'].get('tolerance', 1e-6),
-                solver_type=data['diffusion'].get('solver_type', 'steady_state'),
-                twodimensional_adjustment_coefficient=data['diffusion'].get('twodimensional_adjustment_coefficient', 1.0)
-            )
+        # Diffusion configuration (required)
+        diffusion = DiffusionConfig(
+            max_iterations=data['diffusion']['max_iterations'],
+            tolerance=data['diffusion']['tolerance'],
+            solver_type=data['diffusion']['solver_type'],
+            twodimensional_adjustment_coefficient=data['diffusion']['twodimensional_adjustment_coefficient']
+        )
 
         # Substances
         substances = {}
@@ -318,9 +318,9 @@ class MicroCConfig:
             )
 
         # Associations and thresholds
-        associations = data.get('associations', {})
+        associations = data['associations']
         thresholds = {}
-        for name, thresh_data in data.get('thresholds', {}).items():
+        for name, thresh_data in data['thresholds'].items():
             thresholds[name] = ThresholdConfig(
                 name=name,
                 initial=thresh_data['initial'],
@@ -332,34 +332,41 @@ class MicroCConfig:
         if 'gene_network' in data:
             gene_net_data = data['gene_network']
             nodes = {}
-            for name, node_data in gene_net_data.get('nodes', {}).items():
+            for name, node_data in gene_net_data['nodes'].items():
+                # For nodes defined in .bnd files, inputs and logic are optional in YAML
+                inputs = node_data.get('inputs', []) if 'bnd_file' in gene_net_data else node_data['inputs']
+                logic = node_data.get('logic', '') if 'bnd_file' in gene_net_data else node_data['logic']
+                # is_output defaults to False if not specified (most nodes are not output nodes)
+                is_output = node_data.get('is_output', False)
+
                 nodes[name] = GeneNodeConfig(
                     name=name,
-                    inputs=node_data.get('inputs', []),
-                    logic=node_data.get('logic', ''),
-                    is_input=node_data.get('is_input', False),
-                    is_output=node_data.get('is_output', False),
-                    default_state=node_data.get('default_state', False)
+                    inputs=inputs,
+                    logic=logic,
+                    is_input=node_data['is_input'],
+                    is_output=is_output,
+                    default_state=node_data['default_state']
                 )
+
+            # Derive input_nodes from nodes marked as is_input=True if not explicitly specified
+            input_nodes = gene_net_data.get('input_nodes', [name for name, node in nodes.items() if node.is_input])
 
             gene_network = GeneNetworkConfig(
                 nodes=nodes,
-                input_nodes=gene_net_data.get('input_nodes', []),
-                output_nodes=gene_net_data.get('output_nodes', []),
-                propagation_steps=gene_net_data.get('propagation_steps', 3),
-                bnd_file=gene_net_data.get('bnd_file', None)
+                input_nodes=input_nodes,
+                output_nodes=gene_net_data['output_nodes'],
+                propagation_steps=gene_net_data['propagation_steps'],
+                bnd_file=gene_net_data['bnd_file']
             )
 
-        # Output configuration (same as load_from_yaml)
-        output = OutputConfig()
-        if 'output' in data:
-            output = OutputConfig(
-                save_data_interval=data['output'].get('save_data_interval', 1),
-                save_plots_interval=data['output'].get('save_plots_interval', 50),
-                save_final_plots=data['output'].get('save_final_plots', True),
-                save_initial_plots=data['output'].get('save_initial_plots', True),
-                status_print_interval=data['output'].get('status_print_interval', 10)
-            )
+        # Output configuration (required)
+        output = OutputConfig(
+            save_data_interval=data['output']['save_data_interval'],
+            save_plots_interval=data['output']['save_plots_interval'],
+            save_final_plots=data['output']['save_final_plots'],
+            save_initial_plots=data['output']['save_initial_plots'],
+            status_print_interval=data['output']['status_print_interval']
+        )
 
         return cls(
             domain=domain,
@@ -369,14 +376,14 @@ class MicroCConfig:
             associations=associations,
             thresholds=thresholds,
             gene_network=gene_network,
-            gene_network_steps=data.get('gene_network_steps', 3),
+            gene_network_steps=data.get('gene_network_steps', gene_network.propagation_steps if gene_network else 3),
             output=output,
-            output_dir=Path(data.get('output_dir', 'results')),
-            plots_dir=Path(data.get('plots_dir', 'plots')),
-            data_dir=Path(data.get('data_dir', 'data')),
-            custom_functions_path=data.get('custom_functions_path'),
-            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
-            log_simulation_status=data.get('log_simulation_status', False)
+            output_dir=Path(data['output_dir']),
+            plots_dir=Path(data['plots_dir']),
+            data_dir=Path(data['data_dir']),
+            custom_functions_path=data['custom_functions_path'],
+            debug_phenotype_detailed=data['debug_phenotype_detailed'],
+            log_simulation_status=data['log_simulation_status']
         )
     
     def validate(self) -> bool:

@@ -1,0 +1,22 @@
+# Nutrient starvation - no oxygen, no glucose
+# This should lead to apoptosis
+
+Oxygen_supply = false
+Glucose_supply = false
+
+# No growth factors
+FGFR_stimulus = false
+EGFR_stimulus = false
+cMET_stimulus = false
+
+# No inhibitors
+EGFRI = false
+FGFRI = false
+cMETI = false
+Growth_Inhibitor = false
+GLUT1I = false
+MCT1I = false
+MCT4I = false
+
+# Other stimuli
+MCT1_stimulus = false

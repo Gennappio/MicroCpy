@@ -337,7 +337,7 @@ class MultiSubstanceSimulator:
                 x, y = int(x_pos), int(y_pos)
                 if 0 <= x < self.config.domain.nx and 0 <= y < self.config.domain.ny:
                     # Get reaction rate for this substance
-                    reaction_rate = reactions.get(name, 0.0)  # mol/s/cell
+                    reaction_rate = reactions[name]  # mol/s/cell
 
                     # Convert to concentration change (simplified)
                     cell_volume = self.config.domain.cell_volume_um3 * 1e-18  # Convert to m³
@@ -387,7 +387,7 @@ class MultiSubstanceSimulator:
                 fipy_idx = x * ny + y
 
                 # Get reaction rate for this substance (from custom metabolism function)
-                reaction_rate = reactions.get(substance_name, 0.0)  # mol/s/cell
+                reaction_rate = reactions[substance_name]  # mol/s/cell
 
                 # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume
                 # Apply 2D adjustment coefficient (1/thickness) to account for 2D simulation of 3D system

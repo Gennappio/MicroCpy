@@ -1,0 +1,24 @@
+# Example input file for gene network simulation
+# Format: node_name = true/false (or 1/0, on/off, yes/no)
+
+# Environmental conditions
+Oxygen_supply = true
+Glucose_supply = true
+
+# Growth factors
+FGFR_stimulus = true
+EGFR_stimulus = true
+cMET_stimulus = true
+
+# Inhibitors (all off for normal conditions)
+EGFRI = false
+FGFRI = false
+cMETI = false
+Growth_Inhibitor = false
+GLUT1I = false
+MCT1I = false
+MCT4I = false
+
+# Other stimuli
+MCT1_stimulus = false
+

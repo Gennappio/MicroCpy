@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Gene Simulator
+Synchronous Gene Simulator
 
-This script reads regulatory network files (HTML or BND+CFG) and performs simulations.
-It supports random initialization, fixing node states, and analyzing target nodes.
+This script reads regulatory network files (HTML or BND+CFG) and performs simulations
+with two different synchronous update modes.
 
 Usage:
-    python gene_simulator.py <network_file> [options]
+    python sync_simulator.py <network_file> [options]
 
 Options:
     --steps N             Number of simulation steps (default: 100)
@@ -14,10 +14,15 @@ Options:
     --target-node NODE    Node to analyze (required)
     --fix-node NODE STATE Fix a node to a specific state (ON/OFF)
     --set-node NODE STATE Set initial state of a node (ON/OFF) - deprecated, use --fix-node
+    --mode {1,2}          Synchronous update mode (default: 1)
+                          1: Each node is updated based on previous step states
+                          2: Each node is updated based on mix of current and previous step states
+    --plot                Plot the activation results
+    --output FILE         Path to save the plot (default: target_node_activation.png)
 
 Example:
-    python gene_simulator.py regulatoryGraph.html --steps 100 --runs 200 --target-node mitoATP \
-        --fix-node Oxygen_supply OFF --fix-node Glucose_supply ON
+    python sync_simulator.py regulatoryGraph.html --steps 100 --runs 200 --target-node mitoATP \
+        --fix-node Oxygen_supply OFF --fix-node Glucose_supply ON --mode 2 --plot
 """
 
 import sys
@@ -43,6 +48,7 @@ class Node:
         self.name = name
         self.logic_rule = logic_rule
         self.state = False  # Default to OFF
+        self.next_state = False  # For synchronous updates
         self.updated = False  # Flag to track if node has been updated in current step
 
     def __str__(self):
@@ -76,10 +82,8 @@ class BooleanExpression:
             # Make sure we replace whole words only (not substrings)
             expr = re.sub(r'\b' + re.escape(node_name) + r'\b', 'True' if state else 'False', expr)
 
-        # Replace logical operators - FIXED: Handle ! operator more carefully
-        expr = expr.replace('&', ' and ').replace('|', ' or ')
-        # Replace ! with not, but be careful about spacing
-        expr = re.sub(r'!\s*', 'not ', expr)  # Replace ! followed by optional whitespace
+        # Replace logical operators
+        expr = expr.replace('&', ' and ').replace('|', ' or ').replace('!', ' not ')
 
         try:
             # Evaluate the expression
@@ -128,7 +132,7 @@ class HtmlParser(NetworkParser):
         node_elements = soup.find_all('node')
 
         for node in node_elements:
-            node_id = node['id']
+            node_id = node.get('id')
             if not node_id:
                 continue
 
@@ -148,6 +152,11 @@ class HtmlParser(NetworkParser):
 
             # Create the node
             self.nodes[node_id] = Node(node_id, logic_rule)
+
+    def _parse_html(self, content):
+        """Parse HTML format."""
+        # For now, assume HTML format is similar to GraphML
+        self._parse_graphml(content)
 
 
 class BndParser(NetworkParser):
@@ -198,18 +207,22 @@ def parse_network(file_path):
         raise ValueError(f"Unsupported file format: {file_ext}")
 
 
-class Simulator:
-    """Simulates a regulatory network."""
+class SyncSimulator:
+    """Simulates a regulatory network with synchronous updates."""
 
-    def __init__(self, nodes):
+    def __init__(self, nodes, mode=1):
         """
         Initialize the simulator with a set of nodes.
 
         Args:
             nodes: Dictionary of Node objects
+            mode: Synchronous update mode (1 or 2)
+                  1: Each node is updated based on previous step states
+                  2: Each node is updated based on mix of current and previous step states
         """
         self.nodes = nodes
         self.fixed_nodes = {}  # Dictionary of nodes with fixed states
+        self.mode = mode  # Update mode
 
     def initialize_random(self, set_nodes=None):
         """
@@ -224,12 +237,15 @@ class Simulator:
             # Skip fixed nodes
             if node_name in self.fixed_nodes:
                 node.state = self.fixed_nodes[node_name]
+                node.next_state = self.fixed_nodes[node_name]
             # Set initial state for set nodes
             elif node_name in set_nodes:
                 node.state = set_nodes[node_name]
+                node.next_state = set_nodes[node_name]
             else:
                 # Randomize all other nodes
                 node.state = random.choice([True, False])
+                node.next_state = node.state
 
             # Reset the updated flag
             node.updated = False
@@ -245,47 +261,137 @@ class Simulator:
         if node_name in self.nodes:
             self.fixed_nodes[node_name] = state
             self.nodes[node_name].state = state
+            self.nodes[node_name].next_state = state
         else:
             print(f"Warning: Node {node_name} not found in the network")
 
-    def step(self):
+    def step_mode1(self):
         """
-        Perform one simulation step.
+        Perform one simulation step using Mode 1.
 
-        In each step, randomly pick a node and update it according to its logic.
-        When all nodes have been updated, the step is complete.
+        In Mode 1, at step n, it picks randomly a node and changes it to the n-state,
+        and the next picked node is updated taking into account the n-1 state of the nodes.
         """
-        # Reset the updated flag for all nodes
-        for node in self.nodes.values():
-            node.updated = False
-
-        # Create a list of nodes that need to be updated
+        # Create a list of nodes to update
         nodes_to_update = list(self.nodes.keys())
 
-        # Update nodes one by one in random order until all have been updated
-        while nodes_to_update:
-            # Pick a random node to update
-            node_index = random.randrange(len(nodes_to_update))
-            node_name = nodes_to_update.pop(node_index)
+        # Shuffle the list to randomize the order of updates
+        random.shuffle(nodes_to_update)
+        
+        # Create a dictionary of current node states for logic evaluation
+        # These states are from the previous step (n-1)
+        node_states = {n: self.nodes[n].state for n in self.nodes}
+        
+        # Update each node in the random order
+        for node_name in nodes_to_update:
             node = self.nodes[node_name]
-
+            
             # Skip fixed nodes
             if node_name in self.fixed_nodes:
-                node.state = self.fixed_nodes[node_name]
-                node.updated = True
+                node.next_state = self.fixed_nodes[node_name]
+                continue
+                
+            # If the node has a logic rule, evaluate it using the n-1 states
+            if node.logic_rule:
+                expr = BooleanExpression(node.logic_rule)
+                node.next_state = expr.evaluate(node_states)
+            else:
+                # If no logic rule, keep the current state
+                node.next_state = node.state
+        
+        # After all nodes have been updated, apply the next states
+        for node_name, node in self.nodes.items():
+            node.state = node.next_state
+
+    def step_mode2(self):
+        """
+        Perform one simulation step using Mode 2.
+        
+        In Mode 2, at step n, it picks randomly a node x and changes it to the n-state,
+        and the next picked node y is updated taking into account the n state of the node x
+        and the others already updated.
+        """
+        # Create a list of nodes to update
+        nodes_to_update = list(self.nodes.keys())
+        
+        # Shuffle the list to randomize the order of updates
+        random.shuffle(nodes_to_update)
+        
+        # Create a dictionary of current node states for logic evaluation
+        # This will be updated as we go through the nodes
+        node_states = {n: self.nodes[n].state for n in self.nodes}
+        
+        # Update each node in the random order
+        for node_name in nodes_to_update:
+            node = self.nodes[node_name]
+            
+            # Skip fixed nodes
+            if node_name in self.fixed_nodes:
+                node.next_state = self.fixed_nodes[node_name]
+                # Update the node_states dictionary with the fixed state
+                node_states[node_name] = self.fixed_nodes[node_name]
+                continue
+                
+            # If the node has a logic rule, evaluate it using the current mix of states
+            if node.logic_rule:
+                expr = BooleanExpression(node.logic_rule)
+                node.next_state = expr.evaluate(node_states)
+            else:
+                # If no logic rule, keep the current state
+                node.next_state = node.state
+                
+            # Update the node_states dictionary with the new state
+            # This means subsequent nodes will see this updated state
+            node_states[node_name] = node.next_state
+        
+        # After all nodes have been updated, apply the next states
+        # (This is actually redundant in mode 2 since we've already updated node_states,
+        # but we keep it for consistency and clarity)
+        for node_name, node in self.nodes.items():
+            node.state = node.next_state
+
+    def step_mode3(self):
+        """
+        Perform one simulation step using Mode 3 (truly synchronous).
+
+        In Mode 3, all nodes are updated simultaneously based on the current states.
+        This is truly synchronous with no random order dependencies.
+        """
+        # Get current states of all nodes
+        current_states = {name: node.state for name, node in self.nodes.items()}
+
+        # Calculate new states for all nodes simultaneously
+        new_states = {}
+
+        for node_name, node in self.nodes.items():
+            # Skip fixed nodes - they keep their fixed states
+            if node_name in self.fixed_nodes:
+                new_states[node_name] = self.fixed_nodes[node_name]
                 continue
 
-            # If the node has a logic rule, evaluate it
+            # If the node has a logic rule, evaluate it using current states
             if node.logic_rule:
-                # Create a dictionary of current node states for logic evaluation
-                node_states = {n: self.nodes[n].state for n in self.nodes}
-
-                # Evaluate the logic rule
                 expr = BooleanExpression(node.logic_rule)
-                node.state = expr.evaluate(node_states)
+                new_states[node_name] = expr.evaluate(current_states)
+            else:
+                # If no logic rule, keep the current state
+                new_states[node_name] = node.state
 
-            # Mark the node as updated
-            node.updated = True
+        # Apply all new states simultaneously
+        for node_name, new_state in new_states.items():
+            self.nodes[node_name].state = new_state
+            self.nodes[node_name].next_state = new_state
+
+    def step(self):
+        """
+        Perform one simulation step based on the selected mode.
+        """
+        if self.mode == 1:
+            self.step_mode1()
+        elif self.mode == 2:
+            self.step_mode2()
+        else:  # mode 3
+            self.step_mode3()
 
     def run(self, steps):
         """
@@ -309,12 +415,14 @@ class Simulator:
 
 def parse_arguments():
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description='Gene Simulator')
+    parser = argparse.ArgumentParser(description='Synchronous Gene Simulator')
 
     parser.add_argument('network_file', help='Path to the network file (HTML or BND)')
     parser.add_argument('--steps', type=int, default=100, help='Number of simulation steps (default: 100)')
     parser.add_argument('--runs', type=int, default=1, help='Number of simulation runs (default: 1)')
     parser.add_argument('--target-node', required=True, help='Node to analyze')
+    parser.add_argument('--mode', type=int, choices=[1, 2, 3], default=1,
+                        help='Synchronous update mode: 1 (previous step states), 2 (mixed states), or 3 (truly synchronous)')
     parser.add_argument('--plot', action='store_true', help='Plot the activation results')
     parser.add_argument('--output', help='Path to save the plot (default: target_node_activation.png)')
 
@@ -344,8 +452,15 @@ def main():
         print(f"Error: Target node '{args.target_node}' not found in the network")
         return 1
 
-    # Create the simulator
-    simulator = Simulator(nodes)
+    # Create the simulator with the specified mode
+    simulator = SyncSimulator(nodes, mode=args.mode)
+    print(f"Using synchronous update mode {args.mode}")
+    if args.mode == 1:
+        print("Mode 1: Each node is updated based on previous step states")
+    elif args.mode == 2:
+        print("Mode 2: Each node is updated based on mix of current and previous step states")
+    else:
+        print("Mode 3: All nodes are updated simultaneously (truly synchronous)")
 
     # Process fixed nodes
     if args.fix_node:
@@ -424,7 +539,7 @@ def main():
         # Add labels and title
         plt.xlabel('Number of Runs')
         plt.ylabel('Cumulative ON Percentage (%)')
-        plt.title(f'Activation of {args.target_node} over {args.runs} Runs')
+        plt.title(f'Activation of {args.target_node} over {args.runs} Runs (Mode {args.mode})')
 
         # Add grid and legend
         plt.grid(True, linestyle='--', alpha=0.7)
@@ -437,7 +552,7 @@ def main():
         if args.output:
             output_file = args.output
         else:
-            output_file = f"{args.target_node}_activation.png"
+            output_file = f"{args.target_node}_activation_mode{args.mode}.png"
 
         plt.savefig(output_file)
         print(f"\nPlot saved to {output_file}")

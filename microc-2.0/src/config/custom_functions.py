@@ -48,7 +48,7 @@ def calculate_cell_metabolism(local_environment: Dict[str, Any], cell_state: Dic
     
     Example: Slightly reduced consumption rates
     """
-    phenotype = cell_state.get('phenotype', 'Growth_Arrest')
+    phenotype = cell_state['phenotype']
     
     # Custom metabolism rates (slightly lower than defaults)
     if phenotype == "Proliferation":

@@ -1,0 +1,31 @@
+# OPTIMAL ANTI-APOPTOSIS INPUT COMBINATION
+# Based on pathway analysis to minimize apoptosis probability
+
+# ✅ SURVIVAL FACTORS (Turn ON)
+# Essential Nutrients
+Oxygen_supply = true
+Glucose_supply = true
+
+# Growth Factor Signaling
+FGFR_stimulus = true
+EGFR_stimulus = true
+cMET_stimulus = true
+
+# Metabolic Flexibility
+MCT1_stimulus = true
+
+# ❌ STRESS FACTORS (Turn OFF)
+# DNA Damage/Stress
+DNA_damage = false
+Growth_Inhibitor = false
+
+# Drug Inhibitors (all OFF)
+EGFRI = false
+FGFRI = false
+cMETI = false
+MCT1I = false
+MCT4I = false
+GLUT1I = false
+
+# Additional inputs (set to safe defaults)
+TGFBR_stimulus = false

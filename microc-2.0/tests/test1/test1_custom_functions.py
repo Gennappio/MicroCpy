@@ -40,8 +40,8 @@ def update_cell_phenotype(cell, local_environment, dt):
     Simple phenotype logic for testing
     """
     # Check oxygen levels
-    oxygen_conc = local_environment.get('oxygen_concentration', 0.05)
-    glucose_conc = local_environment.get('glucose_concentration', 3.0)
+    oxygen_conc = local_environment['oxygen_concentration']
+    glucose_conc = local_environment['glucose_concentration']
     
     if oxygen_conc < 0.02 or glucose_conc < 1.0:
         # Low resources - switch to quiescent

@@ -32,7 +32,7 @@ class HookRegistry:
     
     def get_hook(self, name: str) -> Optional[HookDefinition]:
         """Get hook definition by name"""
-        return self.hooks.get(name)
+        return self.hooks[name]
     
     def list_hooks(self) -> List[str]:
         """List all available hook names"""
@@ -236,7 +236,7 @@ class CustomFunctionLoader:
         if not self._auto_load_attempted and self.custom_functions_path is None:
             self._try_auto_load()
 
-        return self.custom_functions.get(hook_name)
+        return self.custom_functions[hook_name]
     
     def has_custom_function(self, hook_name: str) -> bool:
         """Check if custom function is available for hook"""
