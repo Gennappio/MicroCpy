@@ -511,6 +511,9 @@ def run_simulation(config, simulator, gene_network, population, args):
         current_time = step * dt
         step_start_time = time.time()
 
+        # Log step start for detailed phenotype debugging
+        population.phenotype_logger.log_step_start(step)
+
         # Determine which processes to update this step
         updates = orchestrator.step(step)
 

@@ -1,3 +1,9 @@
+# DEBUG FLAGS
+# Set to true to enable detailed cell-by-cell phenotype debugging
+debug_phenotype_detailed: false
+# Set to true to enable structured simulation status logging
+log_simulation_status: true
+
 # Jayatilake Metabolic Symbiosis Experiment Configuration
 # Based on: Jayatilake et al. "A computational model of metabolic symbiosis in cancer"
 # Replicates the NetLogo model parameters and gene network logic
@@ -112,8 +118,8 @@ substances:
 
   TGFA:
     diffusion_coeff: 5.18e-11
-    production_rate: 2.0e-20
-    uptake_rate: 2.0e-17
+    production_rate: 2.0e-17
+    uptake_rate: 2.0e-20
     initial_value: 0.000
     boundary_value: 0.000
     boundary_type: "fixed"
@@ -463,7 +469,7 @@ custom_parameters:
   necrosis_threshold_glucose: 0.23
 
   # Spheroid parameters
-  initial_cell_count: 200
+  initial_cell_count: 20
   maximum_cell_count: 5000
 
   # Shedding parameters
