@@ -61,7 +61,7 @@ class PhenotypeLogger:
             with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(f"\n{'='*20} STEP {step} {'='*20}\n")
 
-    def log_cell_substances_and_nodes(self, cell_id, position, local_env, gene_inputs, gene_states, phenotype):
+    def log_cell_substances_and_nodes(self, cell_id, position, local_env, gene_inputs, gene_states, phenotype, cell=None, config=None):
         """Log detailed cell information for each cell and phenotype update"""
         if not self.debug_enabled:
             return
@@ -97,6 +97,57 @@ class PhenotypeLogger:
 
             # Log final phenotype
             f.write(f"  Final Phenotype: {phenotype}\n")
+
+            # Add division decision logging
+            if cell and config:
+                try:
+                    should_divide = cell.should_divide(config)
+                    f.write(f"  Division Decision: {should_divide}\n")
+
+                    # Get division reasoning - check what information is available
+                    f.write(f"  Division Reasoning:\n")
+                    f.write(f"    Age: {cell.state.age:.1f}\n")
+                    f.write(f"    Current Phenotype: {cell.state.phenotype}\n")
+
+                    # Check if metabolic state exists
+                    if hasattr(cell.state, 'metabolic_state'):
+                        f.write(f"    Metabolic State: {cell.state.metabolic_state}\n")
+                        if 'atp_rate' in cell.state.metabolic_state:
+                            atp_rate = cell.state.metabolic_state['atp_rate']
+                            f.write(f"    ATP Rate: {atp_rate:.2e}\n")
+                    else:
+                        f.write(f"    Metabolic State: Not available\n")
+
+                    # Try to get division parameters from config
+                    try:
+                        # Import the function dynamically
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("custom_functions",
+                            "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py")
+                        custom_module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(custom_module)
+
+                        atp_threshold = custom_module.get_parameter_from_config(config, 'atp_threshold', 0.8)
+                        max_atp = custom_module.get_parameter_from_config(config, 'max_atp', 30)
+                        cell_cycle_time = custom_module.get_parameter_from_config(config, 'cell_cycle_time', 240)
+
+                        f.write(f"    Required Age: {cell_cycle_time}\n")
+                        f.write(f"    ATP Threshold: {atp_threshold}\n")
+                        f.write(f"    Max ATP: {max_atp}\n")
+                        f.write(f"    Age Check: {'PASS' if cell.state.age >= cell_cycle_time else 'FAIL'}\n")
+
+                        if hasattr(cell.state, 'metabolic_state') and 'atp_rate' in cell.state.metabolic_state:
+                            atp_rate = cell.state.metabolic_state['atp_rate']
+                            atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
+                            f.write(f"    ATP Check: {'PASS' if atp_rate_normalized > atp_threshold else 'FAIL'}\n")
+                        else:
+                            f.write(f"    ATP Check: FAIL (no ATP data)\n")
+
+                    except Exception as param_e:
+                        f.write(f"    Parameter Error: {str(param_e)}\n")
+
+                except Exception as e:
+                    f.write(f"  Division Decision: ERROR ({str(e)})\n")
 
     def log_phenotype_update_end(self, phenotype_changes):
         """Log summary at end of phenotype update"""
@@ -806,7 +857,8 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                     gene_inputs = self._calculate_gene_inputs(cell._cached_local_env)
                     self.phenotype_logger.log_cell_substances_and_nodes(
                         cell_id, cell.state.position, cell._cached_local_env,
-                        gene_inputs, cell._cached_gene_states, new_phenotype  # Now logs the NEW phenotype
+                        gene_inputs, cell._cached_gene_states, new_phenotype,  # Now logs the NEW phenotype
+                        cell, self.config  # Add cell and config for division logging
                     )
 
                 # Log structured simulation status
