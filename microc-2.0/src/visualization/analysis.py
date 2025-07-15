@@ -125,9 +125,9 @@ class DataAnalyzer(CustomizableComponent):
         # Analyze timing data
         if 'profile_statistics' in perf_stats:
             for process, proc_stats in perf_stats['profile_statistics'].items():
-                statistics[f'{process}_avg_time'] = proc_stats.get('avg_duration', 0)
-                statistics[f'{process}_total_time'] = proc_stats.get('total_duration', 0)
-                statistics[f'{process}_count'] = proc_stats.get('count', 0)
+                statistics[f'{process}_avg_time'] = proc_stats['avg_duration']
+                statistics[f'{process}_total_time'] = proc_stats['total_duration']
+                statistics[f'{process}_count'] = proc_stats['count']
         
         # Analyze resource usage
         if metrics_history:
@@ -142,9 +142,9 @@ class DataAnalyzer(CustomizableComponent):
             })
         
         metadata = {
-            'total_profiles': perf_stats.get('total_profiles', 0),
-            'total_alerts': perf_stats.get('total_alerts', 0),
-            'monitoring_enabled': perf_stats.get('monitoring_enabled', False),
+            'total_profiles': perf_stats['total_profiles'],
+            'total_alerts': perf_stats['total_alerts'],
+            'monitoring_enabled': perf_stats['monitoring_enabled'],
             'history_length': len(metrics_history)
         }
         
@@ -171,7 +171,7 @@ class DataAnalyzer(CustomizableComponent):
         if len(results_list) > 1:
             # Compare means across simulations
             for key in results_list[0].statistics.keys():
-                values = [r.statistics.get(key, 0) for r in results_list]
+                values = [r.statistics[key] for r in results_list]
                 statistics[f'{key}_comparison_mean'] = float(np.mean(values))
                 statistics[f'{key}_comparison_std'] = float(np.std(values))
                 statistics[f'{key}_comparison_range'] = float(np.max(values) - np.min(values))
@@ -232,7 +232,7 @@ class TimeSeriesAnalyzer(CustomizableComponent):
         metadata = {
             'time_points': len(times),
             'duration': len(times) - 1,
-            'phenotype_evolution': [stats.get('phenotype_counts', {}) for stats in population_history]
+            'phenotype_evolution': [stats['phenotype_counts'] for stats in population_history]
         }
         
         return AnalysisResult(

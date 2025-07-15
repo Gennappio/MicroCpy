@@ -89,9 +89,8 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
 
     # Calculate biological cell grid based on cell_height
     # Get domain size and cell_height from simulation_params
-    domain_size_um = simulation_params.get('domain_size_um', 600.0)  # Default 600 μm
-    cell_height_um = simulation_params.get('cell_height_um', 20.0)   # Default 20 μm
-
+    domain_size_um = simulation_params['domain_size_um'] if 'domain_size_um' in simulation_params else simulation_params['size_x']
+    cell_height_um = simulation_params['cell_height_um'] if 'cell_height_um' in simulation_params else simulation_params['cell_height']
     # Calculate biological cell grid size
     bio_nx = int(domain_size_um / cell_height_um)  # e.g., 600/80 = 7.5 → 7
     bio_ny = int(domain_size_um / cell_height_um)
@@ -103,7 +102,7 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
     print(f"   Biological cell size: {cell_height_um} μm")
     # Get initial cell count from simulation parameters FIRST
-    initial_count = simulation_params.get('initial_cell_count', 100)
+    initial_count = simulation_params['initial_cell_count']
 
     # print(f"🔍 BIOLOGICAL CELL GRID DEBUG:")
     # print(f"   FiPy grid: {fipy_nx}×{fipy_ny}")
@@ -124,7 +123,7 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     center_x, center_y = bio_nx // 2, bio_ny // 2
 
     # Get initial cell count from simulation parameters
-    initial_count = simulation_params.get('initial_cell_count', 100)
+    initial_count = simulation_params['initial_cell_count']
     
     placements = []
 
@@ -213,13 +212,13 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     debug_this_cell = random.random() < 0.01
 
     # Get gene states from cell state (they should be stored there after gene network update)
-    gene_states = cell_state.get('gene_states', {})
+    gene_states = cell_state['gene_states']
 
     # Get local concentrations
-    local_oxygen = local_environment.get('Oxygen', 0.0)
-    local_glucose = local_environment.get('Glucose', 0.0)
-    local_lactate = local_environment.get('Lactate', 0.0)
-    local_h = local_environment.get('H', 0.0)
+    local_oxygen = local_environment['Oxygen']
+    local_glucose = local_environment['Glucose']
+    local_lactate = local_environment['Lactate']
+    local_h = local_environment['H']
 
     # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
     km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen', 0.005)      # NetLogo Km for oxygen
@@ -262,15 +261,15 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     }
 
     # Only consume/produce if cell is alive (not necrotic)
-    is_necrotic = gene_states.get('Necrosis', False)
+    is_necrotic = gene_states['Necrosis']
     if is_necrotic:
         if debug_this_cell:
             print(f"\n🔬 NECROTIC CELL {cell_id[:8]}: No metabolism")
         return reactions
 
     # Get gene states
-    mito_atp = 1.0 if gene_states.get('mitoATP', False) else 0.0
-    glyco_atp = 1.0 if gene_states.get('glycoATP', False) else 0.0
+    mito_atp = 1.0 if gene_states['mitoATP'] else 0.0
+    glyco_atp = 1.0 if gene_states['glycoATP'] else 0.0
 
     # Determine cell type for debugging
     cell_type = "UNKNOWN"
@@ -344,29 +343,29 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     # Growth factor kinetics (Jayatilake et al. 2024: RS = γS,C × CS for consumption, RS = γS,P for production)
 
     # TGFA - specific table values
-    tgfa_conc = local_environment.get('TGFA', 0.0)
+    tgfa_conc = local_environment['TGFA']
     reactions['TGFA'] = -tgfa_consumption * tgfa_conc + tgfa_production
 
     # HGF - specific table values (no production)
-    hgf_conc = local_environment.get('HGF', 0.0)
+    hgf_conc = local_environment['HGF']
     reactions['HGF'] = -hgf_consumption * hgf_conc + hgf_production
 
     # FGF - from diffusion-parameters.txt
-    fgf_conc = local_environment.get('FGF', 0.0)
+    fgf_conc = local_environment['FGF']
     reactions['FGF'] = -fgf_consumption * fgf_conc + fgf_production
 
     # Growth inhibitor kinetics (from diffusion-parameters.txt: GI consumption=2.0e-17, production=0.0e-20)
-    gi_conc = local_environment.get('GI', 0.0)
+    gi_conc = local_environment['GI']
     reactions['GI'] = -2.0e-17 * gi_conc  # Only consumption, no production
 
     # Drug inhibitor kinetics (from diffusion-parameters.txt: all have consumption=4.0e-17, production=0.0)
     drug_inhibitors = ['EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D']
     for drug in drug_inhibitors:
-        local_conc = local_environment.get(drug, 0.0)
+        local_conc = local_environment[drug]
         reactions[drug] = -4.0e-17 * local_conc  # From diffusion-parameters.txt
 
     # pH calculation (Jayatilake et al. 2024: pH = -log10([H+]))
-    h_conc = local_environment.get('H', 1e-7)  # Default to neutral pH
+    h_conc = local_environment['H']
     if h_conc > 0:
         import math
         ph_value = -math.log10(h_conc)
@@ -375,7 +374,7 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
 
     # Apply environmental constraints - don't consume more than available
     for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
-        local_conc = local_environment.get(substance, 0.0)
+        local_conc = local_environment[substance]
         if reactions[substance] < 0:  # Consumption
             max_consumption = abs(reactions[substance])
             available = local_conc
@@ -410,14 +409,14 @@ def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Di
     cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 240)
 
     # Check ATP rate from cell state
-    atp_rate = cell_state.get('atp_rate', 0.0)
+    atp_rate = cell_state['atp_rate']
     atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
 
     # Check cell age from cell state
-    cell_age = cell_state.get('age', 0)
+    cell_age = cell_state['age']
 
     # Check phenotype from cell state
-    phenotype = cell_state.get('phenotype', 'Growth_Arrest')
+    phenotype = cell_state['phenotype']
 
     return (atp_rate_normalized > atp_threshold and
             cell_age > cell_cycle_time and
@@ -463,7 +462,7 @@ def custom_should_divide(cell, config: Any) -> bool:
         return False
 
     # Check ATP rate from cell state (metabolic condition)
-    atp_rate = cell.state.metabolic_state.get('atp_rate', 0.0)
+    atp_rate = cell.state.metabolic_state['atp_rate']
     atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
 
     # METABOLIC OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
@@ -486,14 +485,14 @@ def custom_get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> st
     Get cell color based on gene network outputs (matching NetLogo visualization).
     """
     # Phenotype-based colors (highest priority)
-    if gene_states.get('Necrosis', False):
+    if gene_states['Necrosis']:
         return "black"
-    elif gene_states.get('Apoptosis', False):
+    elif gene_states['Apoptosis']:
         return "red"
 
     # Metabolic state colors based on gene network outputs
-    glyco_active = gene_states.get('glycoATP', False)
-    mito_active = gene_states.get('mitoATP', False)
+    glyco_active = gene_states['glycoATP']
+    mito_active = gene_states['mitoATP']
 
     if glyco_active and not mito_active:
         return "green"      # Glycolysis only
@@ -535,39 +534,39 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
         pos = f"({cell.x:.0f},{cell.y:.0f})"
 
         # Get local environment
-        local_env = local_environments.get(cell.cell_id, {})
-        local_oxygen = local_env.get('Oxygen', 0.0)
-        local_glucose = local_env.get('Glucose', 0.0)
-        local_lactate = local_env.get('Lactate', 0.0)
+        local_env = local_environments[cell.cell_id]
+        local_oxygen = local_env['Oxygen']
+        local_glucose = local_env['Glucose']
+        local_lactate = local_env['Lactate']
 
         # Calculate metabolism using the same function
         reactions = custom_calculate_cell_metabolism(cell.state, local_env, config)
 
         # Get metabolic rates
-        oxygen_rate = reactions.get('Oxygen', 0.0)
-        glucose_rate = reactions.get('Glucose', 0.0)
-        lactate_rate = reactions.get('Lactate', 0.0)
+        oxygen_rate = reactions['Oxygen']
+        glucose_rate = reactions['Glucose']
+        lactate_rate = reactions['Lactate']
 
         # Determine cell state
-        gene_states = cell.state.get('gene_states', {})
+        gene_states = cell.state['gene_states']
 
         # Check fate genes first
-        if gene_states.get('Apoptosis', False):
+        if gene_states['Apoptosis']:
             cell_state = 'Apoptotic'
             state_counts['Apoptotic'] += 1
-        elif gene_states.get('Necrosis', False):
+        elif gene_states['Necrosis']:
             cell_state = 'Necrotic'
             state_counts['Necrotic'] += 1
-        elif gene_states.get('Growth_Arrest', False):
+        elif gene_states['Growth_Arrest']:
             cell_state = 'Growth_Arrest'
             state_counts['Growth_Arrest'] += 1
-        elif gene_states.get('Proliferation', False):
+        elif gene_states['Proliferation']:
             cell_state = 'Proliferation'
             state_counts['Proliferation'] += 1
         else:
             # Check ATP genes
-            mito_atp = gene_states.get('mitoATP', False)
-            glyco_atp = gene_states.get('glycoATP', False)
+            mito_atp = gene_states['mitoATP']
+            glyco_atp = gene_states['glycoATP']
 
             if mito_atp and glyco_atp:
                 cell_state = 'BOTH_ATP'
@@ -650,3 +649,87 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
             print()
 
     print("="*100)
+
+
+# =============================================================================
+# TIMING ORCHESTRATION FUNCTIONS
+# =============================================================================
+
+def custom_should_update_intracellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """
+    Determine if intracellular processes should be updated this step.
+    For Jayatilake experiment: Update every step for realistic gene network dynamics.
+    """
+    # Update every step for realistic gene network behavior
+    return True
+
+def custom_should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """
+    Determine if diffusion should be updated this step.
+    For Jayatilake experiment: Use standard interval-based updates.
+    """
+    # Use standard interval-based updates
+    return (current_step - last_update) >= interval
+
+def custom_should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """
+    Determine if intercellular processes should be updated this step.
+    For Jayatilake experiment: Use standard interval-based updates.
+    """
+    # Use standard interval-based updates
+    return (current_step - last_update) >= interval
+
+
+# =============================================================================
+# GENE NETWORK FUNCTIONS
+# =============================================================================
+
+def custom_update_gene_network(current_states: Dict[str, bool], inputs: Dict[str, float], network_params: Dict[str, Any]) -> Dict[str, bool]:
+    """
+    Custom gene network update logic for Jayatilake experiment.
+    Since we use a .bnd file, we defer to the default gene network implementation.
+    This function is required by the hook system but not used in this experiment.
+    """
+    # For Jayatilake experiment, gene network logic is defined in the .bnd file
+    # We don't override the gene network logic here - let the default implementation handle it
+    # This function should not be called since we use .bnd file, but it's required by the hook system
+    raise NotImplementedError("Gene network logic is handled by .bnd file, not custom function")
+
+
+def custom_update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None) -> str:
+    """
+    Determine cell phenotype based on gene network states for Jayatilake experiment.
+    Uses the standard NetLogo-style phenotype determination logic.
+    """
+    # Check fate genes in NetLogo order (sequential, not if-elif)
+    # Later fate genes can overwrite earlier ones when multiple are active
+
+    # Start with default phenotype
+    phenotype = "Growth_Arrest"
+
+    # Check each fate gene in NetLogo order
+    if gene_states['Apoptosis']:
+        phenotype = "Apoptosis"
+
+    if gene_states['Proliferation']:
+        phenotype = "Proliferation"
+
+    if gene_states['Growth_Arrest']:
+        phenotype = "Growth_Arrest"
+
+    if gene_states['Necrosis']:
+        phenotype = "Necrosis"
+
+    return phenotype
+
+
+def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any) -> bool:
+    """
+    Determine if a cell should die based on its state and environment.
+    For Jayatilake experiment: cells die if they have Apoptosis or Necrosis phenotype.
+    """
+    # Get current phenotype
+    phenotype = cell_state['phenotype']
+
+    # Cell dies if it has death phenotypes
+    return phenotype in ['Apoptosis', 'Necrosis']

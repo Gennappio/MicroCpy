@@ -218,7 +218,7 @@ class PerformanceMonitor(CustomizableComponent):
             self.profile_history[name] = self.profile_history[name][-self.max_history:]
         
         # Check thresholds
-        if entry.duration and entry.duration > self.thresholds.get('process_time', 1.0):
+        if entry.duration and entry.duration > self.thresholds['process_time']:
             self._trigger_alert('process_time', {
                 'process': name,
                 'duration': entry.duration,
@@ -331,7 +331,7 @@ class PerformanceMonitor(CustomizableComponent):
     
     def get_profile_history(self, process_name: str, last_n: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get profile history for a specific process"""
-        entries = self.profile_history.get(process_name, [])
+        entries = self.profile_history[process_name]
         if last_n:
             entries = entries[-last_n:]
         

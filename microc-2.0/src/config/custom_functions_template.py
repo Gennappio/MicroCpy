@@ -37,7 +37,7 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, Any], cell_sta
     - Dict with metabolic rates (mol/s/cell)
     """
     # Example: Simple oxygen-dependent metabolism
-    oxygen = local_environment.get('oxygen_concentration', 0.07)
+    oxygen = local_environment['oxygen_concentration']
     
     if oxygen > 0.05:
         return {'oxygen_consumption_rate': 1.0e-18}
@@ -57,7 +57,7 @@ def custom_update_cell_phenotype(local_environment: Dict[str, Any], gene_states:
     - New phenotype string
     """
     # Example: Simple oxygen-based phenotype
-    oxygen = local_environment.get('oxygen_concentration', 0.07)
+    oxygen = local_environment['oxygen_concentration']
     
     if oxygen < 0.02:
         return "hypoxic"
@@ -76,8 +76,8 @@ def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[
     - True if cell should die
     """
     # Example: Age and oxygen-based death
-    age = cell_state.get('age', 0.0)
-    oxygen = local_environment.get('oxygen_concentration', 0.07)
+    age = cell_state['age']
+    oxygen = local_environment['oxygen_concentration']
     
     return age > 120.0 or oxygen < 0.005
 
@@ -104,9 +104,9 @@ def custom_update_gene_network(current_states: Dict[str, bool], inputs: Dict[str
     new_states = current_states.copy()
 
     # Get environmental inputs
-    oxygen = inputs.get('Oxygen_supply', True)
-    glucose = inputs.get('Glucose_supply', True)
-    growth_inhibitor = inputs.get('Growth_Inhibitor', False)
+    oxygen = inputs['Oxygen_supply']
+    glucose = inputs['Glucose_supply']
+    growth_inhibitor = inputs['Growth_Inhibitor']
 
     # Custom regulatory logic
     new_states['p53'] = not oxygen or not glucose or growth_inhibitor
@@ -224,8 +224,8 @@ def custom_calculate_migration_probability(cell_state: Dict[str, Any], local_env
     - Migration probability (0.0 to 1.0)
     """
     # Example: Migrate towards better oxygen
-    current_oxygen = local_environment.get('oxygen_concentration', 0.07)
-    target_oxygen = local_environment.get('target_oxygen_concentration', 0.07)
+    current_oxygen = local_environment['oxygen_concentration']
+    target_oxygen = local_environment['target_oxygen_concentration']
     
     if target_oxygen > current_oxygen:
         return 0.8
@@ -295,7 +295,7 @@ def custom_handle_performance_alert(alert: Dict[str, Any]) -> None:
     - alert: Alert information dict
     """
     # Example: Log alert
-    print(f"Performance alert: {alert.get('message', 'Unknown')}")
+    print(f"Performance alert: {alert['message']}")
 
 # =============================================================================
 # USAGE INSTRUCTIONS

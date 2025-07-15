@@ -218,7 +218,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             for placement in cell_placements:
                 if isinstance(placement, dict):
                     position = placement.get('position')
-                    phenotype = placement.get('phenotype', 'normal')
+                    phenotype = placement['phenotype'] if 'phenotype' in placement else 'normal'
                 elif isinstance(placement, tuple) and len(placement) == 2:
                     # Simple (position, phenotype) tuple
                     position, phenotype = placement
@@ -466,9 +466,9 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         # Process each association (substance -> gene_input mapping)
         for substance_name, gene_input_name in self.config.associations.items():
             # Get substance concentration from local environment
-            substance_conc = local_env.get(substance_name.lower())
-
-            if substance_conc is None:
+            try:
+                substance_conc = local_env[substance_name.lower()]
+            except KeyError:
                 raise ValueError(f"Substance '{substance_name}' not found in local environment - check configuration")
 
             # Get threshold configuration for this gene input
@@ -823,7 +823,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 # Track phenotype changes compactly
                 if old_phenotype != new_phenotype:
                     change_key = f"{old_phenotype}→{new_phenotype}"
-                    phenotype_changes[change_key] = phenotype_changes.get(change_key, 0) + 1
+                    phenotype_changes[change_key] = phenotype_changes[change_key] + 1 if change_key in phenotype_changes else 1
 
                 # Clean up cache
                 delattr(cell, '_cached_gene_states')
@@ -942,7 +942,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         
         for cell in self.state.cells.values():
             phenotype = cell.state.phenotype
-            phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
+            phenotype_counts[phenotype] = phenotype_counts[phenotype] + 1 if phenotype in phenotype_counts else 1
             total_age += cell.state.age
         
         return {

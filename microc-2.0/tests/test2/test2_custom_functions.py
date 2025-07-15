@@ -96,11 +96,11 @@ def update_cell_phenotype(cell, local_environment, dt):
     Phenotype changes based on multiple environmental factors
     """
     # Get concentrations
-    oxygen_conc = local_environment.get('oxygen_concentration', 0.07)
-    glucose_conc = local_environment.get('glucose_concentration', 5.0)
-    lactate_conc = local_environment.get('lactate_concentration', 1.0)
-    fgf_conc = local_environment.get('fgf_concentration', 0.01)
-    tgfa_conc = local_environment.get('tgfa_concentration', 0.005)
+    oxygen_conc = local_environment['oxygen_concentration']
+    glucose_conc = local_environment['glucose_concentration']
+    lactate_conc = local_environment['lactate_concentration']
+    fgf_conc = local_environment['fgf_concentration']
+    tgfa_conc = local_environment['tgfa_concentration']
     
     # Complex decision logic
     if oxygen_conc < 0.022 or glucose_conc < 2.0:

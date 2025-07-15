@@ -386,7 +386,7 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
     for pos, phenotype in cell_data:
         # Count by phenotype
-        phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
+        phenotype_counts[phenotype] = phenotype_counts[phenotype] + 1 if phenotype in phenotype_counts else 1
 
         # Get cell metabolic state using custom color function if available
         try:
@@ -414,8 +414,8 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
     # Population statistics
     pop_stats = population.get_population_statistics()
-    divisions = pop_stats.get('divisions', 0)
-    deaths = pop_stats.get('deaths', 0)
+    divisions = pop_stats['divisions']
+    deaths = pop_stats['deaths']
 
     # Count cells with proliferation gene active
     proliferation_active = 0
@@ -424,7 +424,7 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
             cell = population.state.get_cell_at_position(pos)
             if cell and hasattr(cell.state, 'gene_states'):
                 # Check if Proliferation gene is active
-                if cell.state.gene_states.get('Proliferation', False):
+                if cell.state.gene_states['Proliferation']:
                     proliferation_active += 1
         except:
             pass
@@ -794,22 +794,22 @@ def main():
                 local_env = simulator.state.get_local_environment(grid_pos)
                 # Convert to the format expected by the custom function
                 final_local_environments[cell.cell_id] = {
-                    'Oxygen': local_env.get('oxygen_concentration', 0.0),
-                    'Glucose': local_env.get('glucose_concentration', 0.0),
-                    'Lactate': local_env.get('lactate_concentration', 0.0),
-                    'H': local_env.get('h_concentration', 0.0),
-                    'FGF': local_env.get('fgf_concentration', 0.0),
-                    'EGF': local_env.get('egf_concentration', 0.0),
-                    'TGFA': local_env.get('tgfa_concentration', 0.0),
-                    'HGF': local_env.get('hgf_concentration', 0.0),
-                    'EGFRD': local_env.get('egfrd_concentration', 0.0),
-                    'FGFRD': local_env.get('fgfrd_concentration', 0.0),
-                    'GI': local_env.get('gi_concentration', 0.0),
-                    'cMETD': local_env.get('cmetd_concentration', 0.0),
-                    'pH': local_env.get('ph_concentration', 0.0),
-                    'MCT1D': local_env.get('mct1d_concentration', 0.0),
-                    'MCT4D': local_env.get('mct4d_concentration', 0.0),
-                    'GLUT1D': local_env.get('glut1d_concentration', 0.0)
+                    'Oxygen': local_env['oxygen_concentration'],
+                    'Glucose': local_env['glucose_concentration'],
+                    'Lactate': local_env['lactate_concentration'],
+                    'H': local_env['h_concentration'],
+                    'FGF': local_env['fgf_concentration'],
+                    'EGF': local_env['egf_concentration'],
+                    'TGFA': local_env['tgfa_concentration'],
+                    'HGF': local_env['hgf_concentration'],
+                    'EGFRD': local_env['egfrd_concentration'],
+                    'FGFRD': local_env['fgfrd_concentration'],
+                    'GI': local_env['gi_concentration'],
+                    'cMETD': local_env['cmetd_concentration'],
+                    'pH': local_env['ph_concentration'],
+                    'MCT1D': local_env['mct1d_concentration'],
+                    'MCT4D': local_env['mct4d_concentration'],
+                    'GLUT1D': local_env['glut1d_concentration']
                 }
             custom_final_report_func(population, final_local_environments, config)
     except Exception as e:

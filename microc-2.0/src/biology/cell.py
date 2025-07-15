@@ -101,13 +101,13 @@ class Cell(ICell, CustomizableComponent):
         # 4. Growth_Arrest (quiescent state)
         new_phenotype = "Quiescent"
        
-        if gene_states.get('Apoptosis', False):
+        if gene_states['Apoptosis']:
             new_phenotype = "Apoptosis"
-        if gene_states.get('Proliferation', False):
+        if gene_states['Proliferation']:
             new_phenotype = "Proliferation"
-        if gene_states.get('Growth_Arrest', False):
+        if gene_states['Growth_Arrest']:
             new_phenotype = "Growth_Arrest"
-        if gene_states.get('Necrosis', False):
+        if gene_states['Necrosis']:
             new_phenotype = "Necrosis"
 
         # Update state
