@@ -737,11 +737,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
                 print(f"   Environmental: Oxygen_supply={gene_inputs.get('Oxygen_supply', False)}, Glucose_supply={gene_inputs.get('Glucose_supply', False)}")
 
-            # Log detailed cell information for debugging
-            self.phenotype_logger.log_cell_substances_and_nodes(
-                cell_id, cell.state.position, local_env, gene_inputs,
-                gene_states, cell.state.phenotype
-            )
+            # NOTE: Debug logging moved to update_phenotypes() to log the correct final phenotype
 
             # Store gene states in cell for phenotype update (FIXED INDENTATION)
             cell._cached_gene_states = gene_states
@@ -804,13 +800,13 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 old_phenotype = cell.state.phenotype
                 new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
 
-                # Log detailed information for each phenotype update
+                # Log detailed information for each phenotype update (with correct final phenotype)
                 if self.phenotype_logger.debug_enabled:
                     # Re-calculate gene inputs for logging (since they're not cached)
                     gene_inputs = self._calculate_gene_inputs(cell._cached_local_env)
                     self.phenotype_logger.log_cell_substances_and_nodes(
                         cell_id, cell.state.position, cell._cached_local_env,
-                        gene_inputs, cell._cached_gene_states, new_phenotype
+                        gene_inputs, cell._cached_gene_states, new_phenotype  # Now logs the NEW phenotype
                     )
 
                 # Log structured simulation status

@@ -414,8 +414,10 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
     # Population statistics
     pop_stats = population.get_population_statistics()
-    divisions = pop_stats['divisions']
-    deaths = pop_stats['deaths']
+    # Note: divisions and deaths are not tracked in get_population_statistics()
+    # These would need to be tracked separately if needed
+    divisions = pop_stats.get('divisions', 0)  # Default to 0 if not tracked
+    deaths = pop_stats.get('deaths', 0)  # Default to 0 if not tracked
 
     # Count cells with proliferation gene active
     proliferation_active = 0
