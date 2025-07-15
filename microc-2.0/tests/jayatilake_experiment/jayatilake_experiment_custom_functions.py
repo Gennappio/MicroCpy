@@ -77,7 +77,7 @@ class MetabolicState:
     proton_production: float
 
 
-def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Initialize cells in a spheroid configuration for metabolic symbiosis experiment.
     Places cells in center with some initial heterogeneity.
@@ -185,7 +185,7 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
     return placements
 
 
-def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
+def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
     """
     Calculate substance consumption/production rates using NetLogo-style Michaelis-Menten kinetics.
     Uses gene states (glycoATP, mitoATP, GLUT1, MCT1, MCT4) and NetLogo-compatible parameters.
@@ -398,7 +398,7 @@ def custom_calculate_cell_metabolism(local_environment: Dict[str, float], cell_s
     return reactions
 
 
-def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any = None) -> bool:
+def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any = None) -> bool:
     """
     Determine if cell should attempt division based on ATP rate and cell cycle time.
     Config-agnostic function that works with any configuration structure.
@@ -447,7 +447,7 @@ def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Di
 #     return False
 
 
-def custom_should_divide(cell, config: Any) -> bool:
+def should_divide(cell, config: Any) -> bool:
     """
     Determine if cell should attempt division based on gene network state and cell conditions.
     ALSO sets phenotype to "Proliferation" when metabolic conditions are met (ATP override).
@@ -480,7 +480,7 @@ def custom_should_divide(cell, config: Any) -> bool:
     return False
 
 
-def custom_get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
+def get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
     """
     Get cell color based on gene network outputs (matching NetLogo visualization).
     """
@@ -504,7 +504,7 @@ def custom_get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> st
         return "gray"       # Quiescent
 
 
-def custom_final_report(population, local_environments, config: Any = None) -> None:
+def final_report(population, local_environments, config: Any = None) -> None:
     """
     Print comprehensive final report of all cells with their metabolic rates and states.
     Called at the end of simulation to provide detailed cell-by-cell analysis.
@@ -529,18 +529,18 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
     # Store detailed data for each cell
     cell_data = []
 
-    for cell in population.cells:
+    for cell in population.state.cells.values():
         # Get cell position
-        pos = f"({cell.x:.0f},{cell.y:.0f})"
+        pos = f"({cell.state.position[0]:.0f},{cell.state.position[1]:.0f})"
 
         # Get local environment
-        local_env = local_environments[cell.cell_id]
+        local_env = local_environments[cell.state.id]
         local_oxygen = local_env['Oxygen']
         local_glucose = local_env['Glucose']
         local_lactate = local_env['Lactate']
 
         # Calculate metabolism using the same function
-        reactions = custom_calculate_cell_metabolism(cell.state, local_env, config)
+        reactions = calculate_cell_metabolism(local_env, cell.state.__dict__, config)
 
         # Get metabolic rates
         oxygen_rate = reactions['Oxygen']
@@ -548,7 +548,7 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
         lactate_rate = reactions['Lactate']
 
         # Determine cell state
-        gene_states = cell.state['gene_states']
+        gene_states = cell.state.gene_states
 
         # Check fate genes first
         if gene_states['Apoptosis']:
@@ -583,7 +583,7 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
 
         # Store cell data
         cell_data.append({
-            'id': cell.cell_id[:8],
+            'id': cell.state.id[:8],
             'pos': pos,
             'state': cell_state,
             'oxygen_env': local_oxygen,
@@ -595,10 +595,10 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
         })
 
     # Print summary statistics
-    print(f"\n📊 POPULATION SUMMARY ({len(population.cells)} total cells):")
+    print(f"\n📊 POPULATION SUMMARY ({len(population.state.cells)} total cells):")
     for state, count in state_counts.items():
         if count > 0:
-            percentage = (count / len(population.cells)) * 100
+            percentage = (count / len(population.state.cells)) * 100
             print(f"   • {state}: {count} cells ({percentage:.1f}%)")
 
     # Print detailed cell-by-cell report
@@ -655,7 +655,7 @@ def custom_final_report(population, local_environments, config: Any = None) -> N
 # TIMING ORCHESTRATION FUNCTIONS
 # =============================================================================
 
-def custom_should_update_intracellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+def should_update_intracellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if intracellular processes should be updated this step.
     For Jayatilake experiment: Update every step for realistic gene network dynamics.
@@ -663,7 +663,7 @@ def custom_should_update_intracellular(current_step: int, last_update: int, inte
     # Update every step for realistic gene network behavior
     return True
 
-def custom_should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+def should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if diffusion should be updated this step.
     For Jayatilake experiment: Use standard interval-based updates.
@@ -671,7 +671,7 @@ def custom_should_update_diffusion(current_step: int, last_update: int, interval
     # Use standard interval-based updates
     return (current_step - last_update) >= interval
 
-def custom_should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+def should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if intercellular processes should be updated this step.
     For Jayatilake experiment: Use standard interval-based updates.
@@ -680,23 +680,9 @@ def custom_should_update_intercellular(current_step: int, last_update: int, inte
     return (current_step - last_update) >= interval
 
 
-# =============================================================================
-# GENE NETWORK FUNCTIONS
-# =============================================================================
-
-def custom_update_gene_network(current_states: Dict[str, bool], inputs: Dict[str, float], network_params: Dict[str, Any]) -> Dict[str, bool]:
-    """
-    Custom gene network update logic for Jayatilake experiment.
-    Since we use a .bnd file, we defer to the default gene network implementation.
-    This function is required by the hook system but not used in this experiment.
-    """
-    # For Jayatilake experiment, gene network logic is defined in the .bnd file
-    # We don't override the gene network logic here - let the default implementation handle it
-    # This function should not be called since we use .bnd file, but it's required by the hook system
-    raise NotImplementedError("Gene network logic is handled by .bnd file, not custom function")
 
 
-def custom_update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None) -> str:
+def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None) -> str:
     """
     Determine cell phenotype based on gene network states for Jayatilake experiment.
     Uses the standard NetLogo-style phenotype determination logic.
@@ -723,7 +709,7 @@ def custom_update_cell_phenotype(cell_state: Dict[str, Any], local_environment: 
     return phenotype
 
 
-def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
+def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
     """
     Determine if a cell should die based on its state and environment.
     For Jayatilake experiment: cells die if they have Apoptosis or Necrosis phenotype.

@@ -31,7 +31,22 @@ from simulation.multi_substance_simulator import MultiSubstanceSimulator
 from simulation.orchestrator import TimescaleOrchestrator
 from biology.population import CellPopulation
 from biology.gene_network import BooleanNetwork
-from interfaces.hooks import set_custom_functions_path, get_hook_manager
+import importlib.util
+
+def load_custom_functions(custom_functions_path):
+    """Load custom functions from file path"""
+    if custom_functions_path is None:
+        return None
+
+    try:
+        spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_path)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    except Exception as e:
+        print(f"Warning: Could not load custom functions: {e}")
+        return None
 
 # Try to import AutoPlotter, but make it optional to avoid scipy hanging issues
 try:
@@ -287,14 +302,13 @@ def load_configuration(config_file, args):
     
     if custom_functions_path:
         if custom_functions_path.exists():
-            set_custom_functions_path(custom_functions_path)
-            print(f"✅ Custom functions loaded: {custom_functions_path}")
+            print(f"✅ Custom functions found: {custom_functions_path}")
         else:
             print(f"⚠️  Custom functions file not found: {custom_functions_path}")
     
-    return config
+    return config, custom_functions_path
 
-def setup_simulation(config, args):
+def setup_simulation(config, args, custom_functions_path=None):
     """Setup all simulation components"""
     print(f"\n🔧 Setting up simulation components...")
     
@@ -312,18 +326,18 @@ def setup_simulation(config, args):
     gene_network = BooleanNetwork(config=config)
     print(f"   ✅ Gene network: {len(gene_network.input_nodes)} inputs, {len(gene_network.output_nodes)} outputs")
     
+    # Load custom functions first
+    custom_functions = load_custom_functions(custom_functions_path)
+
     # Create cell population with config for threshold-based gene inputs
     population = CellPopulation(
         grid_size=(config.domain.nx, config.domain.ny),
         gene_network=gene_network,
+        custom_functions_module=custom_functions,
         config=config
     )
-    
-    # Initialize cells (can be customized via custom_functions.py)
-    from interfaces.hooks import get_hook_manager
-    hook_manager = get_hook_manager()
-    
-    try:
+
+    if custom_functions and hasattr(custom_functions, 'initialize_cell_placement'):
         # Try custom placement function with domain configuration
         # Get initial_cell_count from custom_parameters if available
         initial_cell_count = 100  # Default
@@ -336,15 +350,14 @@ def setup_simulation(config, args):
             'initial_cell_count': initial_cell_count
         }
 
-        placements = hook_manager.call_hook(
-            'custom_initialize_cell_placement',
+        placements = custom_functions.initialize_cell_placement(
             grid_size=(config.domain.nx, config.domain.ny),
             simulation_params=simulation_params
         )
         for placement in placements:
             population.add_cell(placement['position'], phenotype=placement['phenotype'])
         print(f"   ✅ Cells: {len(placements)} (custom placement)")
-    except NotImplementedError:
+    else:
         # Default placement - center cluster
         center_x, center_y = config.domain.nx // 2, config.domain.ny // 2
         default_positions = [
@@ -390,13 +403,11 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
         # Get cell metabolic state using custom color function if available
         try:
-            hook_manager = get_hook_manager()
-            custom_color_func = hook_manager.loader.get_function('custom_get_cell_color')
-            if custom_color_func:
+            if custom_functions and hasattr(custom_functions, 'get_cell_color'):
                 # Get the actual cell object
                 cell = population.state.get_cell_at_position(pos)
                 if cell:
-                    color = custom_color_func(cell, cell.state.gene_states, config)
+                    color = custom_functions.get_cell_color(cell, cell.state.gene_states, config)
                     if 'blue' in color.lower() or 'oxphos' in color.lower():
                         metabolic_counts['OXPHOS'] += 1
                     elif 'red' in color.lower() or 'glyco' in color.lower():
@@ -765,10 +776,10 @@ def main():
     args = parse_arguments()
     
     # Load configuration
-    config = load_configuration(args.config_file, args)
-    
+    config, custom_functions_path = load_configuration(args.config_file, args)
+
     # Setup simulation
-    mesh_manager, simulator, gene_network, population = setup_simulation(config, args)
+    mesh_manager, simulator, gene_network, population = setup_simulation(config, args, custom_functions_path)
 
     # Run simulation (initial plots generated inside before first step)
     results = run_simulation(config, simulator, gene_network, population, args)
@@ -784,18 +795,17 @@ def main():
 
     # Generate final cell metabolic report if custom function is available
     try:
-        hook_manager = get_hook_manager()
-        if hook_manager.loader.has_custom_function('custom_final_report'):
-            custom_final_report_func = hook_manager.loader.get_function('custom_final_report')
+        custom_functions = load_custom_functions(custom_functions_path)
+        if custom_functions and hasattr(custom_functions, 'final_report'):
             # Get final local environments for each cell using the state method
             final_local_environments = {}
-            for cell in population.cells:
+            for cell in population.state.cells.values():
                 # Convert cell position to grid coordinates
-                grid_pos = (int(cell.x), int(cell.y))
+                grid_pos = cell.state.position
                 # Get local environment using the state method
                 local_env = simulator.state.get_local_environment(grid_pos)
                 # Convert to the format expected by the custom function
-                final_local_environments[cell.cell_id] = {
+                final_local_environments[cell.state.id] = {
                     'Oxygen': local_env['oxygen_concentration'],
                     'Glucose': local_env['glucose_concentration'],
                     'Lactate': local_env['lactate_concentration'],
@@ -813,7 +823,7 @@ def main():
                     'MCT4D': local_env['mct4d_concentration'],
                     'GLUT1D': local_env['glut1d_concentration']
                 }
-            custom_final_report_func(population, final_local_environments, config)
+            custom_functions.final_report(population, final_local_environments, config)
     except Exception as e:
         print(f"⚠️  Could not generate final report: {e}")
         import traceback

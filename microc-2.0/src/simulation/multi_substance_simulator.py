@@ -26,7 +26,7 @@ except ImportError:
 # TODO: These config imports should be removed and passed as arguments instead
 from config.config import MicroCConfig, SubstanceConfig, ThresholdConfig
 from core.domain import MeshManager
-from interfaces.hooks import get_hook_manager
+# Hook system removed - using direct function calls
 
 @dataclass
 class SubstanceState:
@@ -87,7 +87,6 @@ class MultiSubstanceSimulator:
     def __init__(self, config: MicroCConfig, mesh_manager: MeshManager):
         self.config = config
         self.mesh_manager = mesh_manager
-        self.hook_manager = get_hook_manager()
         
         # Initialize substance states
         self.state = MultiSubstanceState()

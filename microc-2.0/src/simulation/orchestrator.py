@@ -12,8 +12,8 @@ from pathlib import Path
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import ITimescaleOrchestrator, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import ITimescaleOrchestrator
+import importlib.util
 
 # Add config to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "config"))
@@ -63,7 +63,7 @@ class ProcessTiming:
         self.total_time += duration
         self.average_time = self.total_time / self.total_updates
 
-class TimescaleOrchestrator(ITimescaleOrchestrator, CustomizableComponent):
+class TimescaleOrchestrator(ITimescaleOrchestrator):
     """
     Coordinates multi-timescale biological processes
     
@@ -72,10 +72,9 @@ class TimescaleOrchestrator(ITimescaleOrchestrator, CustomizableComponent):
     """
     
     def __init__(self, time_config: TimeConfig, custom_functions_module=None):
-        super().__init__(custom_functions_module)
-        
+
         self.time_config = time_config
-        self.hook_manager = get_hook_manager()
+        self.custom_functions = self._load_custom_functions(custom_functions_module)
         
         # Initialize state
         self.state = TimescaleState()
@@ -99,19 +98,38 @@ class TimescaleOrchestrator(ITimescaleOrchestrator, CustomizableComponent):
             'diffusion': ['intracellular'],  # Depends on cell reactions
             'intercellular': ['diffusion']  # Depends on substance fields
         }
-    
+
+    def _load_custom_functions(self, custom_functions_module):
+        """Load custom functions from module"""
+        if custom_functions_module is None:
+            return None
+
+        try:
+            if isinstance(custom_functions_module, str):
+                # Load from file path
+                spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    return module
+            else:
+                # Already a module
+                return custom_functions_module
+        except Exception as e:
+            print(f"Warning: Could not load custom functions: {e}")
+            return None
+
     def should_update_diffusion(self, current_step: int) -> bool:
         """Check if diffusion should be updated this step"""
-        try:
-            # Try custom timing logic
-            return self.hook_manager.call_hook(
-                "custom_should_update_diffusion",
+        if self.custom_functions and hasattr(self.custom_functions, 'should_update_diffusion'):
+            # Call custom timing logic
+            return self.custom_functions.should_update_diffusion(
                 current_step=current_step,
                 last_update=self.process_timings['diffusion'].last_update,
                 interval=self.process_timings['diffusion'].interval,
                 state=self.state.__dict__
             )
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_should_update_diffusion(current_step)
     
@@ -125,16 +143,15 @@ class TimescaleOrchestrator(ITimescaleOrchestrator, CustomizableComponent):
     
     def should_update_intracellular(self, current_step: int) -> bool:
         """Check if intracellular processes should be updated"""
-        try:
-            # Try custom timing logic
-            return self.hook_manager.call_hook(
-                "custom_should_update_intracellular",
+        if self.custom_functions and hasattr(self.custom_functions, 'should_update_intracellular'):
+            # Call custom timing logic
+            return self.custom_functions.should_update_intracellular(
                 current_step=current_step,
                 last_update=self.process_timings['intracellular'].last_update,
                 interval=self.process_timings['intracellular'].interval,
                 state=self.state.__dict__
             )
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_should_update_intracellular(current_step)
     
@@ -148,16 +165,15 @@ class TimescaleOrchestrator(ITimescaleOrchestrator, CustomizableComponent):
     
     def should_update_intercellular(self, current_step: int) -> bool:
         """Check if intercellular processes should be updated"""
-        try:
-            # Try custom timing logic
-            return self.hook_manager.call_hook(
-                "custom_should_update_intercellular",
+        if self.custom_functions and hasattr(self.custom_functions, 'should_update_intercellular'):
+            # Call custom timing logic
+            return self.custom_functions.should_update_intercellular(
                 current_step=current_step,
                 last_update=self.process_timings['intercellular'].last_update,
                 interval=self.process_timings['intercellular'].interval,
                 state=self.state.__dict__
             )
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_should_update_intercellular(current_step)
     

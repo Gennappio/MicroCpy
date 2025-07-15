@@ -11,10 +11,10 @@ import os
 import time
 from pathlib import Path
 
-from interfaces.base import ICellPopulation, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import ICellPopulation
 from .cell import Cell, CellState
 from .gene_network import BooleanNetwork
+import importlib.util
 
 class PhenotypeLogger:
     """Detailed logging system for cell phenotype debugging"""
@@ -214,7 +214,7 @@ class PopulationState:
         updates.update(kwargs)
         return PopulationState(**updates)
 
-class CellPopulation(ICellPopulation, CustomizableComponent):
+class CellPopulation(ICellPopulation):
     """
     Spatial cell population management with immutable state tracking
     
@@ -224,11 +224,10 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
     
     def __init__(self, grid_size: Tuple[int, int], gene_network: Optional[BooleanNetwork] = None,
                  custom_functions_module=None, config=None):
-        super().__init__(custom_functions_module)
 
         self.grid_size = grid_size
         self.gene_network = gene_network or BooleanNetwork()
-        self.hook_manager = get_hook_manager()
+        self.custom_functions = self._load_custom_functions(custom_functions_module)
         self.config = config  # Store config for threshold calculations
 
         # Initialize phenotype logger
@@ -252,14 +251,33 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             'max_population_size': grid_size[0] * grid_size[1] * 2  # Prevent runaway growth
         }
 
+    def _load_custom_functions(self, custom_functions_module):
+        """Load custom functions from module"""
+        if custom_functions_module is None:
+            return None
+
+        try:
+            if isinstance(custom_functions_module, str):
+                # Load from file path
+                spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    return module
+            else:
+                # Already a module
+                return custom_functions_module
+        except Exception as e:
+            print(f"Warning: Could not load custom functions: {e}")
+            return None
+
     def initialize_with_custom_placement(self, simulation_params: Optional[Dict] = None) -> int:
         """Initialize population using custom placement function"""
         simulation_params = simulation_params or {}
 
-        try:
-            # Try custom placement function
-            cell_placements = self.hook_manager.call_hook(
-                "custom_initialize_cell_placement",
+        if self.custom_functions and hasattr(self.custom_functions, 'initialize_cell_placement'):
+            # Call custom placement function
+            cell_placements = self.custom_functions.initialize_cell_placement(
                 grid_size=self.grid_size,
                 simulation_params=simulation_params
             )
@@ -284,8 +302,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                     cells_added += 1
 
             return cells_added
-
-        except NotImplementedError:
+        else:
             # Fall back to default single cell at center
             center_x = self.grid_size[0] // 2
             center_y = self.grid_size[1] // 2
@@ -341,13 +358,12 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             return False
         
         # Try custom division direction selection
-        try:
-            target_position = self.hook_manager.call_hook(
-                "custom_select_division_direction",
+        if self.custom_functions and hasattr(self.custom_functions, 'select_division_direction'):
+            target_position = self.custom_functions.select_division_direction(
                 parent_position=parent_cell.state.position,
                 available_positions=self._get_available_neighbors(parent_cell.state.position)
             )
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             target_position = self._default_select_division_direction(parent_cell.state.position)
         
@@ -937,14 +953,13 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         
         for cell in mobile_cells:
             # Try custom migration probability
-            try:
-                migration_prob = self.hook_manager.call_hook(
-                    "custom_calculate_migration_probability",
+            if self.custom_functions and hasattr(self.custom_functions, 'calculate_migration_probability'):
+                migration_prob = self.custom_functions.calculate_migration_probability(
                     cell_state=cell.state.__dict__,
                     local_environment=self._get_local_environment(cell.state.position),
                     target_position=None  # Would be calculated for each neighbor
                 )
-            except NotImplementedError:
+            else:
                 migration_prob = self.default_params['migration_probability']
             
             if np.random.random() < migration_prob:
