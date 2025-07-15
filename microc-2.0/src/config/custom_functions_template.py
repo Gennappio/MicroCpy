@@ -64,21 +64,6 @@ def custom_update_cell_phenotype(local_environment: Dict[str, Any], gene_states:
     else:
         return "normal"
 
-def custom_check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str, Any]) -> bool:
-    """
-    Determine if cell should divide
-    
-    Parameters:
-    - cell_state: Cell properties
-    - local_environment: Environmental conditions
-    
-    Returns:
-    - True if cell should divide
-    """
-    # Example: Age-based division
-    age = cell_state.get('age', 0.0)
-    return age > 24.0  # Divide after 24 hours
-
 def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, Any]) -> bool:
     """
     Determine if cell should die
@@ -338,7 +323,6 @@ USAGE INSTRUCTIONS:
 5. Available hooks (all use custom_ prefix):
    - custom_calculate_cell_metabolism
    - custom_update_cell_phenotype
-   - custom_check_cell_division
    - custom_check_cell_death
    - custom_update_gene_network
    - custom_calculate_boundary_conditions

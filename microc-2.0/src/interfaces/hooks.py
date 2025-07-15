@@ -57,13 +57,6 @@ class HookRegistry:
         ))
 
         self.register_hook(HookDefinition(
-            name="custom_check_cell_division",
-            description="Determine if cell should divide",
-            parameters={"cell_state": dict, "local_environment": dict},
-            return_type=bool
-        ))
-
-        self.register_hook(HookDefinition(
             name="custom_check_cell_death",
             description="Determine if cell should die",
             parameters={"cell_state": dict, "local_environment": dict},

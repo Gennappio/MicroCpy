@@ -132,6 +132,8 @@ class MicroCConfig:
     data_dir: Path = Path("data")
     custom_functions_path: Optional[str] = None
     custom_parameters: Dict[str, Any] = field(default_factory=dict)  # Custom parameters for user functions
+    debug_phenotype_detailed: bool = False  # Flag to enable detailed phenotype debugging
+    log_simulation_status: bool = False  # Flag to enable structured simulation status logging
     
     @classmethod
     def load_from_yaml(cls, config_file: Path) -> 'MicroCConfig':
@@ -260,7 +262,9 @@ class MicroCConfig:
             plots_dir=Path(data.get('plots_dir', 'plots')),
             data_dir=Path(data.get('data_dir', 'data')),
             custom_functions_path=data.get('custom_functions_path'),
-            custom_parameters=data.get('custom_parameters', {})
+            custom_parameters=data.get('custom_parameters', {}),
+            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
+            log_simulation_status=data.get('log_simulation_status', False)
         )
 
     @classmethod
@@ -370,7 +374,9 @@ class MicroCConfig:
             output_dir=Path(data.get('output_dir', 'results')),
             plots_dir=Path(data.get('plots_dir', 'plots')),
             data_dir=Path(data.get('data_dir', 'data')),
-            custom_functions_path=data.get('custom_functions_path')
+            custom_functions_path=data.get('custom_functions_path'),
+            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
+            log_simulation_status=data.get('log_simulation_status', False)
         )
     
     def validate(self) -> bool:
