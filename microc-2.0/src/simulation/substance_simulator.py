@@ -9,8 +9,7 @@ from typing import Dict, Tuple, Optional, Any
 import numpy as np
 from fipy import CellVariable, DiffusionTerm, ImplicitSourceTerm, Viewer
 from fipy.solvers import LinearLUSolver
-from interfaces.base import ISubstanceSimulator, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import ISubstanceSimulator
 from core.domain import MeshManager
 from config.config import SubstanceConfig
 
@@ -35,7 +34,7 @@ class SimulationState:
         updates.update(kwargs)
         return SimulationState(**updates)
 
-class SubstanceSimulator(ISubstanceSimulator, CustomizableComponent):
+class SubstanceSimulator(ISubstanceSimulator):
     """
     FiPy-based substance diffusion-reaction simulator
     
@@ -49,7 +48,6 @@ class SubstanceSimulator(ISubstanceSimulator, CustomizableComponent):
         
         self.mesh_manager = mesh_manager
         self.substance_config = substance_config
-        self.hook_manager = get_hook_manager()
         
         # Create FiPy variable
         self.concentration = CellVariable(
@@ -91,21 +89,9 @@ class SubstanceSimulator(ISubstanceSimulator, CustomizableComponent):
                     float(self.mesh_manager.mesh.faceCenters[1][face_id])
                 )
                 
-                boundary_value = self.hook_manager.call_hook(
-                    "custom_calculate_boundary_conditions",
-                    substance_name=self.substance_config.name,
-                    position=face_center,
-                    time=self.state.time
-                )
-                
-                # Apply custom boundary value
-                if self.mesh_manager.mesh.exteriorFaces[face_id]:
-                    self.concentration.constrain(boundary_value, 
-                                               where=self.mesh_manager.mesh.exteriorFaces[face_id])
-                    
-        except NotImplementedError:
-            # Fall back to default boundary conditions
-            self._default_apply_boundary_conditions()
+                # No custom boundary conditions - use default
+                self._default_apply_boundary_conditions()
+                break  # Exit the loop since we're using default for all faces
     
     def _default_apply_boundary_conditions(self):
         """Default boundary condition application"""

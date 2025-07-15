@@ -16,9 +16,9 @@ import sys
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import CustomizableComponent
+# CustomizableComponent removed - using direct function calls
 
-class PlotExporter(CustomizableComponent):
+class PlotExporter:
     """
     Export simulation data and plots in various formats
     """
@@ -163,7 +163,7 @@ class PlotExporter(CustomizableComponent):
         print(f"📊 Publication figure saved: {filepath}")
         return str(filepath)
 
-class AnimationExporter(CustomizableComponent):
+class AnimationExporter:
     """
     Create animations from simulation time series data
     """

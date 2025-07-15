@@ -21,7 +21,7 @@ from pathlib import Path
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import CustomizableComponent
+# CustomizableComponent removed - using direct function calls
 
 @dataclass
 class AnalysisResult:
@@ -31,7 +31,7 @@ class AnalysisResult:
     statistics: Dict[str, float]
     metadata: Dict[str, Any]
 
-class DataAnalyzer(CustomizableComponent):
+class DataAnalyzer:
     """
     Statistical analysis tools for simulation data
     """
@@ -188,7 +188,7 @@ class DataAnalyzer(CustomizableComponent):
             metadata=metadata
         )
 
-class TimeSeriesAnalyzer(CustomizableComponent):
+class TimeSeriesAnalyzer:
     """
     Time series analysis for simulation data
     """

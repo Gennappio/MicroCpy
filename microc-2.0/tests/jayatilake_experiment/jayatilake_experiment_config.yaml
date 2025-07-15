@@ -1,6 +1,6 @@
 # DEBUG FLAGS
 # Set to true to enable detailed cell-by-cell phenotype debugging
-debug_phenotype_detailed: false
+debug_phenotype_detailed: true
 # Set to true to enable structured simulation status logging
 log_simulation_status: true
 

@@ -8,8 +8,10 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Any
 import uuid
 
-from interfaces.base import ICell, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import ICell
+# Import custom functions directly
+import importlib.util
+from pathlib import Path
 
 @dataclass
 class CellState:
@@ -38,17 +40,15 @@ class CellState:
         updates.update(kwargs)
         return CellState(**updates)
 
-class Cell(ICell, CustomizableComponent):
+class Cell(ICell):
     """
     Modular cell implementation with customizable behavior
-    
-    All cell behaviors can be customized via the hook system without
-    modifying this core implementation.
+
+    All cell behaviors are implemented via direct function calls to custom functions.
     """
-    
+
     def __init__(self, position: tuple[int, int], phenotype: str = "Growth_Arrest",
                  cell_id: Optional[str] = None, custom_functions_module=None):
-        super().__init__(custom_functions_module)
 
         self.state = CellState(
             id=cell_id or str(uuid.uuid4()),
@@ -58,36 +58,56 @@ class Cell(ICell, CustomizableComponent):
             division_count=0,
             tq_wait_time=0.0
         )
-        
-        self.hook_manager = get_hook_manager()
-        
+
+        # Load custom functions module
+        self.custom_functions = self._load_custom_functions(custom_functions_module)
+
         # No default parameters - all values must come from configuration
         # This ensures proper configuration and prevents hidden hardcoded values
         self.default_params = {}
+
+    def _load_custom_functions(self, custom_functions_module):
+        """Load custom functions from module"""
+        if custom_functions_module is None:
+            return None
+
+        try:
+            if isinstance(custom_functions_module, str):
+                # Load from file path
+                spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    return module
+            else:
+                # Already a module
+                return custom_functions_module
+        except Exception as e:
+            print(f"Warning: Could not load custom functions: {e}")
+            return None
     
-    def update_phenotype(self, local_environment: Dict[str, float], 
+    def update_phenotype(self, local_environment: Dict[str, float],
                         gene_states: Dict[str, bool]) -> str:
         """Update cell phenotype based on environment and genes"""
-        try:
-            # Try custom function first
-            new_phenotype = self.hook_manager.call_hook(
-                "custom_update_cell_phenotype",
+        if self.custom_functions and hasattr(self.custom_functions, 'update_cell_phenotype'):
+            # Call custom function
+            new_phenotype = self.custom_functions.update_cell_phenotype(
+                cell_state=self.state.__dict__,
                 local_environment=local_environment,
                 gene_states=gene_states,
                 current_phenotype=self.state.phenotype
             )
-            
-            # Update state
-            self.state = self.state.with_updates(
-                phenotype=new_phenotype,
-                gene_states=gene_states
-            )
-            
-            return new_phenotype
-            
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
-            return self._default_update_phenotype(local_environment, gene_states)
+            new_phenotype = self._default_update_phenotype(local_environment, gene_states)
+
+        # Update state
+        self.state = self.state.with_updates(
+            phenotype=new_phenotype,
+            gene_states=gene_states
+        )
+
+        return new_phenotype
     
     def _default_update_phenotype(self, local_environment: Dict[str, float],
                                  gene_states: Dict[str, bool]) -> str:
@@ -120,16 +140,14 @@ class Cell(ICell, CustomizableComponent):
     
     def calculate_metabolism(self, local_environment: Dict[str, float], config=None) -> Dict[str, float]:
         """Calculate metabolic production/consumption rates"""
-        try:
-            # Try custom function first
-            return self.hook_manager.call_hook(
-                "custom_calculate_cell_metabolism",
+        if self.custom_functions and hasattr(self.custom_functions, 'calculate_cell_metabolism'):
+            # Call custom function
+            return self.custom_functions.calculate_cell_metabolism(
                 local_environment=local_environment,
                 cell_state=self.state.__dict__,
                 config=config
             )
-
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_calculate_metabolism(local_environment, config)
     
@@ -162,15 +180,13 @@ class Cell(ICell, CustomizableComponent):
 
     def should_divide(self, config=None) -> bool:
         """Check if cell should attempt division"""
-        try:
-            # Try custom function first
-            return self.hook_manager.call_hook(
-                "custom_should_divide",
+        if self.custom_functions and hasattr(self.custom_functions, 'should_divide'):
+            # Call custom function
+            return self.custom_functions.should_divide(
                 cell=self,
                 config=config or {}
             )
-
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_should_divide(config)
     
@@ -196,15 +212,13 @@ class Cell(ICell, CustomizableComponent):
     
     def should_die(self, local_environment: Dict[str, float], config=None) -> bool:
         """Check if cell should die"""
-        try:
-            # Try custom function first
-            return self.hook_manager.call_hook(
-                "custom_check_cell_death",
+        if self.custom_functions and hasattr(self.custom_functions, 'check_cell_death'):
+            # Call custom function
+            return self.custom_functions.check_cell_death(
                 cell_state=self.state.__dict__,
                 local_environment=local_environment
             )
-
-        except NotImplementedError:
+        else:
             # Fall back to default implementation
             return self._default_check_cell_death(local_environment, config)
     
