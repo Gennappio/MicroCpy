@@ -475,7 +475,7 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
     print("=" * 80)
 
-def run_simulation(config, simulator, gene_network, population, args):
+def run_simulation(config, simulator, gene_network, population, args, custom_functions_path=None):
     """Run the main simulation loop with multi-timescale orchestration"""
 
     # Determine simulation parameters
@@ -503,8 +503,11 @@ def run_simulation(config, simulator, gene_network, population, args):
     # Create output directory
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create multi-timescale orchestrator
-    orchestrator = TimescaleOrchestrator(config.time)
+    # Load custom functions for orchestrator
+    custom_functions = load_custom_functions(custom_functions_path)
+
+    # Create multi-timescale orchestrator with custom functions
+    orchestrator = TimescaleOrchestrator(config.time, custom_functions)
 
     # Generate TRUE initial state plots (before any simulation steps)
     if config.output.save_initial_plots:
@@ -782,7 +785,7 @@ def main():
     mesh_manager, simulator, gene_network, population = setup_simulation(config, args, custom_functions_path)
 
     # Run simulation (initial plots generated inside before first step)
-    results = run_simulation(config, simulator, gene_network, population, args)
+    results = run_simulation(config, simulator, gene_network, population, args, custom_functions_path)
     
     # Save results
     save_results(results, config, args)

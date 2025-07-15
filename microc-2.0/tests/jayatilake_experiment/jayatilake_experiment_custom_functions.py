@@ -3,6 +3,9 @@ import math
 from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass
 
+# Debug: Confirm custom functions are loaded
+print("🔧 CUSTOM FUNCTIONS LOADED: jayatilake_experiment_custom_functions.py")
+
 # Import custom metabolism functions from separate file
 try:
     import os
@@ -19,7 +22,6 @@ try:
 
     import jayatilake_experiment_custom_metabolism as metabolism
     METABOLISM_FUNCTIONS_AVAILABLE = True
-    print("✅ Imported custom metabolism functions from jayatilake_experiment_custom_metabolism.py")
 except ImportError as e:
     print(f"⚠️  Could not import custom metabolism functions: {e}")
     print(f"   Current working directory: {os.getcwd()}")
@@ -372,6 +374,27 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         # pH doesn't have a "reaction rate" - it's a derived quantity
         reactions['pH'] = 0.0  # pH is calculated from H+, not produced/consumed directly
 
+    # ATP PRODUCTION RATE CALCULATION
+    # Calculate ATP production based on metabolic pathways (glycolysis vs OXPHOS)
+    atp_rate = 0.0
+
+    # Glycolytic ATP production (from glucose consumption)
+    if glyco_atp and reactions['Glucose'] < 0:  # If consuming glucose
+        glucose_consumption_rate = abs(reactions['Glucose'])  # mol/s/cell
+        # Glycolysis: 1 glucose → 2 ATP (net)
+        glycolytic_atp = glucose_consumption_rate * 2.0  # 2 ATP per glucose
+        atp_rate += glycolytic_atp
+
+    # Mitochondrial ATP production (from oxygen consumption)
+    if mito_atp and reactions['Oxygen'] < 0:  # If consuming oxygen
+        oxygen_consumption_rate = abs(reactions['Oxygen'])  # mol/s/cell
+        # OXPHOS: 1 O2 → ~30 ATP (approximate)
+        mitochondrial_atp = oxygen_consumption_rate * 30.0  # 30 ATP per O2
+        atp_rate += mitochondrial_atp
+
+    # Store ATP rate in reactions for access by division function
+    reactions['atp_rate'] = atp_rate
+
     # Apply environmental constraints - don't consume more than available
     for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
         local_conc = local_environment[substance]
@@ -398,6 +421,33 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     return reactions
 
 
+def update_cell_metabolic_state(cell, local_environment: Dict[str, float], config: Any = None):
+    """
+    Update cell's metabolic state with calculated ATP rate and other metabolic values.
+    This function should be called during intracellular processes to populate metabolic_state.
+    """
+    # Calculate metabolism using the existing function
+    reactions = calculate_cell_metabolism(local_environment, cell.state.__dict__, config)
+
+    # Extract key metabolic values
+    atp_rate = reactions.get('atp_rate', 0.0)
+    oxygen_rate = reactions.get('Oxygen', 0.0)
+    glucose_rate = reactions.get('Glucose', 0.0)
+    lactate_rate = reactions.get('Lactate', 0.0)
+
+    # Update cell's metabolic state
+    metabolic_state = {
+        'atp_rate': atp_rate,
+        'oxygen_consumption': abs(oxygen_rate) if oxygen_rate < 0 else 0.0,
+        'glucose_consumption': abs(glucose_rate) if glucose_rate < 0 else 0.0,
+        'lactate_production': lactate_rate if lactate_rate > 0 else 0.0,
+        'lactate_consumption': abs(lactate_rate) if lactate_rate < 0 else 0.0
+    }
+
+    # Update cell state with new metabolic state
+    cell.state = cell.state.with_updates(metabolic_state=metabolic_state)
+
+
 def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str, float], config: Any = None) -> bool:
     """
     Determine if cell should attempt division based on ATP rate and cell cycle time.
@@ -418,33 +468,20 @@ def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str,
     # Check phenotype from cell state
     phenotype = cell_state['phenotype']
 
-    return (atp_rate_normalized > atp_threshold and
-            cell_age > cell_cycle_time and
-            phenotype == "Proliferation")
+    # Debug ATP rate calculation
+    cell_id = cell_state.get('id', 'unknown')[:8]
+    print(f"🔬 DIVISION CHECK {cell_id}: atp_rate={atp_rate:.2e}, max_atp={max_atp}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
+    print(f"   Age: {cell_age:.1f} > {cell_cycle_time}? {cell_age > cell_cycle_time}")
+    print(f"   Phenotype: {phenotype} == 'Proliferation'? {phenotype == 'Proliferation'}")
+    print(f"   ATP check: {atp_rate_normalized:.4f} > {atp_threshold}? {atp_rate_normalized > atp_threshold}")
 
+    division_decision = (atp_rate_normalized > atp_threshold and
+                        cell_age > cell_cycle_time and
+                        phenotype == "Proliferation")
 
-# def custom_check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
-#     """
-#     Determine if cell should die based on gene network state and environmental conditions.
-#     """
-#     # Get gene states from cell state
-#     gene_states = cell_state.get('gene_states', {})
+    print(f"   FINAL DECISION: {division_decision}")
 
-#     # Cell dies if Necrosis or Apoptosis genes are active
-#     necrosis = gene_states.get('Necrosis', False)
-#     apoptosis = gene_states.get('Apoptosis', False)
-
-#     if necrosis or apoptosis:
-#         return True
-
-#     # Additional death conditions could be added here
-#     # For example, extreme hypoxia, nutrient starvation, etc.
-#     # Use lowercase 'oxygen' key (FIXED)
-#     oxygen = local_environment.get('oxygen', 0.0)
-#     if oxygen < 0.001:  # Severe hypoxia
-#         return True
-
-#     return False
+    return division_decision
 
 
 def should_divide(cell, config: Any) -> bool:
@@ -453,30 +490,63 @@ def should_divide(cell, config: Any) -> bool:
     ALSO sets phenotype to "Proliferation" when metabolic conditions are met (ATP override).
     """
     # Get parameters using config-agnostic lookup
-    atp_threshold = get_parameter_from_config(config, 'atp_threshold', 0.8)
-    max_atp = get_parameter_from_config(config, 'max_atp', 30)
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 240)  # iterations
+    atp_threshold = get_parameter_from_config(config, 'atp_threshold', 0.5)
+    max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', 1.0e-14)
+    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 2)  # iterations
+
+    # Debug config lookup (commented out to reduce noise)
+    # print(f"🔧 CONFIG DEBUG: config type: {type(config)}")
+    # print(f"   Final cell_cycle_time = {cell_cycle_time}")
 
     # Check if cell has sufficient age (basic cell cycle time)
     if cell.state.age < cell_cycle_time:
         return False
 
+    # Debug cell division check (reduced output)
+    cell_id = cell.state.id[:8]
+    if cell.state.age >= cell_cycle_time and cell.state.age <= cell_cycle_time + 0.1:  # Only debug newly eligible cells
+        print(f"🔬 DIVISION CHECK {cell_id}: age={cell.state.age:.3f} >= {cell_cycle_time}")
+
+    # ENSURE METABOLIC STATE IS UPDATED
+    # If metabolic state is empty, calculate it now
+    if not cell.state.metabolic_state or 'atp_rate' not in cell.state.metabolic_state:
+        # We need local environment to calculate metabolism
+        # For now, use a dummy environment - this should be fixed in the population update
+        dummy_env = {
+            'Oxygen': 0.05, 'Glucose': 5.0, 'Lactate': 0.1, 'H': 1e-7, 'pH': 7.0,
+            'FGF': 0.0, 'TGFA': 0.0, 'HGF': 0.0, 'GI': 0.0,
+            'EGFRD': 0.0, 'FGFRD': 0.0, 'cMETD': 0.0, 'MCT1D': 0.0, 'GLUT1D': 0.0
+        }
+        update_cell_metabolic_state(cell, dummy_env, config)
+
     # Check ATP rate from cell state (metabolic condition)
-    atp_rate = cell.state.metabolic_state['atp_rate']
-    atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
+    try:
+        atp_rate = cell.state.metabolic_state['atp_rate']
+        atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0
+        print(f"   ATP: rate={atp_rate:.2e}, max={max_atp_rate:.2e}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
+    except Exception as e:
+        print(f"   ❌ ATP ERROR: {e}")
+        print(f"   Cell state: {cell.state}")
+        return False
 
     # METABOLIC OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
     # This ensures metabolic decisions override gene network phenotype decisions
     if atp_rate_normalized > atp_threshold:
+        print(f"   ATP check PASSED: {atp_rate_normalized:.4f} > {atp_threshold} - FORCING Proliferation")
         # Update cell phenotype to proliferation (override gene network decision)
         cell.state = cell.state.with_updates(phenotype="Proliferation")
+        print(f"   DIVISION DECISION: TRUE (ATP override)")
         return True
 
     # If ATP is insufficient, check if we're already in proliferation state
     # (Allow continued proliferation if already started)
     if cell.state.phenotype == "Proliferation":
+        print(f"   ATP check FAILED but already Proliferation - allowing division")
+        print(f"   DIVISION DECISION: TRUE (already proliferating)")
         return True
 
+    print(f"   ATP check FAILED: {atp_rate_normalized:.4f} <= {atp_threshold}, phenotype: {cell.state.phenotype}")
+    print(f"   DIVISION DECISION: FALSE")
     return False
 
 
@@ -652,6 +722,25 @@ def final_report(population, local_environments, config: Any = None) -> None:
 
 
 # =============================================================================
+# AGING AND TIMING FUNCTIONS
+# =============================================================================
+
+def age_cell(cell, dt: float):
+    """
+    Custom aging function to debug aging process.
+    """
+    old_age = cell.state.age
+    new_age = old_age + dt
+
+    # Debug aging for first few cells
+    cell_id = cell.state.id[:8]
+    if old_age < 1.0:  # Only debug young cells
+        print(f"🕰️ AGING: Cell {cell_id} age {old_age:.3f} → {new_age:.3f} (dt={dt})")
+
+    # Update cell age
+    cell.state = cell.state.with_updates(age=new_age)
+
+# =============================================================================
 # TIMING ORCHESTRATION FUNCTIONS
 # =============================================================================
 
@@ -660,6 +749,10 @@ def should_update_intracellular(current_step: int, last_update: int, interval: i
     Determine if intracellular processes should be updated this step.
     For Jayatilake experiment: Update every step for realistic gene network dynamics.
     """
+    # Debug intracellular timing (reduced output)
+    if current_step <= 5 or current_step % 20 == 0:
+        print(f"🕐 INTRACELLULAR CHECK: step={current_step}, last={last_update}, interval={interval}")
+
     # Update every step for realistic gene network behavior
     return True
 
@@ -676,8 +769,13 @@ def should_update_intercellular(current_step: int, last_update: int, interval: i
     Determine if intercellular processes should be updated this step.
     For Jayatilake experiment: Use standard interval-based updates.
     """
+    # Debug intercellular timing (reduced output)
+    should_update = (current_step - last_update) >= interval
+    if should_update and (current_step <= 10 or current_step % 20 == 0):
+        print(f"🔄 INTERCELLULAR UPDATE: step={current_step}, last={last_update}, interval={interval}")
+
     # Use standard interval-based updates
-    return (current_step - last_update) >= interval
+    return should_update
 
 
 
@@ -719,3 +817,14 @@ def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, fl
 
     # Cell dies if it has death phenotypes
     return phenotype in ['Apoptosis', 'Necrosis']
+
+
+# =============================================================================
+# DEBUG: Check if timing functions are available (at end of file)
+# =============================================================================
+timing_functions = ['should_update_intracellular', 'should_update_diffusion', 'should_update_intercellular']
+for func_name in timing_functions:
+    if func_name in globals():
+        print(f"   ✅ {func_name} function found")
+    else:
+        print(f"   ❌ {func_name} function NOT found")
