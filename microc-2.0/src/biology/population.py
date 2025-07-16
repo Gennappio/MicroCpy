@@ -11,10 +11,10 @@ import os
 import time
 from pathlib import Path
 
-from interfaces.base import ICellPopulation, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import ICellPopulation
 from .cell import Cell, CellState
 from .gene_network import BooleanNetwork
+import importlib.util
 
 class PhenotypeLogger:
     """Detailed logging system for cell phenotype debugging"""
@@ -61,7 +61,7 @@ class PhenotypeLogger:
             with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(f"\n{'='*20} STEP {step} {'='*20}\n")
 
-    def log_cell_substances_and_nodes(self, cell_id, position, local_env, gene_inputs, gene_states, phenotype):
+    def log_cell_substances_and_nodes(self, cell_id, position, local_env, gene_inputs, gene_states, phenotype, cell=None, config=None):
         """Log detailed cell information for each cell and phenotype update"""
         if not self.debug_enabled:
             return
@@ -97,6 +97,57 @@ class PhenotypeLogger:
 
             # Log final phenotype
             f.write(f"  Final Phenotype: {phenotype}\n")
+
+            # Add division decision logging
+            if cell and config:
+                try:
+                    should_divide = cell.should_divide(config)
+                    f.write(f"  Division Decision: {should_divide}\n")
+
+                    # Get division reasoning - check what information is available
+                    f.write(f"  Division Reasoning:\n")
+                    f.write(f"    Age: {cell.state.age:.1f}\n")
+                    f.write(f"    Current Phenotype: {cell.state.phenotype}\n")
+
+                    # Check if metabolic state exists
+                    if hasattr(cell.state, 'metabolic_state'):
+                        f.write(f"    Metabolic State: {cell.state.metabolic_state}\n")
+                        if 'atp_rate' in cell.state.metabolic_state:
+                            atp_rate = cell.state.metabolic_state['atp_rate']
+                            f.write(f"    ATP Rate: {atp_rate:.2e}\n")
+                    else:
+                        f.write(f"    Metabolic State: Not available\n")
+
+                    # Try to get division parameters from config
+                    try:
+                        # Import the function dynamically
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("custom_functions",
+                            "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py")
+                        custom_module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(custom_module)
+
+                        atp_threshold = custom_module.get_parameter_from_config(config, 'atp_threshold', 0.8)
+                        max_atp = custom_module.get_parameter_from_config(config, 'max_atp', 30)
+                        cell_cycle_time = custom_module.get_parameter_from_config(config, 'cell_cycle_time', 240)
+
+                        f.write(f"    Required Age: {cell_cycle_time}\n")
+                        f.write(f"    ATP Threshold: {atp_threshold}\n")
+                        f.write(f"    Max ATP: {max_atp}\n")
+                        f.write(f"    Age Check: {'PASS' if cell.state.age >= cell_cycle_time else 'FAIL'}\n")
+
+                        if hasattr(cell.state, 'metabolic_state') and 'atp_rate' in cell.state.metabolic_state:
+                            atp_rate = cell.state.metabolic_state['atp_rate']
+                            atp_rate_normalized = atp_rate / max_atp if max_atp > 0 else 0
+                            f.write(f"    ATP Check: {'PASS' if atp_rate_normalized > atp_threshold else 'FAIL'}\n")
+                        else:
+                            f.write(f"    ATP Check: FAIL (no ATP data)\n")
+
+                    except Exception as param_e:
+                        f.write(f"    Parameter Error: {str(param_e)}\n")
+
+                except Exception as e:
+                    f.write(f"  Division Decision: ERROR ({str(e)})\n")
 
     def log_phenotype_update_end(self, phenotype_changes):
         """Log summary at end of phenotype update"""
@@ -163,7 +214,7 @@ class PopulationState:
         updates.update(kwargs)
         return PopulationState(**updates)
 
-class CellPopulation(ICellPopulation, CustomizableComponent):
+class CellPopulation(ICellPopulation):
     """
     Spatial cell population management with immutable state tracking
     
@@ -173,11 +224,10 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
     
     def __init__(self, grid_size: Tuple[int, int], gene_network: Optional[BooleanNetwork] = None,
                  custom_functions_module=None, config=None):
-        super().__init__(custom_functions_module)
 
         self.grid_size = grid_size
         self.gene_network = gene_network or BooleanNetwork()
-        self.hook_manager = get_hook_manager()
+        self.custom_functions = self._load_custom_functions(custom_functions_module)
         self.config = config  # Store config for threshold calculations
 
         # Initialize phenotype logger
@@ -201,16 +251,42 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             'max_population_size': grid_size[0] * grid_size[1] * 2  # Prevent runaway growth
         }
 
+    def _load_custom_functions(self, custom_functions_module):
+        """Load custom functions from module"""
+        if custom_functions_module is None:
+            return None
+
+        try:
+            if isinstance(custom_functions_module, str):
+                # Load from file path
+                spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    return module
+            else:
+                # Already a module
+                return custom_functions_module
+        except Exception as e:
+            print(f"Warning: Could not load custom functions: {e}")
+            return None
+
     def initialize_with_custom_placement(self, simulation_params: Optional[Dict] = None) -> int:
         """Initialize population using custom placement function"""
         simulation_params = simulation_params or {}
 
-        try:
-            # Try custom placement function
-            cell_placements = self.hook_manager.call_hook(
-                "custom_initialize_cell_placement",
+        if self.custom_functions and hasattr(self.custom_functions, 'initialize_cell_placement'):
+            # Call custom placement function
+            cell_placements = self.custom_functions.initialize_cell_placement(
                 grid_size=self.grid_size,
                 simulation_params=simulation_params
+            )
+        else:
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'initialize_cell_placement' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
             )
 
             # Add cells according to custom placement
@@ -218,7 +294,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             for placement in cell_placements:
                 if isinstance(placement, dict):
                     position = placement.get('position')
-                    phenotype = placement.get('phenotype', 'normal')
+                    phenotype = placement['phenotype'] if 'phenotype' in placement else 'normal'
                 elif isinstance(placement, tuple) and len(placement) == 2:
                     # Simple (position, phenotype) tuple
                     position, phenotype = placement
@@ -233,14 +309,6 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                     cells_added += 1
 
             return cells_added
-
-        except NotImplementedError:
-            # Fall back to default single cell at center
-            center_x = self.grid_size[0] // 2
-            center_y = self.grid_size[1] // 2
-            if self.add_cell((center_x, center_y), "normal"):
-                return 1
-            return 0
     
     def add_cell(self, position: Tuple[int, int], phenotype: str = "normal") -> bool:
         """Add cell at lattice position"""
@@ -290,15 +358,18 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
             return False
         
         # Try custom division direction selection
-        try:
-            target_position = self.hook_manager.call_hook(
-                "custom_select_division_direction",
+        if self.custom_functions and hasattr(self.custom_functions, 'select_division_direction'):
+            target_position = self.custom_functions.select_division_direction(
                 parent_position=parent_cell.state.position,
                 available_positions=self._get_available_neighbors(parent_cell.state.position)
             )
-        except NotImplementedError:
-            # Fall back to default implementation
-            target_position = self._default_select_division_direction(parent_cell.state.position)
+        else:
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'select_division_direction' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
         
         if target_position is None:
             return False  # No space available
@@ -331,14 +402,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         
         return True
     
-    def _default_select_division_direction(self, parent_position: Tuple[int, int]) -> Optional[Tuple[int, int]]:
-        """Default division direction selection"""
-        available_positions = self._get_available_neighbors(parent_position)
-        if not available_positions:
-            return None
-        
-        # Random selection from available positions
-        return available_positions[np.random.randint(len(available_positions))]
+
     
     def _get_available_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
         """Get available neighboring positions"""
@@ -466,9 +530,9 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         # Process each association (substance -> gene_input mapping)
         for substance_name, gene_input_name in self.config.associations.items():
             # Get substance concentration from local environment
-            substance_conc = local_env.get(substance_name.lower())
-
-            if substance_conc is None:
+            try:
+                substance_conc = local_env[substance_name.lower()]
+            except KeyError:
                 raise ValueError(f"Substance '{substance_name}' not found in local environment - check configuration")
 
             # Get threshold configuration for this gene input
@@ -737,11 +801,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
                 print(f"   Environmental: Oxygen_supply={gene_inputs.get('Oxygen_supply', False)}, Glucose_supply={gene_inputs.get('Glucose_supply', False)}")
 
-            # Log detailed cell information for debugging
-            self.phenotype_logger.log_cell_substances_and_nodes(
-                cell_id, cell.state.position, local_env, gene_inputs,
-                gene_states, cell.state.phenotype
-            )
+            # NOTE: Debug logging moved to update_phenotypes() to log the correct final phenotype
 
             # Store gene states in cell for phenotype update (FIXED INDENTATION)
             cell._cached_gene_states = gene_states
@@ -804,13 +864,14 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 old_phenotype = cell.state.phenotype
                 new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
 
-                # Log detailed information for each phenotype update
+                # Log detailed information for each phenotype update (with correct final phenotype)
                 if self.phenotype_logger.debug_enabled:
                     # Re-calculate gene inputs for logging (since they're not cached)
                     gene_inputs = self._calculate_gene_inputs(cell._cached_local_env)
                     self.phenotype_logger.log_cell_substances_and_nodes(
                         cell_id, cell.state.position, cell._cached_local_env,
-                        gene_inputs, cell._cached_gene_states, new_phenotype
+                        gene_inputs, cell._cached_gene_states, new_phenotype,  # Now logs the NEW phenotype
+                        cell, self.config  # Add cell and config for division logging
                     )
 
                 # Log structured simulation status
@@ -823,7 +884,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
                 # Track phenotype changes compactly
                 if old_phenotype != new_phenotype:
                     change_key = f"{old_phenotype}→{new_phenotype}"
-                    phenotype_changes[change_key] = phenotype_changes.get(change_key, 0) + 1
+                    phenotype_changes[change_key] = phenotype_changes[change_key] + 1 if change_key in phenotype_changes else 1
 
                 # Clean up cache
                 delattr(cell, '_cached_gene_states')
@@ -889,15 +950,19 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         
         for cell in mobile_cells:
             # Try custom migration probability
-            try:
-                migration_prob = self.hook_manager.call_hook(
-                    "custom_calculate_migration_probability",
+            if self.custom_functions and hasattr(self.custom_functions, 'calculate_migration_probability'):
+                migration_prob = self.custom_functions.calculate_migration_probability(
                     cell_state=cell.state.__dict__,
                     local_environment=self._get_local_environment(cell.state.position),
                     target_position=None  # Would be calculated for each neighbor
                 )
-            except NotImplementedError:
-                migration_prob = self.default_params['migration_probability']
+            else:
+                # Fail explicitly if custom function is not provided
+                raise RuntimeError(
+                    f"❌ Custom function 'calculate_migration_probability' is required but not found!\n"
+                    f"   Please ensure your custom functions module defines this function.\n"
+                    f"   Custom functions module: {self.custom_functions}"
+                )
             
             if np.random.random() < migration_prob:
                 # Find available neighbors
@@ -942,7 +1007,7 @@ class CellPopulation(ICellPopulation, CustomizableComponent):
         
         for cell in self.state.cells.values():
             phenotype = cell.state.phenotype
-            phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
+            phenotype_counts[phenotype] = phenotype_counts[phenotype] + 1 if phenotype in phenotype_counts else 1
             total_age += cell.state.age
         
         return {

@@ -15,8 +15,7 @@ from pathlib import Path
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import CustomizableComponent
-from interfaces.hooks import get_hook_manager
+# Hook system removed - using direct function calls
 
 @dataclass
 class PerformanceMetrics:
@@ -72,7 +71,7 @@ class PerformanceProfiler:
         if self.entry:
             self.monitor.end_profile(self.name)
 
-class PerformanceMonitor(CustomizableComponent):
+class PerformanceMonitor:
     """
     Comprehensive performance monitoring system
     
@@ -80,9 +79,7 @@ class PerformanceMonitor(CustomizableComponent):
     """
     
     def __init__(self, custom_functions_module=None, max_history=1000):
-        super().__init__(custom_functions_module)
-        
-        self.hook_manager = get_hook_manager()
+        # Hook system removed
         self.max_history = max_history
         
         # Performance history
@@ -163,16 +160,8 @@ class PerformanceMonitor(CustomizableComponent):
                     avg_time = sum(e.duration for e in recent_entries if e.duration) / len(recent_entries)
                     process_times[name] = avg_time
             
-            # Get custom metrics via hooks
+            # No custom metrics - hook system removed
             custom_metrics = {}
-            try:
-                custom_metrics = self.hook_manager.call_hook(
-                    "capture_custom_metrics",
-                    monitor=self,
-                    timestamp=time.time()
-                )
-            except NotImplementedError:
-                pass
             
             return PerformanceMetrics(
                 timestamp=time.time(),
@@ -218,7 +207,7 @@ class PerformanceMonitor(CustomizableComponent):
             self.profile_history[name] = self.profile_history[name][-self.max_history:]
         
         # Check thresholds
-        if entry.duration and entry.duration > self.thresholds.get('process_time', 1.0):
+        if entry.duration and entry.duration > self.thresholds['process_time']:
             self._trigger_alert('process_time', {
                 'process': name,
                 'duration': entry.duration,
@@ -271,11 +260,7 @@ class PerformanceMonitor(CustomizableComponent):
             except Exception as e:
                 print(f"Alert callback error: {e}")
         
-        # Try custom alert handling
-        try:
-            self.hook_manager.call_hook("handle_performance_alert", alert=alert_data)
-        except NotImplementedError:
-            pass
+        # No custom alert handling - hook system removed
     
     def add_alert_callback(self, callback: Callable):
         """Add an alert callback function"""
@@ -331,7 +316,7 @@ class PerformanceMonitor(CustomizableComponent):
     
     def get_profile_history(self, process_name: str, last_n: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get profile history for a specific process"""
-        entries = self.profile_history.get(process_name, [])
+        entries = self.profile_history[process_name]
         if last_n:
             entries = entries[-last_n:]
         
