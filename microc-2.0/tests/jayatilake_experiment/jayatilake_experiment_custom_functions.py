@@ -807,6 +807,28 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     return phenotype
 
 
+def select_division_direction(parent_position: Tuple[int, int], available_positions: List[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+    """
+    Select direction for cell division.
+    For Jayatilake experiment: random selection from available positions.
+    """
+    if not available_positions:
+        return None
+
+    # Random selection from available positions
+    import random
+    return random.choice(available_positions)
+
+
+def calculate_migration_probability(cell_state: Dict[str, Any], local_environment: Dict[str, float], target_position: Optional[Tuple[int, int]] = None) -> float:
+    """
+    Calculate migration probability for a cell.
+    For Jayatilake experiment: no migration (return 0.0).
+    """
+    # No migration in Jayatilake experiment
+    return 0.0
+
+
 def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
     """
     Determine if a cell should die based on its state and environment.
