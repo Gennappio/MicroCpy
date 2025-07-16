@@ -1,0 +1,29 @@
+# Gene network inputs for O2high_Lachigh_Gluchigh_TGFAhigh conditions
+# Based on environmental concentrations and thresholds from config
+
+# Environmental concentrations:
+# Oxygen: 0.06 mM (threshold: 0.022) -> True
+# Glucose: 6.0 mM (threshold: 4.0) -> True  
+# Lactate: 1.0 mM (threshold: 1.5) -> False
+# TGFA: 2.0e-06 mM (threshold: 1.0e-06) -> True
+# H: 4.0e-05 mM (threshold: 8.0e-05) -> False
+# FGF: 5.0e-07 mM (threshold: 1.0e-06) -> False
+# HGF: 5.0e-07 mM (threshold: 2.0e-06) -> False
+
+# Gene inputs (True/False based on thresholds)
+Oxygen_supply: True
+Glucose_supply: True
+MCT1_stimulus: False
+EGFR_stimulus: True
+Proton_level: False
+FGFR_stimulus: False
+cMET_stimulus: False
+DNA_damage: False
+EGFRI: False
+FGFRI: False
+Growth_Inhibitor: False
+cMETI: False
+MCT1I: False
+GLUT1I: False
+MCT4I: False
+TGFBR_stimulus: False

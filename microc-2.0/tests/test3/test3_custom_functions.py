@@ -113,8 +113,8 @@ def get_cell_substance_rates(cell_position, cell_phenotype, local_environment, s
         }
     elif substance_name == "GI":
         # All cells produce growth inhibitor when stressed
-        oxygen_conc = local_environment.get('oxygen_concentration', 0.1)
-        glucose_conc = local_environment.get('glucose_concentration', 10.0)
+        oxygen_conc = local_environment['oxygen_concentration']
+        glucose_conc = local_environment['glucose_concentration']
         
         if oxygen_conc < 0.05 or glucose_conc < 2.0:
             production = 3.0e-16 * total_multiplier  # Stress response
@@ -134,13 +134,13 @@ def update_cell_phenotype(cell, local_environment, dt):
     Multiple factors and potential oscillations
     """
     # Get all concentrations
-    oxygen_conc = local_environment.get('oxygen_concentration', 0.1)
-    glucose_conc = local_environment.get('glucose_concentration', 10.0)
-    lactate_conc = local_environment.get('lactate_concentration', 0.1)
-    fgf_conc = local_environment.get('fgf_concentration', 0.001)
-    tgfa_conc = local_environment.get('tgfa_concentration', 0.001)
-    hgf_conc = local_environment.get('hgf_concentration', 0.002)
-    gi_conc = local_environment.get('gi_concentration', 0.0)
+    oxygen_conc = local_environment['oxygen_concentration']
+    glucose_conc = local_environment['glucose_concentration']
+    lactate_conc = local_environment['lactate_concentration']
+    fgf_conc = local_environment['fgf_concentration']
+    tgfa_conc = local_environment['tgfa_concentration']
+    hgf_conc = local_environment['hgf_concentration']
+    gi_conc = local_environment['gi_concentration']
     
     # Complex decision tree with multiple conditions
     if gi_conc > 0.001:

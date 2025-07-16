@@ -19,8 +19,7 @@ from pathlib import Path
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import CustomizableComponent
-from interfaces.hooks import get_hook_manager
+# Hook system removed - using direct function calls
 
 @dataclass
 class PlotConfig:
@@ -36,7 +35,7 @@ class PlotConfig:
     transparent: bool = False
     bbox_inches: str = 'tight'
 
-class SimulationPlotter(CustomizableComponent):
+class SimulationPlotter:
     """
     Comprehensive plotting system for MicroC 2.0 simulations
     
@@ -47,7 +46,6 @@ class SimulationPlotter(CustomizableComponent):
         super().__init__(custom_functions_module)
         
         self.config = config or PlotConfig()
-        self.hook_manager = get_hook_manager()
         
         # Set up matplotlib style
         plt.style.use('default')  # Use default instead of seaborn
@@ -134,10 +132,9 @@ class SimulationPlotter(CustomizableComponent):
             try:
                 # Try to get the actual cell object to get gene states
                 cell = population.get_cell_at_position(pos)
-                if cell and hasattr(population, 'hook_manager'):
+                if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
                     gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
-                    custom_color = population.hook_manager.call_hook(
-                        "custom_get_cell_color",
+                    custom_color = population.custom_functions.get_cell_color(
                         cell=cell,
                         gene_states=gene_states,
                         config=population.config
@@ -355,10 +352,9 @@ class SimulationPlotter(CustomizableComponent):
             try:
                 # Try to get the actual cell object to get gene states
                 cell = population.get_cell_at_position(pos)
-                if cell and hasattr(population, 'hook_manager'):
+                if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
                     gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
-                    custom_color = population.hook_manager.call_hook(
-                        "custom_get_cell_color",
+                    custom_color = population.custom_functions.get_cell_color(
                         cell=cell,
                         gene_states=gene_states,
                         config=population.config

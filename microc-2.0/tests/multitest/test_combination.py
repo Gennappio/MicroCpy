@@ -29,12 +29,12 @@ def test_combination(combination_id):
         print("✓ Config file loaded successfully")
         
         # Extract substance concentrations
-        substances = config_data.get('substances', {})
-        
-        oxygen_conc = substances.get('Oxygen', {}).get('initial_value', 0)
-        lactate_conc = substances.get('Lactate', {}).get('initial_value', 0)
-        glucose_conc = substances.get('Glucose', {}).get('initial_value', 0)
-        tgfa_conc = substances.get('TGFA', {}).get('initial_value', 0)
+        substances = config_data['substances']
+
+        oxygen_conc = substances['Oxygen']['initial_value']
+        lactate_conc = substances['Lactate']['initial_value']
+        glucose_conc = substances['Glucose']['initial_value']
+        tgfa_conc = substances['TGFA']['initial_value']
         
         print(f"\nSubstance concentrations:")
         print(f"  Oxygen:  {oxygen_conc:.3f} mM ({'HIGH' if oxygen_conc > 0.03 else 'LOW'})")
@@ -58,8 +58,8 @@ def test_combination(combination_id):
         
         # Check domain configuration
         domain = config_data['domain']
-        if domain.get('nx') != 1 or domain.get('ny') != 1:
-            print(f"ERROR: Expected 1x1 grid, got {domain.get('nx')}x{domain.get('ny')}")
+        if domain['nx'] != 1 or domain['ny'] != 1:
+            print(f"ERROR: Expected 1x1 grid, got {domain['nx']}x{domain['ny']}")
             return False
         
         print("✓ Domain configured for single cell (1x1 grid)")
@@ -67,7 +67,7 @@ def test_combination(combination_id):
         # Check that diffusion is disabled
         diffusion_disabled = True
         for substance_name, substance_config in substances.items():
-            if substance_config.get('diffusion_coeff', 1.0) != 0.0:
+            if substance_config['diffusion_coeff'] != 0.0:
                 print(f"WARNING: {substance_name} has non-zero diffusion coefficient")
                 diffusion_disabled = False
         
@@ -75,8 +75,8 @@ def test_combination(combination_id):
             print("✓ Diffusion disabled for all substances")
         
         # Check output directories
-        output_dir = config_data.get('output_dir', '')
-        plots_dir = config_data.get('plots_dir', '')
+        output_dir = config_data['output_dir']
+        plots_dir = config_data['plots_dir']
         
         if f"combination_{combination_id:02d}" in output_dir and f"combination_{combination_id:02d}" in plots_dir:
             print("✓ Output directories configured correctly")

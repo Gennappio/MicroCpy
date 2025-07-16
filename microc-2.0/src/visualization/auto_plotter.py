@@ -120,10 +120,9 @@ class AutoPlotter:
                 try:
                     # Try to get the actual cell object to get gene states
                     cell = population.get_cell_at_position((x, y))
-                    if cell and hasattr(population, 'hook_manager'):
+                    if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
                         gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
-                        custom_color = population.hook_manager.call_hook(
-                            "custom_get_cell_color",
+                        custom_color = population.custom_functions.get_cell_color(
                             cell=cell,
                             gene_states=gene_states,
                             config=population.config
@@ -142,6 +141,19 @@ class AutoPlotter:
                                 'proliferation': 'lightgreen'  # Different from quiescence
                             }
                             cell_color = phenotype_color_map.get(phenotype, 'gray')
+                    else:
+                        # Use phenotype-based colors as fallback
+                        phenotype_color_map = {
+                            'Proliferation': 'green',
+                            'Quiescence': 'blue',
+                            'Hypoxia': 'orange',
+                            'Necrosis': 'black',
+                            'Apoptosis': 'red',
+                            'Growth_Arrest': 'orange',  # Match the actual phenotype name
+                            'growth_arrest': 'orange',  # Different from proliferation
+                            'proliferation': 'lightgreen'  # Different from quiescence
+                        }
+                        cell_color = phenotype_color_map.get(phenotype, 'gray')
                 except Exception as e:
                     # Fallback to phenotype-based colors only on error
                     phenotype_color_map = {

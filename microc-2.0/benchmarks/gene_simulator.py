@@ -128,7 +128,7 @@ class HtmlParser(NetworkParser):
         node_elements = soup.find_all('node')
 
         for node in node_elements:
-            node_id = node.get('id')
+            node_id = node['id']
             if not node_id:
                 continue
 

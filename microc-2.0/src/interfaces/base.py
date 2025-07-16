@@ -2,18 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Any, Optional
 import numpy as np
 
-class CustomizableComponent(ABC):
-    """Base class for components that can be customized via custom_functions.py"""
-    
-    def __init__(self, custom_functions_module=None):
-        self.custom_functions = custom_functions_module
-    
-    def call_custom_or_default(self, method_name: str, *args, **kwargs):
-        """Call custom function if available, otherwise use default"""
-        if self.custom_functions and hasattr(self.custom_functions, method_name):
-            return getattr(self.custom_functions, method_name)(*args, **kwargs)
-        default_method = getattr(self, f"_default_{method_name}")
-        return default_method(*args, **kwargs)
 
 class ISubstanceSimulator(ABC):
     """Interface for substance diffusion-reaction simulators"""

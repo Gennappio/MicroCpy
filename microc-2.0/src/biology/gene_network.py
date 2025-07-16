@@ -12,8 +12,7 @@ import os
 import random
 import re
 
-from interfaces.base import IGeneNetwork, CustomizableComponent
-from interfaces.hooks import get_hook_manager
+from interfaces.base import IGeneNetwork
 
 
 class BooleanExpression:
@@ -64,7 +63,7 @@ class NetworkNode:
     is_input: bool = False
     is_output: bool = False
 
-class BooleanNetwork(IGeneNetwork, CustomizableComponent):
+class BooleanNetwork(IGeneNetwork):
     """
     Fully configurable Boolean gene regulatory network
 
@@ -76,13 +75,10 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
 
     def __init__(self, config=None, network_file: Optional[Path] = None,
                  custom_functions_module=None):
-        super().__init__(custom_functions_module)
-
         self.nodes: Dict[str, NetworkNode] = {}
         self.input_nodes: Set[str] = set()
         self.output_nodes: Set[str] = set()
         self.fixed_nodes: Dict[str, bool] = {}  # Track fixed nodes like gene_simulator.py
-        self.hook_manager = get_hook_manager()
         self.config = config
 
         # Priority: config > .bnd file > default
@@ -353,18 +349,8 @@ class BooleanNetwork(IGeneNetwork, CustomizableComponent):
 
     def step(self, num_steps: int = 1) -> Dict[str, bool]:
         """Run network for specified steps"""
-        try:
-            # Try custom update function first
-            return self.hook_manager.call_hook(
-                "custom_update_gene_network",
-                current_states={name: node.current_state for name, node in self.nodes.items()},
-                inputs={name: self.nodes[name].current_state for name in self.input_nodes},
-                network_params={'num_steps': num_steps}
-            )
-
-        except NotImplementedError:
-            # Fall back to default implementation
-            return self._default_step(num_steps)
+        # Use default implementation (no custom gene network functions)
+        return self._default_step(num_steps)
     
     def _default_step(self, num_steps: int = 1) -> Dict[str, bool]:
         """NetLogo-style gene network update: single gene per step"""
