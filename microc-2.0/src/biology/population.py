@@ -281,6 +281,13 @@ class CellPopulation(ICellPopulation):
                 grid_size=self.grid_size,
                 simulation_params=simulation_params
             )
+        else:
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'initialize_cell_placement' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
 
             # Add cells according to custom placement
             cells_added = 0
@@ -302,13 +309,6 @@ class CellPopulation(ICellPopulation):
                     cells_added += 1
 
             return cells_added
-        else:
-            # Fall back to default single cell at center
-            center_x = self.grid_size[0] // 2
-            center_y = self.grid_size[1] // 2
-            if self.add_cell((center_x, center_y), "normal"):
-                return 1
-            return 0
     
     def add_cell(self, position: Tuple[int, int], phenotype: str = "normal") -> bool:
         """Add cell at lattice position"""
@@ -364,8 +364,12 @@ class CellPopulation(ICellPopulation):
                 available_positions=self._get_available_neighbors(parent_cell.state.position)
             )
         else:
-            # Fall back to default implementation
-            target_position = self._default_select_division_direction(parent_cell.state.position)
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'select_division_direction' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
         
         if target_position is None:
             return False  # No space available
@@ -398,14 +402,7 @@ class CellPopulation(ICellPopulation):
         
         return True
     
-    def _default_select_division_direction(self, parent_position: Tuple[int, int]) -> Optional[Tuple[int, int]]:
-        """Default division direction selection"""
-        available_positions = self._get_available_neighbors(parent_position)
-        if not available_positions:
-            return None
-        
-        # Random selection from available positions
-        return available_positions[np.random.randint(len(available_positions))]
+
     
     def _get_available_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
         """Get available neighboring positions"""
@@ -960,7 +957,12 @@ class CellPopulation(ICellPopulation):
                     target_position=None  # Would be calculated for each neighbor
                 )
             else:
-                migration_prob = self.default_params['migration_probability']
+                # Fail explicitly if custom function is not provided
+                raise RuntimeError(
+                    f"❌ Custom function 'calculate_migration_probability' is required but not found!\n"
+                    f"   Please ensure your custom functions module defines this function.\n"
+                    f"   Custom functions module: {self.custom_functions}"
+                )
             
             if np.random.random() < migration_prob:
                 # Find available neighbors

@@ -98,8 +98,12 @@ class Cell(ICell):
                 current_phenotype=self.state.phenotype
             )
         else:
-            # Fall back to default implementation
-            new_phenotype = self._default_update_phenotype(local_environment, gene_states)
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'update_cell_phenotype' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
 
         # Update state
         self.state = self.state.with_updates(
@@ -109,34 +113,7 @@ class Cell(ICell):
 
         return new_phenotype
     
-    def _default_update_phenotype(self, local_environment: Dict[str, float],
-                                 gene_states: Dict[str, bool]) -> str:
-        """Default phenotype update logic based on gene network outputs"""
 
-        # Use gene network outputs to determine phenotype
-        # Priority order (highest to lowest):
-        # 1. Necrosis (immediate death condition)
-        # 2. Apoptosis (programmed death)
-        # 3. Proliferation (active growth)
-        # 4. Growth_Arrest (quiescent state)
-        new_phenotype = "Quiescent"
-       
-        if gene_states['Apoptosis']:
-            new_phenotype = "Apoptosis"
-        if gene_states['Proliferation']:
-            new_phenotype = "Proliferation"
-        if gene_states['Growth_Arrest']:
-            new_phenotype = "Growth_Arrest"
-        if gene_states['Necrosis']:
-            new_phenotype = "Necrosis"
-
-        # Update state
-        self.state = self.state.with_updates(
-            phenotype=new_phenotype,
-            gene_states=gene_states
-        )
-
-        return new_phenotype
     
     def calculate_metabolism(self, local_environment: Dict[str, float], config=None) -> Dict[str, float]:
         """Calculate metabolic production/consumption rates"""
@@ -148,33 +125,14 @@ class Cell(ICell):
                 config=config
             )
         else:
-            # Fall back to default implementation
-            return self._default_calculate_metabolism(local_environment, config)
-    
-    def _default_calculate_metabolism(self, local_environment: Dict[str, float], config=None) -> Dict[str, float]:
-        """Default metabolism calculation - uses production_rate and uptake_rate from substance configs"""
-
-        # Initialize reactions dictionary
-        reactions = {}
-
-        # Get substance configurations from config
-        if not hasattr(config, 'substances') or not config.substances:
-            raise ValueError(
-                "❌ No substance configurations found!\n"
-                "The config must have a 'substances' section with production_rate and uptake_rate for each substance."
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'calculate_cell_metabolism' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
             )
+    
 
-        # For each substance, use the production_rate and uptake_rate from config
-        for substance_name, substance_config in config.substances.items():
-            # Get production and uptake rates from substance config
-            production_rate = getattr(substance_config, 'production_rate', 0.0)
-            uptake_rate = getattr(substance_config, 'uptake_rate', 0.0)
-
-            # Net reaction rate = production - uptake
-            net_rate = production_rate - uptake_rate
-            reactions[substance_name] = net_rate
-
-        return reactions
 
 
 
@@ -187,28 +145,14 @@ class Cell(ICell):
                 config=config or {}
             )
         else:
-            # Fall back to default implementation
-            return self._default_should_divide(config)
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'should_divide' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
     
-    def _default_should_divide(self, config=None) -> bool:
-        """Default division logic - uses biological default behaviors"""
 
-        # Default biological behavior: only proliferative cells can divide
-        # Custom experiments can override this in custom functions
-        default_dividing_phenotypes = ['Proliferation']
-
-        # Get dividing phenotypes from config (optional override)
-        dividing_phenotypes = self._get_parameter_from_config(config, 'dividing_phenotypes', default_dividing_phenotypes)
-
-        # Check if current phenotype can divide
-        if self.state.phenotype not in dividing_phenotypes:
-            return False
-
-        # Age-based division for proliferative cells
-        # Get cell cycle time threshold - use config or reasonable default
-        cell_cycle_time = self._get_parameter_from_config(config, 'cell_cycle_time', 240)  # 240 iterations default (24h at dt=0.1)
-
-        return self.state.age >= cell_cycle_time
     
     def should_die(self, local_environment: Dict[str, float], config=None) -> bool:
         """Check if cell should die"""
@@ -219,40 +163,14 @@ class Cell(ICell):
                 local_environment=local_environment
             )
         else:
-            # Fall back to default implementation
-            return self._default_check_cell_death(local_environment, config)
+            # Fail explicitly if custom function is not provided
+            raise RuntimeError(
+                f"❌ Custom function 'check_cell_death' is required but not found!\n"
+                f"   Please ensure your custom functions module defines this function.\n"
+                f"   Custom functions module: {self.custom_functions}"
+            )
     
-    def _default_check_cell_death(self, local_environment: Dict[str, float], config=None) -> bool:
-        """Default death logic - uses biological default behaviors"""
 
-        # Default biological behaviors:
-        # - Apoptotic cells die immediately (programmed cell death)
-        # - Necrotic cells persist as necrotic mass (don't get removed)
-        # - Other phenotypes follow age-based death only
-        default_death_phenotypes = ['Apoptosis']
-        default_persistent_phenotypes = ['Necrosis']
-
-        # Get phenotype behaviors from config (optional override)
-        death_phenotypes = self._get_parameter_from_config(config, 'death_phenotypes', default_death_phenotypes)
-        persistent_phenotypes = self._get_parameter_from_config(config, 'persistent_phenotypes', default_persistent_phenotypes)
-
-        # Check if current phenotype causes immediate death
-        if self.state.phenotype in death_phenotypes:
-            return True
-
-        # Check if current phenotype should persist (not be removed)
-        if self.state.phenotype in persistent_phenotypes:
-            return False
-
-        # Age-related death (very old cells) - backup mechanism
-        # Get max age from config - use reasonable default if not specified
-        max_age = self._get_parameter_from_config(config, 'max_cell_age', 500.0)  # 500 hours default
-
-        if self.state.age > max_age:
-            return True
-
-        # Default: cells don't die from phenotype alone (except death/persistent phenotypes above)
-        return False
 
     def _get_parameter_from_config(self, config, param_name: str, default_value=None):
         """Get parameter from config - requires explicit location"""
