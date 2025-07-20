@@ -553,10 +553,15 @@ def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str,
     Determine if cell should attempt division based on ATP rate and cell cycle time.
     Config-agnostic function that works with any configuration structure.
     """
-    # Get parameters using config-agnostic lookup with warnings for missing values
-    atp_threshold = get_parameter_from_config(config, 'atp_threshold')
-    max_atp = get_parameter_from_config(config, 'max_atp')
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time')
+    # Get parameters using config-agnostic lookup - FAIL if missing critical parameters
+    try:
+        atp_threshold = get_parameter_from_config(config, 'atp_threshold', fail_if_missing=True)
+        max_atp = get_parameter_from_config(config, 'max_atp', fail_if_missing=True)
+        cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', fail_if_missing=True)
+    except ValueError as e:
+        print(f"❌ CRITICAL PARAMETER MISSING: {e}")
+        print("   SIMULATION ABORTED - Cannot proceed without required parameters")
+        raise SystemExit(1)
 
     # Check ATP rate from cell state
     atp_rate = cell_state['atp_rate']
@@ -591,10 +596,15 @@ def should_divide(cell, config: Any) -> bool:
     Determine if cell should attempt division based on gene network state and cell conditions.
     ALSO sets phenotype to "Proliferation" when metabolic conditions are met (ATP override).
     """
-    # Get parameters using config-agnostic lookup with warnings for missing values
-    atp_threshold = get_parameter_from_config(config, 'atp_threshold')
-    max_atp_rate = get_parameter_from_config(config, 'max_atp_rate')
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time')  # iterations
+    # Get parameters using config-agnostic lookup - FAIL if missing critical parameters
+    try:
+        atp_threshold = get_parameter_from_config(config, 'atp_threshold', fail_if_missing=True)
+        max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', fail_if_missing=True)
+        cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', fail_if_missing=True)
+    except ValueError as e:
+        print(f"❌ CRITICAL PARAMETER MISSING: {e}")
+        print("   SIMULATION ABORTED - Cannot proceed without required parameters")
+        raise SystemExit(1)
 
     # Debug config lookup (commented out to reduce noise)
     # print(f"🔧 CONFIG DEBUG: config type: {type(config)}")
