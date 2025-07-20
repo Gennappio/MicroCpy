@@ -200,10 +200,18 @@ class AutoPlotter:
         domain_info = f"{self.config.domain.size_x.value}×{self.config.domain.size_y.value} {self.config.domain.size_x.unit}"
         grid_info = f"{self.config.domain.nx}×{self.config.domain.ny}"
 
+        # Get accurate cell count from population if available, otherwise use cell_positions
+        cell_count = 0
+        if population:
+            pop_stats = population.get_population_statistics()
+            cell_count = pop_stats['total_cells']
+        elif cell_positions:
+            cell_count = len(cell_positions)
+
         detailed_title = (f'{substance_name} Distribution at t = {time_point:.3f} {title_suffix}\n'
                          f'Config: {config_name} | Domain: {domain_info} | Grid: {grid_info}\n'
                          f'Range: {vmin:.6f} - {vmax:.6f} mM | Mean: {concentrations.mean():.6f} mM | '
-                         f'Cells: {len(cell_positions) if cell_positions else 0}')
+                         f'Cells: {cell_count}')
 
         ax.set_title(detailed_title, fontsize=11, pad=20)
 
@@ -240,7 +248,7 @@ class AutoPlotter:
                     f'• Max: {vmax:.6f} mM\n'
                     f'• Mean: {concentrations.mean():.6f} mM\n'
                     f'• Std: {concentrations.std():.6f} mM\n'
-                    f'• Cells: {len(cell_positions) if cell_positions else 0}')
+                    f'• Cells: {cell_count}')
 
         ax.text(0.02, 0.85, info_text, transform=ax.transAxes, fontsize=9,
                 verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5",
