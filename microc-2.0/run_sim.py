@@ -368,7 +368,11 @@ def setup_simulation(config, args, custom_functions_path=None):
         for pos in default_positions:
             population.add_cell(pos, phenotype="Proliferation") #TODO check proliferation
         print(f"   ✅ Cells: {len(default_positions)} (default center placement)")
-    
+
+    # Initialize cell ages to allow immediate proliferation
+    if custom_functions and hasattr(custom_functions, 'initialize_cell_ages'):
+        custom_functions.initialize_cell_ages(population, config)
+
     return mesh_manager, simulator, gene_network, population
 
 def print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time):

@@ -211,6 +211,82 @@ def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dic
     return placements
 
 
+def initialize_cell_ages(population, config: Any = None):
+    """
+    Set initial cell ages randomly distributed from 0 to max_cell_age.
+
+    This function is called after cell placement to set cells to random ages
+    with a normal distribution, ensuring some cells can proliferate immediately.
+    """
+    import numpy as np
+
+    # Get parameters from config - fail if missing
+    try:
+        max_cell_age = get_parameter_from_config(config, 'max_cell_age', fail_if_missing=True)
+        cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', fail_if_missing=True)
+    except ValueError as e:
+        print(f"❌ CELL AGE INITIALIZATION FAILED: {e}")
+        print("   Skipping cell age initialization - cells will start with age 0")
+        return
+
+    # Use normal distribution with mean at max_cell_age/2 and std dev of max_cell_age/6
+    # This ensures ~99.7% of values are within [0, max_cell_age] range
+    mean_age = max_cell_age / 2.0
+    std_dev = max_cell_age / 6.0
+
+    print(f"🕰️ INITIALIZING CELL AGES (RANDOM DISTRIBUTION):")
+    print(f"   Max cell age: {max_cell_age}")
+    print(f"   Cell cycle time: {cell_cycle_time}")
+    print(f"   Distribution: Normal(mean={mean_age:.1f}, std={std_dev:.1f})")
+
+    # Track age statistics
+    ages_set = []
+    cells_updated = 0
+    cells_can_proliferate = 0
+
+    # Update all cells to have random ages
+    for cell_id, cell in population.state.cells.items():
+        old_age = cell.state.age
+
+        # Generate random age with normal distribution
+        random_age = np.random.normal(mean_age, std_dev)
+
+        # Clamp to valid range [0, max_cell_age]
+        random_age = max(0.0, min(max_cell_age, random_age))
+
+        # Update cell age
+        cell.state = cell.state.with_updates(age=random_age)
+        ages_set.append(random_age)
+        cells_updated += 1
+
+        # Check if this cell can proliferate immediately
+        if random_age >= cell_cycle_time:
+            cells_can_proliferate += 1
+
+        # Debug first few cells
+        if cells_updated <= 3:
+            can_proliferate = "✅" if random_age >= cell_cycle_time else "❌"
+            print(f"   Cell {cell_id[:8]}: age {old_age:.1f} → {random_age:.1f} {can_proliferate}")
+
+    # Print statistics
+    ages_array = np.array(ages_set)
+    print(f"   📊 Age Statistics:")
+    print(f"      Mean: {np.mean(ages_array):.1f}")
+    print(f"      Std Dev: {np.std(ages_array):.1f}")
+    print(f"      Min: {np.min(ages_array):.1f}")
+    print(f"      Max: {np.max(ages_array):.1f}")
+    print(f"   ✅ Updated {cells_updated} cells with random ages")
+    print(f"   🔬 {cells_can_proliferate}/{cells_updated} cells can proliferate immediately")
+
+
+def custom_initialize_cell_ages(population, config: Any = None):
+    """
+    Hook-compatible version of initialize_cell_ages.
+    Called via hook system to set initial cell ages.
+    """
+    return initialize_cell_ages(population, config)
+
+
 def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
     """
     Calculate substance consumption/production rates using NetLogo-style Michaelis-Menten kinetics.
