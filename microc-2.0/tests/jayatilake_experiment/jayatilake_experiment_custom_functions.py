@@ -31,7 +31,7 @@ except ImportError as e:
 
 
 
-def get_parameter_from_config(config, param_name: str, default_value=None, section=None):
+def get_parameter_from_config(config, param_name: str, default_value=None, section=None, fail_if_missing=False):
     """
     Config-agnostic parameter lookup - works with any configuration structure.
     Looks for parameters in multiple possible locations.
@@ -39,11 +39,17 @@ def get_parameter_from_config(config, param_name: str, default_value=None, secti
     Args:
         config: Configuration object (can be None for global config access)
         param_name: Name of the parameter to look for
-        default_value: Default value if parameter not found
+        default_value: Default value if parameter not found (only used if fail_if_missing=False)
         section: Optional section name (e.g., 'metabolism', 'custom_parameters')
+        fail_if_missing: If True, raises ValueError when parameter is not found
+
+    Raises:
+        ValueError: If fail_if_missing=True and parameter is not found
     """
-    # If no config provided, return default
+    # If no config provided
     if not config:
+        if fail_if_missing:
+            raise ValueError(f"❌ Configuration parameter '{param_name}' is required but config is None")
         return default_value
 
     # If section specified, look in that section first
@@ -63,7 +69,25 @@ def get_parameter_from_config(config, param_name: str, default_value=None, secti
     elif isinstance(config, dict) and param_name in config:
         return config[param_name]
 
-    # If still not found, return default value
+    # Parameter not found
+    if fail_if_missing:
+        # Provide helpful error message with search locations
+        search_locations = []
+        if section:
+            search_locations.append(f"config.{section}.{param_name}")
+        search_locations.extend([
+            f"config.custom_parameters.{param_name}",
+            f"config.{param_name}"
+        ])
+
+        raise ValueError(
+            f"❌ Required configuration parameter '{param_name}' not found!\n"
+            f"   Searched in: {', '.join(search_locations)}\n"
+            f"   Please add this parameter to your configuration file."
+        )
+
+    # Return default value with warning
+    print(f"⚠️  Parameter '{param_name}' not found in config, using default: {default_value}")
     return default_value
 
 
@@ -223,21 +247,21 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     local_h = local_environment['H']
 
     # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
-    km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen', 0.005)      # NetLogo Km for oxygen
-    km_glucose = get_parameter_from_config(config, 'the_optimal_glucose', 0.04)     # NetLogo Km for glucose
-    km_lactate = get_parameter_from_config(config, 'the_optimal_lactate', 0.04)     # NetLogo Km for lactate
-    vmax_oxygen = get_parameter_from_config(config, 'oxygen_vmax', 3.0e-17)         # NetLogo Vmax for oxygen
-    vmax_glucose = get_parameter_from_config(config, 'glucose_vmax', 3.0e-15)       # NetLogo Vmax for glucose
-    max_atp = get_parameter_from_config(config, 'max_atp', 30)                      # Maximum ATP per glucose
-    proton_coefficient = get_parameter_from_config(config, 'proton_coefficient', 0.01)  # Proton production coefficient
+    km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen')      # NetLogo Km for oxygen
+    km_glucose = get_parameter_from_config(config, 'the_optimal_glucose')     # NetLogo Km for glucose
+    km_lactate = get_parameter_from_config(config, 'the_optimal_lactate')     # NetLogo Km for lactate
+    vmax_oxygen = get_parameter_from_config(config, 'oxygen_vmax')         # NetLogo Vmax for oxygen
+    vmax_glucose = get_parameter_from_config(config, 'glucose_vmax')       # NetLogo Vmax for glucose
+    max_atp = get_parameter_from_config(config, 'max_atp')                      # Maximum ATP per glucose
+    proton_coefficient = get_parameter_from_config(config, 'proton_coefficient')  # Proton production coefficient
 
     # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
-    tgfa_consumption = get_parameter_from_config(config, 'tgfa_consumption_rate', 2.0e-17)  # TGFA consumption rate
-    tgfa_production = get_parameter_from_config(config, 'tgfa_production_rate', 2.0e-20)    # TGFA production rate
-    hgf_consumption = get_parameter_from_config(config, 'hgf_consumption_rate', 2.0e-18)    # HGF consumption rate
-    hgf_production = get_parameter_from_config(config, 'hgf_production_rate', 0.0)          # HGF production rate
-    fgf_consumption = get_parameter_from_config(config, 'fgf_consumption_rate', 2.0e-18)    # FGF consumption rate
-    fgf_production = get_parameter_from_config(config, 'fgf_production_rate', 0.0)          # FGF production rate
+    tgfa_consumption = get_parameter_from_config(config, 'tgfa_consumption_rate')  # TGFA consumption rate
+    tgfa_production = get_parameter_from_config(config, 'tgfa_production_rate')    # TGFA production rate
+    hgf_consumption = get_parameter_from_config(config, 'hgf_consumption_rate')    # HGF consumption rate
+    hgf_production = get_parameter_from_config(config, 'hgf_production_rate')          # HGF production rate
+    fgf_consumption = get_parameter_from_config(config, 'fgf_consumption_rate')    # FGF consumption rate
+    fgf_production = get_parameter_from_config(config, 'fgf_production_rate')          # FGF production rate
 
     # Initialize reactions for all substances (from diffusion-parameters.txt)
     reactions = {
@@ -453,10 +477,10 @@ def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str,
     Determine if cell should attempt division based on ATP rate and cell cycle time.
     Config-agnostic function that works with any configuration structure.
     """
-    # Get parameters using config-agnostic lookup
-    atp_threshold = get_parameter_from_config(config, 'atp_threshold', 0.8)
-    max_atp = get_parameter_from_config(config, 'max_atp', 30)
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 240)
+    # Get parameters using config-agnostic lookup with warnings for missing values
+    atp_threshold = get_parameter_from_config(config, 'atp_threshold')
+    max_atp = get_parameter_from_config(config, 'max_atp')
+    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time')
 
     # Check ATP rate from cell state
     atp_rate = cell_state['atp_rate']
@@ -489,10 +513,10 @@ def should_divide(cell, config: Any) -> bool:
     Determine if cell should attempt division based on gene network state and cell conditions.
     ALSO sets phenotype to "Proliferation" when metabolic conditions are met (ATP override).
     """
-    # Get parameters using config-agnostic lookup
-    atp_threshold = get_parameter_from_config(config, 'atp_threshold', 0.5)
-    max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', 1.0e-14)
-    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time', 2)  # iterations
+    # Get parameters using config-agnostic lookup with warnings for missing values
+    atp_threshold = get_parameter_from_config(config, 'atp_threshold')
+    max_atp_rate = get_parameter_from_config(config, 'max_atp_rate')
+    cell_cycle_time = get_parameter_from_config(config, 'cell_cycle_time')  # iterations
 
     # Debug config lookup (commented out to reduce noise)
     # print(f"🔧 CONFIG DEBUG: config type: {type(config)}")
