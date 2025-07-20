@@ -521,6 +521,60 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     return reactions
 
 
+def get_required_metabolic_rate(reactions: Dict[str, float], rate_name: str) -> float:
+    """
+    Safely extract a required metabolic rate from reactions dictionary.
+    Aborts simulation if the rate is missing.
+
+    Args:
+        reactions: Dictionary of reaction rates
+        rate_name: Name of the required rate
+
+    Returns:
+        The metabolic rate value
+
+    Raises:
+        SystemExit: If the required rate is missing
+    """
+    if rate_name not in reactions:
+        error_msg = f"❌ CRITICAL ERROR: Required metabolic rate '{rate_name}' is missing from reactions dictionary!"
+        print(error_msg)
+        print(f"Available rates: {list(reactions.keys())}")
+        print("🚨 ABORTING SIMULATION - Cannot proceed without required metabolic data")
+
+        # Log the error to file for debugging
+        try:
+            with open("log_simulation_status.txt", "a") as f:
+                f.write(f"CRITICAL_ERROR: Missing required rate '{rate_name}'\n")
+                f.write(f"Available rates: {list(reactions.keys())}\n")
+                f.write("SIMULATION_ABORTED\n")
+        except Exception:
+            pass  # Don't let logging errors prevent the abort
+
+        # Abort the simulation
+        import sys
+        sys.exit(1)
+
+    value = reactions[rate_name]
+    if value is None:
+        error_msg = f"❌ CRITICAL ERROR: Required metabolic rate '{rate_name}' is None!"
+        print(error_msg)
+        print("🚨 ABORTING SIMULATION - Cannot proceed with None metabolic data")
+
+        # Log the error to file for debugging
+        try:
+            with open("log_simulation_status.txt", "a") as f:
+                f.write(f"CRITICAL_ERROR: Rate '{rate_name}' is None\n")
+                f.write("SIMULATION_ABORTED\n")
+        except Exception:
+            pass
+
+        import sys
+        sys.exit(1)
+
+    return value
+
+
 def update_cell_metabolic_state(cell, local_environment: Dict[str, float], config: Any = None):
     """
     Update cell's metabolic state with calculated ATP rate and other metabolic values.
@@ -529,11 +583,14 @@ def update_cell_metabolic_state(cell, local_environment: Dict[str, float], confi
     # Calculate metabolism using the existing function
     reactions = calculate_cell_metabolism(local_environment, cell.state.__dict__, config)
 
-    # Extract key metabolic values
-    atp_rate = reactions.get('atp_rate', 0.0)
-    oxygen_rate = reactions.get('Oxygen', 0.0)
-    glucose_rate = reactions.get('Glucose', 0.0)
-    lactate_rate = reactions.get('Lactate', 0.0)
+    # Extract key metabolic values with validation (will abort if missing)
+    atp_rate = get_required_metabolic_rate(reactions, 'atp_rate')
+    oxygen_rate = get_required_metabolic_rate(reactions, 'Oxygen')
+    glucose_rate = get_required_metabolic_rate(reactions, 'Glucose')
+    lactate_rate = get_required_metabolic_rate(reactions, 'Lactate')
+
+    # Optional: Test the validation by uncommenting the line below
+    # test_missing_rate = get_required_metabolic_rate(reactions, 'MISSING_RATE_TEST')
 
     # Update cell's metabolic state
     metabolic_state = {
