@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass
 
 # Debug: Confirm custom functions are loaded
-print("🔧 CUSTOM FUNCTIONS LOADED: jayatilake_experiment_custom_functions.py")
+#print("🔧 CUSTOM FUNCTIONS LOADED: jayatilake_experiment_custom_functions.py")
 
 # Import custom metabolism functions from separate file
 try:
@@ -570,16 +570,18 @@ def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str,
 
     # Debug ATP rate calculation
     cell_id = cell_state.get('id', 'unknown')[:8]
-    print(f"🔬 DIVISION CHECK {cell_id}: atp_rate={atp_rate:.2e}, max_atp={max_atp}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
-    print(f"   Age: {cell_age:.1f} > {cell_cycle_time}? {cell_age > cell_cycle_time}")
-    print(f"   Phenotype: {phenotype} == 'Proliferation'? {phenotype == 'Proliferation'}")
-    print(f"   ATP check: {atp_rate_normalized:.4f} > {atp_threshold}? {atp_rate_normalized > atp_threshold}")
+    #print(f"🔬 DIVISION CHECK {cell_id}: atp_rate={atp_rate:.2e}, max_atp={max_atp}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
+    #print(f"   Age: {cell_age:.1f} > {cell_cycle_time}? {cell_age > cell_cycle_time}")
+    #print(f"   Phenotype: {phenotype} == 'Proliferation'? {phenotype == 'Proliferation'}")
+    #print(f"   ATP check: {atp_rate_normalized:.4f} > {atp_threshold}? {atp_rate_normalized > atp_threshold}")
 
-    division_decision = (atp_rate_normalized > atp_threshold and
-                        cell_age > cell_cycle_time and
+    if(atp_rate_normalized > atp_threshold):
+        cell_state['phenotype'] = "Proliferation"
+
+    division_decision = (cell_age > cell_cycle_time and
                         phenotype == "Proliferation")
 
-    print(f"   FINAL DECISION: {division_decision}")
+    #print(f"   FINAL DECISION: {division_decision}")
 
     return division_decision
 
@@ -940,13 +942,3 @@ def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, fl
     # Cell dies if it has death phenotypes
     return phenotype in ['Apoptosis', 'Necrosis']
 
-
-# =============================================================================
-# DEBUG: Check if timing functions are available (at end of file)
-# =============================================================================
-timing_functions = ['should_update_intracellular', 'should_update_diffusion', 'should_update_intercellular']
-for func_name in timing_functions:
-    if func_name in globals():
-        print(f"   ✅ {func_name} function found")
-    else:
-        print(f"   ❌ {func_name} function NOT found")
