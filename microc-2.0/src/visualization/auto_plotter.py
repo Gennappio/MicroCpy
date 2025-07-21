@@ -105,15 +105,17 @@ class AutoPlotter:
         # Mark cell positions with colors
         cell_colors_used = {}
         if cell_positions and population:
-            cell_size = self.config.domain.size_x.value / self.config.domain.nx
+            # Use biological cell diameter (cell_height parameter), not grid spacing
+            cell_diameter = self.config.domain.cell_height.value  # 20 μm for biological cells
+            grid_spacing = self.config.domain.size_x.value / self.config.domain.nx  # 10 μm for FiPy grid
 
             # Get cell data with phenotypes and colors
             cell_data = population.get_cell_positions()
 
             for (x, y), phenotype in cell_data:
                 # Convert grid coordinates to physical coordinates
-                phys_x = (x + 0.5) * cell_size
-                phys_y = (y + 0.5) * cell_size
+                phys_x = (x + 0.5) * grid_spacing
+                phys_y = (y + 0.5) * grid_spacing
 
                 # Get cell color from custom function if available
                 cell_color = 'gray'  # default
@@ -182,16 +184,18 @@ class AutoPlotter:
                 metabolic_state = color_to_state.get(cell_color, phenotype)
                 cell_colors_used[metabolic_state] = cell_color
 
-                circle = patches.Circle((phys_x, phys_y), cell_size/3,
+                # Draw cell with correct biological diameter (radius = diameter/2)
+                circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
                                       color=cell_color, alpha=0.7, linewidth=1, fill=True)
                 ax.add_patch(circle)
         elif cell_positions:
             # Fallback for when population is not available
-            cell_size = self.config.domain.size_x.value / self.config.domain.nx
+            cell_diameter = self.config.domain.cell_height.value  # Biological cell diameter
+            grid_spacing = self.config.domain.size_x.value / self.config.domain.nx  # Grid spacing
             for x, y in cell_positions:
-                phys_x = (x + 0.5) * cell_size
-                phys_y = (y + 0.5) * cell_size
-                circle = patches.Circle((phys_x, phys_y), cell_size/3,
+                phys_x = (x + 0.5) * grid_spacing
+                phys_y = (y + 0.5) * grid_spacing
+                circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
                                       color='red', alpha=0.7, linewidth=2, fill=False)
                 ax.add_patch(circle)
                 cell_colors_used['Cell'] = 'red'
@@ -257,11 +261,15 @@ class AutoPlotter:
             print(f"🎨 Legend created with {len(cell_colors_used)} cell types: {list(cell_colors_used.keys())}")
 
         # Add text box with additional details including grid info
+        grid_spacing = domain_x / nx
+        cell_diameter = self.config.domain.cell_height.value
         info_text = (f'Simulation Details:\n'
                     f'• Config: {config_name}\n'
                     f'• Time: {time_point:.3f}\n'
                     f'• Substance: {substance_name}\n'
                     f'• FiPy Grid: {nx}×{ny} cells\n'
+                    f'• Grid Spacing: {grid_spacing:.1f} μm\n'
+                    f'• Cell Diameter: {cell_diameter:.1f} μm\n'
                     f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm\n'
                     f'• Min: {vmin:.6f} mM\n'
                     f'• Max: {vmax:.6f} mM\n'
