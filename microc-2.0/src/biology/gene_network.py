@@ -411,7 +411,7 @@ class BooleanNetwork(IGeneNetwork):
         return {name: node.current_state for name, node in self.nodes.items()}
     
     def reset(self, random_init: bool = False):
-        """Reset nodes to False or random states (NetLogo-style)"""
+        """Reset nodes: fate nodes to False, others to random by default"""
         # Define output/fate nodes that should always start as False
         fate_nodes = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
 
@@ -423,16 +423,12 @@ class BooleanNetwork(IGeneNetwork):
                 # Fate nodes always start as False (biologically correct)
                 node.current_state = False
                 node.next_state = False
-            elif random_init:
-                # NetLogo-style: 50% chance True/False for non-fate genes
+            else:
+                # ALL other non-input nodes start RANDOM by default
                 import random
                 state = random.choice([True, False])
                 node.current_state = state
                 node.next_state = state
-            else:
-                # Default: all genes start as False
-                node.current_state = False
-                node.next_state = False
     
     def get_network_info(self) -> Dict[str, any]:
         """Get information about the network structure"""
