@@ -659,7 +659,28 @@ class CellPopulation(ICellPopulation):
             cell.age(dt)
 
             # Update cell metabolism and internal state
-            # (This could include ATP production, protein synthesis, etc.)
+            # Calculate metabolic state for ATP override in phenotype decisions
+            local_env = self._get_local_environment(cell.state.position)
+
+            # Update with current substance concentrations if provided
+            if substance_concentrations:
+                for substance_name, conc_field in substance_concentrations.items():
+                    if cell.state.position in conc_field:
+                        # Update both capitalized and lowercase keys for compatibility
+                        local_env[substance_name.lower()] = conc_field[cell.state.position]
+                        local_env[substance_name] = conc_field[cell.state.position]
+
+            # Calculate and update metabolic state using custom functions
+            if hasattr(cell.custom_functions, 'update_cell_metabolic_state'):
+                cell.custom_functions.update_cell_metabolic_state(cell, local_env, self.config)
+            else:
+                # Fail explicitly if custom function is not provided
+                raise RuntimeError(
+                    f"❌ Custom function 'update_cell_metabolic_state' is required but not found!\n"
+                    f"   Please ensure your custom functions module defines this function.\n"
+                    f"   Custom functions module: {cell.custom_functions}\n"
+                    f"   This function is CRITICAL for calculating ATP rates and metabolic state."
+                )
 
             updated_cells[cell_id] = cell
 
