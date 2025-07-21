@@ -195,7 +195,7 @@ class StandaloneGeneNetwork:
                 print(f"Warning: Input node '{node_name}' not found in network")
     
     def reset(self, random_init: bool = False):
-        """Reset all non-input nodes to False or random states."""
+        """Reset all non-input nodes: fate nodes to False, others to random."""
         # Define output/fate nodes that should always start as False
         fate_nodes = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
 
@@ -204,11 +204,9 @@ class StandaloneGeneNetwork:
                 if node.name in fate_nodes:
                     # Fate nodes always start as False (biologically correct)
                     node.state = False
-                elif random_init:
-                    # NetLogo-style: 50% chance True/False for non-fate genes
-                    node.state = random.choice([True, False])
                 else:
-                    node.state = False
+                    # All other non-input nodes start RANDOM by default
+                    node.state = random.choice([True, False])
     
     def get_all_states(self) -> Dict[str, bool]:
         """Get current states of all nodes."""
@@ -342,7 +340,8 @@ class StandaloneGeneNetwork:
 def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
                   target_nodes: List[str] = None, verbose: bool = False,
                   random_init: bool = False, track_apoptosis_updates: bool = False,
-                  debug_steps: bool = False, print_network: bool = False) -> Dict:
+                  debug_steps: bool = False, print_network: bool = False,
+                  show_confusion_matrix: bool = False) -> Dict:
     """Run multiple simulations and collect statistics."""
     
     # Load network
@@ -357,6 +356,15 @@ def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
     node_stats = defaultdict(Counter)
     target_stats = defaultdict(Counter)
     apoptosis_update_counts = []
+
+    # Define all fate nodes for comprehensive tracking
+    fate_nodes = ['Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis']
+
+    # Define metabolic nodes to track
+    metabolic_nodes = ['mitoATP', 'glycoATP']
+
+    # Confusion matrix for fate node coexistence
+    fate_coexistence = defaultdict(int)
 
     print(f"\nRunning {runs} simulations with {steps} steps each...")
 
@@ -383,9 +391,28 @@ def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
         # Collect statistics
         for node_name, state in final_states.items():
             node_stats[node_name][state] += 1
-            
-            if target_nodes and node_name in target_nodes:
-                target_stats[node_name][state] += 1
+
+        # Track fate node coexistence for confusion matrix
+        active_fate_nodes = [node for node in fate_nodes if final_states.get(node, False)]
+
+        # Create a binary pattern for this combination
+        pattern_bits = []
+        for node in fate_nodes:  # ['Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis']
+            pattern_bits.append('1' if final_states.get(node, False) else '0')
+
+        # Convert to readable pattern
+        if len(active_fate_nodes) == 0:
+            pattern_key = 'None'
+        else:
+            pattern_key = '+'.join(sorted(active_fate_nodes))
+
+        fate_coexistence[pattern_key] += 1
+
+        # Collect target node statistics
+        if target_nodes:
+            for node_name, state in final_states.items():
+                if node_name in target_nodes:
+                    target_stats[node_name][state] += 1
 
     # Calculate apoptosis update statistics
     apoptosis_stats = {}
@@ -406,6 +433,9 @@ def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
         'input_conditions': input_states,
         'all_nodes': {},
         'target_nodes': {},
+        'fate_nodes': {},
+        'metabolic_nodes': {},
+        'fate_coexistence': dict(fate_coexistence),
         'raw_results': all_results if runs <= 10 else [],  # Only store raw results for small runs
         'apoptosis_update_stats': apoptosis_stats if apoptosis_stats else None
     }
@@ -418,6 +448,26 @@ def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
             'OFF': f"{counts[False]}/{total} ({100*counts[False]/total:.1f}%)"
         }
     
+    # Fate nodes statistics (always include all fate nodes)
+    for node_name in fate_nodes:
+        if node_name in node_stats:
+            counts = node_stats[node_name]
+            total = sum(counts.values())
+            results['fate_nodes'][node_name] = {
+                'ON': f"{counts[True]}/{total} ({100*counts[True]/total:.1f}%)",
+                'OFF': f"{counts[False]}/{total} ({100*counts[False]/total:.1f}%)"
+            }
+
+    # Metabolic nodes statistics (always include metabolic nodes)
+    for node_name in metabolic_nodes:
+        if node_name in node_stats:
+            counts = node_stats[node_name]
+            total = sum(counts.values())
+            results['metabolic_nodes'][node_name] = {
+                'ON': f"{counts[True]}/{total} ({100*counts[True]/total:.1f}%)",
+                'OFF': f"{counts[False]}/{total} ({100*counts[False]/total:.1f}%)"
+            }
+
     # Target nodes statistics
     if target_nodes:
         for node_name in target_nodes:
@@ -446,6 +496,7 @@ def main():
     parser.add_argument('--track-apoptosis', action='store_true', help='Track and print Apoptosis node updates for each run')
     parser.add_argument('--debug-steps', action='store_true', help='Print detailed information for each simulation step')
     parser.add_argument('--print-network', action='store_true', help='Print complete network structure before simulation')
+    parser.add_argument('--confusion-matrix', action='store_true', help='Show detailed confusion matrix for fate node coexistence')
 
     args = parser.parse_args()
 
@@ -488,7 +539,8 @@ def main():
         args.random_init,
         args.track_apoptosis,
         args.debug_steps,
-        args.print_network
+        args.print_network,
+        args.confusion_matrix
     )
     
     # Print results
@@ -503,6 +555,41 @@ def main():
     for node, state in results['input_conditions'].items():
         print(f"  {node}: {'ON' if state else 'OFF'}")
     
+    # Always show fate node results
+    print(f"\nFate Node Results:")
+    for node in ['Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis']:
+        if node in results['fate_nodes']:
+            stats = results['fate_nodes'][node]
+            print(f"  {node}: ON {stats['ON']}, OFF {stats['OFF']}")
+        else:
+            print(f"  {node}: NOT FOUND")
+
+    # Always show metabolic node results
+    print(f"\nMetabolic Node Results:")
+    for node in ['mitoATP', 'glycoATP']:
+        if node in results['metabolic_nodes']:
+            stats = results['metabolic_nodes'][node]
+            print(f"  {node}: ON {stats['ON']}, OFF {stats['OFF']}")
+        else:
+            print(f"  {node}: NOT FOUND")
+
+    # Show fate node coexistence (confusion matrix for pairs only)
+    print(f"\nFate Node Pairs Coexistence Matrix:")
+    print(f"{'='*40}")
+    total_runs = results['runs']
+    coexistence = results['fate_coexistence']
+
+    # Generate all possible pairs (couples) of fate nodes
+    import itertools
+    fate_node_names = ['Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis']
+
+    # Show all possible pairs with their counts (including 0s)
+    for combo in itertools.combinations(fate_node_names, 2):
+        pattern_key = '+'.join(sorted(combo))
+        count = coexistence.get(pattern_key, 0)
+        percentage = (count / total_runs) * 100
+        print(f"  {pattern_key}: {count}/{total_runs} ({percentage:.1f}%)")
+
     if args.target_nodes:
         print(f"\nTarget Node Results:")
         for node in args.target_nodes:
