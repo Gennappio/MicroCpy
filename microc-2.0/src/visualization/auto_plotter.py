@@ -219,8 +219,25 @@ class AutoPlotter:
         ax.set_xlabel(f'X Position ({self.config.domain.size_x.unit})')
         ax.set_ylabel(f'Y Position ({self.config.domain.size_y.unit})')
 
-        # Add grid
-        ax.grid(True, alpha=0.3)
+        # Add FiPy mesh grid
+        nx, ny = self.config.domain.nx, self.config.domain.ny
+        domain_x = self.config.domain.size_x.micrometers
+        domain_y = self.config.domain.size_y.micrometers
+
+        # Create grid lines at FiPy mesh boundaries
+        x_grid = np.linspace(0, domain_x, nx + 1)
+        y_grid = np.linspace(0, domain_y, ny + 1)
+
+        # Add vertical grid lines
+        for x in x_grid:
+            ax.axvline(x, color='white', alpha=0.5, linewidth=0.5)
+
+        # Add horizontal grid lines
+        for y in y_grid:
+            ax.axhline(y, color='white', alpha=0.5, linewidth=0.5)
+
+        # Add coordinate grid (lighter)
+        ax.grid(True, alpha=0.2, color='gray', linestyle='--')
 
         # Add cell color legend if cells are present - ENHANCED
         if cell_colors_used:
@@ -239,11 +256,13 @@ class AutoPlotter:
 
             print(f"🎨 Legend created with {len(cell_colors_used)} cell types: {list(cell_colors_used.keys())}")
 
-        # Add text box with additional details
+        # Add text box with additional details including grid info
         info_text = (f'Simulation Details:\n'
                     f'• Config: {config_name}\n'
                     f'• Time: {time_point:.3f}\n'
                     f'• Substance: {substance_name}\n'
+                    f'• FiPy Grid: {nx}×{ny} cells\n'
+                    f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm\n'
                     f'• Min: {vmin:.6f} mM\n'
                     f'• Max: {vmax:.6f} mM\n'
                     f'• Mean: {concentrations.mean():.6f} mM\n'
