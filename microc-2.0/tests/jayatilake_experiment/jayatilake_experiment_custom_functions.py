@@ -324,10 +324,20 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     gene_states = cell_state['gene_states']
 
     # Get local concentrations (handle both capitalized and lowercase keys)
-    local_oxygen = local_environment.get('Oxygen', local_environment.get('oxygen', 0.0))
-    local_glucose = local_environment.get('Glucose', local_environment.get('glucose', 0.0))
-    local_lactate = local_environment.get('Lactate', local_environment.get('lactate', 0.0))
-    local_h = local_environment.get('H', local_environment.get('h', 0.0))
+    # CRITICAL: No default values - missing concentrations should cause errors
+    local_oxygen = local_environment.get('Oxygen', local_environment.get('oxygen'))
+    local_glucose = local_environment.get('Glucose', local_environment.get('glucose'))
+    local_lactate = local_environment.get('Lactate', local_environment.get('lactate'))
+    local_h = local_environment.get('H', local_environment.get('h'))
+
+    if local_oxygen is None:
+        raise ValueError(f"❌ CRITICAL: Oxygen concentration missing from local_environment: {list(local_environment.keys())}")
+    if local_glucose is None:
+        raise ValueError(f"❌ CRITICAL: Glucose concentration missing from local_environment: {list(local_environment.keys())}")
+    if local_lactate is None:
+        raise ValueError(f"❌ CRITICAL: Lactate concentration missing from local_environment: {list(local_environment.keys())}")
+    if local_h is None:
+        raise ValueError(f"❌ CRITICAL: H concentration missing from local_environment: {list(local_environment.keys())}")
 
     # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
     km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen')      # NetLogo Km for oxygen
@@ -455,29 +465,41 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # Growth factor kinetics (Jayatilake et al. 2024: RS = γS,C × CS for consumption, RS = γS,P for production)
 
     # TGFA - specific table values
-    tgfa_conc = local_environment['TGFA']
+    tgfa_conc = local_environment.get('TGFA', local_environment.get('tgfa'))
+    if tgfa_conc is None:
+        raise ValueError(f"❌ CRITICAL: TGFA concentration missing from local_environment")
     reactions['TGFA'] = -tgfa_consumption * tgfa_conc + tgfa_production
 
     # HGF - specific table values (no production)
-    hgf_conc = local_environment['HGF']
+    hgf_conc = local_environment.get('HGF', local_environment.get('hgf'))
+    if hgf_conc is None:
+        raise ValueError(f"❌ CRITICAL: HGF concentration missing from local_environment")
     reactions['HGF'] = -hgf_consumption * hgf_conc + hgf_production
 
     # FGF - from diffusion-parameters.txt
-    fgf_conc = local_environment['FGF']
+    fgf_conc = local_environment.get('FGF', local_environment.get('fgf'))
+    if fgf_conc is None:
+        raise ValueError(f"❌ CRITICAL: FGF concentration missing from local_environment")
     reactions['FGF'] = -fgf_consumption * fgf_conc + fgf_production
 
     # Growth inhibitor kinetics (from diffusion-parameters.txt: GI consumption=2.0e-17, production=0.0e-20)
-    gi_conc = local_environment['GI']
+    gi_conc = local_environment.get('GI', local_environment.get('gi'))
+    if gi_conc is None:
+        raise ValueError(f"❌ CRITICAL: GI concentration missing from local_environment")
     reactions['GI'] = -2.0e-17 * gi_conc  # Only consumption, no production
 
     # Drug inhibitor kinetics (from diffusion-parameters.txt: all have consumption=4.0e-17, production=0.0)
     drug_inhibitors = ['EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D']
     for drug in drug_inhibitors:
-        local_conc = local_environment[drug]
+        local_conc = local_environment.get(drug, local_environment.get(drug.lower()))
+        if local_conc is None:
+            raise ValueError(f"❌ CRITICAL: {drug} concentration missing from local_environment")
         reactions[drug] = -4.0e-17 * local_conc  # From diffusion-parameters.txt
 
     # pH calculation (Jayatilake et al. 2024: pH = -log10([H+]))
-    h_conc = local_environment['H']
+    h_conc = local_environment.get('H', local_environment.get('h'))
+    if h_conc is None:
+        raise ValueError(f"❌ CRITICAL: H concentration missing from local_environment")
     if h_conc > 0:
         import math
         ph_value = -math.log10(h_conc)
@@ -507,7 +529,9 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
 
     # Apply environmental constraints - don't consume more than available
     for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
-        local_conc = local_environment[substance]
+        local_conc = local_environment.get(substance, local_environment.get(substance.lower()))
+        if local_conc is None:
+            raise ValueError(f"❌ CRITICAL: {substance} concentration missing from local_environment during constraint checking")
         if reactions[substance] < 0:  # Consumption
             max_consumption = abs(reactions[substance])
             available = local_conc
@@ -705,8 +729,14 @@ def should_divide(cell, config: Any) -> bool:
     atp_type = "unknown"
     try:
         gene_states = cell.state.gene_states
-        mito_atp = gene_states.get('mitoATP', False)
-        glyco_atp = gene_states.get('glycoATP', False)
+        # Gene states should be present - if missing, this indicates a problem
+        if 'mitoATP' not in gene_states:
+            raise ValueError(f"❌ CRITICAL: mitoATP gene state missing for cell {cell.state.id[:8]}")
+        if 'glycoATP' not in gene_states:
+            raise ValueError(f"❌ CRITICAL: glycoATP gene state missing for cell {cell.state.id[:8]}")
+
+        mito_atp = gene_states['mitoATP']
+        glyco_atp = gene_states['glycoATP']
 
         if mito_atp and glyco_atp:
             atp_type = "both"
