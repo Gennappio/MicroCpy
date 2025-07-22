@@ -325,9 +325,13 @@ def setup_simulation(config, args, custom_functions_path=None):
     # Create gene network
     gene_network = BooleanNetwork(config=config)
     print(f"   ✅ Gene network: {len(gene_network.input_nodes)} inputs, {len(gene_network.output_nodes)} outputs")
-    
+
     # Load custom functions first
     custom_functions = load_custom_functions(custom_functions_path)
+
+    # Initialize gene network with custom function if available
+    if custom_functions and hasattr(custom_functions, 'initialize_gene_network'):
+        custom_functions.initialize_gene_network(gene_network, config)
 
     # Create cell population with config for threshold-based gene inputs
     population = CellPopulation(
