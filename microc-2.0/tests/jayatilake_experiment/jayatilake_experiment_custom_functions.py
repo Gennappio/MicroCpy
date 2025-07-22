@@ -434,30 +434,44 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
 
     # Glycolysis pathway (glycoATP active) - consumes glucose, produces lactate
     if glyco_atp > 0:
+
+
         # Glucose consumption for glycolysis (NetLogo line 3161)
-        glucose_mm_factor = local_glucose / (km_glucose + local_glucose)
-        oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen)
-        glucose_consumption_glyco = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
+        glucose_mm_factor = local_glucose / (km_glucose + local_glucose) if (km_glucose + local_glucose) > 0 else 0
+        oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen) if (km_oxygen + local_oxygen) > 0 else 0
+
+        # Glycolysis should work even with low oxygen (anaerobic)
+        # Use minimum oxygen factor to allow glycolysis when oxygen is low
+        oxygen_factor_for_glycolysis = max(0.1, oxygen_mm_factor)  # Minimum 10% efficiency even without oxygen
+
+        # Use vmax_glucose for glycolysis rate (different from OXPHOS rate)
+        glucose_consumption_glyco = (vmax_glucose * 1.0 / 6) * glucose_mm_factor * oxygen_factor_for_glycolysis
         reactions['Glucose'] += -glucose_consumption_glyco
 
-        # Lactate production from glycolysis using proper Michaelis-Menten kinetics
-        # Formula: R_L,p = (2*μ_O2*A_0/6) * (C_G/(2*K_G + C_G)) * (glycoATP)
-        # Where μ_O2*A_0 = vmax_oxygen, K_G = km_glucose, C_G = local_glucose
-                # Lactate production from glycolysis (NetLogo line 3660)
-        lactate_production = 0.01*(vmax_oxygen * 2.0 / 6) * (max_atp / 2) * glucose_mm_factor
+        # Lactate production from glycolysis - should be proportional to glucose consumption
+        # Each glucose molecule produces 2 lactate molecules in glycolysis
+        # Include glycoATP gene state as a scaling factor
+        lactate_production = glucose_consumption_glyco * 2.0 * glyco_atp  # 2 lactate per glucose
+
+        # If glucose is very low, still allow some baseline lactate production for glycolytic cells
+        if local_glucose < 0.1 and glyco_atp > 0:
+            baseline_lactate = vmax_oxygen * 0.1 * glyco_atp  # Baseline production
+            lactate_production = max(lactate_production, baseline_lactate)
+
 
         reactions['Lactate'] += lactate_production
 
+
         # Proton production from glycolysis (NetLogo line 3429)
         # Proton production should be proportional to lactate production
-        proton_production = (vmax_oxygen * 2.0 / 6) * proton_coefficient * (max_atp / 2) * glucose_mm_factor
+        proton_production = lactate_production * proton_coefficient
         reactions['H'] += proton_production
 
         # ATP production from glycolysis
         atp_rate += glucose_consumption_glyco * 2  # 2 ATP per glucose in glycolysis
 
         # Small oxygen consumption even in glycolysis (NetLogo style)
-        reactions['Oxygen'] += -vmax_oxygen * 0.5 * oxygen_mm_factor  # K=0.5 according to paper
+        reactions['Oxygen'] += -vmax_glucose * 0.5 * oxygen_factor_for_glycolysis  # K=0.5 according to paper
 
     # Store ATP rate in cell state for division decisions
     cell_state['atp_rate'] = atp_rate
