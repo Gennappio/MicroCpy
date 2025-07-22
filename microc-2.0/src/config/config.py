@@ -75,8 +75,8 @@ class SubstanceConfig:
 @dataclass
 class ThresholdConfig:
     name: str
-    initial: float
     threshold: float
+    initial: Optional[float] = None  # Optional - can be derived from substance initial_value
 
 @dataclass
 class AssociationConfig:
@@ -197,8 +197,8 @@ class MicroCConfig:
         for name, thresh_data in data['thresholds'].items():
             thresholds[name] = ThresholdConfig(
                 name=name,
-                initial=thresh_data['initial'],
-                threshold=thresh_data['threshold']
+                threshold=thresh_data['threshold'],
+                initial=thresh_data.get('initial')  # Optional field
             )
 
         # Load gene network configuration

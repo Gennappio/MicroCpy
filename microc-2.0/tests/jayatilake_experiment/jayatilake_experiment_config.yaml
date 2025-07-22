@@ -261,59 +261,41 @@ associations:
 # GLUT1I			      0	4.0e-6
 thresholds:
   Oxygen_supply:
-    initial: 0.07
     threshold: 0.022
   Glucose_supply:
-    initial: 5.0
     threshold: 4.0
   MCT1_stimulus:
-    initial: 1.0
     threshold: 1.5
   Proton_level:
-    initial: 4.0e-5
     threshold: 8.0e-5
   FGFR_stimulus:
-    initial: 0.0
     threshold: 1.0e-6
   EGFR_stimulus:
-    initial: 0.0
     threshold: 1.0e-6
   cMET_stimulus:
-    initial: 0
     threshold: 1.0e-6
   Growth_Inhibitor:
-    initial: 0.0
     threshold: 0.00005
   DNA_damage:
-    initial: 0.0
     threshold: 0.5
   TGFBR_stimulus:
-    initial: 0.0
     threshold: 0.5
   GLUT1I:
-    initial: 0.0
     threshold: 4.0e-6
   GLUT1D:
-    initial: 0.0
     threshold: 0.5
   # Missing thresholds from input-parameters.txt
   EGFRI:
-    initial: 0.0
     threshold: 0.005
   FGFRI:
-    initial: 0.0
     threshold: 0.005
   cMETI:
-    initial: 0.0
     threshold: 0.005
   MCT1I:
-    initial: 0.0
     threshold: 1.7e-5
   MCT4I:
-    initial: 0.0
     threshold: 1.0
   pH_min:
-    initial: 8.0
     threshold: 6.0
 
 # No composite genes needed - all logic implemented in custom functions
