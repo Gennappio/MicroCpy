@@ -263,10 +263,14 @@ def initialize_cell_ages(population, config: Any = None):
         if random_age >= cell_cycle_time:
             cells_can_proliferate += 1
 
-        # Debug first few cells
+        # Debug first few cells AND log all ages to file
         if cells_updated <= 3:
             can_proliferate = "✅" if random_age >= cell_cycle_time else "❌"
             print(f"   Cell {cell_id[:8]}: age {old_age:.1f} → {random_age:.1f} {can_proliferate}")
+
+        # Log all initial ages to file for debugging
+        with open("log_simulation_status.txt", "a") as f:
+            f.write(f"INITIAL_AGE: {cell_id[:8]} | {random_age:.1f} | can_proliferate: {random_age >= cell_cycle_time}\n")
 
     # Print statistics
     ages_array = np.array(ages_set)
@@ -306,21 +310,24 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
             'EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D'
         ]}
 
-    # Debug metabolism for random cells at random times
-    import random
-    cell_id = cell_state.get('id', 'unknown')
+    # Simple progress counter
+    if not hasattr(calculate_cell_metabolism, 'call_count'):
+        calculate_cell_metabolism.call_count = 0
+        calculate_cell_metabolism.oxphos_count = 0
+        calculate_cell_metabolism.glyco_count = 0
+        calculate_cell_metabolism.both_count = 0
+        calculate_cell_metabolism.quiescent_count = 0
 
-    # Random debugging: 1% chance to debug any cell
-    debug_this_cell = random.random() < 0.01
+    calculate_cell_metabolism.call_count += 1
 
     # Get gene states from cell state (they should be stored there after gene network update)
     gene_states = cell_state['gene_states']
 
-    # Get local concentrations
-    local_oxygen = local_environment['Oxygen']
-    local_glucose = local_environment['Glucose']
-    local_lactate = local_environment['Lactate']
-    local_h = local_environment['H']
+    # Get local concentrations (handle both capitalized and lowercase keys)
+    local_oxygen = local_environment.get('Oxygen', local_environment.get('oxygen', 0.0))
+    local_glucose = local_environment.get('Glucose', local_environment.get('glucose', 0.0))
+    local_lactate = local_environment.get('Lactate', local_environment.get('lactate', 0.0))
+    local_h = local_environment.get('H', local_environment.get('h', 0.0))
 
     # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
     km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen')      # NetLogo Km for oxygen
@@ -365,24 +372,27 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # Only consume/produce if cell is alive (not necrotic)
     is_necrotic = gene_states['Necrosis']
     if is_necrotic:
-        if debug_this_cell:
-            print(f"\n🔬 NECROTIC CELL {cell_id[:8]}: No metabolism")
+        # Necrotic cells have no ATP production
+        reactions['atp_rate'] = 0.0
         return reactions
 
     # Get gene states
     mito_atp = 1.0 if gene_states['mitoATP'] else 0.0
     glyco_atp = 1.0 if gene_states['glycoATP'] else 0.0
 
-    # Determine cell type for debugging
-    cell_type = "UNKNOWN"
+    # Count cell types and show progress
     if mito_atp and not glyco_atp:
-        cell_type = "mitoATP"
+        calculate_cell_metabolism.oxphos_count += 1
     elif glyco_atp and not mito_atp:
-        cell_type = "glycoATP"
+        calculate_cell_metabolism.glyco_count += 1
     elif mito_atp and glyco_atp:
-        cell_type = "BOTH_ATP"
+        calculate_cell_metabolism.both_count += 1
     else:
-        cell_type = "NO_ATP"
+        calculate_cell_metabolism.quiescent_count += 1
+
+    # Show progress every 1000 calls
+    if calculate_cell_metabolism.call_count % 1000 == 0:
+        print(f"📊 Step {calculate_cell_metabolism.call_count}: OXPHOS={calculate_cell_metabolism.oxphos_count}, Glyco={calculate_cell_metabolism.glyco_count}, Both={calculate_cell_metabolism.both_count}, Quiescent={calculate_cell_metabolism.quiescent_count}")
 
     # NetLogo-style reaction term calculations using Michaelis-Menten kinetics
     # Based on NetLogo MicroC implementation (lines 2788, 2998, 3054, 3161)
@@ -503,20 +513,6 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
             available = local_conc
             if available < max_consumption:
                 reactions[substance] = -available * 0.9  # Leave some residual
-
-    # Optional debug output for metabolism results (uncomment for debugging)
-    # if debug_this_cell:
-    #     print(f"   METABOLISM RESULTS:")
-    # Comprehensive debugging output
-    if debug_this_cell:
-        print(f"\n🔬 CELL {cell_id[:8]} ({cell_type}) METABOLISM:")
-        print(f"  Environment: O2={local_environment.get('Oxygen', 0):.3f}, Glc={local_environment.get('Glucose', 0):.3f}, Lac={local_environment.get('Lactate', 0):.3f}")
-        print(f"  Gene states: mitoATP={mito_atp}, glycoATP={glyco_atp}")
-        print(f"  OXYGEN:  {reactions['Oxygen']:.2e} mol/s/cell")
-        print(f"  GLUCOSE: {reactions['Glucose']:.2e} mol/s/cell")
-        print(f"  LACTATE: {reactions['Lactate']:.2e} mol/s/cell")
-        print(f"  H+:      {reactions['H']:.2e} mol/s/cell")
-        print(f"  TGFA:    {reactions['TGFA']:.2e} mol/s/cell")
 
     return reactions
 
@@ -648,6 +644,39 @@ def check_cell_division(cell_state: Dict[str, Any], local_environment: Dict[str,
     return division_decision
 
 
+def log_division_decision(cell_id: str, decision: bool, reason: str, cell_age: float, atp_rate_normalized: float, current_phenotype: str, atp_type: str = "unknown"):
+    """
+    Log cell division decisions to the division decisions file.
+    """
+    import time
+    from pathlib import Path
+
+    try:
+        # Create results directory if it doesn't exist
+        results_dir = Path("results") / "jayatilake_experiment"
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        # Log to division decisions file
+        log_file = results_dir / "division_decisions.txt"
+
+        # Create header if file doesn't exist
+        if not log_file.exists():
+            with open(log_file, 'w', encoding='utf-8') as f:
+                f.write("=== CELL DIVISION DECISIONS LOG ===\n")
+                f.write(f"Started at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 100 + "\n")
+                f.write("Cell ID | Decision | Age | ATP_Norm | Phenotype | ATP_Type | Reason\n")
+                f.write("-" * 100 + "\n")
+
+        # Append decision log
+        with open(log_file, 'a', encoding='utf-8') as f:
+            decision_str = "DIVIDE" if decision else "NO_DIV"
+            f.write(f"{cell_id[:8]} | {decision_str} | {cell_age:6.1f} | {atp_rate_normalized:6.3f} | {current_phenotype:12s} | {atp_type:8s} | {reason}\n")
+
+    except Exception as e:
+        print(f"⚠️ Failed to log division decision: {e}")
+
+
 def should_divide(cell, config: Any) -> bool:
     """
     Determine if cell should attempt division based on gene network state and cell conditions.
@@ -667,8 +696,33 @@ def should_divide(cell, config: Any) -> bool:
     # print(f"🔧 CONFIG DEBUG: config type: {type(config)}")
     # print(f"   Final cell_cycle_time = {cell_cycle_time}")
 
+    # Initialize logging variables
+    cell_age = cell.state.age
+    current_phenotype = cell.state.phenotype
+    atp_rate_normalized = 0.0  # Will be calculated if available
+
+    # Determine ATP production type from gene network states
+    atp_type = "unknown"
+    try:
+        gene_states = cell.state.gene_states
+        mito_atp = gene_states.get('mitoATP', False)
+        glyco_atp = gene_states.get('glycoATP', False)
+
+        if mito_atp and glyco_atp:
+            atp_type = "both"
+        elif mito_atp and not glyco_atp:
+            atp_type = "mito"
+        elif glyco_atp and not mito_atp:
+            atp_type = "glyco"
+        else:
+            atp_type = "none"
+    except Exception as e:
+        atp_type = f"error:{str(e)[:10]}"
+
     # Check if cell has sufficient age (basic cell cycle time)
     if cell.state.age < cell_cycle_time:
+        reason = f"Age insufficient: {cell.state.age:.1f} < {cell_cycle_time}"
+        log_division_decision(cell.state.id, False, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
         return False
 
     # Debug cell division check (reduced output)
@@ -696,15 +750,20 @@ def should_divide(cell, config: Any) -> bool:
     except Exception as e:
         print(f"   ❌ ATP ERROR: {e}")
         print(f"   Cell state: {cell.state}")
+        reason = f"ATP calculation error: {e}"
+        log_division_decision(cell.state.id, False, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
         return False
 
     # METABOLIC OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
     # This ensures metabolic decisions override gene network phenotype decisions
     if atp_rate_normalized > atp_threshold:
+        cell.state.phenotype = "Proliferation"
         print(f"   ATP check PASSED: {atp_rate_normalized:.4f} > {atp_threshold} - FORCING Proliferation")
         # Update cell phenotype to proliferation (override gene network decision)
         cell.state = cell.state.with_updates(phenotype="Proliferation")
         print(f"   DIVISION DECISION: TRUE (ATP override)")
+        reason = f"ATP sufficient: {atp_rate_normalized:.3f} > {atp_threshold}"
+        log_division_decision(cell.state.id, True, reason, cell_age, atp_rate_normalized, "Proliferation", atp_type)
         return True
 
     # If ATP is insufficient, check if we're already in proliferation state
@@ -712,10 +771,14 @@ def should_divide(cell, config: Any) -> bool:
     if cell.state.phenotype == "Proliferation":
         print(f"   ATP check FAILED but already Proliferation - allowing division")
         print(f"   DIVISION DECISION: TRUE (already proliferating)")
+        reason = f"Already proliferating (ATP: {atp_rate_normalized:.3f})"
+        log_division_decision(cell.state.id, True, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
         return True
 
     print(f"   ATP check FAILED: {atp_rate_normalized:.4f} <= {atp_threshold}, phenotype: {cell.state.phenotype}")
     print(f"   DIVISION DECISION: FALSE")
+    reason = f"ATP insufficient: {atp_rate_normalized:.3f} <= {atp_threshold}"
+    log_division_decision(cell.state.id, False, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
     return False
 
 
@@ -949,10 +1012,10 @@ def should_update_intercellular(current_step: int, last_update: int, interval: i
 
 
 
-def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None) -> str:
+def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None, config: Any = None) -> str:
     """
     Determine cell phenotype based on gene network states for Jayatilake experiment.
-    Uses the standard NetLogo-style phenotype determination logic.
+    Uses the standard NetLogo-style phenotype determination logic with ATP override.
     """
     # Check fate genes in NetLogo order (sequential, not if-elif)
     # Later fate genes can overwrite earlier ones when multiple are active
@@ -972,6 +1035,44 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
 
     if gene_states['Necrosis']:
         phenotype = "Necrosis"
+
+    # ATP OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
+    # This ensures metabolic decisions override gene network phenotype decisions
+    # This prevents cells from dying due to apoptosis/necrosis when they have sufficient ATP
+    try:
+        # Get ATP parameters from cell state - NO DEFAULTS, must be present
+        metabolic_state = cell_state.get('metabolic_state')
+        if metabolic_state is None:
+            raise ValueError(f"❌ CRITICAL: metabolic_state missing from cell {cell_state.get('id', 'unknown')[:8]}")
+
+        atp_rate = metabolic_state.get('atp_rate')
+        if atp_rate is None:
+            raise ValueError(f"❌ CRITICAL: atp_rate missing from metabolic_state for cell {cell_state.get('id', 'unknown')[:8]}")
+
+        # Only proceed if we have valid metabolic state
+        if atp_rate > 0:
+            # Get thresholds from config - NO HARDCODED VALUES
+            try:
+                max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', fail_if_missing=True)
+                atp_threshold = get_parameter_from_config(config, 'atp_threshold', fail_if_missing=True)
+            except ValueError as e:
+                print(f"❌ CRITICAL PARAMETER MISSING in ATP override: {e}")
+                raise SystemExit(1)
+
+            # Calculate normalized ATP rate
+            atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0
+
+            # If ATP is sufficient, override death phenotypes
+            if atp_rate_normalized > atp_threshold:
+                if phenotype in ['Apoptosis', 'Necrosis']:
+                    print(f"🔋 ATP OVERRIDE: Cell {cell_state.get('id', 'unknown')[:8]} - {phenotype} → Proliferation (ATP: {atp_rate_normalized:.6f} > {atp_threshold})")
+                    phenotype = "Proliferation"
+
+    except Exception as e:
+        # If ATP calculation fails, this is a CRITICAL ERROR - don't silently continue
+        print(f"❌ CRITICAL ATP OVERRIDE ERROR for cell {cell_state.get('id', 'unknown')[:8]}: {e}")
+        print("🚨 ABORTING SIMULATION - ATP override is critical for cell behavior")
+        raise SystemExit(1)
 
     return phenotype
 
