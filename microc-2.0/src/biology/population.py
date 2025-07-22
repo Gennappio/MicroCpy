@@ -883,7 +883,7 @@ class CellPopulation(ICellPopulation):
             # Use cached gene states and environment from gene network update
             if hasattr(cell, '_cached_gene_states') and hasattr(cell, '_cached_local_env'):
                 old_phenotype = cell.state.phenotype
-                new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states)
+                new_phenotype = cell.update_phenotype(cell._cached_local_env, cell._cached_gene_states, self.config)
 
                 # Log detailed information for each phenotype update (with correct final phenotype)
                 if self.phenotype_logger.debug_enabled:

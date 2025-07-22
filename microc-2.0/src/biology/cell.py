@@ -87,7 +87,7 @@ class Cell(ICell):
             return None
     
     def update_phenotype(self, local_environment: Dict[str, float],
-                        gene_states: Dict[str, bool]) -> str:
+                        gene_states: Dict[str, bool], config=None) -> str:
         """Update cell phenotype based on environment and genes"""
         if self.custom_functions and hasattr(self.custom_functions, 'update_cell_phenotype'):
             # Call custom function
@@ -95,7 +95,8 @@ class Cell(ICell):
                 cell_state=self.state.__dict__,
                 local_environment=local_environment,
                 gene_states=gene_states,
-                current_phenotype=self.state.phenotype
+                current_phenotype=self.state.phenotype,
+                config=config
             )
         else:
             # Fail explicitly if custom function is not provided
