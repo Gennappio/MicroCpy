@@ -50,7 +50,8 @@ class AutoPlotter:
     
     def plot_substance_heatmap(self, substance_name: str, concentrations: np.ndarray,
                               cell_positions: List[Tuple[int, int]], time_point: float,
-                              config_name: str = "unknown", population=None, title_suffix: str = ""):
+                              config_name: str = "unknown", population=None, title_suffix: str = "",
+                              is_initial: bool = False, is_final: bool = False):
         """Plot concentration heatmap for a single substance with detailed debugging"""
 
         # DEBUG: Print actual concentration values
@@ -287,8 +288,14 @@ class AutoPlotter:
                 verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5",
                 facecolor="white", alpha=0.9))
 
-        # Save plot
-        filename = f"{substance_name}_heatmap_t{time_point:.3f}.png"
+        # Save plot with unique filename to avoid overwriting
+        if is_initial:
+            filename = f"{substance_name}_heatmap_t{time_point:.3f}_INITIAL.png"
+        elif is_final:
+            filename = f"{substance_name}_heatmap_t{time_point:.3f}_FINAL.png"
+        else:
+            filename = f"{substance_name}_heatmap_t{time_point:.3f}.png"
+
         filepath = self.plots_dir / "heatmaps" / filename
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         plt.close()
@@ -643,7 +650,8 @@ Substance Initial Values:
                 0.0,  # time = 0
                 config_name,
                 population,
-                title_suffix="(TRUE Initial State - Uniform)"
+                title_suffix="(TRUE Initial State - Uniform)",
+                is_initial=True
             )
 
             print(f"   ✅ {substance_name} initial heatmap: {plot_path.name}")
@@ -687,17 +695,12 @@ Substance Initial Values:
             # Plot ALL substances (not just key ones)
             all_substances = list(self.config.substances.keys())
 
-            # Plot initial state (t=0) for all substances
-            initial_time = 0.0
-            for substance in all_substances:
-                if substance in simulator.state.substances:
-                    concentrations = simulator.state.substances[substance].concentrations
+            # SKIP initial state plots here - they were already created by generate_initial_plots()
+            # Creating them again would overwrite the true initial state with final state data
+            print(f"   ⏭️  Skipping initial state plots (already created before simulation)")
 
-                    plot_path = self.plot_substance_heatmap(
-                        substance, concentrations, cell_positions, initial_time, config_name, population
-                    )
-                    generated_plots.append(plot_path)
-                    print(f"   ✅ {substance} initial heatmap: {plot_path.name}")
+            # Note: Initial plots are created by generate_initial_plots() before simulation starts
+            # This prevents overwriting true initial state with final state data
 
             # Plot final state - use current time from simulator or estimate from config
             if time_points:
@@ -712,17 +715,15 @@ Substance Initial Values:
                     concentrations = simulator.state.substances[substance].concentrations
 
                     plot_path = self.plot_substance_heatmap(
-                        substance, concentrations, cell_positions, final_time, config_name, population
+                        substance, concentrations, cell_positions, final_time, config_name, population,
+                        is_final=True
                     )
                     generated_plots.append(plot_path)
                     print(f"   ✅ {substance} final heatmap: {plot_path.name}")
         
-        # 3. Initial state summary plot
-        if population:
-            plot_path = self.plot_initial_state_summary(population, simulator)
-            if plot_path:
-                generated_plots.append(plot_path)
-                print(f"   ✅ Initial state summary: {plot_path.name}")
+        # 3. SKIP initial state summary plot - already created by generate_initial_plots()
+        # Creating it again would overwrite the true initial state with final state data
+        print(f"   ⏭️  Skipping initial state summary (already created before simulation)")
 
         # 4. Final simulation summary plot
         if substance_stats and time_points:
