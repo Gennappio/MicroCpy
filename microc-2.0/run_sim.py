@@ -339,10 +339,8 @@ def setup_simulation(config, args, custom_functions_path=None):
 
     if custom_functions and hasattr(custom_functions, 'initialize_cell_placement'):
         # Try custom placement function with domain configuration
-        # Get initial_cell_count from custom_parameters if available
-        initial_cell_count = 100  # Default
-        if hasattr(config, 'custom_parameters') and 'initial_cell_count' in config.custom_parameters:
-            initial_cell_count = config.custom_parameters['initial_cell_count']
+        # Get initial_cell_count from custom_parameters
+        initial_cell_count = config.custom_parameters['initial_cell_count']
 
         simulation_params = {
             'domain_size_um': config.domain.size_x.micrometers,  # Assume square domain
