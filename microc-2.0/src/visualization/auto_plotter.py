@@ -112,7 +112,10 @@ class AutoPlotter:
             # Get cell data with phenotypes and colors
             cell_data = population.get_cell_positions()
 
+
+            cell_counter = 0
             for (x, y), phenotype in cell_data:
+                cell_counter += 1
                 # Convert grid coordinates to physical coordinates
                 phys_x = (x + 0.5) * grid_spacing
                 phys_y = (y + 0.5) * grid_spacing
@@ -188,6 +191,7 @@ class AutoPlotter:
                 circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
                                       color=cell_color, alpha=0.7, linewidth=1, fill=True)
                 ax.add_patch(circle)
+
         elif cell_positions:
             # Fallback for when population is not available
             cell_diameter = self.config.domain.cell_height.value  # Biological cell diameter
@@ -209,8 +213,10 @@ class AutoPlotter:
         if population:
             pop_stats = population.get_population_statistics()
             cell_count = pop_stats['total_cells']
+
         elif cell_positions:
             cell_count = len(cell_positions)
+            print(f"🔍 TITLE DEBUG: Using cell_positions count: {cell_count}")
 
         detailed_title = (f'{substance_name} Distribution at t = {time_point:.3f} {title_suffix}\n'
                          f'Config: {config_name} | Domain: {domain_info} | Grid: {grid_info}\n'
