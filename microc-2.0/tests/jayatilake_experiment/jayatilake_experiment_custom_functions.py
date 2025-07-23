@@ -91,6 +91,35 @@ def get_required_cell_state(cell_state: Dict[str, Any], state_name: str, cell_id
     return cell_state[state_name]
 
 
+def get_required_environment_concentrations(local_environment: Dict[str, float], *substance_names: str) -> List[float]:
+    """
+    Get required substance concentrations from local environment with explicit error handling.
+    Raises KeyError with detailed message if any substance is missing.
+
+    Args:
+        local_environment: Dictionary containing substance concentrations
+        *substance_names: Variable number of substance names to retrieve
+
+    Returns:
+        List of concentrations in the same order as requested substances
+
+    Example:
+        oxygen_conc, glucose_conc = get_required_environment_concentrations(env, 'Oxygen', 'Glucose')
+    """
+    concentrations = []
+    for substance in substance_names:
+        if substance not in local_environment:
+            available_substances = list(local_environment.keys())
+            raise KeyError(
+                f"❌ CRITICAL: Missing '{substance}' concentration in local_environment\n"
+                f"   Available substances: {available_substances}\n"
+                f"   Simulation aborted to prevent invalid calculations."
+            )
+        concentrations.append(local_environment[substance])
+
+    return concentrations
+
+
 # Debug: Confirm custom functions are loaded
 #print("🔧 CUSTOM FUNCTIONS LOADED: jayatilake_experiment_custom_functions.py")
 
@@ -459,11 +488,11 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     }
 
     # Only consume/produce if cell is alive (not necrotic)
-    is_necrotic = gene_states['Necrosis']
-    if is_necrotic:
-        # Necrotic cells have no ATP production
-        reactions['atp_rate'] = 0.0
-        return reactions
+    # is_necrotic = gene_states['Necrosis']
+    # if is_necrotic:
+    #     # Necrotic cells have no ATP production
+    #     reactions['atp_rate'] = 0.0
+    #     return reactions
 
     # Get gene states
     mito_atp = 1.0 if gene_states['mitoATP'] else 0.0
@@ -1122,7 +1151,24 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     """
     Determine cell phenotype based on gene network states for Jayatilake experiment.
     Uses the standard NetLogo-style phenotype determination logic with ATP override.
+    Includes hardcoded necrosis threshold check to match NetLogo behavior.
     """
+    # HARDCODED NECROSIS CHECK (matches NetLogo logic)
+    # This overrides gene network if both oxygen AND glucose are below thresholds
+    oxygen_conc, glucose_conc = get_required_environment_concentrations(local_environment, 'Oxygen', 'Glucose')
+
+    # Get necrosis thresholds from config (matching NetLogo values)
+    necrosis_threshold_oxygen = 0.011  # the-necrosis-threshold
+    necrosis_threshold_glucose = 0.23  # the-necrosis-threshold-g
+
+    if config:
+        necrosis_threshold_oxygen = getattr(config, 'necrosis_threshold_oxygen', 0.011)
+        necrosis_threshold_glucose = getattr(config, 'necrosis_threshold_glucose', 0.23)
+
+    # # NetLogo hardcoded necrosis logic: if (Oxygen < threshold AND Glucose < threshold) -> Necrosis
+    # if oxygen_conc < necrosis_threshold_oxygen and glucose_conc < necrosis_threshold_glucose:
+    #     return "Necrosis"
+    
     # Check fate genes in NetLogo order (sequential, not if-elif)
     # Later fate genes can overwrite earlier ones when multiple are active
 
@@ -1130,8 +1176,11 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     phenotype = "Growth_Arrest"
 
     # Check each fate gene in NetLogo order
-    if gene_states['Apoptosis']:
-        phenotype = "Apoptosis"
+    # if gene_states['Necrosis']:
+    #     phenotype = "Necrosis"
+
+    # if gene_states['Apoptosis']:
+    #     phenotype = "Apoptosis"
 
     if gene_states['Proliferation']:
         phenotype = "Proliferation"
@@ -1206,9 +1255,12 @@ def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, fl
     Determine if a cell should die based on its state and environment.
     For Jayatilake experiment: cells die if they have Apoptosis or Necrosis phenotype.
     """
-    # Get current phenotype
-    phenotype = cell_state['phenotype']
+    # DISABLED: No cell death for debugging
+    return False
 
-    # Cell dies if it has death phenotypes
-    return phenotype in ['Apoptosis', 'Necrosis']
+    # # Get current phenotype
+    # phenotype = cell_state['phenotype']
+    #
+    # # Cell dies if it has death phenotypes
+    # return phenotype in ['Apoptosis', 'Necrosis']
 
