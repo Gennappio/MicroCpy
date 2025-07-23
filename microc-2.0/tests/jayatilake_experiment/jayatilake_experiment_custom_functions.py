@@ -919,26 +919,43 @@ def should_divide(cell, config: Any) -> bool:
 
 def get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
     """
-    Get cell color based on gene network outputs (matching NetLogo visualization).
+    Get cell color based on actual phenotype (from update_cell_phenotype) for borders
+    and metabolic state (from gene network) for interior.
+    Returns a tuple-like string: "interior_color|border_color"
     """
-    # Phenotype-based colors (highest priority)
-    if gene_states['Necrosis']:
-        return "black"
-    elif gene_states['Apoptosis']:
-        return "red"
+    # Get actual phenotype from cell state (calculated by update_cell_phenotype)
+    actual_phenotype = cell.state.phenotype if hasattr(cell.state, 'phenotype') else 'normal'
 
-    # Metabolic state colors based on gene network outputs
-    glyco_active = gene_states['glycoATP']
-    mito_active = gene_states['mitoATP']
+    # Border colors based on actual phenotype (from update_cell_phenotype function)
+    phenotype_border_colors = {
+        'Necrosis': 'black',
+        'necrosis': 'black',
+        'Apoptosis': 'red',
+        'apoptosis': 'red',
+        'Growth_Arrest': 'orange',
+        'growth_arrest': 'orange',
+        'Proliferation': 'lightgreen',
+        'proliferation': 'lightgreen',
+        'normal': 'gray',
+        'quiescent': 'gray'
+    }
+    border_color = phenotype_border_colors.get(actual_phenotype, 'gray')
+
+    # Interior colors based on metabolic state (from gene network)
+    glyco_active = gene_states.get('glycoATP', False)
+    mito_active = gene_states.get('mitoATP', False)
 
     if glyco_active and not mito_active:
-        return "green"      # Glycolysis only
+        interior_color = "green"      # glycoATP only
     elif not glyco_active and mito_active:
-        return "blue"       # OXPHOS only
+        interior_color = "blue"       # mitoATP only
     elif glyco_active and mito_active:
-        return "violet"     # Mixed metabolism
+        interior_color = "violet"     # mixed metabolism
     else:
-        return "gray"       # Quiescent
+        interior_color = "lightgray"  # none
+
+    # Return combined color info as a formatted string
+    return f"{interior_color}|{border_color}"
 
 
 def final_report(population, local_environments, config: Any = None) -> None:
