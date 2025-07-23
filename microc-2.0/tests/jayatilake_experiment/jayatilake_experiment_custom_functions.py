@@ -1188,42 +1188,29 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     if gene_states['Growth_Arrest']:
         phenotype = "Growth_Arrest"
 
-    if gene_states['Necrosis']:
-        phenotype = "Necrosis"
 
-    # ATP OVERRIDE: If ATP conditions are met, FORCE proliferation phenotype
-    # This ensures metabolic decisions override gene network phenotype decisions
-    # This prevents cells from dying due to apoptosis/necrosis when they have sufficient ATP
-    try:
-        # Get ATP parameters from cell state - NO DEFAULTS, must be present
-        cell_id = cell_state.get('id', 'unknown')
-        metabolic_state = get_required_cell_state(cell_state, 'metabolic_state', cell_id)
-        atp_rate = get_required_cell_state(metabolic_state, 'atp_rate', cell_id)
+    # Get ATP parameters from cell state - NO DEFAULTS, must be present
+    cell_id = cell_state.get('id', 'unknown')
+    metabolic_state = get_required_cell_state(cell_state, 'metabolic_state', cell_id)
+    atp_rate = get_required_cell_state(metabolic_state, 'atp_rate', cell_id)
 
-        # Only proceed if we have valid metabolic state
-        if atp_rate > 0:
-            # Get thresholds from config - NO HARDCODED VALUES
-            try:
-                max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', fail_if_missing=True)
-                atp_threshold = get_parameter_from_config(config, 'atp_threshold', fail_if_missing=True)
-            except ValueError as e:
-                print(f"❌ CRITICAL PARAMETER MISSING in ATP override: {e}")
-                raise SystemExit(1)
+    # Only proceed if we have valid metabolic state
+    if atp_rate > 0:
+        # Get thresholds from config - NO HARDCODED VALUES
+        try:
+            max_atp_rate = get_parameter_from_config(config, 'max_atp_rate', fail_if_missing=True)
+            atp_threshold = get_parameter_from_config(config, 'atp_threshold', fail_if_missing=True)
+        except ValueError as e:
+            print(f"❌ CRITICAL PARAMETER MISSING in ATP override: {e}")
+            raise SystemExit(1)
 
-            # Calculate normalized ATP rate
-            atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0
+        # Calculate normalized ATP rate
+        atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0
 
-            # If ATP is sufficient, override death phenotypes
-            if atp_rate_normalized > atp_threshold:
-                if phenotype in ['Apoptosis', 'Necrosis']:
-                    print(f"🔋 ATP OVERRIDE: Cell {cell_state.get('id', 'unknown')[:8]} - {phenotype} → Proliferation (ATP: {atp_rate_normalized:.6f} > {atp_threshold})")
-                    phenotype = "Proliferation"
-
-    except Exception as e:
-        # If ATP calculation fails, this is a CRITICAL ERROR - don't silently continue
-        print(f"❌ CRITICAL ATP OVERRIDE ERROR for cell {cell_state.get('id', 'unknown')[:8]}: {e}")
-        print("🚨 ABORTING SIMULATION - ATP override is critical for cell behavior")
-        raise SystemExit(1)
+        # If ATP is sufficient, override death phenotypes
+        if atp_rate_normalized > atp_threshold:
+            if phenotype in ['Apoptosis', 'Necrosis']:
+                phenotype = "Proliferation"
 
     return phenotype
 
