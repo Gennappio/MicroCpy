@@ -128,7 +128,8 @@ class SimulationPlotter:
             x, y = pos
 
             # Try to get custom cell color first
-            cell_color = '#808080'  # default gray
+            interior_color = '#D3D3D3'  # default light gray interior
+            border_color = '#808080'    # default gray border
             try:
                 # Try to get the actual cell object to get gene states
                 cell = population.get_cell_at_position(pos)
@@ -139,8 +140,13 @@ class SimulationPlotter:
                         gene_states=gene_states,
                         config=population.config
                     )
-                    if custom_color:
-                        cell_color = custom_color
+                    if custom_color and '|' in custom_color:
+                        # Parse new format: "interior_color|border_color"
+                        interior_color, border_color = custom_color.split('|', 1)
+                    elif custom_color:
+                        # Legacy format: use as both interior and border
+                        interior_color = custom_color
+                        border_color = custom_color
                     else:
                         # Only use phenotype fallback if custom function returns None
                         enhanced_phenotype_colors = {
@@ -148,7 +154,8 @@ class SimulationPlotter:
                             'growth_arrest': '#FFA500',  # Orange - different from proliferation
                             'proliferation': '#90EE90'   # Light green - different from quiescence
                         }
-                        cell_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                        border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                        interior_color = '#D3D3D3'  # Light gray interior
             except Exception as e:
                 # Fallback to enhanced phenotype colors only on error
                 enhanced_phenotype_colors = {
@@ -156,23 +163,35 @@ class SimulationPlotter:
                     'growth_arrest': '#FFA500',  # Orange - different from proliferation
                     'proliferation': '#90EE90'   # Light green - different from quiescence
                 }
-                cell_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                interior_color = '#D3D3D3'  # Light gray interior
 
-            # Track colors used for legend - use metabolic state instead of phenotype
-            color_to_state = {
+            # Track colors used for legend - separate interior and border
+            # Interior colors represent metabolic states
+            interior_to_state = {
+                'green': 'glycoATP',
+                'blue': 'mitoATP',
+                'violet': 'mixed',
+                'lightgray': 'none',
+                '#D3D3D3': 'none'
+            }
+            metabolic_state = interior_to_state.get(interior_color, interior_color)
+            cell_colors_used[f"Interior: {metabolic_state}"] = interior_color
+
+            # Border colors represent phenotypes
+            border_to_phenotype = {
                 'black': 'Necrosis',
                 'red': 'Apoptosis',
-                'green': 'Glycolysis',
-                'blue': 'OXPHOS',
-                'violet': 'Mixed Metabolism',
+                'orange': 'Growth_Arrest',
+                'lightgreen': 'Proliferation',
                 'gray': 'Quiescent',
-                'orange': 'Hypoxia',
-                'lightgreen': 'Active Proliferation'
+                '#FFA500': 'Growth_Arrest',
+                '#90EE90': 'Proliferation'
             }
-            metabolic_state = color_to_state.get(cell_color, phenotype)
-            cell_colors_used[metabolic_state] = cell_color
+            phenotype_state = border_to_phenotype.get(border_color, border_color)
+            cell_colors_used[f"Border: {phenotype_state}"] = border_color
 
-            ax.scatter(x, y, c=cell_color, s=100, alpha=0.7, edgecolors='black', linewidth=0.5)
+            ax.scatter(x, y, c=interior_color, s=100, alpha=0.7, edgecolors=border_color, linewidth=2)
         
         # Set up grid
         grid_size = population.grid_size
@@ -185,13 +204,33 @@ class SimulationPlotter:
         for i in range(grid_size[1] + 1):
             ax.axhline(i - 0.5, color='gray', alpha=0.3, linewidth=0.5)
         
-        # Create legend with actual colors used
-        legend_elements = [
-            plt.scatter([], [], c=color, s=100, label=phenotype.capitalize())
-            for phenotype, color in sorted(cell_colors_used.items())
-        ]
-        ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1),
-                 title='Cell Types')
+        # Create dual legends with actual colors used
+        if cell_colors_used:
+            # Separate interior and border legend items
+            interior_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Interior:')}
+            border_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Border:')}
+
+            # Create interior legend (metabolic states)
+            if interior_items:
+                interior_elements = [
+                    plt.scatter([], [], c=color, s=100, label=state.replace('Interior: ', '').capitalize())
+                    for state, color in sorted(interior_items.items())
+                ]
+                interior_legend = ax.legend(handles=interior_elements, loc='upper right',
+                                          bbox_to_anchor=(1.15, 1),
+                                          title='Metabolic States (Interior)')
+                ax.add_artist(interior_legend)
+
+            # Create border legend (phenotypes)
+            if border_items:
+                border_elements = [
+                    plt.scatter([], [], c='white', s=100, edgecolors=color, linewidth=2,
+                              label=state.replace('Border: ', '').capitalize())
+                    for state, color in sorted(border_items.items())
+                ]
+                ax.legend(handles=border_elements, loc='upper right',
+                         bbox_to_anchor=(1.15, 0.7),
+                         title='Phenotypes (Border)')
         
         # Formatting
         ax.set_xlabel('Grid X', fontsize=self.config.label_size)
@@ -348,7 +387,8 @@ class SimulationPlotter:
             x, y = pos
 
             # Try to get custom cell color first
-            cell_color = '#808080'  # default gray
+            interior_color = '#D3D3D3'  # default light gray interior
+            border_color = '#808080'    # default gray border
             try:
                 # Try to get the actual cell object to get gene states
                 cell = population.get_cell_at_position(pos)
@@ -359,8 +399,13 @@ class SimulationPlotter:
                         gene_states=gene_states,
                         config=population.config
                     )
-                    if custom_color:
-                        cell_color = custom_color
+                    if custom_color and '|' in custom_color:
+                        # Parse new format: "interior_color|border_color"
+                        interior_color, border_color = custom_color.split('|', 1)
+                    elif custom_color:
+                        # Legacy format: use as both interior and border
+                        interior_color = custom_color
+                        border_color = custom_color
                     else:
                         # Only use phenotype fallback if custom function returns None
                         enhanced_phenotype_colors = {
@@ -368,7 +413,8 @@ class SimulationPlotter:
                             'growth_arrest': '#FFA500',  # Orange - different from proliferation
                             'proliferation': '#90EE90'   # Light green - different from quiescence
                         }
-                        cell_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                        border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                        interior_color = '#D3D3D3'  # Light gray interior
             except Exception as e:
                 # Fallback to enhanced phenotype colors only on error
                 enhanced_phenotype_colors = {
@@ -376,33 +422,49 @@ class SimulationPlotter:
                     'growth_arrest': '#FFA500',  # Orange - different from proliferation
                     'proliferation': '#90EE90'   # Light green - different from quiescence
                 }
-                cell_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                interior_color = '#D3D3D3'  # Light gray interior
 
-            # Track colors used for legend - use metabolic state instead of phenotype
-            color_to_state = {
+            # Track colors used for legend - separate interior and border
+            # Interior colors represent metabolic states
+            interior_to_state = {
+                'green': 'glycoATP',
+                'blue': 'mitoATP',
+                'violet': 'mixed',
+                'lightgray': 'none',
+                '#D3D3D3': 'none'
+            }
+            metabolic_state = interior_to_state.get(interior_color, interior_color)
+            cell_colors_used[f"Interior: {metabolic_state}"] = interior_color
+
+            # Border colors represent phenotypes
+            border_to_phenotype = {
                 'black': 'Necrosis',
                 'red': 'Apoptosis',
-                'green': 'Glycolysis',
-                'blue': 'OXPHOS',
-                'violet': 'Mixed Metabolism',
+                'orange': 'Growth_Arrest',
+                'lightgreen': 'Proliferation',
                 'gray': 'Quiescent',
-                'orange': 'Hypoxia',
-                'lightgreen': 'Active Proliferation'
+                '#FFA500': 'Growth_Arrest',
+                '#90EE90': 'Proliferation'
             }
-            metabolic_state = color_to_state.get(cell_color, phenotype)
-            cell_colors_used[metabolic_state] = cell_color
+            phenotype_state = border_to_phenotype.get(border_color, border_color)
+            cell_colors_used[f"Border: {phenotype_state}"] = border_color
 
-            ax2.scatter(x, y, c=cell_color, s=50, alpha=0.7)
+            ax2.scatter(x, y, c=interior_color, s=50, alpha=0.7, edgecolors=border_color, linewidth=1.5)
 
         ax2.set_title('Cell Population')
         ax2.set_aspect('equal')
 
-        # Add mini legend for cell colors
+        # Add mini legend for cell colors (simplified for space)
         if cell_colors_used:
             from matplotlib.patches import Patch
-            mini_legend = [Patch(facecolor=color, label=phenotype)
-                          for phenotype, color in sorted(cell_colors_used.items())]
-            ax2.legend(handles=mini_legend, loc='upper right', fontsize=6)
+            # Only show border colors (phenotypes) in mini legend to save space
+            border_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Border:')}
+            if border_items:
+                mini_legend = [Patch(facecolor='white', edgecolor=color, linewidth=1.5,
+                                   label=state.replace('Border: ', ''))
+                              for state, color in sorted(border_items.items())]
+                ax2.legend(handles=mini_legend, loc='upper right', fontsize=6, title='Phenotypes')
         
         # Population statistics (middle-right)
         ax3 = fig.add_subplot(gs[1, 2])

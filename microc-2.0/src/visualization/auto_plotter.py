@@ -122,7 +122,8 @@ class AutoPlotter:
                 phys_y = (y + 0.5) * grid_spacing
 
                 # Get cell color from custom function if available
-                cell_color = 'gray'  # default
+                interior_color = 'lightgray'  # default interior
+                border_color = 'gray'  # default border
                 try:
                     # Try to get the actual cell object to get gene states
                     cell = population.get_cell_at_position((x, y))
@@ -133,64 +134,80 @@ class AutoPlotter:
                             gene_states=gene_states,
                             config=population.config
                         )
-                        if custom_color:
-                            cell_color = custom_color
+                        if custom_color and '|' in custom_color:
+                            # Parse new format: "interior_color|border_color"
+                            interior_color, border_color = custom_color.split('|', 1)
+                        elif custom_color:
+                            # Legacy format: use as both interior and border
+                            interior_color = custom_color
+                            border_color = custom_color
                         else:
                             # Only use phenotype fallback if custom function returns None
                             phenotype_color_map = {
-                                'Proliferation': 'green',
-                                'Quiescence': 'blue',
+                                'Proliferation': 'lightgreen',
+                                'Quiescence': 'gray',
                                 'Hypoxia': 'orange',
                                 'Necrosis': 'black',
                                 'Apoptosis': 'red',
-                                'growth_arrest': 'orange',  # Different from proliferation
-                                'proliferation': 'lightgreen'  # Different from quiescence
+                                'growth_arrest': 'orange',
+                                'proliferation': 'lightgreen'
                             }
-                            cell_color = phenotype_color_map.get(phenotype, 'gray')
+                            border_color = phenotype_color_map.get(phenotype, 'gray')
+                            interior_color = 'lightgray'
                     else:
                         # Use phenotype-based colors as fallback
                         phenotype_color_map = {
-                            'Proliferation': 'green',
-                            'Quiescence': 'blue',
+                            'Proliferation': 'lightgreen',
+                            'Quiescence': 'gray',
                             'Hypoxia': 'orange',
                             'Necrosis': 'black',
                             'Apoptosis': 'red',
-                            'Growth_Arrest': 'orange',  # Match the actual phenotype name
-                            'growth_arrest': 'orange',  # Different from proliferation
-                            'proliferation': 'lightgreen'  # Different from quiescence
+                            'Growth_Arrest': 'orange',
+                            'growth_arrest': 'orange',
+                            'proliferation': 'lightgreen'
                         }
-                        cell_color = phenotype_color_map.get(phenotype, 'gray')
+                        border_color = phenotype_color_map.get(phenotype, 'gray')
+                        interior_color = 'lightgray'
                 except Exception as e:
                     # Fallback to phenotype-based colors only on error
                     phenotype_color_map = {
-                        'Proliferation': 'green',
-                        'Quiescence': 'blue',
+                        'Proliferation': 'lightgreen',
+                        'Quiescence': 'gray',
                         'Hypoxia': 'orange',
                         'Necrosis': 'black',
                         'Apoptosis': 'red',
-                        'growth_arrest': 'orange',  # Different from proliferation
-                        'proliferation': 'lightgreen'  # Different from quiescence
+                        'growth_arrest': 'orange',
+                        'proliferation': 'lightgreen'
                     }
-                    cell_color = phenotype_color_map.get(phenotype, 'gray')
+                    border_color = phenotype_color_map.get(phenotype, 'gray')
+                    interior_color = 'lightgray'
 
-                # Track colors used for legend - use metabolic state instead of phenotype
-                # Map colors back to metabolic states for better legend
-                color_to_state = {
+                # Track colors used for legend - separate interior and border legends
+                # Interior colors represent metabolic states
+                interior_to_state = {
+                    'green': 'glycoATP',
+                    'blue': 'mitoATP',
+                    'violet': 'mixed',
+                    'lightgray': 'none'
+                }
+                metabolic_state = interior_to_state.get(interior_color, interior_color)
+                cell_colors_used[f"Interior: {metabolic_state}"] = interior_color
+
+                # Border colors represent phenotypes
+                border_to_phenotype = {
                     'black': 'Necrosis',
                     'red': 'Apoptosis',
-                    'green': 'Glycolysis',
-                    'blue': 'OXPHOS',
-                    'violet': 'Mixed Metabolism',
-                    'gray': 'Quiescent',
-                    'orange': 'Hypoxia',
-                    'lightgreen': 'Active Proliferation'
+                    'orange': 'Growth_Arrest',
+                    'lightgreen': 'Proliferation',
+                    'gray': 'Quiescent'
                 }
-                metabolic_state = color_to_state.get(cell_color, phenotype)
-                cell_colors_used[metabolic_state] = cell_color
+                phenotype_state = border_to_phenotype.get(border_color, border_color)
+                cell_colors_used[f"Border: {phenotype_state}"] = border_color
 
-                # Draw cell with correct biological diameter (radius = diameter/2)
+                # Draw cell with interior and border colors
                 circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
-                                      color=cell_color, alpha=0.7, linewidth=1, fill=True)
+                                      facecolor=interior_color, edgecolor=border_color,
+                                      alpha=0.8, linewidth=2, fill=True)
                 ax.add_patch(circle)
 
         elif cell_positions:
@@ -250,22 +267,46 @@ class AutoPlotter:
         # Add coordinate grid (lighter)
         ax.grid(True, alpha=0.2, color='gray', linestyle='--')
 
-        # Add cell color legend if cells are present - ENHANCED
+        # Add dual cell legends if cells are present - ENHANCED
         if cell_colors_used:
-            from matplotlib.patches import Patch
-            legend_elements = [Patch(facecolor=color, label=phenotype, edgecolor='black', linewidth=0.5)
-                             for phenotype, color in sorted(cell_colors_used.items())]
+            from matplotlib.patches import Patch, Circle
 
-            # Create a more prominent legend
-            legend = ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(0, 1),
-                             title='🔬 Cell States', fontsize=10, title_fontsize=12,
-                             frameon=True, fancybox=True, shadow=True,
-                             facecolor='white', edgecolor='black', framealpha=0.9)
+            # Separate interior and border legend items
+            interior_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Interior:')}
+            border_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Border:')}
 
-            # Make legend title bold
-            legend.get_title().set_fontweight('bold')
+            # Create interior legend (metabolic states)
+            if interior_items:
+                interior_elements = [Patch(facecolor=color, label=state.replace('Interior: ', ''),
+                                         edgecolor='gray', linewidth=0.5)
+                                   for state, color in sorted(interior_items.items())]
 
-            print(f"🎨 Legend created with {len(cell_colors_used)} cell types: {list(cell_colors_used.keys())}")
+                interior_legend = ax.legend(handles=interior_elements, loc='upper left',
+                                          bbox_to_anchor=(0, 1),
+                                          title='🔋 Metabolic States (Interior)', fontsize=9,
+                                          title_fontsize=10, frameon=True, fancybox=True,
+                                          shadow=True, facecolor='white', edgecolor='black',
+                                          framealpha=0.9)
+                interior_legend.get_title().set_fontweight('bold')
+
+                # Add the interior legend to the plot
+                ax.add_artist(interior_legend)
+
+            # Create border legend (phenotypes)
+            if border_items:
+                border_elements = [Patch(facecolor='white', label=state.replace('Border: ', ''),
+                                       edgecolor=color, linewidth=2)
+                                 for state, color in sorted(border_items.items())]
+
+                border_legend = ax.legend(handles=border_elements, loc='upper left',
+                                        bbox_to_anchor=(0, 0.7),
+                                        title='🧬 Phenotypes (Border)', fontsize=9,
+                                        title_fontsize=10, frameon=True, fancybox=True,
+                                        shadow=True, facecolor='white', edgecolor='black',
+                                        framealpha=0.9)
+                border_legend.get_title().set_fontweight('bold')
+
+            print(f"🎨 Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
 
         # Add text box with additional details including grid info
         grid_spacing = domain_x / nx
