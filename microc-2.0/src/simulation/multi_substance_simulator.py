@@ -254,6 +254,20 @@ class MultiSubstanceSimulator:
             var = self.fipy_variables[name]
             config = substance_state.config
 
+            # CRITICAL FIX: Create completely fresh variable for each solve
+            # This prevents any accumulated numerical errors or state corruption
+            initial_value = substance_state.config.initial_value.value
+            boundary_value = substance_state.config.boundary_value.value
+
+            # Create brand new variable (don't reuse the old one)
+            var = CellVariable(name=f"{name}_fresh", mesh=self.fipy_mesh, value=initial_value)
+
+            # Apply boundary conditions to fresh variable
+            if substance_state.config.boundary_type == "fixed":
+                var.constrain(boundary_value, self.fipy_mesh.facesTop |
+                             self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft |
+                             self.fipy_mesh.facesRight)
+
             # DEBUG: Confirm fresh variable
             # if name == 'Lactate':
             #     fresh_min = float(np.min(var.value))
