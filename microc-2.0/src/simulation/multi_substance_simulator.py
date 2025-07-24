@@ -241,14 +241,6 @@ class MultiSubstanceSimulator:
             var.constrain(gradient_value, where=face_mask)
 
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
-        """Update all substances using steady state diffusion with cell reactions"""
-
-        if FIPY_AVAILABLE:
-            self._update_with_fipy(substance_reactions)
-        else:
-            self._update_simplified(substance_reactions)
-    
-    def _update_with_fipy(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
         """Update using FiPy diffusion solver - steady state solution"""
 
         for name, substance_state in self.state.substances.items():
@@ -319,44 +311,6 @@ class MultiSubstanceSimulator:
                 (self.config.domain.ny, self.config.domain.nx), order='F'
             )
 
-            # Ensure non-negative concentrations
-            substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
-    
-    def _update_simplified(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
-        """Simplified update without FiPy (for testing) - steady state approximation"""
-
-        for name, substance_state in self.state.substances.items():
-            config = substance_state.config
-
-            # Simple steady-state approximation: just apply reactions directly
-            # (In real implementation, would solve Laplacian equation)
-
-            # Apply source/sink from cell reactions
-            for (x_pos, y_pos), reactions in substance_reactions.items():
-                x, y = int(x_pos), int(y_pos)
-                if 0 <= x < self.config.domain.nx and 0 <= y < self.config.domain.ny:
-                    # Get reaction rate for this substance
-                    # Some substances may not have reactions defined (e.g., EGF, TGFA)
-                    if name not in reactions:
-                        continue  # Skip substances with no reactions
-                    reaction_rate = reactions[name]  # mol/s/cell
-
-                    # Convert to concentration change (simplified)
-                    cell_volume = self.config.domain.cell_volume_um3 * 1e-18  # Convert to m³
-                    volumetric_rate = reaction_rate / cell_volume  # mol/s/m³
-
-                    # Convert to mM and apply (simplified steady-state)
-                    concentration_change = volumetric_rate * 1000.0 * 0.1  # Simplified time step
-                    substance_state.concentrations[y, x] += concentration_change
-            
-            # Apply boundary conditions
-            if config.boundary_type == "fixed":
-                boundary_value = config.boundary_value.value
-                substance_state.concentrations[0, :] = boundary_value   # Top
-                substance_state.concentrations[-1, :] = boundary_value  # Bottom
-                substance_state.concentrations[:, 0] = boundary_value   # Left
-                substance_state.concentrations[:, -1] = boundary_value  # Right
-            
             # Ensure non-negative concentrations
             substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
     
