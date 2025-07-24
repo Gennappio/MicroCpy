@@ -243,6 +243,10 @@ class MultiSubstanceSimulator:
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
         """Update using FiPy diffusion solver - steady state solution"""
 
+        # DEBUG: Show which substances are being processed
+        # substance_names = list(self.state.substances.keys())
+        # print(f"🔄 DIFFUSION UPDATE: Processing {len(substance_names)} substances: {substance_names}")
+
         for name, substance_state in self.state.substances.items():
             if name not in self.fipy_variables:
                 continue
@@ -250,16 +254,36 @@ class MultiSubstanceSimulator:
             var = self.fipy_variables[name]
             config = substance_state.config
 
+            # DEBUG: Confirm fresh variable
+            # if name == 'Lactate':
+            #     fresh_min = float(np.min(var.value))
+            #     fresh_max = float(np.max(var.value))
+            #     print(f"   🆕 FRESH: Created new variable min={fresh_min:.6f}, max={fresh_max:.6f} mM")
+
             # Create source/sink terms from cell reactions
             source_field = self._create_source_field_from_reactions(name, substance_reactions)
 
-            # DEBUG: Show source field before and after negation for lactate
+            # DEBUG: Comprehensive debugging for lactate diffusion issue
             # if name == 'Lactate':
+            #     print(f"\n🔍 DEBUGGING LACTATE DIFFUSION SOLVER:")
+            #     print(f"   Substance: {name}")
+            #     print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
+            #
+            #     # Check source field before negation
             #     non_zero_indices = np.where(source_field != 0)[0]
+            #     print(f"   Source field BEFORE negation: {len(non_zero_indices)} non-zero terms")
             #     if len(non_zero_indices) > 0:
-            #         print(f"🔍 LACTATE SOURCE FIELD BEFORE NEGATION:")
-            #         for idx in non_zero_indices[:5]:  # Show first 5 non-zero values
-            #             print(f"   idx {idx}: {source_field[idx]:.2e} mM/s")
+            #         print(f"   Range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+            #         for i, idx in enumerate(non_zero_indices[:5]):
+            #             print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
+            #     else:
+            #         print(f"   ⚠️  NO SOURCE TERMS FOUND! This explains uniform concentrations!")
+            #
+            #     # Check initial concentrations
+            #     initial_min = float(np.min(var.value))
+            #     initial_max = float(np.max(var.value))
+            #     initial_mean = float(np.mean(var.value))
+            #     print(f"   Initial concentrations: min={initial_min:.6f}, max={initial_max:.6f}, mean={initial_mean:.6f} mM")
 
             # CRITICAL FIX: Negate source field for correct FiPy behavior
             # In our convention: negative = consumption, positive = production
@@ -270,10 +294,11 @@ class MultiSubstanceSimulator:
             # DEBUG: Show source field after negation for lactate
             # if name == 'Lactate':
             #     non_zero_indices = np.where(source_field != 0)[0]
+            #     print(f"   Source field AFTER negation: {len(non_zero_indices)} non-zero terms")
             #     if len(non_zero_indices) > 0:
-            #         print(f"🔍 LACTATE SOURCE FIELD AFTER NEGATION (to FiPy):")
-            #         for idx in non_zero_indices[:5]:  # Show first 5 non-zero values
-            #             print(f"   idx {idx}: {source_field[idx]:.2e} mM/s")
+            #         print(f"   Range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+            #         for i, idx in enumerate(non_zero_indices[:5]):
+            #             print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
 
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
@@ -303,8 +328,27 @@ class MultiSubstanceSimulator:
 
             if iteration >= max_iterations:
                 print(f"Warning: {name} diffusion did not converge after {max_iterations} iterations (residual: {residual:.2e})")
-            # else:
-            #     print(f"✅ {name} converged in {iteration} iterations (residual: {residual:.2e})")
+
+            # DEBUG: Show solver results for lactate
+            # if name == 'Lactate':
+            #     print(f"   Solver converged in {iteration} iterations (residual: {residual:.2e})")
+            #
+            #     # Check final concentrations
+            #     final_min = float(np.min(var.value))
+            #     final_max = float(np.max(var.value))
+            #     final_mean = float(np.mean(var.value))
+            #     final_range = final_max - final_min
+            #     print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
+            #     print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
+            #
+            #     # Compare with standalone test expectation
+            #     if final_range < 0.0001:
+            #         print(f"   🎯 MATCHES current MicroC behavior (nearly uniform)")
+            #         print(f"   ❌ BUT standalone test shows this should be ~0.2 mM range!")
+            #     elif final_range > 0.1:
+            #         print(f"   ✅ SIGNIFICANT GRADIENTS like standalone test")
+            #     else:
+            #         print(f"   📊 SMALL GRADIENTS detected")
 
             # Update our state
             substance_state.concentrations = np.array(var.value).reshape(
@@ -366,14 +410,6 @@ class MultiSubstanceSimulator:
                 #     print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
                 #     print(f"   fipy_idx: {fipy_idx}")
 
-                # Optional debug output for cell height effect on reaction rates (uncomment for debugging)
-                # if len([r for r in source_field if r != 0]) <= 3:
-                #     print(f"🔍 REACTION RATE DEBUG {substance_name} at ({x},{y}):")
-                #     print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
-                #     print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
-                #     print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
-                #     print(f"   final_rate: {final_rate:.2e} mM/s")
-                #     print(f"   Cell height effect: larger volume → lower volumetric rate")
 
         return source_field
 
