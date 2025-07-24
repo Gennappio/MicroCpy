@@ -532,7 +532,7 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         # Lactate consumption for OXPHOS (NetLogo line 3054)
         lactate_mm_factor = local_lactate / (km_lactate + local_lactate)
         lactate_consumption = (vmax_oxygen * 2.0 / 6) * lactate_mm_factor * oxygen_mm_factor
-        reactions['Lactate'] = -lactate_consumption
+        reactions['Lactate'] = lactate_consumption
 
         # ATP production from OXPHOS
         atp_rate += glucose_consumption * max_atp + lactate_consumption * (max_atp / 2)
