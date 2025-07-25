@@ -392,7 +392,7 @@ custom_parameters:
   # ATP parameters
   max_atp: 30                    # Maximum ATP per glucose molecule
   max_atp_rate: 1.0e-14          # Maximum ATP production rate (mol/s)
-  atp_threshold: 0.2             # ATP threshold for proliferation
+  atp_threshold: 0.8             # ATP threshold for proliferation
 
   # Metabolic parameters
   glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
