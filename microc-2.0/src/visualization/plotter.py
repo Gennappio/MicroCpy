@@ -69,6 +69,23 @@ class SimulationPlotter:
         self.concentration_cmap = LinearSegmentedColormap.from_list(
             'concentration', ['#000080', '#0000FF', '#00FFFF', '#FFFF00', '#FF0000']
         )
+
+    def _get_threshold_for_substance(self, substance_name, config):
+        """Get the threshold value for a substance if it has a gene network association."""
+        # Mapping from substance names to gene network input nodes
+        if not hasattr(config, 'associations') or not hasattr(config, 'thresholds'):
+            return None
+
+        # Check if substance has an association with a gene network input
+        if substance_name in config.associations:
+            gene_input_name = config.associations[substance_name]
+
+            # Check if that gene input has a threshold defined
+            if gene_input_name in config.thresholds:
+                threshold_config = config.thresholds[gene_input_name]
+                return threshold_config.threshold
+
+        return None
     
     def plot_concentration_field(self, simulator, title: str = "Substance Concentration", 
                                save_path: Optional[str] = None) -> plt.Figure:
@@ -93,7 +110,18 @@ class SimulationPlotter:
         
         # Plot concentration field
         im = ax.contourf(X, Y, conc_2d, levels=20, cmap=self.concentration_cmap)
-        
+
+        # Add threshold isoline if this substance has a gene network association
+        substance_name = simulator.substance_config.name
+        threshold_value = self._get_threshold_for_substance(substance_name, simulator.config)
+        if threshold_value is not None:
+            # Add threshold contour line
+            threshold_contour = ax.contour(X, Y, conc_2d, levels=[threshold_value],
+                                         colors=['red'], linewidths=2, linestyles='-')
+            # Add threshold label
+            ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
+            print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
+
         # Add colorbar
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label(f'{simulator.substance_config.name} (mM)', fontsize=self.config.label_size)
