@@ -40,6 +40,23 @@ class AutoPlotter:
         self.config = config
         self.plots_dir = Path(plots_dir)
         self.plots_dir.mkdir(parents=True, exist_ok=True)
+
+    def _get_threshold_for_substance(self, substance_name):
+        """Get the threshold value for a substance if it has a gene network association."""
+        # Mapping from substance names to gene network input nodes
+        if not hasattr(self.config, 'associations') or not hasattr(self.config, 'thresholds'):
+            return None
+
+        # Check if substance has an association with a gene network input
+        if substance_name in self.config.associations:
+            gene_input_name = self.config.associations[substance_name]
+
+            # Check if that gene input has a threshold defined
+            if gene_input_name in self.config.thresholds:
+                threshold_config = self.config.thresholds[gene_input_name]
+                return threshold_config.threshold
+
+        return None
         
         # Create subdirectories
         (self.plots_dir / "heatmaps").mkdir(exist_ok=True)
@@ -84,6 +101,21 @@ class AutoPlotter:
                       extent=[0, self.config.domain.size_x.value,
                              0, self.config.domain.size_y.value],
                       vmin=vmin, vmax=vmax)
+
+        # Add threshold isoline if this substance has a gene network association
+        threshold_value = self._get_threshold_for_substance(substance_name)
+        if threshold_value is not None:
+            # Create coordinate grids for contour
+            x_coords = np.linspace(0, self.config.domain.size_x.value, concentrations.shape[1])
+            y_coords = np.linspace(0, self.config.domain.size_y.value, concentrations.shape[0])
+            X, Y = np.meshgrid(x_coords, y_coords)
+
+            # Add threshold contour line
+            threshold_contour = ax.contour(X, Y, concentrations, levels=[threshold_value],
+                                         colors=['red'], linewidths=2, linestyles='-')
+            # Add threshold label
+            ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
+            print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
 
         # Add colorbar with FORCED correct range
         cbar = plt.colorbar(im, ax=ax, shrink=0.8)
