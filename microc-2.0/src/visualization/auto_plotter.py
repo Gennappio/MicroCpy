@@ -781,7 +781,10 @@ Substance Initial Values:
             else:
                 # If no time series data, estimate final time from current simulation state
                 # This happens when save_data_interval is larger than total steps
-                final_time = getattr(simulator, 'current_time', 0.5)  # Default fallback
+                final_time = getattr(simulator, 'current_time', None)
+                if final_time is None:
+                    # Calculate final time from config if simulator doesn't have current_time
+                    final_time = self.config.time.end_time
 
             for substance in all_substances:
                 if substance in simulator.state.substances:
