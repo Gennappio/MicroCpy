@@ -299,11 +299,11 @@ class MultiSubstanceSimulator:
             #     initial_mean = float(np.mean(var.value))
             #     print(f"   Initial concentrations: min={initial_min:.6f}, max={initial_max:.6f}, mean={initial_mean:.6f} mM")
 
-            # CRITICAL FIX: Negate source field for correct FiPy behavior
-            # In our convention: negative = consumption, positive = production
-            # In FiPy ImplicitSourceTerm: positive coeff = consumption, negative coeff = production
-            # So we need to negate our values: consumption (-) becomes (+) for FiPy
-            source_field = -source_field
+            # FIXED: Do NOT negate source field - standalone equation handles the sign
+            # Our convention: negative = consumption, positive = production
+            # Standalone equation: DiffusionTerm(D) == -source_var handles the negation
+            # So we keep our values as-is: positive = production, negative = consumption
+            # source_field = -source_field  # REMOVED: This was causing double negation
 
             # DEBUG: Show source field after negation for lactate
             # if name == 'Lactate':
@@ -317,11 +317,23 @@ class MultiSubstanceSimulator:
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
 
-            # Steady state diffusion equation (no TransientTerm)
-            # 0 = ∇·(D∇C) - R*C where R > 0 for consumption
-            # Fixed: Use minus sign for ImplicitSourceTerm to get consumption behavior
-            equation = (DiffusionTerm(coeff=config.diffusion_coeff) -
-                       ImplicitSourceTerm(coeff=source_var))
+            # DEBUG: Print source field and key info for direct comparison
+            if name == 'Lactate':
+                print(f"[DEBUG] Lactate source field (final): min={np.min(source_field):.3e}, max={np.max(source_field):.3e}, sum={np.sum(source_field):.3e}")
+                nonzero = np.nonzero(source_field)[0]
+                print(f"[DEBUG] Nonzero indices: {nonzero}")
+                if len(nonzero) > 0:
+                    print(f"[DEBUG] Values at nonzero indices: {[source_field[i] for i in nonzero]}")
+                # Print value at center cell
+                nx, ny = self.config.domain.nx, self.config.domain.ny
+                center_x, center_y = nx // 2, ny // 2
+                center_idx = center_x * ny + center_y
+                print(f"[DEBUG] Value at center cell index {center_idx}: {source_field[center_idx]:.3e}")
+                print(f"[DEBUG] Boundary value: {boundary_value}")
+
+            # Use the exact same equation as the standalone FiPy script
+            # Standalone: DiffusionTerm(D) == -source_var
+            equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
             # Solve for steady state
             # Use iterative solver with convergence criteria
@@ -383,7 +395,7 @@ class MultiSubstanceSimulator:
         dx = self.config.domain.size_x.meters / self.config.domain.nx
         dy = self.config.domain.size_y.meters / self.config.domain.ny
         cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
-        mesh_cell_volume = dx * dy  # m³ (area × height)
+        mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
 
         # Optional debug output for cell height effect (uncomment for debugging)
         # print(f"🔍 CELL HEIGHT DEBUG:")
