@@ -191,8 +191,30 @@ class StandaloneGeneNetwork:
         for node_name, state in input_states.items():
             if node_name in self.nodes:
                 self.nodes[node_name].state = state
-            else:
-                print(f"Warning: Input node '{node_name}' not found in network")
+
+    def initialize_logic_states(self):
+        """Initialize all non-input nodes to match their logic rules."""
+        print("Initializing gene network logic states...")
+
+        # Get current states for evaluation
+        current_states = {name: node.state for name, node in self.nodes.items()}
+
+        # Update all non-input nodes to match their logic
+        updates_made = 0
+        for node_name, node in self.nodes.items():
+            if not node.is_input and node.update_function:
+                try:
+                    expected_state = node.update_function.evaluate(current_states)
+                    if node.state != expected_state:
+                        print(f"  Initializing {node_name}: {node.state} -> {expected_state}")
+                        node.state = expected_state
+                        current_states[node_name] = expected_state  # Update for next evaluations
+                        updates_made += 1
+                except Exception as e:
+                    print(f"  Error initializing {node_name}: {e}")
+
+        print(f"Initialization complete: {updates_made} nodes updated")
+           
     
     def reset(self, random_init: bool = False):
         """Reset all non-input nodes: fate nodes to False, others to random."""
@@ -240,8 +262,9 @@ class StandaloneGeneNetwork:
 
     def netlogo_single_gene_update_debug(self):
         """TRUE NetLogo-style: randomly select ONE gene and update it."""
-        # Get all non-input genes
-        non_input_genes = [name for name, node in self.nodes.items() if not node.is_input]
+        # Get all non-input genes with update functions (FIXED: same as non-debug version)
+        non_input_genes = [name for name, node in self.nodes.items()
+                          if not node.is_input and node.update_function]
 
         if not non_input_genes:
             print("  DEBUG: No non-input genes to update")
@@ -281,7 +304,7 @@ class StandaloneGeneNetwork:
     
     def simulate(self, steps: int, debug_apoptosis: bool = False, debug_updates: bool = False,
                 track_apoptosis_updates: bool = False, debug_steps: bool = False,
-                print_network: bool = False) -> Dict[str, bool]:
+                print_network: bool = False, input_states: Dict[str, bool] = None) -> Dict[str, bool]:
         """Run NetLogo-style simulation for specified number of steps."""
         apoptosis_states = []
         update_counts = defaultdict(int) if debug_updates else None
@@ -297,6 +320,12 @@ class StandaloneGeneNetwork:
                 updated_gene = self.netlogo_single_gene_update_debug()
             else:
                 updated_gene = self.netlogo_single_gene_update()
+
+            # CRITICAL FIX: Re-enforce input states after each update to prevent corruption
+            if input_states:
+                for node_name, state in input_states.items():
+                    if node_name in self.nodes:
+                        self.nodes[node_name].state = state
 
             # Track apoptosis updates specifically
             if track_apoptosis_updates and updated_gene == 'Apoptosis':
@@ -376,9 +405,26 @@ def run_simulation(bnd_file: str, input_file: str, runs: int, steps: int,
         network.reset(random_init=random_init)
         network.set_input_states(input_states)
 
+        # CRITICAL FIX: Initialize all nodes to match their logic rules
+        if run == 0:  # Only show initialization output for first run
+            network.initialize_logic_states()
+        else:
+            # Silent initialization for other runs
+            current_states = {name: node.state for name, node in network.nodes.items()}
+            for node_name, node in network.nodes.items():
+                if not node.is_input and node.update_function:
+                    try:
+                        expected_state = node.update_function.evaluate(current_states)
+                        if node.state != expected_state:
+                            node.state = expected_state
+                            current_states[node_name] = expected_state
+                    except:
+                        pass
+
         # Run simulation with debugging options
         final_states = network.simulate(steps, track_apoptosis_updates=track_apoptosis_updates,
-                                       debug_steps=debug_steps, print_network=(print_network and run == 0))
+                                       debug_steps=debug_steps, print_network=(print_network and run == 0),
+                                       input_states=input_states)
         all_results.append(final_states)
 
         # Track apoptosis updates
