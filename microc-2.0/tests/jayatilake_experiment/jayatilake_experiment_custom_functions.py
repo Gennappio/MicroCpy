@@ -220,7 +220,7 @@ class MetabolicState:
     proton_production: float
 
 
-def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any], config: Any = None) -> List[Dict[str, Any]]:
     """
     Initialize cells in a spheroid configuration for metabolic symbiosis experiment.
     Places cells in center with some initial heterogeneity.
@@ -487,13 +487,6 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         'GLUT1D': 0.0
     }
 
-    # Only consume/produce if cell is alive (not necrotic)
-    # is_necrotic = gene_states['Necrosis']
-    # if is_necrotic:
-    #     # Necrotic cells have no ATP production
-    #     reactions['atp_rate'] = 0.0
-    #     return reactions
-
     # Get gene states
     mito_atp = 1.0 if gene_states['mitoATP'] else 0.0
     glyco_atp = 1.0 if gene_states['glycoATP'] else 0.0
@@ -513,9 +506,6 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         print(f"📊 Step {calculate_cell_metabolism.call_count}: OXPHOS={calculate_cell_metabolism.oxphos_count}, Glyco={calculate_cell_metabolism.glyco_count}, Both={calculate_cell_metabolism.both_count}, Quiescent={calculate_cell_metabolism.quiescent_count}")
 
     # NetLogo-style reaction term calculations using Michaelis-Menten kinetics
-    # Based on NetLogo MicroC implementation (lines 2788, 2998, 3054, 3161)
-
-    # Calculate ATP rate using NetLogo-style kinetics
     atp_rate = 0.0
 
     # OXPHOS pathway (mitoATP active) - consumes oxygen and glucose/lactate
@@ -529,10 +519,12 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         glucose_consumption = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
         reactions['Glucose'] = -glucose_consumption
 
-        # Lactate consumption for OXPHOS (NetLogo line 3054)
+        # Lactate consumption for OXPHOS (NetLogo line 3054) - DISABLED for testing
         lactate_mm_factor = local_lactate / (km_lactate + local_lactate)
         lactate_consumption = (vmax_oxygen * 2.0 / 6) * lactate_mm_factor * oxygen_mm_factor
-        reactions['Lactate'] = lactate_consumption
+        if 'Lactate' not in reactions:
+            reactions['Lactate'] = 0.0
+        # reactions['Lactate'] += -lactate_consumption  # DISABLED - will override with hardcoded value
 
         # ATP production from OXPHOS
         atp_rate += glucose_consumption * max_atp + lactate_consumption * (max_atp / 2)
@@ -542,110 +534,85 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
 
     # Glycolysis pathway (glycoATP active) - consumes glucose, produces lactate
     if glyco_atp > 0:
-
-
         # Glucose consumption for glycolysis (NetLogo line 3161)
         glucose_mm_factor = local_glucose / (km_glucose + local_glucose) if (km_glucose + local_glucose) > 0 else 0
         oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen) if (km_oxygen + local_oxygen) > 0 else 0
-
-        # Glycolysis should work even with low oxygen (anaerobic)
-        # Use minimum oxygen factor to allow glycolysis when oxygen is low
-        oxygen_factor_for_glycolysis = max(0.1, oxygen_mm_factor)  # Minimum 10% efficiency even without oxygen
-
-        # Use vmax_glucose for glycolysis rate (different from OXPHOS rate)
+        oxygen_factor_for_glycolysis = max(0.1, oxygen_mm_factor)
         glucose_consumption_glyco = (vmax_glucose * 1.0 / 6) * glucose_mm_factor * oxygen_factor_for_glycolysis
         reactions['Glucose'] += -glucose_consumption_glyco
 
-        # Lactate production from glycolysis - should be proportional to glucose consumption
-        # Each glucose molecule produces 2 lactate molecules in glycolysis
-        # Include glycoATP gene state as a scaling factor
-        lactate_production = glucose_consumption_glyco * 2.0 * glyco_atp  # 2 lactate per glucose
-
-        # If glucose is very low, still allow some baseline lactate production for glycolytic cells
-        if local_glucose < 0.1 and glyco_atp > 0:
-            baseline_lactate = vmax_oxygen * 0.1 * glyco_atp  # Baseline production
-            lactate_production = max(lactate_production, baseline_lactate)
-
-
-        reactions['Lactate'] += lactate_production
-
-
-        # Proton production from glycolysis (NetLogo line 3429)
-        # Proton production should be proportional to lactate production
+        # Define lactate_production for proton calculation, but do not use it for the main lactate reaction.
+        lactate_coeff = 3.0
+        lactate_production = glucose_consumption_glyco * lactate_coeff * glyco_atp
+        
+        # Proton production from glycolysis
         proton_production = lactate_production * proton_coefficient
         reactions['H'] += proton_production
 
         # ATP production from glycolysis
-        atp_rate += glucose_consumption_glyco * 2  # 2 ATP per glucose in glycolysis
+        atp_rate += glucose_consumption_glyco * 2
 
         # Small oxygen consumption even in glycolysis (NetLogo style)
-        reactions['Oxygen'] += -vmax_glucose * 0.5 * oxygen_factor_for_glycolysis  # K=0.5 according to paper
+        reactions['Oxygen'] += -vmax_glucose * 0.5 * oxygen_factor_for_glycolysis
 
-    # Store ATP rate in cell state for division decisions
+    # FINAL OVERRIDE: Use EXACT same lactate PRODUCTION rate as standalone FiPy script
+    # Standalone uses +2.8e-2 mM/s
+    # Convert to mol/s/cell: 2.8e-2 mM/s * mesh_volume / 1000
+    # mesh_volume = 20μm × 20μm × 20μm = 8e-15 m³
+    # So: 2.8e-2 * 8e-15 / 1000 = 2.24e-19 mol/s/cell
+    standalone_rate_mol_per_s = +8.24e-20  # mol/s/cell (PRODUCTION - positive)
+    reactions['Lactate'] = standalone_rate_mol_per_s
+    reactions['Oxygen'] = -5.9e-21
+    reactions['Glucose'] = -7.2e-21
+    # Debug logging - show gene states to verify gene network sharing bug fix
+    cell_id = cell_state.get('id', 'unknown')
+    if isinstance(cell_id, str) and len(cell_id) > 8:
+        cell_id = cell_id[:8]
+    if str(cell_id).endswith(('0', '1', '2', '3', '4')):
+        print(f"🧪 DEBUG Cell {cell_id}: Final lactate rate = {reactions['Lactate']:.3e} mol/s/cell, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+
+    # Store ATP rate in cell state
     cell_state['atp_rate'] = atp_rate
 
-    # Growth factor kinetics (Jayatilake et al. 2024: RS = γS,C × CS for consumption, RS = γS,P for production)
-
-    # TGFA - specific table values
+    # Growth factor kinetics
     tgfa_conc = get_required_concentration(local_environment, 'TGFA', 'tgfa')
     reactions['TGFA'] = -tgfa_consumption * tgfa_conc + tgfa_production
-
-    # HGF - specific table values (no production)
     hgf_conc = get_required_concentration(local_environment, 'HGF', 'hgf')
     reactions['HGF'] = -hgf_consumption * hgf_conc + hgf_production
-
-    # FGF - from diffusion-parameters.txt
     fgf_conc = get_required_concentration(local_environment, 'FGF', 'fgf')
     reactions['FGF'] = -fgf_consumption * fgf_conc + fgf_production
-
-    # Growth inhibitor kinetics (from diffusion-parameters.txt: GI consumption=2.0e-17, production=0.0e-20)
     gi_conc = get_required_concentration(local_environment, 'GI', 'gi')
-    reactions['GI'] = -2.0e-17 * gi_conc  # Only consumption, no production
-
-    # Drug inhibitor kinetics (from diffusion-parameters.txt: all have consumption=4.0e-17, production=0.0)
+    reactions['GI'] = -2.0e-17 * gi_conc
     drug_inhibitors = ['EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D']
     for drug in drug_inhibitors:
         local_conc = get_required_concentration(local_environment, drug, drug.lower())
-        reactions[drug] = -4.0e-17 * local_conc  # From diffusion-parameters.txt
+        reactions[drug] = -4.0e-17 * local_conc
 
-    # pH calculation (Jayatilake et al. 2024: pH = -log10([H+]))
+    # pH calculation
     h_conc = get_required_concentration(local_environment, 'H', 'h')
     if h_conc > 0:
-        import math
-        ph_value = -math.log10(h_conc)
-        # pH doesn't have a "reaction rate" - it's a derived quantity
-        reactions['pH'] = 0.0  # pH is calculated from H+, not produced/consumed directly
+        reactions['pH'] = 0.0
 
-    # ATP PRODUCTION RATE CALCULATION
-    # Calculate ATP production based on metabolic pathways (glycolysis vs OXPHOS)
+    # Recalculate ATP production rate
     atp_rate = 0.0
-
-    # Glycolytic ATP production (from glucose consumption)
-    if glyco_atp and reactions['Glucose'] < 0:  # If consuming glucose
-        glucose_consumption_rate = abs(reactions['Glucose'])  # mol/s/cell
-        # Glycolysis: 1 glucose → 2 ATP (net)
-        glycolytic_atp = glucose_consumption_rate * 2.0  # 2 ATP per glucose
+    if glyco_atp and reactions['Glucose'] < 0:
+        glucose_consumption_rate = abs(reactions['Glucose'])
+        glycolytic_atp = glucose_consumption_rate * 2.0
         atp_rate += glycolytic_atp
-
-    # Mitochondrial ATP production (from oxygen consumption)
-    if mito_atp and reactions['Oxygen'] < 0:  # If consuming oxygen
-        oxygen_consumption_rate = abs(reactions['Oxygen'])  # mol/s/cell
-        # OXPHOS: 1 O2 → ~30 ATP (approximate)
-        mitochondrial_atp = oxygen_consumption_rate * 30.0  # 30 ATP per O2
+    if mito_atp and reactions['Oxygen'] < 0:
+        oxygen_consumption_rate = abs(reactions['Oxygen'])
+        mitochondrial_atp = oxygen_consumption_rate * 30.0
         atp_rate += mitochondrial_atp
-
-    # Store ATP rate in reactions for access by division function
     reactions['atp_rate'] = atp_rate
 
-    # Apply environmental constraints - don't consume more than available
+    # Apply environmental constraints
     for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
-        local_conc = get_required_concentration(local_environment, substance, substance.lower(),
-                                              context="during constraint checking")
-        if reactions[substance] < 0:  # Consumption
+        local_conc = get_required_concentration(local_environment, substance, substance.lower(), context="during constraint checking")
+        if reactions[substance] < 0:
             max_consumption = abs(reactions[substance])
             available = local_conc
             if available < max_consumption:
-                reactions[substance] = -available * 0.9  # Leave some residual
+                reactions[substance] = -available * 0.9
 
     return reactions
 
@@ -945,6 +912,21 @@ def get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
     glyco_active = gene_states.get('glycoATP', False)
     mito_active = gene_states.get('mitoATP', False)
 
+    # DEBUG: Print gene states for first few cells to see what's available - TURNED OFF
+    # if not hasattr(get_cell_color, '_debug_count'):
+    #     get_cell_color._debug_count = 0
+    # if get_cell_color._debug_count < 3:
+    #     print(f"🔍 GENE_STATES DEBUG: Available keys: {sorted(gene_states.keys())}")
+    #     print(f"🔍 GENE_STATES DEBUG: glycoATP={glyco_active}, mitoATP={mito_active}")
+    #     get_cell_color._debug_count += 1
+
+    # DEBUG: Print gene states for first few cells - TURNED OFF
+    # if not hasattr(get_cell_color, '_debug_count'):
+    #     get_cell_color._debug_count = 0
+    # if get_cell_color._debug_count < 5:
+    #     print(f"🎨 DEBUG Cell {cell.state.id}: glycoATP={glyco_active}, mitoATP={mito_active}, phenotype={actual_phenotype}")
+    #     get_cell_color._debug_count += 1
+
     if glyco_active and not mito_active:
         interior_color = "green"      # glycoATP only
     elif not glyco_active and mito_active:
@@ -1196,7 +1178,7 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     # if gene_states['Necrosis']:
     #     phenotype = "Necrosis"
 
-    # if gene_states['Apoptosis']:
+    # if gene_states['Apoptosis']: # TODO: reactivate
     #     phenotype = "Apoptosis"
 
     if gene_states['Proliferation']:

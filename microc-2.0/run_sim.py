@@ -354,7 +354,8 @@ def setup_simulation(config, args, custom_functions_path=None):
 
         placements = custom_functions.initialize_cell_placement(
             grid_size=(config.domain.nx, config.domain.ny),
-            simulation_params=simulation_params
+            simulation_params=simulation_params,
+            config=config
         )
         for placement in placements:
             population.add_cell(placement['position'], phenotype=placement['phenotype'])

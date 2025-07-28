@@ -276,10 +276,11 @@ class CellPopulation(ICellPopulation):
         simulation_params = simulation_params or {}
 
         if self.custom_functions and hasattr(self.custom_functions, 'initialize_cell_placement'):
-            # Call custom placement function
+            # Call custom placement function, passing config
             cell_placements = self.custom_functions.initialize_cell_placement(
                 grid_size=self.grid_size,
-                simulation_params=simulation_params
+                simulation_params=simulation_params,
+                config=self.config
             )
         else:
             # Fail explicitly if custom function is not provided
