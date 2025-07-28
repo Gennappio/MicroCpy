@@ -226,7 +226,7 @@ class CellPopulation(ICellPopulation):
                  custom_functions_module=None, config=None):
 
         self.grid_size = grid_size
-        self.gene_network = gene_network or BooleanNetwork()
+        self.gene_network_template = gene_network or BooleanNetwork()  # Template for creating cell-specific networks
         self.custom_functions = self._load_custom_functions(custom_functions_module)
         self.config = config  # Store config for threshold calculations
 
@@ -498,16 +498,23 @@ class CellPopulation(ICellPopulation):
         - NOT called during regular gene network updates
         - Provides each new cell with random initial gene states
         - Fate nodes (Apoptosis, Proliferation, etc.) always start as False
+        - Each cell gets its own gene network instance
         """
+        # Create a new gene network instance for this cell by copying the template
+        cell_gene_network = self.gene_network_template.copy()
+
         # Use NetLogo-style random initialization if configured
         random_init = getattr(self.config.gene_network, 'random_initialization', False)
 
         # Reset gene network with random initialization for new cells only
-        self.gene_network.reset(random_init=random_init)
+        cell_gene_network.reset(random_init=random_init)
 
-        # Get initial gene states and store them in the cell
-        initial_gene_states = self.gene_network.get_all_states()
-        cell.state = cell.state.with_updates(gene_states=initial_gene_states)
+        # Get initial gene states and store them in the cell along with the gene network
+        initial_gene_states = cell_gene_network.get_all_states()
+        cell.state = cell.state.with_updates(
+            gene_states=initial_gene_states,
+            gene_network=cell_gene_network  # Store the cell's own gene network instance
+        )
 
     def _initialize_population_gene_network(self):
         """Initialize the population's gene network at simulation start"""
@@ -710,9 +717,17 @@ class CellPopulation(ICellPopulation):
             # DO NOT RESET gene network during regular updates - this destroys gene dynamics!
             # Gene network should only be reset during cell creation, not every update
 
+            # Get this cell's own gene network instance
+            cell_gene_network = cell.state.gene_network
+            if cell_gene_network is None:
+                # Fallback: create a new gene network for this cell if it doesn't have one
+                print(f"⚠️  Cell {cell_id} missing gene network, creating new one")
+                self._initialize_cell_gene_network(cell)
+                cell_gene_network = cell.state.gene_network
+
             # Update gene network using configuration-based thresholds
             gene_inputs = self._calculate_gene_inputs(local_env)
-            self.gene_network.set_input_states(gene_inputs)
+            cell_gene_network.set_input_states(gene_inputs)
 
             # Get propagation steps from gene network configuration
             if not (self.config.gene_network and hasattr(self.config.gene_network, 'propagation_steps')):
@@ -720,7 +735,7 @@ class CellPopulation(ICellPopulation):
 
             steps = self.config.gene_network.propagation_steps
 
-            gene_states = self.gene_network.step(steps)
+            gene_states = cell_gene_network.step(steps)
 
             # Collect ATP statistics for all cells
             if not hasattr(self, '_atp_stats'):
@@ -733,8 +748,8 @@ class CellPopulation(ICellPopulation):
                     'atp_production_rate_true': 0
                 }
 
-            # Get all gene network states for ATP analysis
-            all_states = self.gene_network.get_all_states()
+            # Get all gene network states for ATP analysis from this cell's gene network
+            all_states = cell_gene_network.get_all_states()
             atp_rate = all_states.get('ATP_Production_Rate', False)
             mito_atp = all_states.get('mitoATP', False)
             glyco_atp = all_states.get('glycoATP', False)
@@ -795,7 +810,7 @@ class CellPopulation(ICellPopulation):
                 print(f"   Growth factor inputs: FGFR_stimulus={gene_inputs.get('FGFR_stimulus', False)}, EGFR_stimulus={gene_inputs.get('EGFR_stimulus', False)}, cMET_stimulus={gene_inputs.get('cMET_stimulus', False)}")
 
                 # Test apoptosis function directly
-                apoptosis_node = self.gene_network.nodes.get('Apoptosis')
+                apoptosis_node = cell_gene_network.nodes.get('Apoptosis')
                 if apoptosis_node and apoptosis_node.update_function:
                     test_inputs = {'BCL2': bcl2, 'ERK': erk, 'FOXO3': foxo3, 'p53': p53}
                     direct_result = apoptosis_node.update_function(test_inputs)

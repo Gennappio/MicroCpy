@@ -24,6 +24,7 @@ class CellState:
     metabolic_state: Dict[str, float] = field(default_factory=dict)
     gene_states: Dict[str, bool] = field(default_factory=dict)
     tq_wait_time: float = 0.0  # Time waiting in Growth_Arrest state (TQ time)
+    gene_network: Optional[object] = None  # Each cell has its own gene network instance
     
     def with_updates(self, **kwargs) -> 'CellState':
         """Create new CellState with updates (immutable pattern)"""
@@ -35,7 +36,8 @@ class CellState:
             'division_count': self.division_count,
             'metabolic_state': self.metabolic_state.copy(),
             'gene_states': self.gene_states.copy(),
-            'tq_wait_time': self.tq_wait_time
+            'tq_wait_time': self.tq_wait_time,
+            'gene_network': self.gene_network  # Keep reference to gene network
         }
         updates.update(kwargs)
         return CellState(**updates)
