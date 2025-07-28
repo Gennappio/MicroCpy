@@ -441,6 +441,34 @@ class BooleanNetwork(IGeneNetwork):
             'connections': {name: node.inputs for name, node in self.nodes.items() if node.inputs}
         }
     
+    def copy(self):
+        """Create a deep copy of this gene network for use by individual cells"""
+        import copy
+
+        # Create new instance with same config
+        new_network = BooleanNetwork(config=self.config)
+
+        # Deep copy all nodes
+        new_network.nodes = {}
+        for name, node in self.nodes.items():
+            new_node = NetworkNode(
+                name=node.name,
+                current_state=node.current_state,
+                next_state=node.next_state,
+                update_function=node.update_function,  # Functions can be shared
+                inputs=node.inputs.copy(),
+                is_input=node.is_input,
+                is_output=node.is_output
+            )
+            new_network.nodes[name] = new_node
+
+        # Copy other attributes
+        new_network.input_nodes = self.input_nodes.copy()
+        new_network.output_nodes = self.output_nodes.copy()
+        new_network.fixed_nodes = self.fixed_nodes.copy()
+
+        return new_network
+
     def __repr__(self) -> str:
         info = self.get_network_info()
         return (f"BooleanNetwork(nodes={info['total_nodes']}, "
