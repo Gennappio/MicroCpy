@@ -335,6 +335,35 @@ class BooleanNetwork(IGeneNetwork):
             if node_name in self.nodes:
                 self.nodes[node_name].current_state = state
     
+    def initialize_logic_states(self, verbose: bool = False):
+        """Initialize all non-input nodes to match their logic rules."""
+        if verbose:
+            print("Initializing gene network logic states...")
+
+        # Get current states for evaluation
+        current_states = {name: node.current_state for name, node in self.nodes.items()}
+
+        # Update all non-input nodes to match their logic
+        updates_made = 0
+        for node_name, node in self.nodes.items():
+            if not node.is_input and node.update_function:
+                try:
+                    expected_state = node.update_function(current_states)
+                    if node.current_state != expected_state:
+                        if verbose:
+                            print(f"  Initializing {node_name}: {node.current_state} -> {expected_state}")
+                        node.current_state = expected_state
+                        current_states[node_name] = expected_state  # Update for next evaluations
+                        updates_made += 1
+                except Exception as e:
+                    if verbose:
+                        print(f"  Error initializing {node_name}: {e}")
+
+        if verbose:
+            print(f"Initialization complete: {updates_made} nodes updated")
+
+        return updates_made
+    
     def initialize_random(self):
         """Initialize ALL nodes with random states - IDENTICAL to gene_simulator.py"""
         import random

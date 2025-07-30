@@ -509,6 +509,10 @@ class CellPopulation(ICellPopulation):
         # Reset gene network with random initialization for new cells only
         cell_gene_network.reset(random_init=random_init)
 
+        # CRITICAL FIX: Initialize all nodes to match their logic rules after random reset
+        # This ensures nodes start in states consistent with their logic, not just random
+        cell_gene_network.initialize_logic_states(verbose=False)
+
         # Get initial gene states and store them in the cell along with the gene network
         initial_gene_states = cell_gene_network.get_all_states()
         cell.state = cell.state.with_updates(
@@ -728,6 +732,12 @@ class CellPopulation(ICellPopulation):
             # Update gene network using configuration-based thresholds
             gene_inputs = self._calculate_gene_inputs(local_env)
             cell_gene_network.set_input_states(gene_inputs)
+
+            # CRITICAL FIX: Initialize logic states after setting inputs
+            # This ensures all nodes are in states consistent with their logic rules
+            # Only needed on first update or when input states change significantly
+            if self.step_count == 0:  # First update - initialize logic
+                cell_gene_network.initialize_logic_states(verbose=False)
 
             # Get propagation steps from gene network configuration
             if not (self.config.gene_network and hasattr(self.config.gene_network, 'propagation_steps')):
