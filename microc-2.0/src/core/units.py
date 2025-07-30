@@ -13,12 +13,12 @@ class Length:
     unit: str = "m"  # Base unit: meters
     
     def __post_init__(self):
-        if self.unit not in ["m", "mm", "μm", "um", "micrometer"]:
+        if self.unit not in ["m", "mm", "m", "um", "micrometer"]:
             raise UnitError(f"Invalid length unit: {self.unit}")
     
     @property
     def meters(self) -> float:
-        conversions = {"m": 1.0, "mm": 1e-3, "μm": 1e-6, "um": 1e-6, "micrometer": 1e-6}
+        conversions = {"m": 1.0, "mm": 1e-3, "m": 1e-6, "um": 1e-6, "micrometer": 1e-6}
         return self.value * conversions[self.unit]
     
     @property 
@@ -30,7 +30,7 @@ class Length:
         return self.meters / other.meters
     
     def __repr__(self) -> str:
-        return f"Length({self.value} {self.unit} = {self.meters:.2e} m = {self.micrometers:.1f} μm)"
+        return f"Length({self.value} {self.unit} = {self.meters:.2e} m = {self.micrometers:.1f} m)"
 
 @dataclass(frozen=True) 
 class Concentration:
@@ -57,5 +57,5 @@ class UnitValidator:
     def validate_volume_calculation(length: Length, width: Length, height: Length, expected_volume: float) -> bool:
         calculated = length.meters * width.meters * height.meters
         if not (0.95 * expected_volume < calculated < 1.05 * expected_volume):
-            raise UnitError(f"Volume mismatch: calculated {calculated:.2e} m³, expected {expected_volume:.2e} m³")
+            raise UnitError(f"Volume mismatch: calculated {calculated:.2e} m, expected {expected_volume:.2e} m")
         return True
