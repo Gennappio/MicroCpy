@@ -120,15 +120,15 @@ class SimulationPlotter:
                                          colors=['red'], linewidths=2, linestyles='-')
             # Add threshold label
             ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
-            print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
+            print(f"    Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
 
         # Add colorbar
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label(f'{simulator.substance_config.name} (mM)', fontsize=self.config.label_size)
         
         # Formatting
-        ax.set_xlabel('X Position (μm)', fontsize=self.config.label_size)
-        ax.set_ylabel('Y Position (μm)', fontsize=self.config.label_size)
+        ax.set_xlabel('X Position (m)', fontsize=self.config.label_size)
+        ax.set_ylabel('Y Position (m)', fontsize=self.config.label_size)
         ax.set_title(title, fontsize=self.config.title_size)
         ax.set_aspect('equal')
         
@@ -404,8 +404,8 @@ class SimulationPlotter:
         cbar = plt.colorbar(im, ax=ax1)
         cbar.set_label(f'{simulator.substance_config.name} (mM)')
         ax1.set_title('Concentration Field')
-        ax1.set_xlabel('X Position (μm)')
-        ax1.set_ylabel('Y Position (μm)')
+        ax1.set_xlabel('X Position (m)')
+        ax1.set_ylabel('Y Position (m)')
         
         # Cell population (top-right)
         ax2 = fig.add_subplot(gs[0, 2])
@@ -558,7 +558,7 @@ Active Profiles: {perf_stats['active_profiles']}""",
             transparent=self.config.transparent,
             bbox_inches=self.config.bbox_inches
         )
-        print(f"📊 Plot saved: {save_path}")
+        print(f" Plot saved: {save_path}")
     
     def show_all(self):
         """Display all open figures"""
