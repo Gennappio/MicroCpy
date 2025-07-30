@@ -19,14 +19,15 @@ import sys
 import argparse
 from pathlib import Path
 import time
+import os
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent / "config"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config.config import MicroCConfig
-from core.domain import MeshManager
+from src.config.config import MicroCConfig
+from src.core.domain import MeshManager
 from simulation.multi_substance_simulator import MultiSubstanceSimulator
 from simulation.orchestrator import TimescaleOrchestrator
 from biology.population import CellPopulation
@@ -402,7 +403,7 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
 
     # Count cells by phenotype/metabolic state
     phenotype_counts = {}
-    metabolic_counts = {'OXPHOS': 0, 'Glycolytic': 0, 'Quiescent': 0, 'Other': 0}
+    metabolic_counts = {'OXPHOS': 0, 'Glyco': 0, 'Both': 0, 'Quiescent': 0, 'Other': 0}
 
     for pos, phenotype in cell_data:
         # Count by phenotype
