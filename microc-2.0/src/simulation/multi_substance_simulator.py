@@ -317,19 +317,19 @@ class MultiSubstanceSimulator:
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
 
-            # DEBUG: Print source field and key info for direct comparison
-            if name == 'Lactate':
-                print(f"[DEBUG] Lactate source field (final): min={np.min(source_field):.3e}, max={np.max(source_field):.3e}, sum={np.sum(source_field):.3e}")
-                nonzero = np.nonzero(source_field)[0]
-                print(f"[DEBUG] Nonzero indices: {nonzero}")
-                if len(nonzero) > 0:
-                    print(f"[DEBUG] Values at nonzero indices: {[source_field[i] for i in nonzero]}")
-                # Print value at center cell
-                nx, ny = self.config.domain.nx, self.config.domain.ny
-                center_x, center_y = nx // 2, ny // 2
-                center_idx = center_x * ny + center_y
-                print(f"[DEBUG] Value at center cell index {center_idx}: {source_field[center_idx]:.3e}")
-                print(f"[DEBUG] Boundary value: {boundary_value}")
+            # DEBUG: Print source field and key info for direct comparison - DISABLED
+            # if name == 'Lactate':
+            #     print(f"[DEBUG] Lactate source field (final): min={np.min(source_field):.3e}, max={np.max(source_field):.3e}, sum={np.sum(source_field):.3e}")
+            #     nonzero = np.nonzero(source_field)[0]
+            #     print(f"[DEBUG] Nonzero indices: {nonzero}")
+            #     if len(nonzero) > 0:
+            #         print(f"[DEBUG] Values at nonzero indices: {[source_field[i] for i in nonzero]}")
+            #     # Print value at center cell
+            #     nx, ny = self.config.domain.nx, self.config.domain.ny
+            #     center_x, center_y = nx // 2, ny // 2
+            #     center_idx = center_x * ny + center_y
+            #     print(f"[DEBUG] Value at center cell index {center_idx}: {source_field[center_idx]:.3e}")
+            #     print(f"[DEBUG] Boundary value: {boundary_value}")
 
             # Use the exact same equation as the standalone FiPy script
             # Standalone: DiffusionTerm(D) == -source_var
