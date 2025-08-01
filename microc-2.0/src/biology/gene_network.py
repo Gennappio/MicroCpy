@@ -395,30 +395,38 @@ class BooleanNetwork(IGeneNetwork):
         TRUE NetLogo-style gene network update: randomly select ONE gene and update it.
 
         This matches the standalone version exactly:
-        1. Get all non-input genes with update functions
+        1. Get all non-input genes with update functions (cached)
         2. Randomly select ONE gene (no eligibility checking)
-        3. Evaluate the gene's rule with ALL current states
+        3. Evaluate the gene's rule with ALL current states (cached dict)
         4. Update only that gene's state
+
+        Performance optimization: Caches updatable genes list and reuses state dict.
         """
         import random
 
-        # Get all non-input genes (TRUE NetLogo approach - no eligibility checking)
-        non_input_genes = [name for name, gene_node in self.nodes.items()
-                          if not gene_node.is_input and gene_node.update_function]
+        # Cache the list of updatable genes (only computed once since gene structure doesn't change)
+        if not hasattr(self, '_cached_updatable_genes'):
+            self._cached_updatable_genes = [name for name, gene_node in self.nodes.items()
+                                          if not gene_node.is_input and gene_node.update_function]
 
-        if not non_input_genes:
+        if not self._cached_updatable_genes:
             return None
 
         # TRUE NetLogo approach: randomly select ONE gene (no eligibility checking)
-        selected_gene = random.choice(non_input_genes)
+        selected_gene = random.choice(self._cached_updatable_genes)
         gene_node = self.nodes[selected_gene]
 
-        # Get current states of all nodes for logic evaluation
-        current_states = {name: node.current_state for name, node in self.nodes.items()}
+        # Cache and reuse the current states dictionary structure
+        if not hasattr(self, '_state_cache'):
+            self._state_cache = {}
+
+        # Update the cached states with current values (reuse dict structure)
+        for name, node in self.nodes.items():
+            self._state_cache[name] = node.current_state
 
         # Evaluate the gene's rule and update ONLY this gene
         # Pass ALL current states (like standalone version)
-        new_state = gene_node.update_function(current_states)
+        new_state = gene_node.update_function(self._state_cache)
 
         # Update only this one gene (NetLogo style)
         if gene_node.current_state != new_state: # TODO: why this if? just write it
