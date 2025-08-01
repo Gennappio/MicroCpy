@@ -111,7 +111,7 @@ class BooleanNetwork(IGeneNetwork):
                     )
                     nodes_created += 1
 
-            print(f"✅ Loaded {nodes_created} nodes from .bnd file")
+            # print(f"✅ Loaded {nodes_created} nodes from .bnd file")
 
             # Identify input and output nodes
             self._identify_input_output_nodes()
@@ -205,8 +205,8 @@ class BooleanNetwork(IGeneNetwork):
                 self.output_nodes.add(node_name)
                 node.is_output = True
 
-        print(f"✅ Identified {len(self.input_nodes)} input nodes: {sorted(self.input_nodes)}")
-        print(f"✅ Identified {len(self.output_nodes)} output nodes: {sorted(self.output_nodes)}")
+        # print(f"✅ Identified {len(self.input_nodes)} input nodes: {sorted(self.input_nodes)}")
+        # print(f"✅ Identified {len(self.output_nodes)} output nodes: {sorted(self.output_nodes)}")
 
     def _load_from_config(self, gene_network_config):
         """Load network from configuration object"""
@@ -219,7 +219,7 @@ class BooleanNetwork(IGeneNetwork):
         if hasattr(gene_network_config, 'bnd_file') and gene_network_config.bnd_file:
             bnd_path = Path(gene_network_config.bnd_file)
             if bnd_path.exists():
-                print(f"✅ Loading gene network from .bnd file: {bnd_path}")
+                # print(f"✅ Loading gene network from .bnd file: {bnd_path}")
                 self._load_from_bnd_file(bnd_path)
             else:
                 print(f"⚠️  .bnd file not found: {bnd_path}")
@@ -278,9 +278,9 @@ class BooleanNetwork(IGeneNetwork):
         if not self.input_nodes and not self.output_nodes:
             self._identify_input_output_nodes()
 
-        print(f"✅ Loaded gene network from config: {len(self.nodes)} nodes")
-        print(f"✅ Input nodes: {sorted(self.input_nodes)}")
-        print(f"✅ Output nodes: {sorted(self.output_nodes)}")
+        # print(f"✅ Loaded gene network from config: {len(self.nodes)} nodes")
+        # print(f"✅ Input nodes: {sorted(self.input_nodes)}")
+        # print(f"✅ Output nodes: {sorted(self.output_nodes)}")
 
     def _create_minimal_network(self):
         """Create minimal network - only essential nodes for basic functionality"""
