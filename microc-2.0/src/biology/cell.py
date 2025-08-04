@@ -5,7 +5,7 @@ Provides a modular cell system with customizable behavior through hooks.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union, Tuple
 import uuid
 
 from interfaces.base import ICell
@@ -17,7 +17,7 @@ from pathlib import Path
 class CellState:
     """Immutable cell state representation"""
     id: str
-    position: tuple[int, int]
+    position: Union[Tuple[int, int], Tuple[int, int, int]]  # Support both 2D and 3D positions
     phenotype: str
     age: float
     division_count: int
@@ -49,7 +49,7 @@ class Cell(ICell):
     All cell behaviors are implemented via direct function calls to custom functions.
     """
 
-    def __init__(self, position: tuple[int, int], phenotype: str = "Growth_Arrest",
+    def __init__(self, position: Union[Tuple[int, int], Tuple[int, int, int]], phenotype: str = "Growth_Arrest",
                  cell_id: Optional[str] = None, custom_functions_module=None):
 
         self.state = CellState(
@@ -212,7 +212,7 @@ class Cell(ICell):
         
         return daughter
     
-    def move_to(self, new_position: tuple[int, int]):
+    def move_to(self, new_position: Union[Tuple[int, int], Tuple[int, int, int]]):
         """Move cell to new position"""
         self.state = self.state.with_updates(position=new_position)
     

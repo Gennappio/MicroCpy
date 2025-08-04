@@ -1,13 +1,13 @@
 domain:
   size_x: 800.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 800.0
-  size_y_unit: "μm"
+  size_y_unit: "um"
   nx: 40  # CRITICAL: Must give 20μm spacing
   ny: 40
   dimensions: 2
   cell_height: 20.0          # Biological cell height/thickness
-  cell_height_unit: "μm"     # Can be changed to make cells thicker/thinner
+  cell_height_unit: "um"     # Can be changed to make cells thicker/thinner
 
 time:
   dt: 0.01
@@ -28,4 +28,21 @@ substances:
     diffusion_coeff: 6.70e-11  # m²/s
     production_rate: 3.0e-15   # mol/s/cell
     uptake_rate: 0.0
-    initial_
+    initial_value: 1.0         # mM
+    boundary_value: 1.0        # mM
+    boundary_type: "fixed"
+
+# Gene network associations
+associations:
+  lactate: "NA"  # No gene network association for lactate
+
+# Thresholds for gene network inputs
+thresholds: {}
+
+# Output configuration
+output:
+  save_data_interval: 10
+  save_plots_interval: 10
+  status_print_interval: 5
+  save_initial_plots: true
+  save_final_plots: true

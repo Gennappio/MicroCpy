@@ -5,7 +5,7 @@ Provides spatial population management with immutable state tracking.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional, Set, Union
 import numpy as np
 import os
 import time
@@ -199,7 +199,7 @@ class PhenotypeLogger:
 class PopulationState:
     """Immutable population state representation"""
     cells: Dict[str, Cell] = field(default_factory=dict)
-    spatial_grid: Dict[Tuple[int, int], str] = field(default_factory=dict)  # position -> cell_id
+    spatial_grid: Dict[Union[Tuple[int, int], Tuple[int, int, int]], str] = field(default_factory=dict)  # position -> cell_id
     total_cells: int = 0
     generation_count: int = 0
     
@@ -222,7 +222,7 @@ class CellPopulation(ICellPopulation):
     All behaviors can be customized via the hook system.
     """
     
-    def __init__(self, grid_size: Tuple[int, int], gene_network: Optional[BooleanNetwork] = None,
+    def __init__(self, grid_size: Union[Tuple[int, int], Tuple[int, int, int]], gene_network: Optional[BooleanNetwork] = None,
                  custom_functions_module=None, config=None):
 
         self.grid_size = grid_size
@@ -311,7 +311,7 @@ class CellPopulation(ICellPopulation):
 
             return cells_added
     
-    def add_cell(self, position: Tuple[int, int], phenotype: str = "normal") -> bool:
+    def add_cell(self, position: Union[Tuple[int, int], Tuple[int, int, int]], phenotype: str = "normal") -> bool:
         """Add cell at lattice position"""
         # Validate position
         if not self._is_valid_position(position):
@@ -405,25 +405,44 @@ class CellPopulation(ICellPopulation):
     
 
     
-    def _get_available_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
+    def _get_available_neighbors(self, position: Union[Tuple[int, int], Tuple[int, int, int]]) -> List[Union[Tuple[int, int], Tuple[int, int, int]]]:
         """Get available neighboring positions"""
-        x, y = position
-        neighbors = [
-            (x-1, y), (x+1, y), (x, y-1), (x, y+1),  # Von Neumann neighborhood
-            (x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)  # Moore neighborhood
-        ]
-        
+        if len(position) == 2:
+            # 2D neighbors
+            x, y = position
+            neighbors = [
+                (x-1, y), (x+1, y), (x, y-1), (x, y+1),  # Von Neumann neighborhood
+                (x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)  # Moore neighborhood
+            ]
+        else:
+            # 3D neighbors
+            x, y, z = position
+            neighbors = []
+            # 26-connected neighborhood in 3D
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    for dz in [-1, 0, 1]:
+                        if dx == 0 and dy == 0 and dz == 0:
+                            continue  # Skip the center position
+                        neighbors.append((x + dx, y + dy, z + dz))
+
         available = []
         for pos in neighbors:
             if self._is_valid_position(pos) and pos not in self.state.spatial_grid:
                 available.append(pos)
-        
+
         return available
     
-    def _is_valid_position(self, position: Tuple[int, int]) -> bool:
+    def _is_valid_position(self, position: Union[Tuple[int, int], Tuple[int, int, int]]) -> bool:
         """Check if position is within grid bounds"""
-        x, y = position
-        return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
+        if len(position) == 2:
+            x, y = position
+            return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
+        else:
+            x, y, z = position
+            return (0 <= x < self.grid_size[0] and
+                    0 <= y < self.grid_size[1] and
+                    0 <= z < self.grid_size[2])
     
     def remove_dead_cells(self) -> List[str]:
         """Remove dead cells and return their IDs"""
@@ -1065,12 +1084,12 @@ class CellPopulation(ICellPopulation):
             'grid_occupancy': len(self.state.spatial_grid) / (self.grid_size[0] * self.grid_size[1])
         }
     
-    def get_cell_positions(self) -> List[Tuple[Tuple[int, int], str]]:
+    def get_cell_positions(self) -> List[Tuple[Union[Tuple[int, int], Tuple[int, int, int]], str]]:
         """Get list of (position, phenotype) for all cells"""
         return [(cell.state.position, cell.state.phenotype)
                 for cell in self.state.cells.values()]
 
-    def get_cell_at_position(self, position: Tuple[int, int]):
+    def get_cell_at_position(self, position: Union[Tuple[int, int], Tuple[int, int, int]]):
         """Get cell at specific position, if any"""
         for cell in self.state.cells.values():
             if cell.state.position == position:

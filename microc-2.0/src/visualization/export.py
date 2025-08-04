@@ -29,7 +29,7 @@ class PlotExporter:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         
-        print(f"📁 Plot export directory: {self.output_dir.absolute()}")
+        print(f" Plot export directory: {self.output_dir.absolute()}")
     
     def export_concentration_data(self, simulator, filename: str = "concentration_data.csv") -> str:
         """Export concentration field data to CSV"""
@@ -60,7 +60,7 @@ class PlotExporter:
         filepath = self.output_dir / filename
         df.to_csv(filepath, index=False)
         
-        print(f"📊 Concentration data exported: {filepath}")
+        print(f" Concentration data exported: {filepath}")
         return str(filepath)
     
     def export_population_data(self, population, filename: str = "population_data.csv") -> str:
@@ -85,7 +85,7 @@ class PlotExporter:
         filepath = self.output_dir / filename
         df.to_csv(filepath, index=False)
         
-        print(f"🦠 Population data exported: {filepath}")
+        print(f" Population data exported: {filepath}")
         return str(filepath)
     
     def export_performance_data(self, monitor, filename: str = "performance_data.json") -> str:
@@ -107,7 +107,7 @@ class PlotExporter:
         with open(filepath, 'w') as f:
             json.dump(export_data, f, indent=2, default=str)
         
-        print(f"📊 Performance data exported: {filepath}")
+        print(f" Performance data exported: {filepath}")
         return str(filepath)
     
     def export_simulation_summary(self, simulator, population, monitor, 
@@ -128,7 +128,7 @@ class PlotExporter:
         with open(filepath, 'w') as f:
             json.dump(summary, f, indent=2, default=str)
         
-        print(f"📋 Simulation summary exported: {filepath}")
+        print(f" Simulation summary exported: {filepath}")
         return str(filepath)
     
     def create_publication_figure(self, simulator, population, monitor, 
@@ -160,7 +160,7 @@ class PlotExporter:
         fig.savefig(filepath, dpi=300, bbox_inches='tight')
         plt.close(fig)
         
-        print(f"📊 Publication figure saved: {filepath}")
+        print(f" Publication figure saved: {filepath}")
         return str(filepath)
 
 class AnimationExporter:
@@ -202,8 +202,8 @@ class AnimationExporter:
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label(f'{substance_name} (mM)')
         
-        ax.set_xlabel('X Position (μm)')
-        ax.set_ylabel('Y Position (μm)')
+        ax.set_xlabel('X Position (m)')
+        ax.set_ylabel('Y Position (m)')
         title = ax.set_title(f'{substance_name} Evolution - Step 0')
         ax.set_aspect('equal')
         
@@ -211,8 +211,8 @@ class AnimationExporter:
             ax.clear()
             conc_2d = concentration_history[frame].reshape((ny, nx))
             im = ax.contourf(X, Y, conc_2d, levels=20, vmin=vmin, vmax=vmax, cmap='viridis')
-            ax.set_xlabel('X Position (μm)')
-            ax.set_ylabel('Y Position (μm)')
+            ax.set_xlabel('X Position (m)')
+            ax.set_ylabel('Y Position (m)')
             ax.set_title(f'{substance_name} Evolution - Step {frame}')
             ax.set_aspect('equal')
             return [im]
@@ -228,7 +228,7 @@ class AnimationExporter:
         anim.save(filepath, writer='pillow', fps=fps)
         plt.close(fig)
         
-        print(f"🎬 Concentration animation saved: {filepath}")
+        print(f" Concentration animation saved: {filepath}")
         return str(filepath)
     
     def animate_population_growth(self, population_history: List[Dict],
@@ -313,7 +313,7 @@ class AnimationExporter:
         anim.save(filepath, writer='pillow', fps=fps)
         plt.close(fig)
         
-        print(f"🎬 Population animation saved: {filepath}")
+        print(f" Population animation saved: {filepath}")
         return str(filepath)
     
     def create_combined_animation(self, concentration_history: List[np.ndarray],
@@ -363,8 +363,8 @@ class AnimationExporter:
             # Plot concentration field
             conc_2d = concentration_history[frame].reshape((ny, nx))
             im = ax1.contourf(X, Y, conc_2d, levels=20, vmin=vmin, vmax=vmax, cmap='viridis')
-            ax1.set_xlabel('X Position (μm)')
-            ax1.set_ylabel('Y Position (μm)')
+            ax1.set_xlabel('X Position (m)')
+            ax1.set_ylabel('Y Position (m)')
             ax1.set_title(f'{substance_name} Field - Step {frame}')
             ax1.set_aspect('equal')
             
@@ -409,5 +409,5 @@ class AnimationExporter:
         anim.save(filepath, writer='pillow', fps=fps)
         plt.close(fig)
         
-        print(f"🎬 Combined animation saved: {filepath}")
+        print(f" Combined animation saved: {filepath}")
         return str(filepath)
