@@ -13,6 +13,8 @@ class DomainConfig:
     size_y: Length
     nx: int
     ny: int
+    size_z: Optional[Length] = None  # Z dimension for 3D simulations
+    nz: Optional[int] = None  # Z grid points for 3D simulations
     dimensions: int = 2
     cell_height: Length = field(default_factory=lambda: Length(20.0, "μm"))  # Biological cell height/thickness
     
@@ -32,11 +34,18 @@ class DomainConfig:
     
     @property
     def cell_volume_um3(self) -> float:
-        """Cell volume in μm³ - single source of truth"""
+        """Cell volume in μm³ - handles both 2D and 3D simulations"""
         dx_um = self.size_x.micrometers / self.nx
         dy_um = self.size_y.micrometers / self.ny
-        height_um = self.cell_height.micrometers  # Configurable cell height
-        return dx_um * dy_um * height_um
+
+        if self.dimensions == 3 and self.size_z is not None and self.nz is not None:
+            # For 3D simulations: dx × dy × dz
+            dz_um = self.size_z.micrometers / self.nz
+            return dx_um * dy_um * dz_um
+        else:
+            # For 2D simulations: area × height
+            height_um = self.cell_height.micrometers  # Configurable cell height
+            return dx_um * dy_um * height_um
 
 @dataclass
 class TimeConfig:
@@ -137,18 +146,36 @@ class MicroCConfig:
     
     @classmethod
     def load_from_yaml(cls, config_file: Path) -> 'MicroCConfig':
+        config_dir = config_file.parent
         with open(config_file) as f:
             data = yaml.safe_load(f)
-        
+
+        # Resolve paths relative to the config file directory
+        if 'gene_network' in data and 'bnd_file' in data['gene_network']:
+            bnd_file_path = config_dir / data['gene_network']['bnd_file']
+            if not bnd_file_path.exists():
+                raise FileNotFoundError(f"bnd_file not found at resolved path: {bnd_file_path}")
+            data['gene_network']['bnd_file'] = str(bnd_file_path)
+
+        if 'custom_functions_path' in data and data['custom_functions_path']:
+            custom_functions_path = config_dir / data['custom_functions_path']
+            if not custom_functions_path.exists():
+                raise FileNotFoundError(f"custom_functions_path not found at resolved path: {custom_functions_path}")
+            data['custom_functions_path'] = str(custom_functions_path)
+
         # Convert to proper types with validation
+        domain_data = data['domain']
         domain = DomainConfig(
-            size_x=Length(data['domain']['size_x'], data['domain']['size_x_unit']),
-            size_y=Length(data['domain']['size_y'], data['domain']['size_y_unit']),
-            nx=data['domain']['nx'],
-            ny=data['domain']['ny'],
+            size_x=Length(domain_data['size_x'], domain_data['size_x_unit']),
+            size_y=Length(domain_data['size_y'], domain_data['size_y_unit']),
+            size_z=Length(domain_data['size_z'], domain_data['size_z_unit']) if 'size_z' in domain_data else None,
+            nx=domain_data['nx'],
+            ny=domain_data['ny'],
+            nz=domain_data.get('nz', None),
+            dimensions=domain_data.get('dimensions', 2),
             cell_height=Length(
-                data['domain']['cell_height'],
-                data['domain']['cell_height_unit']
+                domain_data['cell_height'],
+                domain_data['cell_height_unit']
             )
         )
         
@@ -277,9 +304,11 @@ class MicroCConfig:
         domain = DomainConfig(
             size_x=Length(domain_data['size_x'], domain_data['size_x_unit']),
             size_y=Length(domain_data['size_y'], domain_data['size_y_unit']),
+            size_z=Length(domain_data['size_z'], domain_data['size_z_unit']) if 'size_z' in domain_data else None,
             nx=domain_data['nx'],
             ny=domain_data['ny'],
-            dimensions=domain_data['dimensions'],
+            nz=domain_data.get('nz', None),
+            dimensions=domain_data.get('dimensions', 2),
             cell_height=Length(
                 domain_data['cell_height'],
                 domain_data['cell_height_unit']

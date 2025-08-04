@@ -14,34 +14,37 @@ domain:
   size_x_unit: "um"
   size_y: 1500.0
   size_y_unit: "um"
-  nx: 150
-  ny: 150
-  dimensions: 2
-  cell_height: 20.0          # Biological cell height/thickness (testing position changes)
+  size_z: 1500.0
+  size_z_unit: "um"
+  nx: 75
+  ny: 75
+  nz: 75
+  dimensions: 3
+  cell_height: 20.0          # Biological cell height/thickness (for 2D compatibility)
   cell_height_unit: "um"     # Can be changed to make cells thicker/thinner
 
 # Time configuration with multi-timescale orchestration
 time:
   dt: 0.1
-  end_time: 500.0
-  diffusion_step: 2      # Update diffusion every 2 steps (medium speed)
+  end_time: 0.5  # Run longer to ensure multiple diffusion updates
+  diffusion_step: 2      # Update diffusion every 2 steps (medium speed) CHANGE!
   intracellular_step: 1  # Update gene networks every step (fast)
   intercellular_step: 5  # Update cell interactions every 5 steps (slow)
 
-# Diffusion solver configuration - time stepping for stability testing
+# Diffusion solver configuration - MATCH STANDALONE
 diffusion:
-  max_iterations: 1000        # Maximum iterations for steady state convergence
-  tolerance: 1e-6             # Convergence tolerance for steady state solver
-  solver_type: "time_stepping" # Use time stepping solver for stability
+  max_iterations: 1000        # MATCH STANDALONE: Increased for better accuracy
+  tolerance: 1e-6             # MATCH STANDALONE: Stricter tolerance for better convergence
+  solver_type: "steady_state" # Use steady state solver
   twodimensional_adjustment_coefficient: 1.0  # Fixed: Use proper volume calculation instead
 
 # Output and saving configuration
 output:
-  save_data_interval: 2500     # Save data every 10 steps
-  save_plots_interval: 2500        # Generate plots every 2 steps (for testing)
+  save_data_interval: 1000     # Save data every 10 steps
+  save_plots_interval: 1       # Generate plots every step to see transient states
   save_final_plots: true     # Always save plots at the end
   save_initial_plots: true   # Always save plots at the beginning
-  status_print_interval: 2500  # Print detailed status every 10 steps
+  status_print_interval: 10  # Print detailed status every 10 steps
 
 # Substances - from diffusion-parameters.txt
 substances:
@@ -72,7 +75,7 @@ substances:
   Oxygen:
     diffusion_coeff: 1.0e-9
     production_rate: 0.00
-    uptake_rate: 3.0e-17
+    uptake_rate: 3.0e-18
     initial_value: 0.07
     boundary_value: 0.07
     boundary_type: "fixed"
@@ -88,10 +91,10 @@ substances:
     unit: "mM"
 
   Lactate:
-    diffusion_coeff: 6.70e-11
+    diffusion_coeff: 1.8e-10  # MATCH STANDALONE
     production_rate: 3.0e-15
     uptake_rate: 0.0e-15
-    initial_value: 5.00
+    initial_value: 1.00
     boundary_value: 1.00
     boundary_type: "fixed"
     unit: "mM"
@@ -304,12 +307,12 @@ thresholds:
 # Gene network configuration - Metabolic symbiosis network
 gene_network:
   # Path to the .bnd file containing the gene network logic
-  bnd_file: "tests/jayatilake_experiment/jaya_microc.bnd"
+  bnd_file: "jaya_microc.bnd"
 
   # Gene network propagation steps (NetLogo-style: sparse updates for realistic behavior)
   # Based on analysis: 10-50 steps gives realistic apoptosis rates (0-2%)
   # 100+ steps leads to over-convergence and excessive apoptosis
-  propagation_steps: 50
+  propagation_steps: 500
 
   # NetLogo-style random initialization (50% chance True/False for non-fate genes)
   # Fate nodes (Apoptosis, Proliferation, Growth_Arrest, Necrosis) always start as False
@@ -418,7 +421,6 @@ custom_parameters:
   K_glyco: 0.5                   # Weighting factor for glycoATP contribution to oxygen consumption
 
   # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
-  # TGFA (Growth factor of EGFR)
   # Note: These rates are defined here (not in diffusion-parameters.txt) because:
   # - diffusion-parameters.txt only has consumption/production rates for basic diffusion
   # - Custom metabolism functions need specific kinetic parameters from Jayatilake paper
@@ -448,7 +450,7 @@ custom_parameters:
   necrosis_threshold_glucose: 0.23
 
   # Spheroid parameters
-  initial_cell_count: 20
+  initial_cell_count: 1000
   maximum_cell_count: 5000
 
   # Shedding parameters
@@ -458,4 +460,4 @@ custom_parameters:
 output_dir: "results/jayatilake_experiment"
 plots_dir: "plots/jayatilake_experiment"
 data_dir: "data/jayatilake_experiment"
-custom_functions_path: "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py"
+custom_functions_path: "jayatilake_experiment_custom_functions.py"

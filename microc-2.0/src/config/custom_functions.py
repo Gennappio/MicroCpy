@@ -42,7 +42,7 @@ def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dic
 
     return placements
 
-def calculate_cell_metabolism(local_environment: Dict[str, Any], cell_state: Dict[str, Any]) -> Dict[str, float]:
+def calculate_cell_metabolism(local_environment: Dict[str, Any], cell_state: Dict[str, Any], config=None) -> Dict[str, float]:
     """
     Custom metabolism calculation
     
@@ -50,18 +50,19 @@ def calculate_cell_metabolism(local_environment: Dict[str, Any], cell_state: Dic
     """
     phenotype = cell_state['phenotype']
     
-    # Custom metabolism rates (slightly lower than defaults)
+    # Custom metabolism rates (scaled to match standalone script)
+    # Standalone uses -2.8e-2 mM/s, which converts to ~2.24e-19 mol/s/cell (divided by 1000)
     if phenotype == "Proliferation":
         return {
             'oxygen_consumption_rate': 2.0e-17,  # Reduced from 3.0e-17
             'glucose_consumption_rate': 1.5e-17,
-            'lactate_production_rate': 0.8e-17
+            'lactate_production_rate': 2.24e-19  # SCALED DOWN: matches standalone -2.8e-2 mM/s
         }
     elif phenotype == "Growth_Arrest":
         return {
             'oxygen_consumption_rate': 0.8e-17,  # Reduced from 1.0e-17
             'glucose_consumption_rate': 0.4e-17,
-            'lactate_production_rate': 0.2e-17
+            'lactate_production_rate': 5.6e-20  # SCALED DOWN: 1/4 of proliferation rate
         }
     elif phenotype == "Apoptosis":
         return {

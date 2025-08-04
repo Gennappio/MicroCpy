@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional, Union
 from dataclasses import dataclass
 
 
@@ -220,7 +220,7 @@ class MetabolicState:
     proton_production: float
 
 
-def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any], config: Any = None) -> List[Dict[str, Any]]:
+def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, int]], simulation_params: Dict[str, Any], config: Any = None) -> List[Dict[str, Any]]:
     """
     Initialize cells in a spheroid configuration for metabolic symbiosis experiment.
     Places cells in center with some initial heterogeneity.
@@ -228,22 +228,39 @@ def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dic
     IMPORTANT: This function receives the FiPy grid size, but should calculate
     biological cell positions based on cell_height parameter!
     """
-    fipy_nx, fipy_ny = grid_size  # This is the FiPy grid (e.g., 40x40)
+    # Handle both 2D and 3D grid sizes
+    if len(grid_size) == 2:
+        fipy_nx, fipy_ny = grid_size  # This is the FiPy grid (e.g., 40x40)
+        fipy_nz = None
+        is_3d = False
+    else:
+        fipy_nx, fipy_ny, fipy_nz = grid_size  # This is the FiPy grid (e.g., 75x75x75)
+        is_3d = True
 
     # Calculate biological cell grid based on cell_height
     # Get domain size and cell_height from simulation_params
     domain_size_um = simulation_params['domain_size_um'] if 'domain_size_um' in simulation_params else simulation_params['size_x']
     cell_height_um = simulation_params['cell_height_um'] if 'cell_height_um' in simulation_params else simulation_params['cell_height']
+
     # Calculate biological cell grid size
     bio_nx = int(domain_size_um / cell_height_um)  # e.g., 600/80 = 7.5 → 7
     bio_ny = int(domain_size_um / cell_height_um)
+    bio_nz = int(domain_size_um / cell_height_um) if is_3d else 1
 
-    print(f"🔍 BIOLOGICAL CELL GRID DEBUG:")
-    print(f"   FiPy grid: {fipy_nx}×{fipy_ny}")
-    print(f"   Domain size: {domain_size_um} μm")
-    print(f"   Cell height: {cell_height_um} μm")
-    print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
-    print(f"   Biological cell size: {cell_height_um} μm")
+    if is_3d:
+        print(f"🔍 BIOLOGICAL CELL GRID DEBUG (3D):")
+        print(f"   FiPy grid: {fipy_nx}×{fipy_ny}×{fipy_nz}")
+        print(f"   Domain size: {domain_size_um} μm")
+        print(f"   Cell height: {cell_height_um} μm")
+        print(f"   Biological cell grid: {bio_nx}×{bio_ny}×{bio_nz}")
+        print(f"   Biological cell size: {cell_height_um} μm")
+    else:
+        print(f"🔍 BIOLOGICAL CELL GRID DEBUG (2D):")
+        print(f"   FiPy grid: {fipy_nx}×{fipy_ny}")
+        print(f"   Domain size: {domain_size_um} μm")
+        print(f"   Cell height: {cell_height_um} μm")
+        print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
+        print(f"   Biological cell size: {cell_height_um} μm")
     # Get initial cell count from simulation parameters FIRST
     initial_count = simulation_params['initial_cell_count']
 
@@ -264,61 +281,91 @@ def initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dic
 
     # Use biological cell grid for placement
     center_x, center_y = bio_nx // 2, bio_ny // 2
+    center_z = bio_nz // 2 if is_3d else 0
 
     # Get initial cell count from simulation parameters
     initial_count = simulation_params['initial_cell_count']
-    
+
     placements = []
 
     # Place cells in expanding spherical pattern on biological cell grid
     radius = 1
     cells_placed = 0
 
-    while cells_placed < initial_count and radius < min(bio_nx, bio_ny) // 2:
-        for x in range(max(0, center_x - radius), min(bio_nx, center_x + radius + 1)):
-            for y in range(max(0, center_y - radius), min(bio_ny, center_y + radius + 1)):
+    if is_3d:
+        max_radius = min(bio_nx, bio_ny, bio_nz) // 2
+    else:
+        max_radius = min(bio_nx, bio_ny) // 2
+
+    while cells_placed < initial_count and radius < max_radius:
+        if is_3d:
+            # 3D spherical placement
+            for x in range(max(0, center_x - radius), min(bio_nx, center_x + radius + 1)):
+                for y in range(max(0, center_y - radius), min(bio_ny, center_y + radius + 1)):
+                    for z in range(max(0, center_z - radius), min(bio_nz, center_z + radius + 1)):
+                        if cells_placed >= initial_count:
+                            break
+
+                        # Check if position is within spherical distance
+                        distance = ((x - center_x)**2 + (y - center_y)**2 + (z - center_z)**2)**0.5
+                        if distance <= radius:
+                            position = (x, y, z)
+                            if position not in used_positions:
+                                used_positions.add(position)
+                                placements.append({
+                                    'position': position,
+                                    'phenotype': "Proliferation"  # All start as proliferative
+                                })
+                                cells_placed += 1
+                    if cells_placed >= initial_count:
+                        break
                 if cells_placed >= initial_count:
                     break
-                
-                # Check if position is within radius
-                distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-                if distance <= radius:
-                    # Convert biological cell coordinates to FiPy coordinates
-                    # Scale from biological grid to FiPy grid
-                    fipy_x = int(x * fipy_nx / bio_nx)
-                    fipy_y = int(y * fipy_ny / bio_ny)
+        else:
+            # 2D circular placement
+            for x in range(max(0, center_x - radius), min(bio_nx, center_x + radius + 1)):
+                for y in range(max(0, center_y - radius), min(bio_ny, center_y + radius + 1)):
+                    if cells_placed >= initial_count:
+                        break
 
-                    # Ensure coordinates are within FiPy grid bounds
-                    fipy_x = max(0, min(fipy_nx - 1, fipy_x))
-                    fipy_y = max(0, min(fipy_ny - 1, fipy_y))
+                    # Check if position is within radius
+                    distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+                    if distance <= radius:
+                        # Convert biological cell coordinates to FiPy coordinates
+                        # Scale from biological grid to FiPy grid
+                        fipy_x = int(x * fipy_nx / bio_nx)
+                        fipy_y = int(y * fipy_ny / bio_ny)
 
-                    # Check for coordinate collisions
-                    fipy_pos = (fipy_x, fipy_y)
-                    if fipy_pos in used_positions:
-                        collision_count += 1
-                        if collision_count <= 5:
-                            print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) → fipy({fipy_x},{fipy_y}) already used!")
-                        continue  # Skip this cell to avoid overwriting
+                        # Ensure coordinates are within FiPy grid bounds
+                        fipy_x = max(0, min(fipy_nx - 1, fipy_x))
+                        fipy_y = max(0, min(fipy_ny - 1, fipy_y))
 
-                    used_positions.add(fipy_pos)
+                        # Check for coordinate collisions
+                        fipy_pos = (fipy_x, fipy_y)
+                        if fipy_pos in used_positions:
+                            collision_count += 1
+                            if collision_count <= 5:
+                                print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) → fipy({fipy_x},{fipy_y}) already used!")
+                            continue  # Skip this cell to avoid overwriting
 
-                    # Debug coordinate mapping for first few cells
-                    if cells_placed < 5:
-                        print(f"   Cell {cells_placed}: bio({x},{y}) → fipy({fipy_x},{fipy_y})")
+                        used_positions.add(fipy_pos)
 
-                    # No randomness - all cells start as Proliferation
-                    phenotype = "Proliferation"
+                        # Debug coordinate mapping for first few cells
+                        if cells_placed < 5:
+                            print(f"   Cell {cells_placed}: bio({x},{y}) → fipy({fipy_x},{fipy_y})")
 
-                    placements.append({
-                        'position': (fipy_x, fipy_y),  # Use FiPy coordinates
-                        'phenotype': phenotype,
-                        'bio_position': (x, y),  # Store biological position for debugging
-                        'bio_grid_size': (bio_nx, bio_ny)
-                    })
-                    cells_placed += 1
-            
-            if cells_placed >= initial_count:
-                break
+                        # No randomness - all cells start as Proliferation
+                        phenotype = "Proliferation"
+
+                        placements.append({
+                            'position': (fipy_x, fipy_y),  # Use FiPy coordinates
+                            'phenotype': phenotype,
+                            'bio_position': (x, y),  # Store biological position for debugging
+                            'bio_grid_size': (bio_nx, bio_ny)
+                        })
+                        cells_placed += 1
+                if cells_placed >= initial_count:
+                    break
         
         radius += 1
 
@@ -400,11 +447,28 @@ def initialize_cell_ages(population, config: Any = None):
     print(f"   🔬 {cells_can_proliferate}/{cells_updated} cells can proliferate immediately")
 
 
+def reset_metabolism_counters():
+    """
+    Reset the metabolism counting statistics.
+    Call this at the start of each simulation run.
+    """
+    if hasattr(calculate_cell_metabolism, 'call_count'):
+        calculate_cell_metabolism.call_count = 0
+        calculate_cell_metabolism.oxphos_count = 0
+        calculate_cell_metabolism.glyco_count = 0
+        calculate_cell_metabolism.both_count = 0
+        calculate_cell_metabolism.quiescent_count = 0
+        calculate_cell_metabolism.counted_cells = set()
+        print("🔄 Reset metabolism counters for new simulation")
+
+
 def custom_initialize_cell_ages(population, config: Any = None):
     """
     Hook-compatible version of initialize_cell_ages.
     Called via hook system to set initial cell ages.
     """
+    # Reset metabolism counters at start of simulation
+    reset_metabolism_counters()
     return initialize_cell_ages(population, config)
 
 
@@ -427,13 +491,14 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
             'EGFRD', 'FGFRD', 'cMETD', 'MCT1D', 'GLUT1D'
         ]}
 
-    # Simple progress counter
+    # Simple progress counter - reset at start of each simulation
     if not hasattr(calculate_cell_metabolism, 'call_count'):
         calculate_cell_metabolism.call_count = 0
         calculate_cell_metabolism.oxphos_count = 0
         calculate_cell_metabolism.glyco_count = 0
         calculate_cell_metabolism.both_count = 0
         calculate_cell_metabolism.quiescent_count = 0
+        calculate_cell_metabolism.counted_cells = set()  # Track which cells we've counted
 
     calculate_cell_metabolism.call_count += 1
 
@@ -491,19 +556,23 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     mito_atp = 1.0 if gene_states['mitoATP'] else 0.0
     glyco_atp = 1.0 if gene_states['glycoATP'] else 0.0
 
-    # Count cell types and show progress
-    if mito_atp and not glyco_atp:
-        calculate_cell_metabolism.oxphos_count += 1
-    elif glyco_atp and not mito_atp:
-        calculate_cell_metabolism.glyco_count += 1
-    elif mito_atp and glyco_atp:
-        calculate_cell_metabolism.both_count += 1
-    else:
-        calculate_cell_metabolism.quiescent_count += 1
+    # Count cell types only once per cell (avoid double counting across timesteps)
+    cell_id = cell_state.get('id', f'cell_{calculate_cell_metabolism.call_count}')
+    if cell_id not in calculate_cell_metabolism.counted_cells:
+        calculate_cell_metabolism.counted_cells.add(cell_id)
+        if mito_atp and not glyco_atp:
+            calculate_cell_metabolism.oxphos_count += 1
+        elif glyco_atp and not mito_atp:
+            calculate_cell_metabolism.glyco_count += 1
+        elif mito_atp and glyco_atp:
+            calculate_cell_metabolism.both_count += 1
+        else:
+            calculate_cell_metabolism.quiescent_count += 1
 
-    # Show progress every 1000 calls
-    if calculate_cell_metabolism.call_count % 1000 == 0:
-        print(f"📊 Step {calculate_cell_metabolism.call_count}: OXPHOS={calculate_cell_metabolism.oxphos_count}, Glyco={calculate_cell_metabolism.glyco_count}, Both={calculate_cell_metabolism.both_count}, Quiescent={calculate_cell_metabolism.quiescent_count}")
+    # Show progress every 1000 calls - DISABLED
+    # if calculate_cell_metabolism.call_count % 1000 == 0:
+    #     total_counted = len(calculate_cell_metabolism.counted_cells)
+    #     print(f"📊 Step {calculate_cell_metabolism.call_count}: OXPHOS={calculate_cell_metabolism.oxphos_count}, Glyco={calculate_cell_metabolism.glyco_count}, Both={calculate_cell_metabolism.both_count}, Quiescent={calculate_cell_metabolism.quiescent_count} (Total unique cells: {total_counted})")
 
     # NetLogo-style reaction term calculations using Michaelis-Menten kinetics
     atp_rate = 0.0
@@ -564,12 +633,12 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     reactions['Lactate'] = standalone_rate_mol_per_s
     reactions['Oxygen'] = -5.9e-21
     reactions['Glucose'] = -7.2e-21
-    # Debug logging - show gene states to verify gene network sharing bug fix
-    cell_id = cell_state.get('id', 'unknown')
-    if isinstance(cell_id, str) and len(cell_id) > 8:
-        cell_id = cell_id[:8]
-    if str(cell_id).endswith(('0', '1', '2', '3', '4')):
-        print(f"🧪 DEBUG Cell {cell_id}: Final lactate rate = {reactions['Lactate']:.3e} mol/s/cell, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+    # Debug logging - show gene states to verify gene network sharing bug fix - TURNED OFF
+    # cell_id = cell_state.get('id', 'unknown')
+    # if isinstance(cell_id, str) and len(cell_id) > 8:
+    #     cell_id = cell_id[:8]
+    # if str(cell_id).endswith(('0', '1', '2', '3', '4')):
+    #     print(f"🧪 DEBUG Cell {cell_id}: Final lactate rate = {reactions['Lactate']:.3e} mol/s/cell, mitoATP={mito_atp}, glycoATP={glyco_atp}")
 
     # Store ATP rate in cell state
     cell_state['atp_rate'] = atp_rate
@@ -848,7 +917,8 @@ def should_divide(cell, config: Any) -> bool:
     try:
         atp_rate = cell.state.metabolic_state['atp_rate']
         atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0
-        print(f"   ATP: rate={atp_rate:.2e}, max={max_atp_rate:.2e}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
+        # Debug output disabled for cleaner simulation output
+        # print(f"   ATP: rate={atp_rate:.2e}, max={max_atp_rate:.2e}, normalized={atp_rate_normalized:.4f}, threshold={atp_threshold}")
     except Exception as e:
         print(f"   ❌ ATP ERROR: {e}")
         print(f"   Cell state: {cell.state}")
@@ -860,10 +930,11 @@ def should_divide(cell, config: Any) -> bool:
     # This ensures metabolic decisions override gene network phenotype decisions
     if atp_rate_normalized > atp_threshold:
         cell.state.phenotype = "Proliferation"
-        print(f"   ATP check PASSED: {atp_rate_normalized:.4f} > {atp_threshold} - FORCING Proliferation")
+        # Debug output disabled for cleaner simulation output
+        # print(f"   ATP check PASSED: {atp_rate_normalized:.4f} > {atp_threshold} - FORCING Proliferation")
         # Update cell phenotype to proliferation (override gene network decision)
         cell.state = cell.state.with_updates(phenotype="Proliferation")
-        print(f"   DIVISION DECISION: TRUE (ATP override)")
+        # print(f"   DIVISION DECISION: TRUE (ATP override)")
         reason = f"ATP sufficient: {atp_rate_normalized:.3f} > {atp_threshold}"
         log_division_decision(cell.state.id, True, reason, cell_age, atp_rate_normalized, "Proliferation", atp_type)
         return True
@@ -871,14 +942,16 @@ def should_divide(cell, config: Any) -> bool:
     # If ATP is insufficient, check if we're already in proliferation state
     # (Allow continued proliferation if already started)
     if cell.state.phenotype == "Proliferation":
-        print(f"   ATP check FAILED but already Proliferation - allowing division")
-        print(f"   DIVISION DECISION: TRUE (already proliferating)")
+        # Debug output disabled for cleaner simulation output
+        # print(f"   ATP check FAILED but already Proliferation - allowing division")
+        # print(f"   DIVISION DECISION: TRUE (already proliferating)")
         reason = f"Already proliferating (ATP: {atp_rate_normalized:.3f})"
         log_division_decision(cell.state.id, True, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
         return True
 
-    print(f"   ATP check FAILED: {atp_rate_normalized:.4f} <= {atp_threshold}, phenotype: {cell.state.phenotype}")
-    print(f"   DIVISION DECISION: FALSE")
+    # Debug output disabled for cleaner simulation output
+    # print(f"   ATP check FAILED: {atp_rate_normalized:.4f} <= {atp_threshold}, phenotype: {cell.state.phenotype}")
+    # print(f"   DIVISION DECISION: FALSE")
     reason = f"ATP insufficient: {atp_rate_normalized:.3f} <= {atp_threshold}"
     log_division_decision(cell.state.id, False, reason, cell_age, atp_rate_normalized, current_phenotype, atp_type)
     return False
@@ -912,29 +985,25 @@ def get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
     glyco_active = gene_states.get('glycoATP', False)
     mito_active = gene_states.get('mitoATP', False)
 
-    # DEBUG: Print gene states for first few cells to see what's available - TURNED OFF
+    # DEBUG: Print gene states to see what's available - TURNED OFF
     # if not hasattr(get_cell_color, '_debug_count'):
     #     get_cell_color._debug_count = 0
-    # if get_cell_color._debug_count < 3:
-    #     print(f"🔍 GENE_STATES DEBUG: Available keys: {sorted(gene_states.keys())}")
-    #     print(f"🔍 GENE_STATES DEBUG: glycoATP={glyco_active}, mitoATP={mito_active}")
+    # if get_cell_color._debug_count < 10:
+    #     print(f"🎨 DEBUG Cell {cell.state.id[:8]}: glycoATP={glyco_active}, mitoATP={mito_active}, phenotype={actual_phenotype}")
     #     get_cell_color._debug_count += 1
 
-    # DEBUG: Print gene states for first few cells - TURNED OFF
-    # if not hasattr(get_cell_color, '_debug_count'):
-    #     get_cell_color._debug_count = 0
-    # if get_cell_color._debug_count < 5:
-    #     print(f"🎨 DEBUG Cell {cell.state.id}: glycoATP={glyco_active}, mitoATP={mito_active}, phenotype={actual_phenotype}")
-    #     get_cell_color._debug_count += 1
-
-    if glyco_active and not mito_active:
-        interior_color = "green"      # glycoATP only
-    elif not glyco_active and mito_active:
-        interior_color = "blue"       # mitoATP only
-    elif glyco_active and mito_active:
+    if glyco_active and mito_active:
         interior_color = "violet"     # mixed metabolism
+    elif glyco_active:
+        interior_color = "green"      # glycoATP only
+    elif mito_active:
+        interior_color = "blue"       # mitoATP only
     else:
         interior_color = "lightgray"  # none
+    
+    # Debug: Show color assignments for first few cells - TURNED OFF
+    # if get_cell_color._debug_count <= 10:
+    #     print(f"   → Assigned color: {interior_color}|{border_color}")
 
     # Return combined color info as a formatted string
     return f"{interior_color}|{border_color}"
@@ -945,6 +1014,9 @@ def final_report(population, local_environments, config: Any = None) -> None:
     Print comprehensive final report of all cells with their metabolic rates and states.
     Called at the end of simulation to provide detailed cell-by-cell analysis.
     """
+    # TURNED OFF - detailed cell report disabled
+    return
+
     print("🔬 CUSTOM FINAL REPORT FUNCTION CALLED!")
     print("\n" + "="*100)
     print("🔬 FINAL CELL METABOLIC REPORT")

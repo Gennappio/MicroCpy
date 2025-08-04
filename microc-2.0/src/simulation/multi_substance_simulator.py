@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Import FiPy for diffusion simulation
 try:
-    from fipy import Grid2D, CellVariable, DiffusionTerm, ImplicitSourceTerm
+    from fipy import Grid2D, Grid3D, CellVariable, DiffusionTerm, ImplicitSourceTerm
     FIPY_AVAILABLE = True
 except ImportError:
     FIPY_AVAILABLE = False
@@ -124,10 +124,17 @@ class MultiSubstanceSimulator:
         # Create FiPy mesh
         dx = self.config.domain.size_x.meters / self.config.domain.nx
         dy = self.config.domain.size_y.meters / self.config.domain.ny
-        
-        self.fipy_mesh = Grid2D(dx=dx, dy=dy, 
-                               nx=self.config.domain.nx, 
-                               ny=self.config.domain.ny)
+
+        if self.config.domain.dimensions == 3:
+            dz = self.config.domain.size_z.meters / self.config.domain.nz
+            self.fipy_mesh = Grid3D(dx=dx, dy=dy, dz=dz,
+                                   nx=self.config.domain.nx,
+                                   ny=self.config.domain.ny,
+                                   nz=self.config.domain.nz)
+        else:
+            self.fipy_mesh = Grid2D(dx=dx, dy=dy,
+                                   nx=self.config.domain.nx,
+                                   ny=self.config.domain.ny)
         
         # Create FiPy variables for each substance
         for name, substance_state in self.state.substances.items():
@@ -140,9 +147,15 @@ class MultiSubstanceSimulator:
             # Set boundary conditions
             if substance_state.config.boundary_type == "fixed":
                 # Original fixed boundary behavior - constant value on all boundaries
-                var.constrain(boundary_value, self.fipy_mesh.facesTop | 
-                             self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft | 
-                             self.fipy_mesh.facesRight)
+                if self.config.domain.dimensions == 3:
+                    var.constrain(boundary_value,
+                                 self.fipy_mesh.facesTop | self.fipy_mesh.facesBottom |
+                                 self.fipy_mesh.facesLeft | self.fipy_mesh.facesRight |
+                                 self.fipy_mesh.facesFront | self.fipy_mesh.facesBack)
+                else:
+                    var.constrain(boundary_value, self.fipy_mesh.facesTop |
+                                 self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft |
+                                 self.fipy_mesh.facesRight)
             elif substance_state.config.boundary_type == "gradient":
                 # New gradient boundary type - custom gradient setup
                 self._apply_custom_gradient_boundary_conditions(var, name)
@@ -388,14 +401,23 @@ class MultiSubstanceSimulator:
                                           substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> np.ndarray:
         """Create source/sink field from cell reactions (no config access!)"""
 
-        nx, ny = self.config.domain.nx, self.config.domain.ny
-        source_field = np.zeros(nx * ny)
+        if self.config.domain.dimensions == 3:
+            nx, ny, nz = self.config.domain.nx, self.config.domain.ny, self.config.domain.nz
+            source_field = np.zeros(nx * ny * nz)
+        else:
+            nx, ny = self.config.domain.nx, self.config.domain.ny
+            source_field = np.zeros(nx * ny)
 
-        # Calculate mesh cell volume (grid spacing × grid spacing × configurable height)
+        # Calculate mesh cell volume
         dx = self.config.domain.size_x.meters / self.config.domain.nx
         dy = self.config.domain.size_y.meters / self.config.domain.ny
-        cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
-        mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
+
+        if self.config.domain.dimensions == 3:
+            dz = self.config.domain.size_z.meters / self.config.domain.nz
+            mesh_cell_volume = dx * dy * dz  # m³ (true 3D volume)
+        else:
+            cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
+            mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
 
         # Optional debug output for cell height effect (uncomment for debugging)
         # print(f"🔍 CELL HEIGHT DEBUG:")
@@ -404,13 +426,27 @@ class MultiSubstanceSimulator:
         # print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
         # print(f"   Grid spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
 
-        for (x_pos, y_pos), reactions in substance_reactions.items():
-            # Convert to grid coordinates
-            x, y = int(x_pos), int(y_pos)
+        for position, reactions in substance_reactions.items():
+            # Handle both 2D and 3D positions
+            if len(position) == 2:
+                x_pos, y_pos = position
+                x, y = int(x_pos), int(y_pos)
+                z = 0  # Default for 2D
 
-            if 0 <= x < nx and 0 <= y < ny:
-                # Convert to FiPy index (Fortran/column-major order to match reshape)
-                fipy_idx = x * ny + y
+                if 0 <= x < nx and 0 <= y < ny:
+                    # Convert to FiPy index (Fortran/column-major order to match reshape)
+                    fipy_idx = x * ny + y
+                else:
+                    continue
+            else:
+                x_pos, y_pos, z_pos = position
+                x, y, z = int(x_pos), int(y_pos), int(z_pos)
+
+                if 0 <= x < nx and 0 <= y < ny and 0 <= z < nz:
+                    # Convert to FiPy index for 3D (Fortran/column-major order)
+                    fipy_idx = x * ny * nz + y * nz + z
+                else:
+                    continue
 
                 # Get reaction rate for this substance (from custom metabolism function)
                 # Some substances may not have reactions defined (e.g., EGF, TGFA)

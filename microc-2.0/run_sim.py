@@ -335,8 +335,13 @@ def setup_simulation(config, args, custom_functions_path=None):
         custom_functions.initialize_gene_network(gene_network, config)
 
     # Create cell population with config for threshold-based gene inputs
+    if config.domain.dimensions == 3:
+        grid_size = (config.domain.nx, config.domain.ny, config.domain.nz)
+    else:
+        grid_size = (config.domain.nx, config.domain.ny)
+
     population = CellPopulation(
-        grid_size=(config.domain.nx, config.domain.ny),
+        grid_size=grid_size,
         gene_network=gene_network,
         custom_functions_module=custom_functions,
         config=config
@@ -378,6 +383,37 @@ def setup_simulation(config, args, custom_functions_path=None):
         custom_functions.initialize_cell_ages(population, config)
 
     return mesh_manager, simulator, gene_network, population
+
+def print_concise_status(step, population):
+    """Print concise one-line status with metabolic breakdown"""
+    # Get metabolic state counts
+    metabolic_counts = {
+        'mitoATP': 0,
+        'glycoATP': 0,
+        'Both': 0,
+        'None': 0
+    }
+
+    total_cells = 0
+    for cell in population.state.cells.values():
+        total_cells += 1
+        if hasattr(cell.state, 'gene_states'):
+            mito_atp = cell.state.gene_states.get('mitoATP', False)
+            glyco_atp = cell.state.gene_states.get('glycoATP', False)
+
+            if mito_atp and glyco_atp:
+                metabolic_counts['Both'] += 1
+            elif mito_atp:
+                metabolic_counts['mitoATP'] += 1
+            elif glyco_atp:
+                metabolic_counts['glycoATP'] += 1
+            else:
+                metabolic_counts['None'] += 1
+        else:
+            metabolic_counts['None'] += 1
+
+    # Print one-line status
+    print(f"📊 Step {step}: mitoATP={metabolic_counts['mitoATP']}, glycoATP={metabolic_counts['glycoATP']}, Both={metabolic_counts['Both']}, None={metabolic_counts['None']} (Total: {total_cells})")
 
 def print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time):
     """Print detailed simulation status"""
@@ -640,11 +676,18 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
                     )
                     print(f"   ✅ {substance_name} heatmap: {plot_path.name}")
 
-        # Detailed status printing based on status interval
+        # Concise status printing based on status interval
         should_print_status = (step > 0 and
                               step % config.output.status_print_interval == 0 and
                               not args.verbose)  # Don't duplicate if already verbose
         if should_print_status:
+            print_concise_status(step, population)
+
+        # Detailed status printing for verbose mode
+        should_print_detailed = (step > 0 and
+                                step % config.output.status_print_interval == 0 and
+                                args.verbose)
+        if should_print_detailed:
             print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time)
             # Print ATP statistics at status intervals
             population.print_atp_statistics()
@@ -780,7 +823,7 @@ def generate_plots(config, results, simulator, population, args):
 
 def main():
     """Main simulation runner"""
-    print("🧬 MicroC 2.0 - Generic Simulation Runner")
+    print("MicroC 2.0 - Generic Simulation Runner")
     print("=" * 50)
     
     # Parse arguments

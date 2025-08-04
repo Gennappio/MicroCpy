@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional, Union
 import numpy as np
 
 
@@ -49,7 +49,7 @@ class ICellPopulation(ABC):
     """Interface for cell population management"""
     
     @abstractmethod
-    def add_cell(self, position: Tuple[int, int], phenotype: str = "normal") -> bool:
+    def add_cell(self, position: Union[Tuple[int, int], Tuple[int, int, int]], phenotype: str = "normal") -> bool:
         """Add cell at lattice position"""
         pass
     
