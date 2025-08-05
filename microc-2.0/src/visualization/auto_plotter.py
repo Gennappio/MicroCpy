@@ -68,12 +68,24 @@ class AutoPlotter:
     def plot_substance_heatmap(self, substance_name: str, concentrations: np.ndarray,
                               cell_positions: List[Tuple[int, int]], time_point: float,
                               config_name: str = "unknown", population=None, title_suffix: str = "",
-                              is_initial: bool = False, is_final: bool = False):
+                              is_initial: bool = False, is_final: bool = False, quiet: bool = False):
         """Plot concentration heatmap for a single substance with detailed debugging"""
+
+        # Handle 3D data by taking a middle slice
+        if len(concentrations.shape) == 3:
+            # Take middle slice in Z direction for 3D data
+            middle_z = concentrations.shape[0] // 2
+            plot_data = concentrations[middle_z, :, :]
+            slice_info = f" (Z-slice {middle_z}/{concentrations.shape[0]-1})"
+        else:
+            # Use 2D data as-is
+            plot_data = concentrations
+            slice_info = ""
 
         # DEBUG: Print actual concentration values
         # print(f"🔍 DEBUG {substance_name} heatmap:")
         # print(f"   Array shape: {concentrations.shape}")
+        # print(f"   Plot data shape: {plot_data.shape}")
         # print(f"   Array dtype: {concentrations.dtype}")
         # print(f"   Raw min: {concentrations.min():.8f}")
         # print(f"   Raw max: {concentrations.max():.8f}")
@@ -83,21 +95,23 @@ class AutoPlotter:
         fig, ax = plt.subplots(figsize=(12, 10))
 
         # Create heatmap with explicit vmin/vmax to fix colorbar
-        vmin = concentrations.min()
-        vmax = concentrations.max()
+        vmin = plot_data.min()
+        vmax = plot_data.max()
 
         # Fix for uniform data: add small epsilon to prevent vmin=vmax colormap issues
         if vmax - vmin < 1e-10:  # Essentially uniform data
             epsilon = max(abs(vmin) * 1e-6, 1e-10)  # Small relative epsilon
             vmin = vmin - epsilon
             vmax = vmax + epsilon
-            print(f"   ⚠️  Uniform data detected, adding epsilon: ±{epsilon:.2e}")
+            if not quiet:
+                print(f"   ⚠️  Uniform data detected, adding epsilon: ±{epsilon:.2e}")
 
         # Additional debugging for the plotting values
-        print(f"   Plot vmin: {vmin:.8f}")
-        print(f"   Plot vmax: {vmax:.8f}")
+        if not quiet:
+            print(f"   Plot vmin: {vmin:.8f}")
+            print(f"   Plot vmax: {vmax:.8f}")
 
-        im = ax.imshow(concentrations, cmap='viridis', origin='lower',
+        im = ax.imshow(plot_data, cmap='viridis', origin='lower',
                       extent=[0, self.config.domain.size_x.value,
                              0, self.config.domain.size_y.value],
                       vmin=vmin, vmax=vmax)
@@ -106,16 +120,17 @@ class AutoPlotter:
         threshold_value = self._get_threshold_for_substance(substance_name)
         if threshold_value is not None:
             # Create coordinate grids for contour
-            x_coords = np.linspace(0, self.config.domain.size_x.value, concentrations.shape[1])
-            y_coords = np.linspace(0, self.config.domain.size_y.value, concentrations.shape[0])
+            x_coords = np.linspace(0, self.config.domain.size_x.value, plot_data.shape[1])
+            y_coords = np.linspace(0, self.config.domain.size_y.value, plot_data.shape[0])
             X, Y = np.meshgrid(x_coords, y_coords)
 
             # Add threshold contour line
-            threshold_contour = ax.contour(X, Y, concentrations, levels=[threshold_value],
+            threshold_contour = ax.contour(X, Y, plot_data, levels=[threshold_value],
                                          colors=['red'], linewidths=2, linestyles='-')
             # Add threshold label
             ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
-            print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
+            if not quiet:
+                print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
 
         # Add colorbar with FORCED correct range
         cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -139,19 +154,22 @@ class AutoPlotter:
         cell_colors_used = {}
         if cell_positions and population:
             # Use biological cell diameter (cell_height parameter), not grid spacing
-            cell_diameter = self.config.domain.cell_height.value  # 20 μm for biological cells
-            grid_spacing = self.config.domain.size_x.value / self.config.domain.nx  # 10 μm for FiPy grid
+            cell_diameter = self.config.domain.cell_height.value  # 5.0 μm for biological cells
+
+            # IMPORTANT: Cells are positioned on biological grid, not FiPy grid!
+            # Biological cell spacing = cell_height = 5.0 μm
+            # FiPy grid spacing = domain_size / nx = 20.0 μm
+            biological_cell_spacing = self.config.domain.cell_height.value  # 5.0 μm
 
             # Get cell data with phenotypes and colors
             cell_data = population.get_cell_positions()
 
-
             cell_counter = 0
             for (x, y), phenotype in cell_data:
                 cell_counter += 1
-                # Convert grid coordinates to physical coordinates
-                phys_x = (x + 0.5) * grid_spacing
-                phys_y = (y + 0.5) * grid_spacing
+                # Cell positions are on biological grid, convert using biological spacing
+                phys_x = (x + 0.5) * biological_cell_spacing
+                phys_y = (y + 0.5) * biological_cell_spacing
 
                 # Get cell color from custom function if available
                 interior_color = 'lightgray'  # default interior
@@ -245,10 +263,10 @@ class AutoPlotter:
         elif cell_positions:
             # Fallback for when population is not available
             cell_diameter = self.config.domain.cell_height.value  # Biological cell diameter
-            grid_spacing = self.config.domain.size_x.value / self.config.domain.nx  # Grid spacing
+            biological_cell_spacing = self.config.domain.cell_height.value  # Use biological spacing, not FiPy spacing
             for x, y in cell_positions:
-                phys_x = (x + 0.5) * grid_spacing
-                phys_y = (y + 0.5) * grid_spacing
+                phys_x = (x + 0.5) * biological_cell_spacing
+                phys_y = (y + 0.5) * biological_cell_spacing
                 circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
                                       color='red', alpha=0.7, linewidth=2, fill=False)
                 ax.add_patch(circle)
@@ -268,9 +286,9 @@ class AutoPlotter:
             cell_count = len(cell_positions)
             print(f"🔍 TITLE DEBUG: Using cell_positions count: {cell_count}")
 
-        detailed_title = (f'{substance_name} Distribution at t = {time_point:.3f} {title_suffix}\n'
+        detailed_title = (f'{substance_name} Distribution at t = {time_point:.3f} {title_suffix}{slice_info}\n'
                          f'Config: {config_name} | Domain: {domain_info} | Grid: {grid_info}\n'
-                         f'Range: {vmin:.6f} - {vmax:.6f} mM | Mean: {concentrations.mean():.6f} mM | '
+                         f'Range: {vmin:.6f} - {vmax:.6f} mM | Mean: {plot_data.mean():.6f} mM | '
                          f'Cells: {cell_count}')
 
         ax.set_title(detailed_title, fontsize=11, pad=20)
@@ -315,7 +333,7 @@ class AutoPlotter:
 
                 interior_legend = ax.legend(handles=interior_elements, loc='upper left',
                                           bbox_to_anchor=(0, 1),
-                                          title='🔋 Metabolic States (Interior)', fontsize=9,
+                                          title='⚡ Metabolic States (Interior)', fontsize=9,
                                           title_fontsize=10, frameon=True, fancybox=True,
                                           shadow=True, facecolor='white', edgecolor='black',
                                           framealpha=0.9)
@@ -332,13 +350,14 @@ class AutoPlotter:
 
                 border_legend = ax.legend(handles=border_elements, loc='upper left',
                                         bbox_to_anchor=(0, 0.7),
-                                        title='🧬 Phenotypes (Border)', fontsize=9,
+                                        title='◉ Phenotypes (Border)', fontsize=9,
                                         title_fontsize=10, frameon=True, fancybox=True,
                                         shadow=True, facecolor='white', edgecolor='black',
                                         framealpha=0.9)
                 border_legend.get_title().set_fontweight('bold')
 
-            print(f"🎨 Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
+            if not quiet:
+                print(f"🎨 Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
 
         # Add text box with additional details including grid info
         grid_spacing = domain_x / nx
