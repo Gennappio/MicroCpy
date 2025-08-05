@@ -334,11 +334,21 @@ def setup_simulation(config, args, custom_functions_path=None):
     if custom_functions and hasattr(custom_functions, 'initialize_gene_network'):
         custom_functions.initialize_gene_network(gene_network, config)
 
-    # Create cell population with config for threshold-based gene inputs
+    # Create cell population with biological cell grid size (not FiPy grid size)
+    # Calculate biological grid based on cell_height
+    domain_size_um = config.domain.size_x.micrometers
+    cell_height_um = config.domain.cell_height.micrometers
+    bio_nx = int(domain_size_um / cell_height_um)
+    bio_ny = int(domain_size_um / cell_height_um)
+
     if config.domain.dimensions == 3:
-        grid_size = (config.domain.nx, config.domain.ny, config.domain.nz)
+        bio_nz = int(domain_size_um / cell_height_um)
+        grid_size = (bio_nx, bio_ny, bio_nz)
     else:
-        grid_size = (config.domain.nx, config.domain.ny)
+        grid_size = (bio_nx, bio_ny)
+
+    print(f"   🔍 Population grid: {grid_size} (biological cell grid)")
+    print(f"   🔍 FiPy grid: {(config.domain.nx, config.domain.ny)} (for substance diffusion)")
 
     population = CellPopulation(
         grid_size=grid_size,
@@ -659,6 +669,7 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
             plotter = AutoPlotter(config, config.plots_dir)
 
             # Generate substance heatmaps for current state
+            plot_count = 0
             for substance_name in config.substances.keys():
                 if substance_name in simulator.state.substances:
                     concentrations = simulator.state.substances[substance_name].concentrations
@@ -672,9 +683,11 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
                         time_point=current_time,
                         config_name=Path(args.config_file).stem,
                         population=population,
-                        title_suffix=f"(t={current_time:.3f})"
+                        title_suffix=f"(t={current_time:.3f})",
+                        quiet=True  # Reduce verbosity for intermediate plots
                     )
-                    print(f"   ✅ {substance_name} heatmap: {plot_path.name}")
+                    plot_count += 1
+            print(f"   ✅ Generated {plot_count} plots at t={current_time:.3f}")
 
         # Concise status printing based on status interval
         should_print_status = (step > 0 and
