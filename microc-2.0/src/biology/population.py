@@ -649,18 +649,35 @@ class CellPopulation(ICellPopulation):
 
             # Update with current substance concentrations if provided
             if substance_concentrations:
+                # Convert biological cell position to FiPy grid position for concentration lookup
+                bio_x, bio_y = cell.state.position
+                fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
+                fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
+
+                # Ensure coordinates are within FiPy grid bounds
+                fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
+                fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
+                fipy_pos = (fipy_x, fipy_y)
+
                 for substance_name, conc_field in substance_concentrations.items():
-                    if cell.state.position in conc_field:
+                    if fipy_pos in conc_field:
                         # Update both capitalized and lowercase keys for compatibility
-                        local_env[substance_name.lower()] = conc_field[cell.state.position]
-                        local_env[substance_name] = conc_field[cell.state.position]
+                        local_env[substance_name.lower()] = conc_field[fipy_pos]
+                        local_env[substance_name] = conc_field[fipy_pos]
 
             # Use cell's metabolism calculation (which handles custom hooks internally)
             metabolism = cell.calculate_metabolism(local_env, self.config)
 
-            # Convert grid position to physical coordinates (would use mesh manager)
-            # For now, use grid coordinates as physical coordinates
-            physical_pos = (float(cell.state.position[0]), float(cell.state.position[1]))
+            # Convert biological cell grid position to physical coordinates
+            # Biological cells are positioned on a grid with spacing = cell_height
+            cell_height_m = self.config.domain.cell_height.meters
+            bio_x, bio_y = cell.state.position
+
+            # Convert to physical coordinates (center of biological cell)
+            physical_pos = (
+                (bio_x + 0.5) * cell_height_m,
+                (bio_y + 0.5) * cell_height_m
+            )
 
             reactions[physical_pos] = metabolism
 
@@ -695,11 +712,21 @@ class CellPopulation(ICellPopulation):
 
             # Update with current substance concentrations if provided
             if substance_concentrations:
+                # Convert biological cell position to FiPy grid position for concentration lookup
+                bio_x, bio_y = cell.state.position
+                fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
+                fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
+
+                # Ensure coordinates are within FiPy grid bounds
+                fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
+                fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
+                fipy_pos = (fipy_x, fipy_y)
+
                 for substance_name, conc_field in substance_concentrations.items():
-                    if cell.state.position in conc_field:
+                    if fipy_pos in conc_field:
                         # Update both capitalized and lowercase keys for compatibility
-                        local_env[substance_name.lower()] = conc_field[cell.state.position]
-                        local_env[substance_name] = conc_field[cell.state.position]
+                        local_env[substance_name.lower()] = conc_field[fipy_pos]
+                        local_env[substance_name] = conc_field[fipy_pos]
 
             # Calculate and update metabolic state using custom functions
             if hasattr(cell.custom_functions, 'update_cell_metabolic_state'):
@@ -731,11 +758,21 @@ class CellPopulation(ICellPopulation):
             local_env = self._get_local_environment(cell.state.position)
 
             # Update substance concentrations IF PROVIDED
+            # Convert biological cell position to FiPy grid position for concentration lookup
+            bio_x, bio_y = cell.state.position
+            fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
+            fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
+
+            # Ensure coordinates are within FiPy grid bounds
+            fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
+            fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
+            fipy_pos = (fipy_x, fipy_y)
+
             for substance_name, conc_field in substance_concentrations.items():
-                if cell.state.position in conc_field:
+                if fipy_pos in conc_field:
                     # Update both capitalized and lowercase keys to ensure consistency
-                    local_env[substance_name.lower()] = conc_field[cell.state.position]  # lowercase for gene inputs
-                    local_env[substance_name] = conc_field[cell.state.position]  # capitalized for compatibility
+                    local_env[substance_name.lower()] = conc_field[fipy_pos]  # lowercase for gene inputs
+                    local_env[substance_name] = conc_field[fipy_pos]  # capitalized for compatibility
 
             # DO NOT RESET gene network during regular updates - this destroys gene dynamics!
             # Gene network should only be reset during cell creation, not every update

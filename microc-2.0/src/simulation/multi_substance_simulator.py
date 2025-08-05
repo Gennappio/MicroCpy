@@ -32,14 +32,24 @@ from core.domain import MeshManager
 class SubstanceState:
     """State of a single substance"""
     name: str
-    concentrations: np.ndarray  # 2D array of concentrations
+    concentrations: np.ndarray  # 2D or 3D array of concentrations
     config: SubstanceConfig
     
     def get_concentration_at(self, position: Tuple[int, int]) -> float:
         """Get concentration at specific grid position"""
         x, y = position
-        if 0 <= x < self.concentrations.shape[1] and 0 <= y < self.concentrations.shape[0]:
-            return float(self.concentrations[y, x])
+
+        # Handle both 2D and 3D concentration arrays
+        if len(self.concentrations.shape) == 3:
+            # 3D case: take middle slice in Z direction
+            nz = self.concentrations.shape[0]
+            middle_z = nz // 2
+            if 0 <= x < self.concentrations.shape[2] and 0 <= y < self.concentrations.shape[1]:
+                return float(self.concentrations[middle_z, y, x])
+        else:
+            # 2D case: use as-is
+            if 0 <= x < self.concentrations.shape[1] and 0 <= y < self.concentrations.shape[0]:
+                return float(self.concentrations[y, x])
         return 0.0
 
 @dataclass
@@ -390,9 +400,14 @@ class MultiSubstanceSimulator:
             #         print(f"   📊 SMALL GRADIENTS detected")
 
             # Update our state
-            substance_state.concentrations = np.array(var.value).reshape(
-                (self.config.domain.ny, self.config.domain.nx), order='F'
-            )
+            if self.config.domain.dimensions == 3:
+                substance_state.concentrations = np.array(var.value).reshape(
+                    (self.config.domain.nz, self.config.domain.ny, self.config.domain.nx), order='F'
+                )
+            else:
+                substance_state.concentrations = np.array(var.value).reshape(
+                    (self.config.domain.ny, self.config.domain.nx), order='F'
+                )
 
             # Ensure non-negative concentrations
             substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
@@ -483,17 +498,27 @@ class MultiSubstanceSimulator:
     def get_substance_concentrations(self) -> Dict[str, Dict[Tuple[int, int], float]]:
         """Get all substance concentrations for cell updates"""
         concentrations = {}
-        
+
         for name, substance_state in self.state.substances.items():
             substance_concentrations = {}
-            ny, nx = substance_state.concentrations.shape
-            
+
+            # Handle both 2D and 3D concentration arrays
+            if len(substance_state.concentrations.shape) == 3:
+                # 3D case: take middle slice in Z direction
+                nz = substance_state.concentrations.shape[0]
+                middle_z = nz // 2
+                conc_slice = substance_state.concentrations[middle_z, :, :]
+            else:
+                # 2D case: use as-is
+                conc_slice = substance_state.concentrations
+
+            ny, nx = conc_slice.shape
             for y in range(ny):
                 for x in range(nx):
-                    substance_concentrations[(x, y)] = substance_state.concentrations[y, x]
-            
+                    substance_concentrations[(x, y)] = conc_slice[y, x]
+
             concentrations[name.lower()] = substance_concentrations
-        
+
         return concentrations
     
     def get_gene_network_inputs_for_position(self, position: Tuple[int, int]) -> Dict[str, float]:
@@ -525,11 +550,20 @@ class MultiSubstanceSimulator:
 
         for name, substance_state in self.state.substances.items():
             conc_field = {}
-            ny, nx = substance_state.concentrations.shape
 
-            for i in range(ny):
-                for j in range(nx):
-                    conc_field[(i, j)] = float(substance_state.concentrations[i, j])
+            # Handle both 2D and 3D concentration arrays
+            if len(substance_state.concentrations.shape) == 3:
+                # 3D case: take middle slice in Z direction
+                nz = substance_state.concentrations.shape[0]
+                middle_z = nz // 2
+                conc_slice = substance_state.concentrations[middle_z, :, :]
+            else:
+                # 2D case: use as-is
+                conc_slice = substance_state.concentrations
+
+            for i in range(conc_slice.shape[0]):
+                for j in range(conc_slice.shape[1]):
+                    conc_field[(i, j)] = float(conc_slice[i, j])
 
             concentrations[name] = conc_field
 
