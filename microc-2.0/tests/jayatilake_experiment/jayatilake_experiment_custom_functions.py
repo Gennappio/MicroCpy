@@ -331,36 +331,29 @@ def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, 
                     # Check if position is within radius
                     distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
                     if distance <= radius:
-                        # Convert biological cell coordinates to FiPy coordinates
-                        # Scale from biological grid to FiPy grid
-                        fipy_x = int(x * fipy_nx / bio_nx)
-                        fipy_y = int(y * fipy_ny / bio_ny)
+                        # Use biological cell coordinates directly - no conversion to FiPy grid!
+                        # The substance simulator will handle mapping between biological positions and FiPy mesh
+                        bio_pos = (x, y)
 
-                        # Ensure coordinates are within FiPy grid bounds
-                        fipy_x = max(0, min(fipy_nx - 1, fipy_x))
-                        fipy_y = max(0, min(fipy_ny - 1, fipy_y))
-
-                        # Check for coordinate collisions
-                        fipy_pos = (fipy_x, fipy_y)
-                        if fipy_pos in used_positions:
+                        # Check for coordinate collisions on biological grid
+                        if bio_pos in used_positions:
                             collision_count += 1
                             if collision_count <= 5:
-                                print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) → fipy({fipy_x},{fipy_y}) already used!")
+                                print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) already used!")
                             continue  # Skip this cell to avoid overwriting
 
-                        used_positions.add(fipy_pos)
+                        used_positions.add(bio_pos)
 
                         # Debug coordinate mapping for first few cells
                         if cells_placed < 5:
-                            print(f"   Cell {cells_placed}: bio({x},{y}) → fipy({fipy_x},{fipy_y})")
+                            print(f"   Cell {cells_placed}: bio({x},{y}) - using biological coordinates directly")
 
                         # No randomness - all cells start as Proliferation
                         phenotype = "Proliferation"
 
                         placements.append({
-                            'position': (fipy_x, fipy_y),  # Use FiPy coordinates
+                            'position': bio_pos,  # Use biological coordinates directly
                             'phenotype': phenotype,
-                            'bio_position': (x, y),  # Store biological position for debugging
                             'bio_grid_size': (bio_nx, bio_ny)
                         })
                         cells_placed += 1
