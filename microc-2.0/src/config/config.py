@@ -70,7 +70,15 @@ class OutputConfig:
     save_final_plots: bool = True      # Always save plots at the end
     save_initial_plots: bool = True    # Always save plots at the beginning
     status_print_interval: int = 10    # Print detailed status every N steps
-    
+    save_cellstate_interval: int = 0   # Save cell states every N steps (0 = disabled)
+
+@dataclass
+class InitialStateConfig:
+    """Configuration for initial state generation and loading"""
+    mode: str = "generate"              # "generate" or "load"
+    file_path: Optional[str] = None     # Path to initial state file (for load mode)
+    save_initial_state: bool = False    # Save initial state after generation
+
 @dataclass
 class SubstanceConfig:
     name: str
@@ -136,6 +144,7 @@ class MicroCConfig:
     gene_network_steps: int = 3  # Default propagation steps if no full gene network config
     environment: EnvironmentConfig = field(default_factory=EnvironmentConfig)
     output: OutputConfig = field(default_factory=OutputConfig)  # Output and saving configuration
+    initial_state: InitialStateConfig = field(default_factory=InitialStateConfig)  # Initial state configuration
     output_dir: Path = Path("results")
     plots_dir: Path = Path("plots")
     data_dir: Path = Path("data")
@@ -201,8 +210,18 @@ class MicroCConfig:
             save_plots_interval=data['output']['save_plots_interval'],
             save_final_plots=data['output']['save_final_plots'],
             save_initial_plots=data['output']['save_initial_plots'],
-            status_print_interval=data['output']['status_print_interval']
+            status_print_interval=data['output']['status_print_interval'],
+            save_cellstate_interval=data['output'].get('save_cellstate_interval', 0)
         )
+
+        # Initial state configuration (optional)
+        initial_state = InitialStateConfig()
+        if 'initial_state' in data:
+            initial_state = InitialStateConfig(
+                mode=data['initial_state'].get('mode', 'generate'),
+                file_path=data['initial_state'].get('file_path', None),
+                save_initial_state=data['initial_state'].get('save_initial_state', False)
+            )
         
         substances = {}
         for name, sub_data in data['substances'].items():
@@ -287,6 +306,7 @@ class MicroCConfig:
             gene_network_steps=data.get('gene_network_steps', gene_network.propagation_steps if gene_network else 3),
             environment=environment,
             output=output,
+            initial_state=initial_state,
             output_dir=Path(data['output_dir']),
             plots_dir=Path(data['plots_dir']),
             data_dir=Path(data['data_dir']),
@@ -394,8 +414,18 @@ class MicroCConfig:
             save_plots_interval=data['output']['save_plots_interval'],
             save_final_plots=data['output']['save_final_plots'],
             save_initial_plots=data['output']['save_initial_plots'],
-            status_print_interval=data['output']['status_print_interval']
+            status_print_interval=data['output']['status_print_interval'],
+            save_cellstate_interval=data['output'].get('save_cellstate_interval', 0)
         )
+
+        # Initial state configuration (optional)
+        initial_state = InitialStateConfig()
+        if 'initial_state' in data:
+            initial_state = InitialStateConfig(
+                mode=data['initial_state'].get('mode', 'generate'),
+                file_path=data['initial_state'].get('file_path', None),
+                save_initial_state=data['initial_state'].get('save_initial_state', False)
+            )
 
         return cls(
             domain=domain,
@@ -407,6 +437,7 @@ class MicroCConfig:
             gene_network=gene_network,
             gene_network_steps=data.get('gene_network_steps', gene_network.propagation_steps if gene_network else 3),
             output=output,
+            initial_state=initial_state,
             output_dir=Path(data['output_dir']),
             plots_dir=Path(data['plots_dir']),
             data_dir=Path(data['data_dir']),

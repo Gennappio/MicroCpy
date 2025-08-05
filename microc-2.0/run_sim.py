@@ -32,6 +32,7 @@ from simulation.multi_substance_simulator import MultiSubstanceSimulator
 from simulation.orchestrator import TimescaleOrchestrator
 from biology.population import CellPopulation
 from biology.gene_network import BooleanNetwork
+from src.io.initial_state import InitialStateManager, generate_initial_state_filename
 import importlib.util
 
 def load_custom_functions(custom_functions_path):
@@ -357,40 +358,65 @@ def setup_simulation(config, args, custom_functions_path=None):
         config=config
     )
 
-    if custom_functions and hasattr(custom_functions, 'initialize_cell_placement'):
-        # Try custom placement function with domain configuration
-        # Get initial_cell_count from custom_parameters
-        initial_cell_count = config.custom_parameters['initial_cell_count']
+    # Initialize cells based on configuration mode
+    initial_state_manager = InitialStateManager(config)
 
-        simulation_params = {
-            'domain_size_um': config.domain.size_x.micrometers,  # Assume square domain
-            'cell_height_um': config.domain.cell_height.micrometers,
-            'initial_cell_count': initial_cell_count
-        }
+    if config.initial_state.mode == "load" and config.initial_state.file_path:
+        # Load initial state from file
+        print(f"📂 Loading initial state from: {config.initial_state.file_path}")
+        try:
+            cell_data = initial_state_manager.load_initial_state(config.initial_state.file_path)
+            cells_loaded = population.initialize_cells(cell_data)
+            print(f"   ✅ Cells: {cells_loaded} (loaded from file)")
+        except Exception as e:
+            print(f"❌ Failed to load initial state: {e}")
+            print("   Falling back to generation mode...")
+            config.initial_state.mode = "generate"
 
-        placements = custom_functions.initialize_cell_placement(
-            grid_size=(config.domain.nx, config.domain.ny),
-            simulation_params=simulation_params,
-            config=config
-        )
-        for placement in placements:
-            population.add_cell(placement['position'], phenotype=placement['phenotype'])
-        print(f"   ✅ Cells: {len(placements)} (custom placement)")
-    else:
-        # Default placement - center cluster
-        center_x, center_y = config.domain.nx // 2, config.domain.ny // 2
-        default_positions = [
-            (center_x, center_y),
-            (center_x-1, center_y), (center_x+1, center_y),
-            (center_x, center_y-1), (center_x, center_y+1)
-        ]
-        for pos in default_positions:
-            population.add_cell(pos, phenotype="Proliferation") #TODO check proliferation
-        print(f"   ✅ Cells: {len(default_positions)} (default center placement)")
+    if config.initial_state.mode == "generate":
+        # Generate initial state using existing logic
+        if custom_functions and hasattr(custom_functions, 'initialize_cell_placement'):
+            # Try custom placement function with domain configuration
+            # Get initial_cell_count from custom_parameters
+            initial_cell_count = config.custom_parameters['initial_cell_count']
 
-    # Initialize cell ages to allow immediate proliferation
-    if custom_functions and hasattr(custom_functions, 'initialize_cell_ages'):
-        custom_functions.initialize_cell_ages(population, config)
+            simulation_params = {
+                'domain_size_um': config.domain.size_x.micrometers,  # Assume square domain
+                'cell_height_um': config.domain.cell_height.micrometers,
+                'initial_cell_count': initial_cell_count
+            }
+
+            placements = custom_functions.initialize_cell_placement(
+                grid_size=(config.domain.nx, config.domain.ny),
+                simulation_params=simulation_params,
+                config=config
+            )
+            for placement in placements:
+                population.add_cell(placement['position'], phenotype=placement['phenotype'])
+            print(f"   ✅ Cells: {len(placements)} (custom placement)")
+        else:
+            # Default placement - center cluster
+            center_x, center_y = config.domain.nx // 2, config.domain.ny // 2
+            default_positions = [
+                (center_x, center_y),
+                (center_x-1, center_y), (center_x+1, center_y),
+                (center_x, center_y-1), (center_x, center_y+1)
+            ]
+            for pos in default_positions:
+                population.add_cell(pos, phenotype="Proliferation") #TODO check proliferation
+            print(f"   ✅ Cells: {len(default_positions)} (default center placement)")
+
+        # Initialize cell ages to allow immediate proliferation
+        if custom_functions and hasattr(custom_functions, 'initialize_cell_ages'):
+            custom_functions.initialize_cell_ages(population, config)
+
+        # Save initial state if requested
+        if config.initial_state.save_initial_state:
+            output_dir = Path(config.output_dir) / "initial_states"
+            filename = generate_initial_state_filename(config, step=0)
+            file_path = output_dir / filename
+            initial_state_manager.save_initial_state(population.state.cells, file_path, step=0)
+            print(f"   💾 Saved initial state to: {file_path}")
 
     return mesh_manager, simulator, gene_network, population
 
@@ -658,6 +684,18 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
             gene_network.set_input_states(gene_inputs)
             gene_outputs = gene_network.step(1)
             results['gene_network_states'].append(gene_outputs)
+
+        # Save cell states based on cellstate saving interval
+        should_save_cellstate = (config.output.save_cellstate_interval > 0 and
+                                step % config.output.save_cellstate_interval == 0)
+        if should_save_cellstate:
+            print(f"\n💾 Saving cell states at step {step + 1}...")
+            initial_state_manager = InitialStateManager(config)
+            output_dir = Path(config.output_dir) / "cell_states"
+            filename = generate_initial_state_filename(config, step=step + 1)
+            file_path = output_dir / filename
+            initial_state_manager.save_initial_state(population.state.cells, file_path, step=step + 1)
+            print(f"   ✅ Saved {len(population.state.cells)} cell states to: {file_path}")
 
         # Generate intermediate plots based on plot interval
         should_generate_plots = (not args.no_plots and
