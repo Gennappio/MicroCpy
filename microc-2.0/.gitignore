@@ -195,3 +195,9 @@ docs/_build/
 # Profiling output
 *.profile
 *.pstats
+
+# Simulation output files that should not be tracked
+simulation_config.json
+substance_data.json
+time.npy
+fipy_oxygen_test.png
