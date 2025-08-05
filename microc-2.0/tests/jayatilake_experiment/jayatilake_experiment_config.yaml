@@ -10,17 +10,17 @@ log_simulation_status: true
 
 # Domain configuration - 3D spheroid simulation
 domain:
-  size_x: 1500.0
+  size_x: 500.0
   size_x_unit: "um"
-  size_y: 1500.0
+  size_y: 500.0
   size_y_unit: "um"
-  size_z: 1500.0
+  size_z: 500.0
   size_z_unit: "um"
-  nx: 75
-  ny: 75
-  nz: 75
+  nx: 25
+  ny: 25
+  nz: 25
   dimensions: 3
-  cell_height: 20.0          # Biological cell height/thickness (for 2D compatibility)
+  cell_height: 5.0          # Biological cell height/thickness (for 2D compatibility)
   cell_height_unit: "um"     # Can be changed to make cells thicker/thinner
 
 # Time configuration with multi-timescale orchestration
@@ -41,7 +41,7 @@ diffusion:
 # Output and saving configuration
 output:
   save_data_interval: 1000     # Save data every 10 steps
-  save_plots_interval: 1       # Generate plots every step to see transient states
+  save_plots_interval: 2       # Generate plots every 2 steps (reduced from 1 for less noise)
   save_final_plots: true     # Always save plots at the end
   save_initial_plots: true   # Always save plots at the beginning
   status_print_interval: 10  # Print detailed status every 10 steps
