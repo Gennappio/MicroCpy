@@ -26,7 +26,7 @@ domain:
 # Time configuration with multi-timescale orchestration
 time:
   dt: 0.1
-  end_time: 0.5  # Run longer to ensure multiple diffusion updates
+  end_time: 0.2  # Run longer to ensure multiple diffusion updates
   diffusion_step: 2      # Update diffusion every 2 steps (medium speed) CHANGE!
   intracellular_step: 1  # Update gene networks every step (fast)
   intercellular_step: 5  # Update cell interactions every 5 steps (slow)
@@ -45,6 +45,13 @@ output:
   save_final_plots: true     # Always save plots at the end
   save_initial_plots: true   # Always save plots at the beginning
   status_print_interval: 10  # Print detailed status every 10 steps
+  save_cellstate_interval: 2  # Save cell states every N steps (0 = disabled)
+
+# Initial state configuration
+initial_state:
+  mode: "generate"             # "generate" or "load"
+  file_path: null              # Path to initial state file (for load mode)
+  save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt
 substances:

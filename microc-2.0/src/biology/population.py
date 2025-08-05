@@ -5,7 +5,7 @@ Provides spatial population management with immutable state tracking.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Optional, Set, Union
+from typing import Dict, List, Tuple, Optional, Set, Union, Any
 import numpy as np
 import os
 import time
@@ -346,7 +346,93 @@ class CellPopulation(ICellPopulation):
         )
         
         return True
-    
+
+    def initialize_cells(self, cell_data: List[Dict[str, Any]]) -> int:
+        """
+        Initialize population with a list of cell data.
+
+        Args:
+            cell_data: List of dictionaries containing cell initialization data.
+                      Each dict should have 'position' and 'phenotype' keys.
+                      Optional keys: 'id', 'age', 'division_count', 'gene_states',
+                                   'metabolic_state', 'tq_wait_time'
+
+        Returns:
+            Number of cells successfully added
+        """
+        cells_added = 0
+
+        for cell_info in cell_data:
+            position = cell_info['position']
+            phenotype = cell_info.get('phenotype', 'Growth_Arrest')
+            cell_id = cell_info.get('id', None)
+
+            # Validate position
+            if not self._is_valid_position(position):
+                print(f"⚠️  Invalid position {position}, skipping cell")
+                continue
+
+            # Check if position is occupied
+            if position in self.state.spatial_grid:
+                print(f"⚠️  Position {position} occupied, skipping cell")
+                continue
+
+            # Check population limit
+            if self.state.total_cells >= self.default_params['max_population_size']:
+                print(f"⚠️  Population limit reached, stopping cell initialization")
+                break
+
+            # Create new cell
+            cell = Cell(position=position, phenotype=phenotype,
+                       cell_id=cell_id, custom_functions_module=self.custom_functions)
+
+            # Initialize gene network for new cell
+            self._initialize_cell_gene_network(cell)
+
+            # Apply additional cell state if provided
+            updates = {}
+            if 'age' in cell_info:
+                updates['age'] = float(cell_info['age'])
+            if 'division_count' in cell_info:
+                updates['division_count'] = int(cell_info['division_count'])
+            if 'tq_wait_time' in cell_info:
+                updates['tq_wait_time'] = float(cell_info['tq_wait_time'])
+            if 'metabolic_state' in cell_info:
+                updates['metabolic_state'] = cell_info['metabolic_state'].copy()
+
+            # Apply gene states if provided (overrides random initialization)
+            if 'gene_states' in cell_info and cell_info['gene_states']:
+                # Update the cell's gene network with loaded states
+                gene_network = cell.state.gene_network
+                if gene_network:
+                    for gene_name, state in cell_info['gene_states'].items():
+                        if gene_name in gene_network.nodes:
+                            gene_network.nodes[gene_name].current_state = bool(state)
+
+                updates['gene_states'] = cell_info['gene_states'].copy()
+
+            # Apply updates if any
+            if updates:
+                cell.state = cell.state.with_updates(**updates)
+
+            # Update population state
+            new_cells = self.state.cells.copy()
+            new_cells[cell.state.id] = cell
+
+            new_spatial_grid = self.state.spatial_grid.copy()
+            new_spatial_grid[position] = cell.state.id
+
+            self.state = self.state.with_updates(
+                cells=new_cells,
+                spatial_grid=new_spatial_grid,
+                total_cells=self.state.total_cells + 1
+            )
+
+            cells_added += 1
+
+        print(f"✅ Initialized {cells_added}/{len(cell_data)} cells")
+        return cells_added
+
     def attempt_division(self, parent_id: str) -> bool:
         """Attempt to divide a cell"""
         if parent_id not in self.state.cells:
