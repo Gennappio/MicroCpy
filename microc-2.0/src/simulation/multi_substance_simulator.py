@@ -18,6 +18,7 @@ from pathlib import Path
 # Import FiPy for diffusion simulation
 try:
     from fipy import Grid2D, Grid3D, CellVariable, DiffusionTerm, ImplicitSourceTerm
+    from fipy.solvers.scipy import LinearGMRESSolver as Solver
     FIPY_AVAILABLE = True
 except ImportError:
     FIPY_AVAILABLE = False
@@ -300,6 +301,13 @@ class MultiSubstanceSimulator:
             # Create source/sink terms from cell reactions
             source_field = self._create_source_field_from_reactions(name, substance_reactions)
 
+            # DEBUG: Check if source field has any non-zero values
+            non_zero_count = np.count_nonzero(source_field)
+            if non_zero_count > 0:
+                print(f"🔍 {name}: {non_zero_count} non-zero source terms, range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+            else:
+                print(f"⚠️  {name}: NO source terms! All zeros.")
+
             # DEBUG: Comprehensive debugging for lactate diffusion issue
             # if name == 'Lactate':
             #     print(f"\n🔍 DEBUGGING LACTATE DIFFUSION SOLVER:")
@@ -358,25 +366,18 @@ class MultiSubstanceSimulator:
             # Standalone: DiffusionTerm(D) == -source_var
             equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
-            # Solve for steady state
-            # Use iterative solver with convergence criteria
-            max_iterations = int(getattr(self.config.diffusion, 'max_iterations', 1000))
-            tolerance = float(getattr(self.config.diffusion, 'tolerance', 1e-6))
+            # Solve for steady state using the exact same approach as standalone script
+            solver = Solver(iterations=1000, tolerance=1e-6)
 
-            # Solve iteratively until convergence
-            residual = 1.0
-            iteration = 0
-
-            while residual > tolerance and iteration < max_iterations:
-                old_values = var.value.copy()
-                equation.solve(var=var)
-
-                # Calculate residual (relative change)
-                residual = np.max(np.abs(var.value - old_values)) / (np.max(np.abs(var.value)) + 1e-12)
-                iteration += 1
-
-            if iteration >= max_iterations:
-                print(f"Warning: {name} diffusion did not converge after {max_iterations} iterations (residual: {residual:.2e})")
+            try:
+                res = equation.solve(var=var, solver=solver)
+                # DEBUG: Uncomment to see solver results
+                # if res is not None:
+                #     print(f"✅ {name} solver finished. Final residual: {res:.2e}")
+                # else:
+                #     print(f"✅ {name} solver finished.")
+            except Exception as e:
+                print(f"💥 Error during {name} solve: {e}")
 
             # DEBUG: Show solver results for lactate
             # if name == 'Lactate':
@@ -416,11 +417,14 @@ class MultiSubstanceSimulator:
                                           substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> np.ndarray:
         """Create source/sink field from cell reactions (no config access!)"""
 
+
+
         if self.config.domain.dimensions == 3:
             nx, ny, nz = self.config.domain.nx, self.config.domain.ny, self.config.domain.nz
             source_field = np.zeros(nx * ny * nz)
         else:
             nx, ny = self.config.domain.nx, self.config.domain.ny
+            nz = 1  # For 2D case
             source_field = np.zeros(nx * ny)
 
         # Calculate mesh cell volume
@@ -445,17 +449,37 @@ class MultiSubstanceSimulator:
             # Handle both 2D and 3D positions
             if len(position) == 2:
                 x_pos, y_pos = position
-                x, y = int(x_pos), int(y_pos)
+
+                # Convert physical coordinates (meters) to grid indices
+                # Physical coordinates are in meters, need to convert to grid indices
+                dx = self.config.domain.size_x.meters / nx
+                dy = self.config.domain.size_y.meters / ny
+
+                x = int(x_pos / dx)
+                y = int(y_pos / dy)
                 z = 0  # Default for 2D
 
                 if 0 <= x < nx and 0 <= y < ny:
-                    # Convert to FiPy index (Fortran/column-major order to match reshape)
-                    fipy_idx = x * ny + y
+                    # Convert to FiPy index - use correct formula for 3D mesh even with 2D position
+                    if self.config.domain.dimensions == 3:
+                        # For 3D mesh: x * ny * nz + y * nz + z (z=0 for 2D positions)
+                        fipy_idx = x * ny * nz + y * nz + z
+                    else:
+                        # For 2D mesh: x * ny + y
+                        fipy_idx = x * ny + y
                 else:
                     continue
             else:
                 x_pos, y_pos, z_pos = position
-                x, y, z = int(x_pos), int(y_pos), int(z_pos)
+
+                # Convert physical coordinates (meters) to grid indices
+                dx = self.config.domain.size_x.meters / nx
+                dy = self.config.domain.size_y.meters / ny
+                dz = self.config.domain.size_z.meters / nz
+
+                x = int(x_pos / dx)
+                y = int(y_pos / dy)
+                z = int(z_pos / dz)
 
                 if 0 <= x < nx and 0 <= y < ny and 0 <= z < nz:
                     # Convert to FiPy index for 3D (Fortran/column-major order)
@@ -463,19 +487,21 @@ class MultiSubstanceSimulator:
                 else:
                     continue
 
-                # Get reaction rate for this substance (from custom metabolism function)
-                # Some substances may not have reactions defined (e.g., EGF, TGFA)
-                if substance_name not in reactions:
-                    continue  # Skip substances with no reactions
-                reaction_rate = reactions[substance_name]  # mol/s/cell
+            # Get reaction rate for this substance (from custom metabolism function)
+            # Some substances may not have reactions defined (e.g., EGF, TGFA)
+            if substance_name not in reactions:
+                continue  # Skip substances with no reactions
 
-                # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume
-                # Apply 2D adjustment coefficient (1/thickness) to account for 2D simulation of 3D system
-                volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
+            reaction_rate = reactions[substance_name]  # mol/s/cell
 
-                # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
-                final_rate = volumetric_rate * 1000.0
-                source_field[fipy_idx] = final_rate
+            # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume
+            # Apply 2D adjustment coefficient (1/thickness) to account for 2D simulation of 3D system
+            volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
+
+            # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
+            final_rate = volumetric_rate * 1000.0
+
+            source_field[fipy_idx] = final_rate
 
                 # DEBUG: Print reaction terms being passed to FiPy for lactate
                 # if substance_name == 'Lactate' and reaction_rate != 0.0:

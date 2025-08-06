@@ -103,7 +103,7 @@ class H5CellStateLoader:
         
         # Convert biological grid coordinates to physical coordinates
         positions = self.cell_data['positions']
-        cell_height = self.domain_info.get('cell_height', 5e-6)
+        cell_height = self.domain_info.get('cell_height', 20e-6)
 
         # Convert to meters
         x_meters = positions[:, 0] * cell_height
@@ -143,28 +143,20 @@ class FiPyH5Simulator:
     
     def _setup_domain(self):
         """Setup domain parameters from H5 data or defaults"""
-        if self.loader.domain_info:
-            # Use domain info from H5 file
-            self.domain_size = self.loader.domain_info.get('size_x', 500e-6)  # Default 500 μm
-            self.grid_size = (
-                self.loader.domain_info.get('nx', 25),
-                self.loader.domain_info.get('ny', 25),
-                self.loader.domain_info.get('nz', 25)
-            )
-            self.cell_height = self.loader.domain_info.get('cell_height', 5e-6)
-        else:
-            # Use defaults
-            self.domain_size = 500e-6  # 500 μm
-            self.grid_size = (25, 25, 25)
-            self.cell_height = 5e-6
-        
+        # Use correct parameters from jayatilake_experiment_config.yaml
+        # The H5 file was generated with these parameters
+        print("[*] Using correct domain parameters from jayatilake_experiment_config.yaml")
+        self.domain_size = 500e-6  # 500 μm (correct domain from config)
+        self.grid_size = (25, 25, 25)  # 25×25×25 grid (correct grid from config)
+        self.cell_height = 5e-6  # 5 μm (correct cell height from config)
+
         nx, ny, nz = self.grid_size
-        
+
         # Calculate mesh spacing
         dx = self.domain_size / nx
         dy = self.domain_size / ny
         dz = self.domain_size / nz
-        
+
         print(f"[*] Domain setup:")
         print(f"    Size: {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} μm")
         print(f"    Grid: {nx} x {ny} x {nz}")
@@ -217,7 +209,10 @@ class FiPyH5Simulator:
         
         mesh_cell_volume = dx * dy * dz
         cells_mapped = 0
-        
+
+        # Track cells per grid position for averaging
+        grid_cell_counts = np.zeros(self.mesh.numberOfCells)
+
         for i, (pos, phenotype) in enumerate(zip(positions, phenotypes)):
             # Convert biological grid coordinates to physical coordinates
             # Positions in H5 are stored as biological grid indices
@@ -241,10 +236,19 @@ class FiPyH5Simulator:
                 # Convert to mM/s (mol/s/cell → mM/s)
                 rate_mM_per_s = rate_mol_per_s / mesh_cell_volume * 1000
                 source_field[fipy_idx] += rate_mM_per_s
+                grid_cell_counts[fipy_idx] += 1
                 cells_mapped += 1
         
+        # Average the rates for grid cells with multiple biological cells
+        overlapping_cells = np.sum(grid_cell_counts > 1)
+        if overlapping_cells > 0:
+            print(f"[!] Found {overlapping_cells} grid cells with multiple biological cells")
+            # Average the consumption rates
+            mask = grid_cell_counts > 0
+            source_field[mask] = source_field[mask] / grid_cell_counts[mask]
+
         print(f"[+] Mapped {cells_mapped}/{len(positions)} cells for {substance_name}")
-        
+
         # Update source field
         self.substances[substance_name]['source_field'] = source_field
     
@@ -328,8 +332,29 @@ class FiPyH5Simulator:
         substance_var = self.substances[substance_name]['variable']
         nx, ny, nz = self.grid_size
         
-        # Extract middle Z slice
-        middle_z = nz // 2
+        # Find the Z slice with cells (check where cells are located)
+        if self.loader.cell_data:
+            positions = self.loader.cell_data['positions']
+            # Convert biological grid coordinates to FiPy grid indices
+            z_coords = []
+            for pos in positions:
+                z_meters = pos[2] * self.cell_height if len(pos) > 2 else 0
+                z_idx = int(z_meters / (self.domain_size / nz))
+                z_coords.append(z_idx)
+
+            # Find the Z slice with most cells
+            if z_coords:
+                unique_z, counts = np.unique(z_coords, return_counts=True)
+                middle_z = unique_z[np.argmax(counts)]
+                print(f"[*] Cell distribution by Z slice:")
+                for z, count in zip(unique_z, counts):
+                    print(f"    Z={z}: {count} cells")
+                print(f"[*] Using Z slice {middle_z} (contains {np.max(counts)} cells)")
+            else:
+                middle_z = nz // 2
+        else:
+            middle_z = nz // 2
+
         slice_data = np.zeros((nx, ny))
         
         for x in range(nx):
@@ -344,17 +369,19 @@ class FiPyH5Simulator:
         plt.title(f'3D FiPy H5 Reader - {substance_name} (Z={middle_z} slice)\n'
                   f'File: {self.loader.file_path.name}, '
                   f'Grid: {nx}×{ny}×{nz}, Cells: {len(self.loader.cell_data.get("ids", []))}')
-        plt.xlabel('X Grid Index')
-        plt.ylabel('Y Grid Index')
+        plt.xlabel('X Position (μm)')
+        plt.ylabel('Y Position (μm)')
         
         # Mark cell positions on the slice
         if self.loader.cell_data:
             positions = self.loader.cell_data['positions']
             phenotypes = self.loader.cell_data['phenotypes']
-            
+
             dx = self.domain_size / nx
             dy = self.domain_size / ny
             dz = self.domain_size / nz
+
+            print(f"[*] Plotting cells on slice Z={middle_z}")
             
             # Get unique phenotypes and colors
             unique_phenotypes = list(set(phenotypes))
@@ -367,27 +394,23 @@ class FiPyH5Simulator:
                 
                 for i, (pos, pheno) in enumerate(zip(positions, phenotypes)):
                     if pheno == phenotype:
-                        # Convert biological grid coordinates to physical coordinates
-                        x_meters = pos[0] * self.cell_height
-                        y_meters = pos[1] * self.cell_height
-                        z_meters = pos[2] * self.cell_height if len(pos) > 2 else 0
+                        # Convert biological grid coordinates to physical coordinates (micrometers)
+                        x_um = pos[0] * (self.cell_height * 1e6)  # Convert to μm
+                        y_um = pos[1] * (self.cell_height * 1e6)  # Convert to μm
+                        z_um = pos[2] * (self.cell_height * 1e6) if len(pos) > 2 else 0
 
-                        # Convert to FiPy grid indices
-                        x = int(x_meters / dx)
-                        y = int(y_meters / dy)
-                        z = int(z_meters / dz)
-                        
-                        # Only show cells in the middle slice (±1 for visibility)
-                        if abs(z - middle_z) <= 1:
-                            cell_x_coords.append(x)
-                            cell_y_coords.append(y)
+                        # Show cells in the selected slice (±1 for visibility)
+                        if abs(z_um - middle_z * (self.domain_size * 1e6 / nz)) <= (self.cell_height * 1e6):
+                            cell_x_coords.append(x_um)
+                            cell_y_coords.append(y_um)
                 
                 if cell_x_coords:
-                    plt.scatter(cell_x_coords, cell_y_coords, 
-                              c=[phenotype_colors[phenotype]], 
-                              s=15, alpha=0.8, 
+                    plt.scatter(cell_x_coords, cell_y_coords,
+                              c=[phenotype_colors[phenotype]],
+                              s=15, alpha=0.8,
                               label=f'{phenotype} ({len(cell_x_coords)})',
                               edgecolors='black', linewidth=0.5)
+                    print(f"[*] Plotted {len(cell_x_coords)} {phenotype} cells")
             
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         
