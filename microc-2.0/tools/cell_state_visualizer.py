@@ -108,43 +108,81 @@ class CellStateVisualizer:
         if not self.cell_data:
             print("[!] No cell data available")
             return
-        
+
         positions = self.cell_data['positions']
         phenotypes = self.cell_data['phenotypes']
-        
+
+        # Convert biological grid coordinates to FiPy grid coordinates
+        # Use the same logic as H5 reader: discrete positions with Z-slice filtering
+        cell_height = 5e-6  # 5 μm for 3D simulations (from config files)
+        domain_size = 500e-6  # 500 μm domain (from config files)
+        nx = ny = nz = 25  # 25x25x25 grid (from config files)
+        dx = dy = dz = domain_size / 25
+
+        # Convert to discrete FiPy grid coordinates (same as H5 reader)
+        all_coords = []
+        z_coords = []
+
+        for pos in positions:
+            x_meters = pos[0] * cell_height
+            y_meters = pos[1] * cell_height
+            z_meters = pos[2] * cell_height if len(pos) > 2 else 0
+
+            x = int(x_meters / dx)
+            y = int(y_meters / dy)
+            z = int(z_meters / dz)
+
+            all_coords.append([x, y, z])
+            z_coords.append(z)
+
+        all_coords = np.array(all_coords)
+        z_coords = np.array(z_coords)
+
+        # Find the Z slice with most cells (same logic as H5 reader)
+        unique_z, counts = np.unique(z_coords, return_counts=True)
+        middle_z = unique_z[np.argmax(counts)]
+
+        # Filter cells in the displayed slice (±1 for visibility, same as H5 reader)
+        slice_mask = np.abs(z_coords - middle_z) <= 1
+        positions_fipy = all_coords[slice_mask][:, :2]  # Only X,Y coordinates
+
+        # Filter other data arrays to match
+        if len(phenotypes) == len(positions):
+            phenotypes = [phenotypes[i] for i in range(len(phenotypes)) if slice_mask[i]]
+
         fig, ax = plt.subplots(figsize=(12, 10))
-        
+
         if show_phenotypes:
             # Color by phenotype
             unique_phenotypes = list(set(phenotypes))
             colors = plt.cm.Set3(np.linspace(0, 1, len(unique_phenotypes)))
             phenotype_colors = {phenotype: colors[i] for i, phenotype in enumerate(unique_phenotypes)}
-            
+
             for phenotype in unique_phenotypes:
                 mask = np.array(phenotypes) == phenotype
-                pos_subset = positions[mask]
-                ax.scatter(pos_subset[:, 0], pos_subset[:, 1], 
-                          c=[phenotype_colors[phenotype]], 
+                pos_subset = positions_fipy[mask]
+                ax.scatter(pos_subset[:, 0], pos_subset[:, 1],
+                          c=[phenotype_colors[phenotype]],
                           label=f'{phenotype} ({np.sum(mask)})',
                           alpha=0.7, s=20)
-            
+
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         else:
             # Color by age
             ages = self.cell_data['ages']
-            scatter = ax.scatter(positions[:, 0], positions[:, 1], 
+            scatter = ax.scatter(positions_fipy[:, 0], positions_fipy[:, 1],
                                c=ages, cmap='viridis', alpha=0.7, s=20)
             plt.colorbar(scatter, label='Cell Age')
-        
-        ax.set_xlabel('X Position (m)')
-        ax.set_ylabel('Y Position (m)')
-        ax.set_title(f'Cell Positions - {self.file_path.name}\n'
-                    f'{len(positions)} cells, Step {self.metadata.get("step", "unknown")}')
+
+        ax.set_xlabel('X Grid Index')
+        ax.set_ylabel('Y Grid Index')
+        ax.set_title(f'Cell Positions - {self.file_path.name} (Z slice {middle_z}±1)\n'
+                    f'Showing {len(positions_fipy)} of {len(positions)} cells, Step {self.metadata.get("step", "unknown")}')
         ax.grid(True, alpha=0.3)
         ax.set_aspect('equal')
-        
+
         plt.tight_layout()
-        
+
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"[+] Saved plot: {save_path}")
@@ -161,42 +199,53 @@ class CellStateVisualizer:
         if positions.shape[1] < 3:
             print("[!] Not 3D data")
             return
-        
+
         phenotypes = self.cell_data['phenotypes']
-        
+
+        # Convert biological grid coordinates to FiPy grid coordinates
+        # Show actual continuous positions within the FiPy grid (not discrete grid centers)
+        cell_height = 5e-6  # 5 μm for 3D simulations (from config files)
+        domain_size = 500e-6  # 500 μm domain (from config files)
+        grid_size = 25  # 25x25x25 grid (from config files)
+        dx = domain_size / grid_size
+
+        # Two-step conversion: biological grid → physical → FiPy continuous coordinates
+        positions_physical = positions * cell_height  # Convert to meters
+        positions_fipy = positions_physical / dx  # Convert to FiPy grid coordinates (continuous)
+
         fig = plt.figure(figsize=(12, 10))
         ax = fig.add_subplot(111, projection='3d')
-        
+
         if show_phenotypes:
             # Color by phenotype
             unique_phenotypes = list(set(phenotypes))
             colors = plt.cm.Set3(np.linspace(0, 1, len(unique_phenotypes)))
             phenotype_colors = {phenotype: colors[i] for i, phenotype in enumerate(unique_phenotypes)}
-            
+
             for phenotype in unique_phenotypes:
                 mask = np.array(phenotypes) == phenotype
-                pos_subset = positions[mask]
+                pos_subset = positions_fipy[mask]
                 ax.scatter(pos_subset[:, 0], pos_subset[:, 1], pos_subset[:, 2],
-                          c=[phenotype_colors[phenotype]], 
+                          c=[phenotype_colors[phenotype]],
                           label=f'{phenotype} ({np.sum(mask)})',
                           alpha=0.7, s=20)
-            
+
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         else:
             # Color by age
             ages = self.cell_data['ages']
-            scatter = ax.scatter(positions[:, 0], positions[:, 1], positions[:, 2],
+            scatter = ax.scatter(positions_fipy[:, 0], positions_fipy[:, 1], positions_fipy[:, 2],
                                c=ages, cmap='viridis', alpha=0.7, s=20)
             plt.colorbar(scatter, label='Cell Age')
-        
-        ax.set_xlabel('X Position (m)')
-        ax.set_ylabel('Y Position (m)')
-        ax.set_zlabel('Z Position (m)')
+
+        ax.set_xlabel('X Grid Coordinate')
+        ax.set_ylabel('Y Grid Coordinate')
+        ax.set_zlabel('Z Grid Coordinate')
         ax.set_title(f'3D Cell Positions - {self.file_path.name}\n'
                     f'{len(positions)} cells, Step {self.metadata.get("step", "unknown")}')
-        
+
         plt.tight_layout()
-        
+
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"💾 Saved plot: {save_path}")

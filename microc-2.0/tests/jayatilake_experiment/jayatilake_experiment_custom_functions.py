@@ -624,7 +624,7 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # So: 2.8e-2 * 8e-15 / 1000 = 2.24e-19 mol/s/cell
     standalone_rate_mol_per_s = +8.24e-20  # mol/s/cell (PRODUCTION - positive)
     reactions['Lactate'] = standalone_rate_mol_per_s
-    reactions['Oxygen'] = -5.9e-21
+    reactions['Oxygen'] = -5.9e-19
     reactions['Glucose'] = -7.2e-21
     # Debug logging - show gene states to verify gene network sharing bug fix - TURNED OFF
     # cell_id = cell_state.get('id', 'unknown')
