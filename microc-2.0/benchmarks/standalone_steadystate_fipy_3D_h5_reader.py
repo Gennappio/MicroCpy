@@ -105,10 +105,10 @@ class H5CellStateLoader:
         positions = self.cell_data['positions']
         cell_height = self.domain_info.get('cell_height', 20e-6)
 
-        # Convert to meters
-        x_meters = positions[:, 0] * cell_height
-        y_meters = positions[:, 1] * cell_height
-        z_meters = positions[:, 2] * cell_height if positions.shape[1] > 2 else np.zeros(len(positions))
+        # Convert to meters (biological grid coordinates × cell height)
+        x_meters = (positions[:, 0]-10) * cell_height  # X bio coords × 5μm
+        y_meters = positions[:, 1] * cell_height  # Y bio coords × 5μm
+        z_meters = positions[:, 2] * cell_height  # Z bio coords × 5μm
 
         return {
             'total_cells': len(self.cell_data['ids']),
@@ -185,8 +185,8 @@ class FiPyH5Simulator:
         print(f"    Diffusion coeff: {diffusion_coeff:.2e} m²/s")
         print(f"    Initial/boundary: {initial_value}/{boundary_value} mM")
     
-    def calculate_reaction_rates(self, substance_name: str):
-        """Calculate reaction rates based on cell phenotypes and gene states"""
+    def map_cells_to_grid(self, substance_name: str):
+        """Map cells from H5 file to FiPy grid with hardcoded lactate production"""
         if substance_name not in self.substances:
             print(f"[!] Substance {substance_name} not found")
             return
@@ -194,12 +194,16 @@ class FiPyH5Simulator:
         source_field = self.substances[substance_name]['source_field']
         source_field.fill(0)  # Reset
         
-        # Get cell data
-        positions = self.loader.cell_data['positions']
-        phenotypes = self.loader.cell_data['phenotypes']
-        
-        # Define reaction rates based on substance and phenotype
-        reaction_rates = self._get_reaction_rates(substance_name)
+        # Get cell data - APPLY SAME MODIFICATIONS AS SUMMARY
+        positions = self.loader.cell_data['positions'].copy()
+        positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset as in summary
+
+        # DEBUG: Verify we're using MODIFIED cells
+        print(f"[DEBUG] Using {len(positions)} cells from H5 file (MODIFIED)")
+        print(f"[DEBUG] Position range: X={positions[:, 0].min():.0f}-{positions[:, 0].max():.0f}, Y={positions[:, 1].min():.0f}-{positions[:, 1].max():.0f}")
+
+        # Simple hardcoded lactate production rate (same as working standalone)
+        lactate_production_rate = 2.8e-2  # mM/s (same as standalone_steadystate_fipy.py)
         
         # Map cells to FiPy grid
         nx, ny, nz = self.grid_size
@@ -207,13 +211,12 @@ class FiPyH5Simulator:
         dy = self.domain_size / ny
         dz = self.domain_size / nz
         
-        mesh_cell_volume = dx * dy * dz
         cells_mapped = 0
 
         # Track cells per grid position for averaging
         grid_cell_counts = np.zeros(self.mesh.numberOfCells)
 
-        for i, (pos, phenotype) in enumerate(zip(positions, phenotypes)):
+        for pos in positions:
             # Convert biological grid coordinates to physical coordinates
             # Positions in H5 are stored as biological grid indices
             x_meters = pos[0] * self.cell_height
@@ -224,18 +227,14 @@ class FiPyH5Simulator:
             x_idx = int(x_meters / dx)
             y_idx = int(y_meters / dy)
             z_idx = int(z_meters / dz)
-            
+
             # Check bounds
             if 0 <= x_idx < nx and 0 <= y_idx < ny and 0 <= z_idx < nz:
                 # Convert to FiPy index (column-major order)
                 fipy_idx = x_idx * ny * nz + y_idx * nz + z_idx
-                
-                # Get reaction rate for this phenotype
-                rate_mol_per_s = reaction_rates.get(phenotype, 0.0)
-                
-                # Convert to mM/s (mol/s/cell → mM/s)
-                rate_mM_per_s = rate_mol_per_s / mesh_cell_volume * 1000
-                source_field[fipy_idx] += rate_mM_per_s
+
+                # Use hardcoded lactate production rate (already in mM/s)
+                source_field[fipy_idx] += lactate_production_rate
                 grid_cell_counts[fipy_idx] += 1
                 cells_mapped += 1
         
@@ -249,35 +248,16 @@ class FiPyH5Simulator:
 
         print(f"[+] Mapped {cells_mapped}/{len(positions)} cells for {substance_name}")
 
+        # DEBUG: Show which FiPy grid cells have consumption
+        active_cells = np.where(source_field != 0)[0]
+        print(f"[DEBUG] {len(active_cells)} FiPy grid cells have consumption/production")
+        if len(active_cells) > 0:
+            print(f"[DEBUG] Source field range: {source_field.min():.2e} to {source_field.max():.2e} mM/s")
+
         # Update source field
         self.substances[substance_name]['source_field'] = source_field
     
-    def _get_reaction_rates(self, substance_name: str) -> Dict[str, float]:
-        """Get reaction rates for different phenotypes and substances"""
-        # Reaction rates in mol/s/cell (from MicroC parameters)
-        rates = {
-            'Lactate': {
-                'Proliferation': +8.24e-20,    # Production
-                'Growth_Arrest': +4.12e-20,   # Reduced production
-                'Apoptosis': +1.0e-20,        # Minimal production
-                'Necrosis': 0.0               # No production
-            },
-            'Oxygen': {
-                'Proliferation': -3.0e-17,    # Consumption
-                'Growth_Arrest': -1.5e-17,   # Reduced consumption
-                'Apoptosis': -0.5e-17,       # Minimal consumption
-                'Necrosis': 0.0              # No consumption
-            },
-            'Glucose': {
-                'Proliferation': -3.0e-15,    # Consumption
-                'Growth_Arrest': -1.5e-15,   # Reduced consumption
-                'Apoptosis': -0.5e-15,       # Minimal consumption
-                'Necrosis': 0.0              # No consumption
-            }
-        }
-        
-        return rates.get(substance_name, {})
-    
+
     def solve_substance(self, substance_name: str, max_iterations: int = 1000, 
                        tolerance: float = 1e-6):
         """Solve diffusion equation for a substance"""
@@ -334,7 +314,8 @@ class FiPyH5Simulator:
         
         # Find the Z slice with cells (check where cells are located)
         if self.loader.cell_data:
-            positions = self.loader.cell_data['positions']
+            positions = self.loader.cell_data['positions'].copy()
+            positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset
             # Convert biological grid coordinates to FiPy grid indices
             z_coords = []
             for pos in positions:
@@ -369,49 +350,43 @@ class FiPyH5Simulator:
         plt.title(f'3D FiPy H5 Reader - {substance_name} (Z={middle_z} slice)\n'
                   f'File: {self.loader.file_path.name}, '
                   f'Grid: {nx}×{ny}×{nz}, Cells: {len(self.loader.cell_data.get("ids", []))}')
-        plt.xlabel('X Position (μm)')
-        plt.ylabel('Y Position (μm)')
+        plt.xlabel('X Grid Coordinate')
+        plt.ylabel('Y Grid Coordinate')
         
         # Mark cell positions on the slice
         if self.loader.cell_data:
-            positions = self.loader.cell_data['positions']
-            phenotypes = self.loader.cell_data['phenotypes']
+            positions = self.loader.cell_data['positions'].copy()
+            positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset
 
             dx = self.domain_size / nx
-            dy = self.domain_size / ny
-            dz = self.domain_size / nz
 
             print(f"[*] Plotting cells on slice Z={middle_z}")
-            
-            # Get unique phenotypes and colors
-            unique_phenotypes = list(set(phenotypes))
-            colors = plt.cm.Set3(np.linspace(0, 1, len(unique_phenotypes)))
-            phenotype_colors = {p: colors[i] for i, p in enumerate(unique_phenotypes)}
-            
-            for phenotype in unique_phenotypes:
-                cell_x_coords = []
-                cell_y_coords = []
-                
-                for i, (pos, pheno) in enumerate(zip(positions, phenotypes)):
-                    if pheno == phenotype:
-                        # Convert biological grid coordinates to physical coordinates (micrometers)
-                        x_um = pos[0] * (self.cell_height * 1e6)  # Convert to μm
-                        y_um = pos[1] * (self.cell_height * 1e6)  # Convert to μm
-                        z_um = pos[2] * (self.cell_height * 1e6) if len(pos) > 2 else 0
 
-                        # Show cells in the selected slice (±1 for visibility)
-                        if abs(z_um - middle_z * (self.domain_size * 1e6 / nz)) <= (self.cell_height * 1e6):
-                            cell_x_coords.append(x_um)
-                            cell_y_coords.append(y_um)
-                
-                if cell_x_coords:
-                    plt.scatter(cell_x_coords, cell_y_coords,
-                              c=[phenotype_colors[phenotype]],
-                              s=15, alpha=0.8,
-                              label=f'{phenotype} ({len(cell_x_coords)})',
-                              edgecolors='black', linewidth=0.5)
-                    print(f"[*] Plotted {len(cell_x_coords)} {phenotype} cells")
-            
+            cell_x_coords = []
+            cell_y_coords = []
+
+            for pos in positions:
+                # Two-step conversion: biological grid → physical → FiPy continuous coordinates
+                # (Same logic as cell_state_visualizer.py)
+                pos_physical = pos * self.cell_height  # Convert to meters
+                pos_fipy = pos_physical / dx  # Convert to FiPy grid coordinates (continuous)
+
+                x = pos_fipy[0]
+                y = pos_fipy[1]
+                z = pos_fipy[2] if len(pos_fipy) > 2 else 0
+
+                # Show cells in the selected slice (±1 for visibility)
+                if abs(z - middle_z) <= 1:
+                    cell_x_coords.append(x)
+                    cell_y_coords.append(y)
+
+            if cell_x_coords:
+                plt.scatter(cell_x_coords, cell_y_coords,
+                          c='red', s=15, alpha=0.8,
+                          label=f'Cells ({len(cell_x_coords)})',
+                          edgecolors='black', linewidth=0.5)
+                print(f"[*] Plotted {len(cell_x_coords)} cells")
+
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         
         plt.tight_layout()
@@ -448,14 +423,6 @@ Examples:
     )
     
     parser.add_argument('h5_file', help='Path to the H5 cell state file')
-    parser.add_argument('--substance', choices=['Lactate', 'Oxygen', 'Glucose'], 
-                       default='Lactate', help='Substance to simulate (default: Lactate)')
-    parser.add_argument('--all-substances', action='store_true',
-                       help='Simulate all substances')
-    parser.add_argument('--save-plots', action='store_true',
-                       help='Save plots instead of showing them')
-    parser.add_argument('--output-dir', default='h5_simulation_results',
-                       help='Output directory for plots (default: h5_simulation_results)')
     
     args = parser.parse_args()
     
@@ -481,66 +448,34 @@ Examples:
         # Create simulator
         simulator = FiPyH5Simulator(loader)
         
-        # Define substances to simulate
-        substances_to_simulate = []
-        if args.all_substances:
-            substances_to_simulate = ['Lactate', 'Oxygen', 'Glucose']
-        else:
-            substances_to_simulate = [args.substance]
-        
-        # Substance parameters (from MicroC config)
-        substance_params = {
-            'Lactate': {
-                'diffusion_coeff': 1.8e-10,
-                'initial_value': 1.0,
-                'boundary_value': 1.0
-            },
-            'Oxygen': {
-                'diffusion_coeff': 1.0e-9,
-                'initial_value': 0.07,
-                'boundary_value': 0.07
-            },
-            'Glucose': {
-                'diffusion_coeff': 6.70e-11,
-                'initial_value': 5.0,
-                'boundary_value': 5.0
-            }
-        }
-        
         # Setup output directory
-        if args.save_plots:
-            output_path = Path(args.output_dir)
-            output_path.mkdir(exist_ok=True)
-            print(f"[*] Output directory: {output_path}")
-        
-        # Simulate each substance
-        for substance in substances_to_simulate:
-            print(f"\n{'='*40}")
-            print(f"Simulating {substance}")
-            print(f"{'='*40}")
-            
-            # Add substance
-            params = substance_params[substance]
-            simulator.add_substance(
-                substance,
-                params['diffusion_coeff'],
-                params['initial_value'],
-                params['boundary_value']
-            )
-            
-            # Calculate reaction rates
-            simulator.calculate_reaction_rates(substance)
-            
-            # Solve
-            result = simulator.solve_substance(substance)
-            
-            if result is not None:
-                # Plot results
-                if args.save_plots:
-                    save_path = output_path / f"{Path(args.h5_file).stem}_{substance}_simulation.png"
-                    simulator.plot_results(substance, str(save_path))
-                else:
-                    simulator.plot_results(substance)
+        output_path = Path("h5_simulation_results")
+        output_path.mkdir(exist_ok=True)
+        print(f"[*] Output directory: {output_path}")
+
+        # Hardcoded lactate simulation
+        print(f"\n{'='*40}")
+        print(f"Simulating Lactate")
+        print(f"{'='*40}")
+
+        # Add lactate with hardcoded parameters (same as working standalone)
+        simulator.add_substance(
+            "Lactate",
+            1.8e-10,  # diffusion_coeff m²/s (correct value from standalone)
+            1.0,      # initial_value mM
+            1.0       # boundary_value mM
+        )
+
+        # Map cells to grid
+        simulator.map_cells_to_grid("Lactate")
+
+        # Solve
+        result = simulator.solve_substance("Lactate")
+
+        if result is not None:
+            # Plot results
+            save_path = output_path / f"{Path(args.h5_file).stem}_Lactate_simulation.png"
+            simulator.plot_results("Lactate", str(save_path))
         
         print(f"\n{'='*60}")
         print("[+] H5 simulation completed successfully!")
