@@ -158,10 +158,10 @@ class FiPyH5Simulator:
         dz = self.domain_size / nz
 
         print(f"[*] Domain setup:")
-        print(f"    Size: {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} μm")
+        print(f"    Size: {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} x {self.domain_size*1e6:.0f} um")
         print(f"    Grid: {nx} x {ny} x {nz}")
-        print(f"    Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} μm")
-        print(f"    Cell height: {self.cell_height*1e6:.1f} μm")
+        print(f"    Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
+        print(f"    Cell height: {self.cell_height*1e6:.1f} um")
         
         # Create FiPy mesh
         self.mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=nx, ny=ny, nz=nz)
@@ -448,8 +448,9 @@ Examples:
         # Create simulator
         simulator = FiPyH5Simulator(loader)
         
-        # Setup output directory
-        output_path = Path("h5_simulation_results")
+        # Setup output directory (create in same folder as script)
+        script_dir = Path(__file__).parent
+        output_path = script_dir / "fipy_h5_simulation_results"
         output_path.mkdir(exist_ok=True)
         print(f"[*] Output directory: {output_path}")
 

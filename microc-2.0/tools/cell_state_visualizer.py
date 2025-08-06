@@ -38,7 +38,7 @@ try:
     PLOTLY_AVAILABLE = True
 except ImportError:
     PLOTLY_AVAILABLE = False
-    print("⚠️  Plotly not available. Interactive plots disabled. Install with: pip install plotly")
+    print("[WARN]  Plotly not available. Interactive plots disabled. Install with: pip install plotly")
 
 class CellStateVisualizer:
     """Visualizer for MicroC cell state files"""
@@ -114,8 +114,8 @@ class CellStateVisualizer:
 
         # Convert biological grid coordinates to FiPy grid coordinates
         # Use the same logic as H5 reader: discrete positions with Z-slice filtering
-        cell_height = 5e-6  # 5 μm for 3D simulations (from config files)
-        domain_size = 500e-6  # 500 μm domain (from config files)
+        cell_height = 5e-6  # 5 um for 3D simulations (from config files)
+        domain_size = 500e-6  # 500 um domain (from config files)
         nx = ny = nz = 25  # 25x25x25 grid (from config files)
         dx = dy = dz = domain_size / 25
 
@@ -204,8 +204,8 @@ class CellStateVisualizer:
 
         # Convert biological grid coordinates to FiPy grid coordinates
         # Show actual continuous positions within the FiPy grid (not discrete grid centers)
-        cell_height = 5e-6  # 5 μm for 3D simulations (from config files)
-        domain_size = 500e-6  # 500 μm domain (from config files)
+        cell_height = 5e-6  # 5 um for 3D simulations (from config files)
+        domain_size = 500e-6  # 500 um domain (from config files)
         grid_size = 25  # 25x25x25 grid (from config files)
         dx = domain_size / grid_size
 
@@ -248,14 +248,14 @@ class CellStateVisualizer:
 
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
     
     def plot_gene_heatmap(self, save_path: str = None, max_genes: int = 50, max_cells: int = 100):
         """Plot gene activation heatmap"""
         if not self.gene_data:
-            print("❌ No gene data available")
+            print("[!] No gene data available")
             return
         
         gene_names = self.gene_data['gene_names']
@@ -296,14 +296,14 @@ class CellStateVisualizer:
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
     
     def plot_phenotype_distribution(self, save_path: str = None):
         """Plot phenotype distribution"""
         if not self.cell_data:
-            print("❌ No cell data available")
+            print("[!] No cell data available")
             return
         
         phenotypes = self.cell_data['phenotypes']
@@ -336,14 +336,14 @@ class CellStateVisualizer:
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
     
     def plot_fate_genes_analysis(self, save_path: str = None):
         """Plot fate genes analysis"""
         if not self.gene_data:
-            print("❌ No gene data available")
+            print("[!] No gene data available")
             return
         
         gene_names = self.gene_data['gene_names']
@@ -360,7 +360,7 @@ class CellStateVisualizer:
                 fate_gene_names_found.append(gene)
         
         if not fate_gene_indices:
-            print("❌ No fate genes found")
+            print("[!] No fate genes found")
             return
         
         # Calculate activation rates
@@ -402,14 +402,14 @@ class CellStateVisualizer:
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
     
     def plot_age_distribution(self, save_path: str = None):
         """Plot cell age distribution"""
         if not self.cell_data:
-            print("❌ No cell data available")
+            print("[!] No cell data available")
             return
         
         ages = self.cell_data['ages']
@@ -451,23 +451,23 @@ class CellStateVisualizer:
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
     
     def create_interactive_3d_plot(self, save_path: str = None):
         """Create interactive 3D plot with plotly"""
         if not PLOTLY_AVAILABLE:
-            print("❌ Plotly not available for interactive plots")
+            print("[!] Plotly not available for interactive plots")
             return
         
         if not self.cell_data:
-            print("❌ No cell data available")
+            print("[!] No cell data available")
             return
         
         positions = self.cell_data['positions']
         if positions.shape[1] < 3:
-            print("❌ Not 3D data")
+            print("[!] Not 3D data")
             return
         
         phenotypes = self.cell_data['phenotypes']
@@ -511,7 +511,7 @@ class CellStateVisualizer:
         
         if save_path:
             fig.write_html(save_path)
-            print(f"💾 Saved interactive plot: {save_path}")
+            print(f"[SAVE] Saved interactive plot: {save_path}")
         else:
             fig.show()
     
@@ -522,8 +522,8 @@ class CellStateVisualizer:
         
         base_name = self.file_path.stem
         
-        print(f"\n🎨 Creating all visualizations...")
-        print(f"📁 Output directory: {output_path}")
+        print(f"\n[ART] Creating all visualizations...")
+        print(f"[DIR] Output directory: {output_path}")
         
         # 2D positions
         if self.cell_data:
@@ -564,7 +564,7 @@ class CellStateVisualizer:
                 save_path=output_path / f"{base_name}_fate_genes.png"
             )
         
-        print(f"✅ All visualizations created in {output_path}")
+        print(f"[+] All visualizations created in {output_path}")
 
 
 class TemporalAnalyzer:
@@ -585,7 +585,7 @@ class TemporalAnalyzer:
 
         for file_path in sorted(self.file_paths):
             if not file_path.exists():
-                print(f"⚠️  File not found: {file_path}")
+                print(f"[WARN]  File not found: {file_path}")
                 continue
 
             try:
@@ -614,14 +614,14 @@ class TemporalAnalyzer:
                         self.gene_data.append(gene_dict)
 
             except Exception as e:
-                print(f"⚠️  Error loading {file_path}: {e}")
+                print(f"[WARN]  Error loading {file_path}: {e}")
 
-        print(f"✅ Loaded {len(self.time_points)} time points")
+        print(f"[+] Loaded {len(self.time_points)} time points")
 
     def plot_population_evolution(self, save_path: str = None):
         """Plot population evolution over time"""
         if not self.time_points:
-            print("❌ No temporal data available")
+            print("[!] No temporal data available")
             return
 
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
@@ -658,14 +658,14 @@ class TemporalAnalyzer:
 
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
 
     def plot_fate_gene_evolution(self, save_path: str = None):
         """Plot fate gene evolution over time"""
         if not self.gene_data:
-            print("❌ No gene data available")
+            print("[!] No gene data available")
             return
 
         fate_genes = ['Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis']
@@ -694,7 +694,7 @@ class TemporalAnalyzer:
 
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Saved plot: {save_path}")
+            print(f"[SAVE] Saved plot: {save_path}")
         else:
             plt.show()
 
@@ -705,10 +705,10 @@ def analyze_temporal_evolution(file_pattern: str, output_dir: str = "temporal_an
 
     file_paths = glob(file_pattern)
     if not file_paths:
-        print(f"❌ No files found matching pattern: {file_pattern}")
+        print(f"[!] No files found matching pattern: {file_pattern}")
         return
 
-    print(f"🕒 Analyzing temporal evolution from {len(file_paths)} files")
+    print(f"[TIME] Analyzing temporal evolution from {len(file_paths)} files")
 
     analyzer = TemporalAnalyzer(file_paths)
 
@@ -724,7 +724,7 @@ def analyze_temporal_evolution(file_pattern: str, output_dir: str = "temporal_an
         save_path=output_path / "fate_gene_evolution.png"
     )
 
-    print(f"✅ Temporal analysis completed in {output_path}")
+    print(f"[+] Temporal analysis completed in {output_path}")
 
 
 def main():
@@ -759,8 +759,8 @@ Examples:
                        help='Create all available plots')
     parser.add_argument('--temporal', action='store_true',
                        help='Analyze temporal evolution (file_path should be a pattern)')
-    parser.add_argument('--output-dir', default='visualizations',
-                       help='Output directory for plots (default: visualizations)')
+    parser.add_argument('--output-dir', default=None,
+                       help='Output directory for plots (default: cell_visualizer_results)')
     parser.add_argument('--show', action='store_true',
                        help='Show plots instead of saving them')
     
@@ -774,7 +774,12 @@ Examples:
 
         # Create visualizer
         visualizer = CellStateVisualizer(args.file_path)
-        
+
+        # Set default output directory if not specified
+        if args.output_dir is None:
+            script_dir = Path(__file__).parent
+            args.output_dir = script_dir / "cell_visualizer_results"
+
         save_path_func = lambda name: None if args.show else f"{args.output_dir}/{visualizer.file_path.stem}_{name}.png"
         
         if args.all_plots:
@@ -810,16 +815,16 @@ Examples:
             # Default behavior - show basic plots
             if not any([args.positions_2d, args.positions_3d, args.interactive_3d, 
                        args.gene_heatmap, args.phenotypes, args.fate_genes, args.ages]):
-                print("📊 Creating default visualizations...")
+                print("[*] Creating default visualizations...")
                 visualizer.plot_cell_positions_2d(save_path_func("positions_2d"))
                 visualizer.plot_phenotype_distribution(save_path_func("phenotypes"))
                 if visualizer.gene_data:
                     visualizer.plot_fate_genes_analysis(save_path_func("fate_genes"))
         
-        print(f"\n✅ Visualization completed successfully!")
-        
+        print(f"\n[+] Visualization completed successfully!")
+
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[!] Error: {e}")
         sys.exit(1)
 
 
