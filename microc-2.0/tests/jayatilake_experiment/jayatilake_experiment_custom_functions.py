@@ -140,7 +140,7 @@ try:
     import jayatilake_experiment_custom_metabolism as metabolism
     METABOLISM_FUNCTIONS_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️  Could not import custom metabolism functions: {e}")
+    print(f"[!] Could not import custom metabolism functions: {e}")
     print(f"   Current working directory: {os.getcwd()}")
     print(f"   Python path: {sys.path[:3]}...")  # Show first 3 entries
     METABOLISM_FUNCTIONS_AVAILABLE = False
@@ -204,7 +204,7 @@ def get_parameter_from_config(config, param_name: str, default_value=None, secti
         )
 
     # Return default value with warning
-    print(f"⚠️  Parameter '{param_name}' not found in config, using default: {default_value}")
+    print(f"[!] Parameter '{param_name}' not found in config, using default: {default_value}")
     return default_value
 
 
@@ -248,19 +248,19 @@ def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, 
     bio_nz = int(domain_size_um / cell_height_um) if is_3d else 1
 
     if is_3d:
-        print(f"🔍 BIOLOGICAL CELL GRID DEBUG (3D):")
-        print(f"   FiPy grid: {fipy_nx}×{fipy_ny}×{fipy_nz}")
-        print(f"   Domain size: {domain_size_um} μm")
-        print(f"   Cell height: {cell_height_um} μm")
-        print(f"   Biological cell grid: {bio_nx}×{bio_ny}×{bio_nz}")
-        print(f"   Biological cell size: {cell_height_um} μm")
+        print(f"[DEBUG] BIOLOGICAL CELL GRID DEBUG (3D):")
+        print(f"   FiPy grid: {fipy_nx}x{fipy_ny}x{fipy_nz}")
+        print(f"   Domain size: {domain_size_um} um")
+        print(f"   Cell height: {cell_height_um} um")
+        print(f"   Biological cell grid: {bio_nx}x{bio_ny}x{bio_nz}")
+        print(f"   Biological cell size: {cell_height_um} um")
     else:
-        print(f"🔍 BIOLOGICAL CELL GRID DEBUG (2D):")
-        print(f"   FiPy grid: {fipy_nx}×{fipy_ny}")
-        print(f"   Domain size: {domain_size_um} μm")
-        print(f"   Cell height: {cell_height_um} μm")
-        print(f"   Biological cell grid: {bio_nx}×{bio_ny}")
-        print(f"   Biological cell size: {cell_height_um} μm")
+        print(f"[DEBUG] BIOLOGICAL CELL GRID DEBUG (2D):")
+        print(f"   FiPy grid: {fipy_nx}x{fipy_ny}")
+        print(f"   Domain size: {domain_size_um} um")
+        print(f"   Cell height: {cell_height_um} um")
+        print(f"   Biological cell grid: {bio_nx}x{bio_ny}")
+        print(f"   Biological cell size: {cell_height_um} um")
     # Get initial cell count from simulation parameters FIRST
     initial_count = simulation_params['initial_cell_count']
 
@@ -339,7 +339,7 @@ def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, 
                         if bio_pos in used_positions:
                             collision_count += 1
                             if collision_count <= 5:
-                                print(f"   ⚠️  COLLISION: Cell {cells_placed} at bio({x},{y}) already used!")
+                                print(f"   [!] COLLISION: Cell {cells_placed} at bio({x},{y}) already used!")
                             continue  # Skip this cell to avoid overwriting
 
                         used_positions.add(bio_pos)
@@ -363,7 +363,7 @@ def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, 
         radius += 1
 
     # Summary
-    print(f"   📊 Placement summary: {len(placements)} cells placed, {collision_count} collisions avoided")
+    print(f"   [INFO] Placement summary: {len(placements)} cells placed, {collision_count} collisions avoided")
 
     return placements
 
@@ -391,7 +391,7 @@ def initialize_cell_ages(population, config: Any = None):
     mean_age = max_cell_age / 2.0
     std_dev = max_cell_age / 6.0
 
-    print(f"🕰️ INITIALIZING CELL AGES (RANDOM DISTRIBUTION):")
+    print(f"[INIT] INITIALIZING CELL AGES (RANDOM DISTRIBUTION):")
     print(f"   Max cell age: {max_cell_age}")
     print(f"   Cell cycle time: {cell_cycle_time}")
     print(f"   Distribution: Normal(mean={mean_age:.1f}, std={std_dev:.1f})")
@@ -422,8 +422,8 @@ def initialize_cell_ages(population, config: Any = None):
 
         # Debug first few cells AND log all ages to file
         if cells_updated <= 3:
-            can_proliferate = "✅" if random_age >= cell_cycle_time else "❌"
-            print(f"   Cell {cell_id[:8]}: age {old_age:.1f} → {random_age:.1f} {can_proliferate}")
+            can_proliferate = "[OK]" if random_age >= cell_cycle_time else "[NO]"
+            print(f"   Cell {cell_id[:8]}: age {old_age:.1f} -> {random_age:.1f} {can_proliferate}")
 
         # Log all initial ages to file for debugging
         with open("log_simulation_status.txt", "a") as f:
@@ -431,13 +431,13 @@ def initialize_cell_ages(population, config: Any = None):
 
     # Print statistics
     ages_array = np.array(ages_set)
-    print(f"   📊 Age Statistics:")
+    print(f"   [STATS] Age Statistics:")
     print(f"      Mean: {np.mean(ages_array):.1f}")
     print(f"      Std Dev: {np.std(ages_array):.1f}")
     print(f"      Min: {np.min(ages_array):.1f}")
     print(f"      Max: {np.max(ages_array):.1f}")
-    print(f"   ✅ Updated {cells_updated} cells with random ages")
-    print(f"   🔬 {cells_can_proliferate}/{cells_updated} cells can proliferate immediately")
+    print(f"   [OK] Updated {cells_updated} cells with random ages")
+    print(f"   [INFO] {cells_can_proliferate}/{cells_updated} cells can proliferate immediately")
 
 
 def reset_metabolism_counters():
@@ -500,10 +500,10 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
 
     # Get local concentrations (handle both capitalized and lowercase keys)
     # CRITICAL: No default values - missing concentrations should cause errors
-    local_oxygen = get_required_concentration(local_environment, 'Oxygen', 'oxygen')
-    local_glucose = get_required_concentration(local_environment, 'Glucose', 'glucose')
-    local_lactate = get_required_concentration(local_environment, 'Lactate', 'lactate')
-    local_h = get_required_concentration(local_environment, 'H', 'h')
+    local_oxygen = get_required_concentration(local_environment, 'oxygen', 'Oxygen')
+    local_glucose = get_required_concentration(local_environment, 'glucose', 'Glucose')
+    local_lactate = get_required_concentration(local_environment, 'lactate', 'Lactate')
+    local_h = get_required_concentration(local_environment, 'h', 'H')
 
     # Get NetLogo-compatible Michaelis constants and metabolic parameters from config
     km_oxygen = get_parameter_from_config(config, 'the_optimal_oxygen')      # NetLogo Km for oxygen
@@ -525,10 +525,10 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # Initialize reactions for all substances (from diffusion-parameters.txt)
     reactions = {
         # Metabolic substances (Michaelis-Menten kinetics)
-        'Oxygen': 0.0,
-        'Glucose': 0.0,
-        'Lactate': 0.0,
-        'H': 0.0,
+        'oxygen': 0.0,
+        'glucose': 0.0,
+        'lactate': 0.0,
+        'h': 0.0,
         'pH': 0.0,  # Derived from H+ concentration
 
         # Growth factors (γS,C × CS consumption, γS,P production)
@@ -574,25 +574,25 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     if mito_atp > 0:
         # Oxygen consumption with Michaelis-Menten kinetics (NetLogo style)
         oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen)
-        reactions['Oxygen'] = -vmax_oxygen * oxygen_mm_factor
+        reactions['oxygen'] = -vmax_oxygen * oxygen_mm_factor
 
         # Glucose consumption for OXPHOS (NetLogo line 2998) - REDUCED for mitoATP
         glucose_mm_factor = local_glucose / (km_glucose + local_glucose)
         glucose_consumption = (vmax_oxygen * 1.0 / 6) * glucose_mm_factor * oxygen_mm_factor
-        reactions['Glucose'] = -glucose_consumption
+        reactions['glucose'] = -glucose_consumption
 
         # Lactate consumption for OXPHOS (NetLogo line 3054) - DISABLED for testing
         lactate_mm_factor = local_lactate / (km_lactate + local_lactate)
         lactate_consumption = (vmax_oxygen * 2.0 / 6) * lactate_mm_factor * oxygen_mm_factor
-        if 'Lactate' not in reactions:
-            reactions['Lactate'] = 0.0
-        # reactions['Lactate'] += -lactate_consumption  # DISABLED - will override with hardcoded value
+        if 'lactate' not in reactions:
+            reactions['lactate'] = 0.0
+        # reactions['lactate'] += -lactate_consumption  # DISABLED - will override with hardcoded value
 
         # ATP production from OXPHOS
         atp_rate += glucose_consumption * max_atp + lactate_consumption * (max_atp / 2)
 
         # Proton consumption during OXPHOS (negative H production)
-        reactions['H'] = -glucose_consumption * proton_coefficient
+        reactions['h'] = -glucose_consumption * proton_coefficient
 
     # Glycolysis pathway (glycoATP active) - consumes glucose, produces lactate
     if glyco_atp > 0:
@@ -601,21 +601,21 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
         oxygen_mm_factor = local_oxygen / (km_oxygen + local_oxygen) if (km_oxygen + local_oxygen) > 0 else 0
         oxygen_factor_for_glycolysis = max(0.1, oxygen_mm_factor)
         glucose_consumption_glyco = (vmax_glucose * 1.0 / 6) * glucose_mm_factor * oxygen_factor_for_glycolysis
-        reactions['Glucose'] += -glucose_consumption_glyco
+        reactions['glucose'] += -glucose_consumption_glyco
 
         # Define lactate_production for proton calculation, but do not use it for the main lactate reaction.
         lactate_coeff = 3.0
         lactate_production = glucose_consumption_glyco * lactate_coeff * glyco_atp
-        
+
         # Proton production from glycolysis
         proton_production = lactate_production * proton_coefficient
-        reactions['H'] += proton_production
+        reactions['h'] += proton_production
 
         # ATP production from glycolysis
         atp_rate += glucose_consumption_glyco * 2
 
         # Small oxygen consumption even in glycolysis (NetLogo style)
-        reactions['Oxygen'] += -vmax_glucose * 0.5 * oxygen_factor_for_glycolysis
+        reactions['oxygen'] += -vmax_glucose * 0.5 * oxygen_factor_for_glycolysis
 
     # FINAL OVERRIDE: Use EXACT same lactate PRODUCTION rate as standalone FiPy script
     # Standalone uses +2.8e-2 mM/s
@@ -623,9 +623,9 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # mesh_volume = 20μm × 20μm × 20μm = 8e-15 m³
     # So: 2.8e-2 * 8e-15 / 1000 = 2.24e-19 mol/s/cell
     standalone_rate_mol_per_s = +8.24e-20  # mol/s/cell (PRODUCTION - positive)
-    reactions['Lactate'] = standalone_rate_mol_per_s
-    reactions['Oxygen'] = -5.9e-19
-    reactions['Glucose'] = -7.2e-21
+    reactions['lactate'] = standalone_rate_mol_per_s
+    reactions['oxygen'] = -5.9e-19
+    reactions['glucose'] = -7.2e-21
     # Debug logging - show gene states to verify gene network sharing bug fix - TURNED OFF
     # cell_id = cell_state.get('id', 'unknown')
     # if isinstance(cell_id, str) and len(cell_id) > 8:
@@ -657,24 +657,25 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
 
     # Recalculate ATP production rate
     atp_rate = 0.0
-    if glyco_atp and reactions['Glucose'] < 0:
-        glucose_consumption_rate = abs(reactions['Glucose'])
+    if glyco_atp and reactions['glucose'] < 0:
+        glucose_consumption_rate = abs(reactions['glucose'])
         glycolytic_atp = glucose_consumption_rate * 2.0
         atp_rate += glycolytic_atp
-    if mito_atp and reactions['Oxygen'] < 0:
-        oxygen_consumption_rate = abs(reactions['Oxygen'])
+    if mito_atp and reactions['oxygen'] < 0:
+        oxygen_consumption_rate = abs(reactions['oxygen'])
         mitochondrial_atp = oxygen_consumption_rate * 30.0
         atp_rate += mitochondrial_atp
     reactions['atp_rate'] = atp_rate
 
-    # Apply environmental constraints
-    for substance in ['Oxygen', 'Glucose', 'Lactate', 'FGF', 'TGFA', 'HGF', 'GI'] + drug_inhibitors:
-        local_conc = get_required_concentration(local_environment, substance, substance.lower(), context="during constraint checking")
-        if reactions[substance] < 0:
-            max_consumption = abs(reactions[substance])
-            available = local_conc
-            if available < max_consumption:
-                reactions[substance] = -available * 0.9
+    # Apply environmental constraints (only for substances that have reactions)
+    for substance in ['oxygen', 'glucose', 'lactate']:
+        if substance in reactions:
+            local_conc = get_required_concentration(local_environment, substance, substance.upper(), context="during constraint checking")
+            if reactions[substance] < 0:
+                max_consumption = abs(reactions[substance])
+                available = local_conc
+                if available < max_consumption:
+                    reactions[substance] = -available * 0.9
 
     return reactions
 
@@ -743,9 +744,9 @@ def update_cell_metabolic_state(cell, local_environment: Dict[str, float], confi
 
     # Extract key metabolic values with validation (will abort if missing)
     atp_rate = get_required_metabolic_rate(reactions, 'atp_rate')
-    oxygen_rate = get_required_metabolic_rate(reactions, 'Oxygen')
-    glucose_rate = get_required_metabolic_rate(reactions, 'Glucose')
-    lactate_rate = get_required_metabolic_rate(reactions, 'Lactate')
+    oxygen_rate = get_required_metabolic_rate(reactions, 'oxygen')
+    glucose_rate = get_required_metabolic_rate(reactions, 'glucose')
+    lactate_rate = get_required_metabolic_rate(reactions, 'lactate')
 
     # Optional: Test the validation by uncommenting the line below
     # test_missing_rate = get_required_metabolic_rate(reactions, 'MISSING_RATE_TEST')
@@ -1182,7 +1183,7 @@ def should_update_intracellular(current_step: int, last_update: int, interval: i
     """
     # Debug intracellular timing (reduced output)
     if current_step <= 5 or current_step % 20 == 0:
-        print(f"🕐 INTRACELLULAR CHECK: step={current_step}, last={last_update}, interval={interval}")
+        print(f"[CHECK] INTRACELLULAR CHECK: step={current_step}, last={last_update}, interval={interval}")
 
     # Update every step for realistic gene network behavior
     return True
@@ -1219,7 +1220,7 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     """
     # HARDCODED NECROSIS CHECK (matches NetLogo logic)
     # This overrides gene network if both oxygen AND glucose are below thresholds
-    oxygen_conc, glucose_conc = get_required_environment_concentrations(local_environment, 'Oxygen', 'Glucose')
+    oxygen_conc, glucose_conc = get_required_environment_concentrations(local_environment, 'oxygen', 'glucose')
 
     # Get necrosis thresholds from config (matching NetLogo values)
     necrosis_threshold_oxygen = 0.011  # the-necrosis-threshold
