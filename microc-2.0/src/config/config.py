@@ -71,12 +71,13 @@ class OutputConfig:
     save_initial_plots: bool = True    # Always save plots at the beginning
     status_print_interval: int = 10    # Print detailed status every N steps
     save_cellstate_interval: int = 0   # Save cell states every N steps (0 = disabled)
+    cell_size_um: float = 5.0          # Cell size in micrometers for VTK export
 
 @dataclass
 class InitialStateConfig:
     """Configuration for initial state generation and loading"""
-    mode: str = "generate"              # "generate" or "load"
-    file_path: Optional[str] = None     # Path to initial state file (for load mode)
+    mode: str = "generate"              # "generate", "load_h5", or "load_vtk"
+    file_path: Optional[str] = None     # Path to initial state file (H5 or VTK)
     save_initial_state: bool = False    # Save initial state after generation
 
 @dataclass
