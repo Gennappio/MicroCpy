@@ -430,7 +430,7 @@ class CellPopulation(ICellPopulation):
 
             cells_added += 1
 
-        print(f"✅ Initialized {cells_added}/{len(cell_data)} cells")
+        print(f"[OK] Initialized {cells_added}/{len(cell_data)} cells")
         return cells_added
 
     def attempt_division(self, parent_id: str) -> bool:
@@ -571,7 +571,7 @@ class CellPopulation(ICellPopulation):
                 self._cell_count_debug_counter = 0
             self._cell_count_debug_counter += 1
             if self._cell_count_debug_counter % 10 == 1:  # Every 10 calls
-                print(f"📊 Population stable: {len(self.state.cells)} cells")
+                print(f"[POP] Population stable: {len(self.state.cells)} cells")
             return []
 
         # Debug: Report cell deaths
@@ -845,14 +845,24 @@ class CellPopulation(ICellPopulation):
 
             # Update substance concentrations IF PROVIDED
             # Convert biological cell position to FiPy grid position for concentration lookup
-            bio_x, bio_y = cell.state.position
+            if self.config.domain.dimensions == 3:
+                bio_x, bio_y, bio_z = cell.state.position
+            else:
+                bio_x, bio_y = cell.state.position
+
             fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
             fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
 
             # Ensure coordinates are within FiPy grid bounds
             fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
             fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
-            fipy_pos = (fipy_x, fipy_y)
+
+            if self.config.domain.dimensions == 3:
+                fipy_z = int(bio_z * self.config.domain.nz / (self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers))
+                fipy_z = max(0, min(self.config.domain.nz - 1, fipy_z))
+                fipy_pos = (fipy_x, fipy_y, fipy_z)
+            else:
+                fipy_pos = (fipy_x, fipy_y)
 
             for substance_name, conc_field in substance_concentrations.items():
                 if fipy_pos in conc_field:
@@ -1072,7 +1082,7 @@ class CellPopulation(ICellPopulation):
 
                 # Track phenotype changes compactly
                 if old_phenotype != new_phenotype:
-                    change_key = f"{old_phenotype}→{new_phenotype}"
+                    change_key = f"{old_phenotype}->{new_phenotype}"
                     phenotype_changes[change_key] = phenotype_changes[change_key] + 1 if change_key in phenotype_changes else 1
 
                 # Clean up cache
@@ -1087,7 +1097,7 @@ class CellPopulation(ICellPopulation):
         # Print compact phenotype summary
         if phenotype_changes:
             changes_str = ", ".join([f"{k}:{v}" for k, v in phenotype_changes.items()])
-            print(f"🧬 Phenotype changes: {changes_str}")
+            print(f"[PHENO] Phenotype changes: {changes_str}")
 
         # Update state
         self.state = self.state.with_updates(cells=updated_cells)
