@@ -41,6 +41,11 @@ class AutoPlotter:
         self.plots_dir = Path(plots_dir)
         self.plots_dir.mkdir(parents=True, exist_ok=True)
 
+        # Create subdirectories
+        (self.plots_dir / "heatmaps").mkdir(exist_ok=True)
+        (self.plots_dir / "timeseries").mkdir(exist_ok=True)
+        (self.plots_dir / "summary").mkdir(exist_ok=True)
+
     def _get_threshold_for_substance(self, substance_name):
         """Get the threshold value for a substance if it has a gene network association."""
         # Mapping from substance names to gene network input nodes
@@ -104,7 +109,7 @@ class AutoPlotter:
             vmin = vmin - epsilon
             vmax = vmax + epsilon
             if not quiet:
-                print(f"   ⚠️  Uniform data detected, adding epsilon: ±{epsilon:.2e}")
+                print(f"   [!] Uniform data detected, adding epsilon: +/-{epsilon:.2e}")
 
         # Additional debugging for the plotting values
         if not quiet:
@@ -130,7 +135,7 @@ class AutoPlotter:
             # Add threshold label
             ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
             if not quiet:
-                print(f"   🎯 Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
+                print(f"   [ISO] Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
 
         # Add colorbar with FORCED correct range
         cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -165,8 +170,15 @@ class AutoPlotter:
             cell_data = population.get_cell_positions()
 
             cell_counter = 0
-            for (x, y), phenotype in cell_data:
+            for position, phenotype in cell_data:
                 cell_counter += 1
+
+                # Handle both 2D and 3D positions
+                if len(position) == 2:
+                    x, y = position
+                else:  # 3D position - project to 2D (use x, y coordinates)
+                    x, y, z = position
+
                 # Cell positions are on biological grid, convert using biological spacing
                 phys_x = (x + 0.5) * biological_cell_spacing
                 phys_y = (y + 0.5) * biological_cell_spacing
@@ -357,7 +369,7 @@ class AutoPlotter:
                 border_legend.get_title().set_fontweight('bold')
 
             if not quiet:
-                print(f"🎨 Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
+                print(f"[LEG] Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
 
         # Add text box with additional details including grid info
         grid_spacing = domain_x / nx
@@ -751,7 +763,7 @@ Substance Initial Values:
     def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None):
         """Generate all plots automatically"""
 
-        print(f"📊 Generating plots...")
+        print(f"[PLOT] Generating plots...")
         generated_plots = []
 
         time_points = results.get('time', [])
@@ -789,7 +801,7 @@ Substance Initial Values:
 
             # SKIP initial state plots here - they were already created by generate_initial_plots()
             # Creating them again would overwrite the true initial state with final state data
-            print(f"   ⏭️  Skipping initial state plots (already created before simulation)")
+            print(f"   [SKIP] Skipping initial state plots (already created before simulation)")
 
             # Note: Initial plots are created by generate_initial_plots() before simulation starts
             # This prevents overwriting true initial state with final state data
@@ -814,11 +826,11 @@ Substance Initial Values:
                         is_final=True
                     )
                     generated_plots.append(plot_path)
-                    print(f"   ✅ {substance} final heatmap: {plot_path.name}")
+                    print(f"   [OK] {substance} final heatmap: {plot_path.name}")
         
         # 3. SKIP initial state summary plot - already created by generate_initial_plots()
         # Creating it again would overwrite the true initial state with final state data
-        print(f"   ⏭️  Skipping initial state summary (already created before simulation)")
+        print(f"   [SKIP] Skipping initial state summary (already created before simulation)")
 
         # 4. Final simulation summary plot
         if substance_stats and time_points:
@@ -827,5 +839,5 @@ Substance Initial Values:
                 generated_plots.append(plot_path)
                 print(f"   ✅ Final simulation summary: {plot_path.name}")
         
-        print(f"📊 Generated {len(generated_plots)} plots in {self.plots_dir}")
+        print(f"[PLOT] Generated {len(generated_plots)} plots in {self.plots_dir}")
         return generated_plots
