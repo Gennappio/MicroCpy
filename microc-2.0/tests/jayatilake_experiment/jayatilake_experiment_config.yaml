@@ -49,8 +49,8 @@ output:
 
 # Initial state configuration
 initial_state:
-  mode: "generate"             # "generate" or "load"
-  file_path: null              # Path to initial state file (for load mode)
+  mode: "load_vtk"             # "generate" or "load"
+  file_path:  "tools/generated_h5/tumor_core4_cells.vtk"              # Path to initial state file (for load mode)
   save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt
