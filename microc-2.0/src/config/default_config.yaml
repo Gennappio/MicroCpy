@@ -46,3 +46,12 @@ output:
   status_print_interval: 5
   save_initial_plots: true
   save_final_plots: true
+
+# Initial state configuration
+initial_state:
+  mode: "generate"             # "generate", "load_h5", "load_vtk", or "load" (auto-detect)
+  file_path: null              # Path to initial state file (.h5 or .vtk)
+  save_initial_state: false    # Save initial state after generation
+
+  # VTK loading automatically detects biological cell size from cube geometry
+  # and updates domain.cell_height accordingly

@@ -9,7 +9,7 @@ Handles saving and loading of:
 Uses HDF5 format for efficient storage of structured scientific data.
 """
 
-import h5py
+import h5py  # Only for loading existing H5 files
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Union, Optional, Any
@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import uuid
 import json
 from datetime import datetime
+import re
 
 from ..biology.cell import CellState
 from ..config.config import MicroCConfig
@@ -35,10 +36,210 @@ class CellStateData:
     tq_wait_time: float = 0.0
 
 
+class VTKCellLoader:
+    """Load cell positions and biological cell size from VTK cubic cell files"""
+
+    def __init__(self, file_path: Union[str, Path]):
+        self.file_path = Path(file_path)
+        if not self.file_path.exists():
+            raise FileNotFoundError(f"VTK file not found: {file_path}")
+
+        self.cell_positions = []
+        self.cell_size_um = None
+        self.cell_count = 0
+
+        self._load_vtk_file()
+
+    def _load_vtk_file(self):
+        """Parse VTK file to extract cell positions and size"""
+        print(f"[VTK] Loading VTK cell positions from {self.file_path}")
+
+        with open(self.file_path, 'r') as f:
+            lines = f.readlines()
+
+        # Parse VTK file structure
+        points_section = False
+        cells_section = False
+        cell_data_section = False
+
+        points = []
+        cell_connectivity = []
+
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Find POINTS section
+            if line.startswith('POINTS'):
+                points_section = True
+                num_points = int(line.split()[1])
+                print(f"[*] Found {num_points} points in VTK file")
+                i += 1
+                continue
+
+            # Find CELLS section
+            elif line.startswith('CELLS'):
+                points_section = False
+                cells_section = True
+                num_cells = int(line.split()[1])
+                self.cell_count = num_cells
+                print(f"[*] Found {num_cells} cells in VTK file")
+                i += 1
+                continue
+
+            # Find CELL_DATA section
+            elif line.startswith('CELL_DATA'):
+                cells_section = False
+                cell_data_section = True
+                i += 1
+                continue
+
+            # Parse points
+            elif points_section and line and not line.startswith('CELLS'):
+                coords = list(map(float, line.split()))
+                # Group coordinates into (x,y,z) triplets
+                for j in range(0, len(coords), 3):
+                    if j + 2 < len(coords):
+                        points.append((coords[j], coords[j+1], coords[j+2]))
+
+            # Parse cell connectivity (hexahedrons or points)
+            elif cells_section and line and not line.startswith('CELL_TYPES'):
+                parts = line.split()
+                if len(parts) >= 9 and parts[0] == '8':  # Hexahedron with 8 vertices
+                    vertex_indices = [int(x) for x in parts[1:9]]
+                    cell_connectivity.append(('hexahedron', vertex_indices))
+                elif len(parts) == 2 and parts[0] == '1':  # Point cell with 1 vertex
+                    vertex_index = int(parts[1])
+                    cell_connectivity.append(('point', [vertex_index]))
+
+            i += 1
+
+        # Calculate cell centers and size from hexahedron vertices
+        self._calculate_cell_centers_and_size(points, cell_connectivity)
+
+    def _calculate_cell_centers_and_size(self, points: List[Tuple[float, float, float]],
+                                       connectivity: List[Tuple[str, List[int]]]):
+        """Calculate cell centers and biological cell size from cell connectivity"""
+
+        if not connectivity:
+            raise ValueError("No valid cells found in VTK file")
+
+        cell_centers = []
+        edge_lengths = []
+
+        # Check cell type
+        cell_type, first_vertices = connectivity[0]
+
+        if cell_type == 'hexahedron':
+            # Handle cubic cells (8 vertices each)
+            for cell_type, cell_vertices in connectivity:
+                if cell_type != 'hexahedron':
+                    continue
+
+                # Get the 8 vertices of the hexahedron
+                vertices = [points[i] for i in cell_vertices]
+
+                # Calculate center as average of all vertices
+                center_x = sum(v[0] for v in vertices) / 8
+                center_y = sum(v[1] for v in vertices) / 8
+                center_z = sum(v[2] for v in vertices) / 8
+
+                cell_centers.append((center_x, center_y, center_z))
+
+                # Calculate edge length (assuming cubic cells)
+                # Use distance between first two vertices as edge length
+                v0, v1 = vertices[0], vertices[1]
+                edge_length = ((v1[0] - v0[0])**2 + (v1[1] - v0[1])**2 + (v1[2] - v0[2])**2)**0.5
+                edge_lengths.append(edge_length)
+
+        elif cell_type == 'point':
+            # Handle point cells (1 vertex each) - assume spherical cells
+            print(f"[*] Detected point cells (spherical), estimating cell size from point distribution")
+
+            for cell_type, cell_vertices in connectivity:
+                if cell_type != 'point':
+                    continue
+
+                # Get the single point
+                vertex_index = cell_vertices[0]
+                point = points[vertex_index]
+                cell_centers.append(point)
+
+            # Estimate cell size from nearest neighbor distances
+            if len(cell_centers) >= 2:
+                import numpy as np
+                centers_array = np.array(cell_centers)
+
+                # Calculate distances between all pairs of points
+                distances = []
+                for i in range(len(centers_array)):
+                    for j in range(i+1, len(centers_array)):
+                        dist = np.linalg.norm(centers_array[i] - centers_array[j])
+                        if dist > 0:  # Avoid zero distances
+                            distances.append(dist)
+
+                if distances:
+                    # Use median distance as cell size estimate
+                    median_distance = np.median(distances)
+                    edge_lengths = [median_distance] * len(cell_centers)
+                    print(f"[*] Estimated cell size from point spacing: {median_distance*1e6:.2f} um")
+                else:
+                    # Fallback: assume 10 um cells
+                    edge_lengths = [10e-6] * len(cell_centers)
+                    print(f"[*] Using fallback cell size: 10.0 um")
+            else:
+                # Single cell or no cells - use fallback
+                edge_lengths = [10e-6] * len(cell_centers)
+                print(f"[*] Using fallback cell size: 10.0 um")
+        else:
+            raise ValueError(f"Unsupported cell type: {cell_type}")
+
+        # Convert positions from meters to biological grid coordinates
+        # Assuming VTK coordinates are in meters
+        if edge_lengths:
+            avg_edge_length_m = sum(edge_lengths) / len(edge_lengths)
+            self.cell_size_um = avg_edge_length_m * 1e6  # Convert to micrometers
+
+            print(f"[*] Detected biological cell size: {self.cell_size_um:.2f} um")
+
+            # Convert cell centers to biological grid coordinates
+            # First, find the bounding box to normalize coordinates to positive values
+            min_x = min(center[0] for center in cell_centers)
+            min_y = min(center[1] for center in cell_centers)
+            min_z = min(center[2] for center in cell_centers)
+
+            cell_size_m = avg_edge_length_m
+
+            for center in cell_centers:
+                # Shift coordinates to make them positive, then convert to grid coordinates
+                bio_x = (center[0] - min_x) / cell_size_m
+                bio_y = (center[1] - min_y) / cell_size_m
+                bio_z = (center[2] - min_z) / cell_size_m
+                self.cell_positions.append((bio_x, bio_y, bio_z))
+
+        print(f"[+] Loaded {len(self.cell_positions)} cell positions")
+        print(f"[+] Biological cell size: {self.cell_size_um:.2f} um")
+
+    def get_cell_positions(self) -> List[Tuple[float, float, float]]:
+        """Get cell positions in biological grid coordinates"""
+        return self.cell_positions
+
+    def get_cell_size_um(self) -> float:
+        """Get biological cell size in micrometers"""
+        return self.cell_size_um
+
+    def get_cell_count(self) -> int:
+        """Get number of cells"""
+        return len(self.cell_positions)
+
+
 class InitialStateManager:
     """
-    Manages saving and loading of initial cell states for MicroC simulations.
-    
+    Manages loading of initial cell states for MicroC simulations.
+
+    NOTE: H5 file generation has been moved to external tools.
+    Use: python run_microc.py --generate --cells 1000 --radius 50
+
     File format: HDF5 with the following structure:
     /metadata/
         - config_hash: str (hash of config for validation)
@@ -67,119 +268,21 @@ class InitialStateManager:
     def save_initial_state(self, cells: Dict[str, Any], file_path: Union[str, Path], 
                           step: int = 0) -> None:
         """
-        Save initial cell states to HDF5 file.
-        
+        DEPRECATED: H5 file generation has been moved to external tools.
+
+        This method is no longer supported. Use the external H5 generator tool instead:
+        python run_microc.py --generate --cells 1000 --radius 50
+
         Args:
             cells: Dictionary of cell_id -> Cell objects
             file_path: Path to save the HDF5 file
             step: Simulation step (for periodic saves)
         """
-        file_path = Path(file_path)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Convert cells to serializable format
-        cell_data = []
-        for cell_id, cell in cells.items():
-            # Convert position to 3D if needed
-            pos = cell.state.position
-            if len(pos) == 2:
-                pos_3d = (pos[0], pos[1], 0.0)  # Add z=0 for 2D simulations
-            else:
-                pos_3d = pos
-                
-            cell_data.append(CellStateData(
-                id=cell.state.id,
-                position=pos_3d,
-                phenotype=cell.state.phenotype,
-                age=cell.state.age,
-                division_count=cell.state.division_count,
-                gene_states=cell.state.gene_states.copy(),
-                metabolic_state=cell.state.metabolic_state.copy(),
-                tq_wait_time=cell.state.tq_wait_time
-            ))
-        
-        print(f"💾 Saving {len(cell_data)} cell states to {file_path}")
-        
-        with h5py.File(file_path, 'w') as f:
-            # Save metadata
-            meta_group = f.create_group('metadata')
-            meta_group.attrs['timestamp'] = datetime.now().isoformat()
-            meta_group.attrs['version'] = "MicroC-2.0"
-            meta_group.attrs['cell_count'] = len(cell_data)
-            meta_group.attrs['step'] = step
-            meta_group.attrs['config_hash'] = self._compute_config_hash()
-            
-            # Save domain info
-            domain_info = {
-                'dimensions': self.config.domain.dimensions,
-                'size_x': self.config.domain.size_x.meters,
-                'size_y': self.config.domain.size_y.meters,
-                'size_z': self.config.domain.size_z.meters if self.config.domain.size_z else 0.0,
-                'nx': self.config.domain.nx,
-                'ny': self.config.domain.ny,
-                'nz': self.config.domain.nz if self.config.domain.nz else 1,
-                'cell_height': self.config.domain.cell_height.meters
-            }
-            meta_group.attrs['domain_info'] = json.dumps(domain_info)
-            
-            if not cell_data:
-                print("⚠️  No cells to save")
-                return
-                
-            # Save cell data
-            cells_group = f.create_group('cells')
-            
-            # Basic cell properties
-            cells_group.create_dataset('ids', data=[c.id.encode('utf-8') for c in cell_data])
-            cells_group.create_dataset('positions', data=np.array([c.position for c in cell_data]))
-            cells_group.create_dataset('phenotypes', data=[c.phenotype.encode('utf-8') for c in cell_data])
-            cells_group.create_dataset('ages', data=[c.age for c in cell_data])
-            cells_group.create_dataset('division_counts', data=[c.division_count for c in cell_data])
-            cells_group.create_dataset('tq_wait_times', data=[c.tq_wait_time for c in cell_data])
-            
-            # Save gene states
-            if cell_data and cell_data[0].gene_states:
-                gene_group = f.create_group('gene_states')
-                
-                # Get all unique gene names
-                all_genes = set()
-                for cell in cell_data:
-                    all_genes.update(cell.gene_states.keys())
-                gene_names = sorted(list(all_genes))
-                
-                # Create gene states matrix (cells x genes)
-                gene_matrix = np.zeros((len(cell_data), len(gene_names)), dtype=bool)
-                for i, cell in enumerate(cell_data):
-                    for j, gene_name in enumerate(gene_names):
-                        gene_matrix[i, j] = cell.gene_states.get(gene_name, False)
-                
-                gene_group.create_dataset('gene_names', data=[g.encode('utf-8') for g in gene_names])
-                gene_group.create_dataset('states', data=gene_matrix)
-                
-                print(f"✅ Saved gene states: {len(gene_names)} genes for {len(cell_data)} cells")
-            
-            # Save metabolic states
-            if cell_data and cell_data[0].metabolic_state:
-                metab_group = f.create_group('metabolic_states')
-                
-                # Get all unique metabolite names
-                all_metabolites = set()
-                for cell in cell_data:
-                    all_metabolites.update(cell.metabolic_state.keys())
-                metabolite_names = sorted(list(all_metabolites))
-                
-                # Create metabolic states matrix (cells x metabolites)
-                metab_matrix = np.zeros((len(cell_data), len(metabolite_names)), dtype=float)
-                for i, cell in enumerate(cell_data):
-                    for j, metab_name in enumerate(metabolite_names):
-                        metab_matrix[i, j] = cell.metabolic_state.get(metab_name, 0.0)
-                
-                metab_group.create_dataset('metabolite_names', data=[m.encode('utf-8') for m in metabolite_names])
-                metab_group.create_dataset('values', data=metab_matrix)
-                
-                print(f"✅ Saved metabolic states: {len(metabolite_names)} metabolites for {len(cell_data)} cells")
-        
-        print(f"✅ Successfully saved initial state to {file_path}")
+        print("⚠️  H5 file generation has been removed from the core MicroC system.")
+        print("   Use the external H5 generator tool instead:")
+        print("   python run_microc.py --generate --cells 1000 --radius 50")
+        print(f"   Skipping H5 save to {file_path}")
+        return
     
     def load_initial_state(self, file_path: Union[str, Path]) -> List[Dict[str, Any]]:
         """
@@ -193,7 +296,7 @@ class InitialStateManager:
         if not file_path.exists():
             raise FileNotFoundError(f"Initial state file not found: {file_path}")
         
-        print(f"📂 Loading initial state from {file_path}")
+        print(f"[LOAD] Loading initial state from {file_path}")
         
         cell_init_data = []
         
@@ -243,7 +346,7 @@ class InitialStateManager:
                         for j in range(len(gene_names))
                     }
                 
-                print(f"✅ Loaded gene states: {len(gene_names)} genes")
+                print(f"[OK] Loaded gene states: {len(gene_names)} genes")
             
             # Load metabolic states if available
             metabolic_states_dict = {}
@@ -259,7 +362,7 @@ class InitialStateManager:
                         for j in range(len(metabolite_names))
                     }
                 
-                print(f"✅ Loaded metabolic states: {len(metabolite_names)} metabolites")
+                print(f"[OK] Loaded metabolic states: {len(metabolite_names)} metabolites")
             
             # Create cell initialization data
             for i in range(len(ids)):
@@ -279,8 +382,64 @@ class InitialStateManager:
                     'tq_wait_time': float(tq_wait_times[i])
                 })
         
-        print(f"✅ Successfully loaded {len(cell_init_data)} cells from {file_path}")
+        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from {file_path}")
         return cell_init_data
+
+    def load_initial_state_from_vtk(self, file_path: Union[str, Path]) -> Tuple[List[Dict[str, Any]], float]:
+        """
+        Load initial cell positions from VTK cubic cell file.
+
+        Returns:
+            Tuple of (cell_init_data, cell_size_um)
+        """
+        file_path = Path(file_path)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"VTK file not found: {file_path}")
+
+        # Load VTK file
+        vtk_loader = VTKCellLoader(file_path)
+        positions = vtk_loader.get_cell_positions()
+        cell_size_um = vtk_loader.get_cell_size_um()
+
+        print(f"[INFO] VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+
+        if not positions:
+            print("[!] No cells in VTK file")
+            return [], cell_size_um
+
+        # Create cell initialization data with default values
+        cell_init_data = []
+
+        for i, pos in enumerate(positions):
+            # Convert 3D position to 2D if needed for 2D simulations
+            if self.config.domain.dimensions == 2:
+                pos = (pos[0], pos[1])  # Drop z coordinate
+                if i < 3:  # Debug first few positions
+                    print(f"[DEBUG] Cell {i}: 3D pos {positions[i]} -> 2D pos {pos}")
+            else:
+                if i < 3:  # Debug first few positions
+                    print(f"[DEBUG] Cell {i}: 3D pos {pos} (keeping 3D)")
+
+            # Generate unique cell ID
+            cell_id = f"cell_{i:06d}"
+
+            # Create cell with default values
+            cell_init_data.append({
+                'id': cell_id,
+                'position': pos,
+                'phenotype': 'Quiescent',  # Default phenotype
+                'age': 0.0,  # Default age
+                'division_count': 0,  # Default division count
+                'gene_states': {},  # Empty gene states (will be initialized by gene network)
+                'metabolic_state': {},  # Empty metabolic state
+                'tq_wait_time': 0.0  # Default wait time
+            })
+
+        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from VTK file")
+        print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
+
+        return cell_init_data, cell_size_um
     
     def _compute_config_hash(self) -> str:
         """Compute a hash of the configuration for validation"""
@@ -304,13 +463,13 @@ class InitialStateManager:
                   f"current ({current_domain.nx}, {current_domain.ny})")
         
         # Check domain size
-        size_tolerance = 1e-6  # 1 μm tolerance
+        size_tolerance = 1e-6  # 1 um tolerance
         if (abs(saved_domain_info['size_x'] - current_domain.size_x.meters) > size_tolerance or
             abs(saved_domain_info['size_y'] - current_domain.size_y.meters) > size_tolerance):
             print(f"⚠️  Domain size mismatch: saved ({saved_domain_info['size_x']:.6f}, {saved_domain_info['size_y']:.6f}) m, "
                   f"current ({current_domain.size_x.meters:.6f}, {current_domain.size_y.meters:.6f}) m")
         
-        print("✅ Domain compatibility validated")
+        print("[OK] Domain compatibility validated")
 
 
 def generate_initial_state_filename(config: MicroCConfig, step: int = 0) -> str:
