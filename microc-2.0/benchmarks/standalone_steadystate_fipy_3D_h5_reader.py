@@ -131,24 +131,30 @@ class H5CellStateLoader:
 class FiPyH5Simulator:
     """FiPy simulator that uses H5 cell data"""
     
-    def __init__(self, h5_loader: H5CellStateLoader):
+    def __init__(self, h5_loader: H5CellStateLoader, domain_size: float = 500e-6, grid_size: int = 25):
         self.loader = h5_loader
         self.substances = {}
         self.mesh = None
         self.grid_size = None
         self.domain_size = None
         self.cell_height = None
-        
+
+        # Store user-provided parameters
+        self.user_domain_size = domain_size
+        self.user_grid_size = grid_size
+
         self._setup_domain()
     
     def _setup_domain(self):
-        """Setup domain parameters from H5 data or defaults"""
-        # Use correct parameters from jayatilake_experiment_config.yaml
-        # The H5 file was generated with these parameters
-        print("[*] Using correct domain parameters from jayatilake_experiment_config.yaml")
-        self.domain_size = 500e-6  # 500 μm (correct domain from config)
-        self.grid_size = (25, 25, 25)  # 25×25×25 grid (correct grid from config)
-        self.cell_height = 5e-6  # 5 μm (correct cell height from config)
+        """Setup domain parameters from user input or defaults"""
+        # Use user-provided parameters or defaults
+        print(f"[*] Using domain parameters:")
+        print(f"    Domain size: {self.user_domain_size*1e6:.0f} μm")
+        print(f"    Grid size: {self.user_grid_size}x{self.user_grid_size}x{self.user_grid_size}")
+
+        self.domain_size = self.user_domain_size  # User-specified domain size
+        self.grid_size = (self.user_grid_size, self.user_grid_size, self.user_grid_size)  # User-specified grid
+        self.cell_height = 5e-6  # 5 μm (standard cell height)
 
         nx, ny, nz = self.grid_size
 
@@ -163,9 +169,15 @@ class FiPyH5Simulator:
         print(f"    Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
         print(f"    Cell height: {self.cell_height*1e6:.1f} um")
         
-        # Create FiPy mesh
+        # Create FiPy mesh (starts at 0,0,0 by default)
         self.mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=nx, ny=ny, nz=nz)
+
+        # Shift mesh coordinates to center at origin
+        # FiPy mesh goes from 0 to domain_size, we want -domain_size/2 to +domain_size/2
+        self.mesh = self.mesh + ((-self.domain_size/2,) * 3)
+
         print(f"[+] Created 3D mesh with {self.mesh.numberOfCells} cells")
+        print(f"    Domain bounds: {-self.domain_size/2*1e6:.0f} to {+self.domain_size/2*1e6:.0f} μm")
     
     def add_substance(self, name: str, diffusion_coeff: float, initial_value: float, 
                      boundary_value: float):
@@ -224,9 +236,10 @@ class FiPyH5Simulator:
             z_meters = pos[2] * self.cell_height if len(pos) > 2 else 0
 
             # Convert physical coordinates to FiPy grid indices
-            x_idx = int(x_meters / dx)
-            y_idx = int(y_meters / dy)
-            z_idx = int(z_meters / dz)
+            # Since mesh is centered at origin, shift coordinates to positive range
+            x_idx = int((x_meters + self.domain_size/2) / dx)
+            y_idx = int((y_meters + self.domain_size/2) / dy)
+            z_idx = int((z_meters + self.domain_size/2) / dz)
 
             # Check bounds
             if 0 <= x_idx < nx and 0 <= y_idx < ny and 0 <= z_idx < nz:
@@ -303,7 +316,7 @@ class FiPyH5Simulator:
         
         return substance_var
     
-    def plot_results(self, substance_name: str, save_path: str = None):
+    def plot_results(self, substance_name: str, save_path: str = None, z_slice: int = None):
         """Plot simulation results"""
         if substance_name not in self.substances:
             print(f"[!] Substance {substance_name} not found")
@@ -312,29 +325,42 @@ class FiPyH5Simulator:
         substance_var = self.substances[substance_name]['variable']
         nx, ny, nz = self.grid_size
         
-        # Find the Z slice with cells (check where cells are located)
-        if self.loader.cell_data:
-            positions = self.loader.cell_data['positions'].copy()
-            positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset
-            # Convert biological grid coordinates to FiPy grid indices
-            z_coords = []
-            for pos in positions:
-                z_meters = pos[2] * self.cell_height if len(pos) > 2 else 0
-                z_idx = int(z_meters / (self.domain_size / nz))
-                z_coords.append(z_idx)
+        # Determine Z slice to visualize
+        if z_slice is not None:
+            # User specified Z slice
+            middle_z = z_slice
+            print(f"[*] Using user-specified Z slice {middle_z}")
 
-            # Find the Z slice with most cells
-            if z_coords:
-                unique_z, counts = np.unique(z_coords, return_counts=True)
-                middle_z = unique_z[np.argmax(counts)]
-                print(f"[*] Cell distribution by Z slice:")
-                for z, count in zip(unique_z, counts):
-                    print(f"    Z={z}: {count} cells")
-                print(f"[*] Using Z slice {middle_z} (contains {np.max(counts)} cells)")
+            # Validate slice is within bounds
+            if middle_z < 0 or middle_z >= nz:
+                print(f"[!] Warning: Z slice {middle_z} is outside valid range [0, {nz-1}]")
+                middle_z = max(0, min(middle_z, nz-1))
+                print(f"[*] Clamped to Z slice {middle_z}")
+        else:
+            # Auto-select slice with most cells
+            if self.loader.cell_data:
+                positions = self.loader.cell_data['positions'].copy()
+                positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset
+                # Convert biological grid coordinates to FiPy grid indices
+                z_coords = []
+                for pos in positions:
+                    z_meters = pos[2] * self.cell_height if len(pos) > 2 else 0
+                    # Use same coordinate system as cell plotting (centered domain)
+                    z_idx = int((z_meters + self.domain_size/2) / (self.domain_size / nz))
+                    z_coords.append(z_idx)
+
+                # Find the Z slice with most cells
+                if z_coords:
+                    unique_z, counts = np.unique(z_coords, return_counts=True)
+                    middle_z = unique_z[np.argmax(counts)]
+                    print(f"[*] Cell distribution by Z slice:")
+                    for z, count in zip(unique_z, counts):
+                        print(f"    Z={z}: {count} cells")
+                    print(f"[*] Auto-selected Z slice {middle_z} (contains {np.max(counts)} cells)")
+                else:
+                    middle_z = nz // 2
             else:
                 middle_z = nz // 2
-        else:
-            middle_z = nz // 2
 
         slice_data = np.zeros((nx, ny))
         
@@ -343,22 +369,25 @@ class FiPyH5Simulator:
                 idx = x * ny * nz + y * nz + middle_z
                 slice_data[x, y] = substance_var.value[idx]
         
-        # Plot
+        # Plot with correct coordinate system (centered domain)
         plt.figure(figsize=(12, 10))
-        plt.imshow(slice_data.T, origin='lower', cmap='viridis', aspect='equal')
+
+        # Calculate extent for centered domain: -domain_size/2 to +domain_size/2
+        half_domain = self.domain_size / 2
+        extent = [-half_domain*1e6, half_domain*1e6, -half_domain*1e6, half_domain*1e6]  # Convert to μm
+
+        plt.imshow(slice_data.T, origin='lower', cmap='viridis', aspect='equal', extent=extent)
         plt.colorbar(label=f'{substance_name} Concentration (mM)')
         plt.title(f'3D FiPy H5 Reader - {substance_name} (Z={middle_z} slice)\n'
                   f'File: {self.loader.file_path.name}, '
                   f'Grid: {nx}×{ny}×{nz}, Cells: {len(self.loader.cell_data.get("ids", []))}')
-        plt.xlabel('X Grid Coordinate')
-        plt.ylabel('Y Grid Coordinate')
+        plt.xlabel('X Coordinate (μm)')
+        plt.ylabel('Y Coordinate (μm)')
         
         # Mark cell positions on the slice
         if self.loader.cell_data:
             positions = self.loader.cell_data['positions'].copy()
             positions[:, 0] = positions[:, 0] - 10  # Apply the same -10 offset
-
-            dx = self.domain_size / nx
 
             print(f"[*] Plotting cells on slice Z={middle_z}")
 
@@ -366,19 +395,23 @@ class FiPyH5Simulator:
             cell_y_coords = []
 
             for pos in positions:
-                # Two-step conversion: biological grid → physical → FiPy continuous coordinates
-                # (Same logic as cell_state_visualizer.py)
+                # Convert biological grid coordinates to physical coordinates (meters)
+                # The biological coordinates are already roughly centered around 0
                 pos_physical = pos * self.cell_height  # Convert to meters
-                pos_fipy = pos_physical / dx  # Convert to FiPy grid coordinates (continuous)
 
-                x = pos_fipy[0]
-                y = pos_fipy[1]
-                z = pos_fipy[2] if len(pos_fipy) > 2 else 0
+                # Convert to μm for plotting - coordinates should already be centered
+                x_um = pos_physical[0] * 1e6  # Convert to μm
+                y_um = pos_physical[1] * 1e6  # Convert to μm
+                z_meters = pos_physical[2] if len(pos_physical) > 2 else 0
+
+                # Convert Z to grid index for slice selection
+                # Z coordinates need to be shifted to grid indices (0 to nz-1)
+                z_idx = int((z_meters + self.domain_size/2) / (self.domain_size / nz))
 
                 # Show cells in the selected slice (±1 for visibility)
-                if abs(z - middle_z) <= 1:
-                    cell_x_coords.append(x)
-                    cell_y_coords.append(y)
+                if abs(z_idx - middle_z) <= 1:
+                    cell_x_coords.append(x_um)
+                    cell_y_coords.append(y_um)
 
             if cell_x_coords:
                 plt.scatter(cell_x_coords, cell_y_coords,
@@ -386,8 +419,9 @@ class FiPyH5Simulator:
                           label=f'Cells ({len(cell_x_coords)})',
                           edgecolors='black', linewidth=0.5)
                 print(f"[*] Plotted {len(cell_x_coords)} cells")
-
-            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+                plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            else:
+                print(f"[!] No cells found in slice {middle_z} ± 1")
         
         plt.tight_layout()
         
@@ -417,13 +451,25 @@ Examples:
   python standalone_steadystate_fipy_3D_h5_reader.py "results/*/cell_states/cell_state_step*.h5" --substance Lactate --save-plots
 
   # Compare initial vs evolved state
-  python standalone_steadystate_fipy_3D_h5_reader.py initial_state_3D_S.h5 --all-substances --save-plots
-  python standalone_steadystate_fipy_3D_h5_reader.py cell_state_step000005.h5 --all-substances --save-plots
+  python standalone_steadystate_fipy_3D_h5_reader.py initial_state_3D_S.h5
+  python standalone_steadystate_fipy_3D_h5_reader.py cell_state_step000005.h5
+
+  # Custom domain size for large cell populations
+  python standalone_steadystate_fipy_3D_h5_reader.py tumor_core.h5 --domain-size 1000e-6 --grid-size 50
+
+  # Visualize specific Z slice
+  python standalone_steadystate_fipy_3D_h5_reader.py initial_state_3D_S.h5 --z-slice 15
         """
     )
     
     parser.add_argument('h5_file', help='Path to the H5 cell state file')
-    
+    parser.add_argument('--domain-size', type=float, default=500e-6,
+                       help='Domain size in meters (default: 500e-6 = 500 μm)')
+    parser.add_argument('--grid-size', type=int, default=25,
+                       help='Grid size (NxNxN) (default: 25)')
+    parser.add_argument('--z-slice', type=int, default=None,
+                       help='Z slice index to visualize (default: auto-select slice with most cells)')
+
     args = parser.parse_args()
     
     try:
@@ -445,8 +491,8 @@ Examples:
         print(f"      Y: {pos_range.get('y', (0,0))[0]:.2e} - {pos_range.get('y', (0,0))[1]:.2e} m")
         print(f"      Z: {pos_range.get('z', (0,0))[0]:.2e} - {pos_range.get('z', (0,0))[1]:.2e} m")
         
-        # Create simulator
-        simulator = FiPyH5Simulator(loader)
+        # Create simulator with user-specified domain parameters
+        simulator = FiPyH5Simulator(loader, args.domain_size, args.grid_size)
         
         # Setup output directory (create in same folder as script)
         script_dir = Path(__file__).parent
@@ -476,7 +522,7 @@ Examples:
         if result is not None:
             # Plot results
             save_path = output_path / f"{Path(args.h5_file).stem}_Lactate_simulation.png"
-            simulator.plot_results("Lactate", str(save_path))
+            simulator.plot_results("Lactate", str(save_path), args.z_slice)
         
         print(f"\n{'='*60}")
         print("[+] H5 simulation completed successfully!")
