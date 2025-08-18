@@ -26,7 +26,7 @@ domain:
 # Time configuration with multi-timescale orchestration
 time:
   dt: 0.1
-  end_time: 0.2  # Run longer to ensure multiple diffusion updates
+  end_time: 0.5  # Longer test run for VTK export
   diffusion_step: 2      # Update diffusion every 2 steps (medium speed) CHANGE!
   intracellular_step: 1  # Update gene networks every step (fast)
   intercellular_step: 5  # Update cell interactions every 5 steps (slow)
