@@ -736,7 +736,11 @@ class CellPopulation(ICellPopulation):
             # Update with current substance concentrations if provided
             if substance_concentrations:
                 # Convert biological cell position to FiPy grid position for concentration lookup
-                bio_x, bio_y = cell.state.position
+                # Handle both 2D and 3D positions
+                if len(cell.state.position) == 2:
+                    bio_x, bio_y = cell.state.position
+                else:  # 3D position - use x, y coordinates
+                    bio_x, bio_y, bio_z = cell.state.position
                 fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
                 fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
 
@@ -757,13 +761,23 @@ class CellPopulation(ICellPopulation):
             # Convert biological cell grid position to physical coordinates
             # Biological cells are positioned on a grid with spacing = cell_height
             cell_height_m = self.config.domain.cell_height.meters
-            bio_x, bio_y = cell.state.position
 
-            # Convert to physical coordinates (center of biological cell)
-            physical_pos = (
-                (bio_x + 0.5) * cell_height_m,
-                (bio_y + 0.5) * cell_height_m
-            )
+            # Handle both 2D and 3D positions
+            if len(cell.state.position) == 2:
+                bio_x, bio_y = cell.state.position
+                # Convert to physical coordinates (center of biological cell)
+                physical_pos = (
+                    (bio_x + 0.5) * cell_height_m,
+                    (bio_y + 0.5) * cell_height_m
+                )
+            else:  # 3D position
+                bio_x, bio_y, bio_z = cell.state.position
+                # Convert to physical coordinates (center of biological cell)
+                physical_pos = (
+                    (bio_x + 0.5) * cell_height_m,
+                    (bio_y + 0.5) * cell_height_m,
+                    (bio_z + 0.5) * cell_height_m
+                )
 
             reactions[physical_pos] = metabolism
 
@@ -799,7 +813,11 @@ class CellPopulation(ICellPopulation):
             # Update with current substance concentrations if provided
             if substance_concentrations:
                 # Convert biological cell position to FiPy grid position for concentration lookup
-                bio_x, bio_y = cell.state.position
+                # Handle both 2D and 3D positions
+                if len(cell.state.position) == 2:
+                    bio_x, bio_y = cell.state.position
+                else:  # 3D position - use x, y coordinates
+                    bio_x, bio_y, bio_z = cell.state.position
                 fipy_x = int(bio_x * self.config.domain.nx / (self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers))
                 fipy_y = int(bio_y * self.config.domain.ny / (self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers))
 
