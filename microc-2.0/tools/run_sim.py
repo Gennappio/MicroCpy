@@ -823,6 +823,20 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
                 else:
                     print(f"[!] VTK export failed - no cell data")
 
+                # Export VTK substance concentration fields
+                from vtk_export import export_microc_substance_fields
+                substance_output_dir = config.output_dir / "vtk_substances"
+                substance_files = export_microc_substance_fields(
+                    simulator=simulator,
+                    output_dir=str(substance_output_dir),
+                    step=step
+                )
+
+                if substance_files:
+                    print(f"[+] VTK substance fields exported: {len(substance_files)} files")
+                else:
+                    print(f"[!] VTK substance export failed - no substance data")
+
                 # Export H5 gene network states
                 from vtk_export import export_microc_gene_states
                 h5_output_dir = config.output_dir / "h5_gene_states"
