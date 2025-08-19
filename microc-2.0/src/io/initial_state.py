@@ -429,6 +429,7 @@ class InitialStateManager:
         positions = domain_data['positions']
         gene_states = domain_data['gene_states']
         phenotypes = domain_data['phenotypes']
+        metabolism = domain_data.get('metabolism', [])
         metadata = domain_data['metadata']
 
         cell_size_um = metadata.get('biocell_grid_size_um', 20.0)
@@ -450,9 +451,10 @@ class InitialStateManager:
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
 
-            # Get gene states and phenotype for this cell
+            # Get gene states, phenotype, and metabolism for this cell
             cell_gene_states = gene_states.get(i, {})
             cell_phenotype = phenotypes[i] if i < len(phenotypes) else 'Quiescent'
+            cell_metabolism = metabolism[i] if i < len(metabolism) else 0
 
             # Create cell with loaded data
             cell_init_data.append({
@@ -462,7 +464,7 @@ class InitialStateManager:
                 'age': 0.0,  # Default age (could be added to VTK format later)
                 'division_count': 0,  # Default division count
                 'gene_states': cell_gene_states,
-                'metabolic_state': {},  # Empty metabolic state (could be added later)
+                'metabolic_state': {'metabolism': cell_metabolism},  # Store metabolism value
                 'tq_wait_time': 0.0  # Default wait time
             })
 

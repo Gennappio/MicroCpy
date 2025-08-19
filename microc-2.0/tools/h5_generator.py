@@ -39,11 +39,16 @@ class H5Generator:
         # Load gene activation probabilities
         self.gene_probs = self._load_gene_probabilities()
         
-        # Define gene network nodes (from MicroC)
+        # Define ALL gene network nodes (from complete_gene_network_config.yaml)
         self.gene_nodes = [
-            'Oxygen_supply', 'Glucose_supply', 'MCT1_stimulus', 'Proton_level',
-            'FGFR_stimulus', 'EGFR_stimulus', 'Glycolysis', 'OXPHOS', 'ATP',
-            'Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis'
+            # Input nodes (13)
+            'Oxygen_supply', 'Glucose_supply', 'ATP_Production_Rate',
+            'FGFR_stimulus', 'EGFR_stimulus', 'cMET_stimulus', 'MCT1_stimulus',
+            'EGFRI', 'FGFRI', 'cMETI', 'MCT1I', 'GLUT1I', 'Growth_Inhibitor',
+            # Internal nodes (7)
+            'p53', 'p21', 'BCL2', 'ERK', 'FOXO3', 'MYC', 'p70',
+            # Output nodes (4)
+            'Necrosis', 'Apoptosis', 'Growth_Arrest', 'Proliferation'
         ]
         
         print(f"[*] H5 Generator initialized:")
@@ -197,7 +202,44 @@ class H5Generator:
             print(f"    {pheno}: {count} cells")
         
         return phenotypes
-    
+
+    def _determine_metabolism(self, gene_states: Dict[str, np.ndarray]) -> List[int]:
+        """
+        Determine cell metabolism based on gene states
+
+        Returns:
+            List of metabolism values:
+            0 = none (no ATP production)
+            1 = glycoATP (glycolysis only)
+            2 = mitoATP (mitochondrial only)
+            3 = mixed (both glycolysis and mitochondrial)
+        """
+        metabolism = []
+
+        # Get relevant gene states (use ATP_Production_Rate as proxy for metabolic activity)
+        atp_production = gene_states.get('ATP_Production_Rate', np.zeros(self.cell_number, dtype=bool))
+        oxygen_supply = gene_states.get('Oxygen_supply', np.zeros(self.cell_number, dtype=bool))
+        glucose_supply = gene_states.get('Glucose_supply', np.zeros(self.cell_number, dtype=bool))
+
+        for i in range(self.cell_number):
+            if not atp_production[i]:
+                # No ATP production
+                metabolism.append(0)  # none
+            elif oxygen_supply[i] and glucose_supply[i]:
+                # Both oxygen and glucose available - mixed metabolism
+                metabolism.append(3)  # mixed
+            elif glucose_supply[i] and not oxygen_supply[i]:
+                # Only glucose available - glycolysis
+                metabolism.append(1)  # glycoATP
+            elif oxygen_supply[i] and not glucose_supply[i]:
+                # Only oxygen available - mitochondrial (rare case)
+                metabolism.append(2)  # mitoATP
+            else:
+                # No substrates available
+                metabolism.append(0)  # none
+
+        return metabolism
+
     def generate_h5_files(self, output_prefix: str = "generated_cells"):
         """Generate the H5 files (cell states and gene states)"""
 
@@ -219,6 +261,9 @@ class H5Generator:
 
         # Determine phenotypes
         phenotypes = self._determine_phenotypes(gene_states)
+
+        # Determine metabolism
+        metabolism = self._determine_metabolism(gene_states)
 
         # Generate cell metadata
         cell_ids = [f"cell_{i:06d}" for i in range(actual_cell_count)]
@@ -269,6 +314,7 @@ class H5Generator:
             positions=positions,
             gene_states=gene_states_per_cell,
             phenotypes=phenotypes,
+            metabolism=metabolism,
             metadata=metadata,
             output_path=str(vtk_file)
         )

@@ -235,14 +235,15 @@ class VTKDomainExporter:
         self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
 
     def export_complete_domain(self, positions: np.ndarray, gene_states: Dict,
-                             phenotypes: List[str], metadata: Dict, output_path: str) -> str:
+                             phenotypes: List[str], metabolism: List[int], metadata: Dict, output_path: str) -> str:
         """
-        Export complete domain description with cells, gene networks, phenotypes, and metadata
+        Export complete domain description with cells, gene networks, phenotypes, metabolism, and metadata
 
         Args:
             positions: Nx3 array of cell positions (biological grid coordinates)
             gene_states: Dict mapping cell_id -> {gene_name: bool} for each cell
             phenotypes: List of phenotype strings for each cell
+            metabolism: List of metabolism values (0=none, 1=glycoATP, 2=mitoATP, 3=mixed)
             metadata: Dict with domain metadata (description, time, bounds, etc.)
             output_path: Path to save VTK file
 
@@ -328,6 +329,12 @@ class VTKDomainExporter:
             f.write("LOOKUP_TABLE default\n")
             for phenotype in phenotypes:
                 f.write(f"{phenotype_map[phenotype]}\n")
+
+            # Metabolism data (0=none, 1=glycoATP, 2=mitoATP, 3=mixed)
+            f.write(f"SCALARS Metabolism int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for metab in metabolism:
+                f.write(f"{metab}\n")
 
             # Gene network data (each gene as separate scalar field)
             for gene_name in gene_nodes:
@@ -465,13 +472,17 @@ class VTKDomainLoader:
 
                 cell_positions.append([bio_x, bio_y, bio_z])
 
-        # Parse gene states and phenotypes
+        # Parse gene states, phenotypes, and metabolism
         gene_states = {}
         phenotypes = []
+        metabolism = []
 
         # Get phenotype mapping
         phenotype_values = scalar_data.get('Phenotype', [])
         phenotype_map = {i: p for i, p in enumerate(phenotype_types)}
+
+        # Get metabolism values
+        metabolism_values = scalar_data.get('Metabolism', [])
 
         for i in range(len(cell_positions)):
             # Gene states for this cell
@@ -489,10 +500,17 @@ class VTKDomainLoader:
             else:
                 phenotypes.append('Unknown')
 
+            # Metabolism for this cell
+            if i < len(metabolism_values):
+                metabolism.append(metabolism_values[i])
+            else:
+                metabolism.append(0)  # Default to none
+
         result = {
             'positions': np.array(cell_positions),
             'gene_states': gene_states,
             'phenotypes': phenotypes,
+            'metabolism': metabolism,
             'metadata': metadata,
             'gene_nodes': gene_nodes,
             'phenotype_types': phenotype_types
