@@ -401,9 +401,10 @@ class InitialStateManager:
         # Try to load as enhanced VTK domain file first
         try:
             # Check if this is an enhanced VTK domain file
-            with open(file_path, 'r') as f:
-                content = f.read()
-                if "# METADATA_START" in content and "# gene_nodes:" in content:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                # Check if description line contains metadata (genes= and phenotypes=)
+                if len(lines) >= 2 and "|" in lines[1] and "genes=" in lines[1] and "phenotypes=" in lines[1]:
                     # This is an enhanced VTK domain file
                     print(f"[VTK] Detected enhanced VTK domain file")
                     return self._load_enhanced_vtk_domain(file_path)
