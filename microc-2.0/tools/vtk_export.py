@@ -263,24 +263,19 @@ class VTKDomainExporter:
         gene_nodes = list(next(iter(gene_states.values())).keys()) if gene_states else []
 
         with open(output_path, 'w', encoding='utf-8') as f:
-            # VTK header with metadata
+            # VTK header with embedded metadata in description line
+            # Encode metadata as JSON-like string in the description
+            metadata_str = (f"cells={len(positions)} "
+                          f"size={metadata.get('biocell_grid_size_um', self.cell_size_um)}um "
+                          f"genes={','.join(gene_nodes)} "
+                          f"phenotypes={','.join(sorted(set(phenotypes)))} "
+                          f"time={metadata.get('simulated_time', 0.0)} "
+                          f"bounds={metadata.get('domain_bounds_um', 'auto')}")
+
             f.write("# vtk DataFile Version 3.0\n")
-            f.write(f"MicroC Domain: {metadata.get('description', 'Generated domain')}\n")
+            f.write(f"MicroC Domain: {metadata.get('description', 'Generated domain')} | {metadata_str}\n")
             f.write("ASCII\n")
             f.write("DATASET UNSTRUCTURED_GRID\n")
-
-            # Write metadata as comments
-            f.write(f"# METADATA_START\n")
-            f.write(f"# description: {metadata.get('description', 'MicroC generated domain')}\n")
-            f.write(f"# simulated_time: {metadata.get('simulated_time', 0.0)}\n")
-            f.write(f"# suggested_cell_size_um: {metadata.get('suggested_cell_size_um', self.cell_size_um)}\n")
-            f.write(f"# biocell_grid_size_um: {metadata.get('biocell_grid_size_um', self.cell_size_um)}\n")
-            f.write(f"# domain_bounds_um: {metadata.get('domain_bounds_um', 'auto')}\n")
-            f.write(f"# generation_timestamp: {metadata.get('generation_timestamp', 'unknown')}\n")
-            f.write(f"# cell_count: {len(positions)}\n")
-            f.write(f"# gene_nodes: {','.join(gene_nodes)}\n")
-            f.write(f"# phenotype_types: {','.join(set(phenotypes))}\n")
-            f.write(f"# METADATA_END\n")
 
             # Generate cube vertices for each cell (8 vertices per cube)
             total_points = len(positions) * 8
@@ -375,39 +370,40 @@ class VTKDomainLoader:
         with open(vtk_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
-        # Parse metadata from comments
+        # Parse metadata from description line
         metadata = {}
         gene_nodes = []
         phenotype_types = []
 
-        in_metadata = False
-        for line in lines:
-            line = line.strip()
-            if line == "# METADATA_START":
-                in_metadata = True
-                continue
-            elif line == "# METADATA_END":
-                in_metadata = False
-                continue
-            elif in_metadata and line.startswith("# "):
-                # Parse metadata line
-                if ": " in line:
-                    key, value = line[2:].split(": ", 1)
-                    if key == "gene_nodes":
-                        gene_nodes = value.split(",") if value else []
-                    elif key == "phenotype_types":
-                        phenotype_types = value.split(",") if value else []
-                    else:
-                        # Try to convert to appropriate type
-                        try:
-                            if "." in value:
-                                metadata[key] = float(value)
-                            elif value.isdigit():
-                                metadata[key] = int(value)
+        # Look for description line (second line)
+        if len(lines) >= 2:
+            desc_line = lines[1].strip()
+            if "|" in desc_line:
+                # Extract metadata part after the "|"
+                parts = desc_line.split("|", 1)
+                if len(parts) == 2:
+                    metadata_part = parts[1].strip()
+
+                    # Parse key=value pairs
+                    for item in metadata_part.split():
+                        if "=" in item:
+                            key, value = item.split("=", 1)
+                            if key == "genes":
+                                gene_nodes = value.split(",") if value else []
+                            elif key == "phenotypes":
+                                phenotype_types = value.split(",") if value else []
+                            elif key == "cells":
+                                metadata['cell_count'] = int(value)
+                            elif key == "size":
+                                # Extract numeric value from "20.0um" format
+                                size_str = value.replace("um", "")
+                                metadata['biocell_grid_size_um'] = float(size_str)
+                            elif key == "time":
+                                metadata['simulated_time'] = float(value)
+                            elif key == "bounds":
+                                metadata['domain_bounds_um'] = value
                             else:
                                 metadata[key] = value
-                        except ValueError:
-                            metadata[key] = value
 
         # Parse cell positions from POINTS section
         positions = []
