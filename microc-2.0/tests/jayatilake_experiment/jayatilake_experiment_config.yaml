@@ -50,7 +50,7 @@ output:
 # Initial state configuration
 initial_state:
   mode: "load_vtk"             # "generate" or "load"
-  file_path:  "tools/generated_h5/test_domain_utf8_domain.vtk"              # Path to initial state file (for load mode)
+  file_path:  "tools/generated_h5/tumor_with_necrosis_fixed_domain.vtk"              # Path to initial state file (for load mode)
   save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt

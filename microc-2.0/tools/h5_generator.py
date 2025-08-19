@@ -43,7 +43,7 @@ class H5Generator:
         self.gene_nodes = [
             'Oxygen_supply', 'Glucose_supply', 'MCT1_stimulus', 'Proton_level',
             'FGFR_stimulus', 'EGFR_stimulus', 'Glycolysis', 'OXPHOS', 'ATP',
-            'Proliferation', 'Apoptosis', 'Growth_Arrest'
+            'Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis'
         ]
         
         print(f"[*] H5 Generator initialized:")
@@ -171,13 +171,16 @@ class H5Generator:
     def _determine_phenotypes(self, gene_states: Dict[str, np.ndarray]) -> List[str]:
         """Determine cell phenotypes based on gene states"""
         phenotypes = []
-        
+
         proliferation = gene_states.get('Proliferation', np.zeros(self.cell_number, dtype=bool))
         apoptosis = gene_states.get('Apoptosis', np.zeros(self.cell_number, dtype=bool))
         growth_arrest = gene_states.get('Growth_Arrest', np.zeros(self.cell_number, dtype=bool))
-        
+        necrosis = gene_states.get('Necrosis', np.zeros(self.cell_number, dtype=bool))
+
         for i in range(self.cell_number):
-            if apoptosis[i]:
+            if necrosis[i]:
+                phenotypes.append('Necrosis')
+            elif apoptosis[i]:
                 phenotypes.append('Apoptosis')
             elif growth_arrest[i]:
                 phenotypes.append('Growth_Arrest')

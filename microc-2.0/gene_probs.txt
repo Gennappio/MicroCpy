@@ -1,0 +1,22 @@
+# Gene Network Node Activation Probabilities
+# Format: gene_name probability
+# Probability should be between 0.0 and 1.0
+
+# Supply nodes (usually high activation)
+Oxygen_supply 0.8
+Glucose_supply 0.9
+MCT1_stimulus 0.6
+Proton_level 0.4
+FGFR_stimulus 0.3
+EGFR_stimulus 0.2
+
+# Metabolic nodes
+Glycolysis 0.7
+OXPHOS 0.5
+ATP 0.8
+
+# Fate nodes (usually lower activation)
+Proliferation 0.3
+Apoptosis 0.1
+Growth_Arrest 0.2
+Necrosis 0.05
