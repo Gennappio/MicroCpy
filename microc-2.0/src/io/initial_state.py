@@ -387,7 +387,8 @@ class InitialStateManager:
 
     def load_initial_state_from_vtk(self, file_path: Union[str, Path]) -> Tuple[List[Dict[str, Any]], float]:
         """
-        Load initial cell positions from VTK cubic cell file.
+        Load initial cell state from VTK domain file (enhanced format with gene networks and phenotypes).
+        Falls back to basic VTK loading if enhanced format is not detected.
 
         Returns:
             Tuple of (cell_init_data, cell_size_um)
@@ -397,12 +398,88 @@ class InitialStateManager:
         if not file_path.exists():
             raise FileNotFoundError(f"VTK file not found: {file_path}")
 
-        # Load VTK file
+        # Try to load as enhanced VTK domain file first
+        try:
+            # Check if this is an enhanced VTK domain file
+            with open(file_path, 'r') as f:
+                content = f.read()
+                if "# METADATA_START" in content and "# gene_nodes:" in content:
+                    # This is an enhanced VTK domain file
+                    print(f"[VTK] Detected enhanced VTK domain file")
+                    return self._load_enhanced_vtk_domain(file_path)
+        except Exception as e:
+            print(f"[DEBUG] Enhanced VTK loading failed: {e}")
+
+        # Fall back to basic VTK loading
+        print(f"[VTK] Using basic VTK loading (legacy format)")
+        return self._load_basic_vtk_file(file_path)
+
+    def _load_enhanced_vtk_domain(self, file_path: Path) -> Tuple[List[Dict[str, Any]], float]:
+        """Load enhanced VTK domain file with gene networks and phenotypes"""
+        # Import VTK domain loader
+        import sys
+        sys.path.append('tools')
+        from vtk_export import VTKDomainLoader
+
+        # Load complete domain
+        loader = VTKDomainLoader()
+        domain_data = loader.load_complete_domain(str(file_path))
+
+        positions = domain_data['positions']
+        gene_states = domain_data['gene_states']
+        phenotypes = domain_data['phenotypes']
+        metadata = domain_data['metadata']
+
+        cell_size_um = metadata.get('biocell_grid_size_um', 20.0)
+
+        print(f"[INFO] Enhanced VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+
+        if len(positions) == 0:
+            print("[!] No cells in VTK file")
+            return [], cell_size_um
+
+        # Create cell initialization data with loaded gene states and phenotypes
+        cell_init_data = []
+
+        for i, pos in enumerate(positions):
+            # Convert 3D position to 2D if needed for 2D simulations
+            if self.config.domain.dimensions == 2:
+                pos = (pos[0], pos[1])  # Drop z coordinate
+
+            # Generate unique cell ID
+            cell_id = f"cell_{i:06d}"
+
+            # Get gene states and phenotype for this cell
+            cell_gene_states = gene_states.get(i, {})
+            cell_phenotype = phenotypes[i] if i < len(phenotypes) else 'Quiescent'
+
+            # Create cell with loaded data
+            cell_init_data.append({
+                'id': cell_id,
+                'position': pos,
+                'phenotype': cell_phenotype,
+                'age': 0.0,  # Default age (could be added to VTK format later)
+                'division_count': 0,  # Default division count
+                'gene_states': cell_gene_states,
+                'metabolic_state': {},  # Empty metabolic state (could be added later)
+                'tq_wait_time': 0.0  # Default wait time
+            })
+
+        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from enhanced VTK domain file")
+        print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
+        print(f"[OK] Loaded gene networks: {len(domain_data.get('gene_nodes', []))} nodes per cell")
+        print(f"[OK] Loaded phenotypes: {len(set(phenotypes))} unique types")
+
+        return cell_init_data, cell_size_um
+
+    def _load_basic_vtk_file(self, file_path: Path) -> Tuple[List[Dict[str, Any]], float]:
+        """Load basic VTK file (legacy format) with only positions"""
+        # Load VTK file using existing loader
         vtk_loader = VTKCellLoader(file_path)
         positions = vtk_loader.get_cell_positions()
         cell_size_um = vtk_loader.get_cell_size_um()
 
-        print(f"[INFO] VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+        print(f"[INFO] Basic VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
 
         if not positions:
             print("[!] No cells in VTK file")
@@ -415,11 +492,6 @@ class InitialStateManager:
             # Convert 3D position to 2D if needed for 2D simulations
             if self.config.domain.dimensions == 2:
                 pos = (pos[0], pos[1])  # Drop z coordinate
-                if i < 3:  # Debug first few positions
-                    print(f"[DEBUG] Cell {i}: 3D pos {positions[i]} -> 2D pos {pos}")
-            else:
-                if i < 3:  # Debug first few positions
-                    print(f"[DEBUG] Cell {i}: 3D pos {pos} (keeping 3D)")
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -436,7 +508,7 @@ class InitialStateManager:
                 'tq_wait_time': 0.0  # Default wait time
             })
 
-        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from VTK file")
+        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from basic VTK file")
         print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
 
         return cell_init_data, cell_size_um

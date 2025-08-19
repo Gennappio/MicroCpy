@@ -12,6 +12,7 @@ The VTK files contain cubic cell geometry with scalar data for visualization.
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
+from datetime import datetime
 
 # Check if FiPy is available for substance field export
 try:
@@ -223,6 +224,290 @@ class VTKSubstanceFieldExporter:
                     for i in range(nx):
                         conc = concentrations[i, j, k] if is_3d else concentrations[i, j, 0]
                         f.write(f"{conc:.6e}\n")
+
+
+class VTKDomainExporter:
+    """Enhanced VTK export for complete domain description with gene networks and metadata"""
+
+    def __init__(self, cell_size_um: float):
+        """Initialize with cell size in micrometers"""
+        self.cell_size_um = cell_size_um
+        self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
+
+    def export_complete_domain(self, positions: np.ndarray, gene_states: Dict,
+                             phenotypes: List[str], metadata: Dict, output_path: str) -> str:
+        """
+        Export complete domain description with cells, gene networks, phenotypes, and metadata
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            gene_states: Dict mapping cell_id -> {gene_name: bool} for each cell
+            phenotypes: List of phenotype strings for each cell
+            metadata: Dict with domain metadata (description, time, bounds, etc.)
+            output_path: Path to save VTK file
+
+        Returns:
+            Path to exported VTK file
+        """
+        # Ensure output directory exists
+        output_dir = Path(output_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"[*] Exporting complete VTK domain...")
+        print(f"    Cell size: {self.cell_size_um} um")
+        print(f"    Cell count: {len(positions)}")
+        print(f"    Gene networks: {len(gene_states)} cells")
+        print(f"    Phenotypes: {len(set(phenotypes))} unique types")
+
+        # Get all gene node names from first cell
+        gene_nodes = list(next(iter(gene_states.values())).keys()) if gene_states else []
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            # VTK header with metadata
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"MicroC Domain: {metadata.get('description', 'Generated domain')}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Write metadata as comments
+            f.write(f"# METADATA_START\n")
+            f.write(f"# description: {metadata.get('description', 'MicroC generated domain')}\n")
+            f.write(f"# simulated_time: {metadata.get('simulated_time', 0.0)}\n")
+            f.write(f"# suggested_cell_size_um: {metadata.get('suggested_cell_size_um', self.cell_size_um)}\n")
+            f.write(f"# biocell_grid_size_um: {metadata.get('biocell_grid_size_um', self.cell_size_um)}\n")
+            f.write(f"# domain_bounds_um: {metadata.get('domain_bounds_um', 'auto')}\n")
+            f.write(f"# generation_timestamp: {metadata.get('generation_timestamp', 'unknown')}\n")
+            f.write(f"# cell_count: {len(positions)}\n")
+            f.write(f"# gene_nodes: {','.join(gene_nodes)}\n")
+            f.write(f"# phenotype_types: {','.join(set(phenotypes))}\n")
+            f.write(f"# METADATA_END\n")
+
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = self.cell_size_m / 2.0  # Half cell size in meters
+
+            for pos in positions:
+                # Convert from biological grid coordinates to physical coordinates (meters)
+                x_center = pos[0] * self.cell_size_m
+                y_center = pos[1] * self.cell_size_m
+                z_center = pos[2] * self.cell_size_m if len(pos) > 2 else 0.0
+
+                # Generate 8 vertices of the cube around the center
+                vertices = [
+                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                ]
+
+                for vertex in vertices:
+                    f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+
+            # Cell connectivity (hexahedrons)
+            num_cells = len(positions)
+            f.write(f"CELLS {num_cells} {num_cells * 9}\n")  # 9 = 8 vertices + 1 count
+
+            for i in range(num_cells):
+                base_idx = i * 8
+                # Hexahedron connectivity (VTK_HEXAHEDRON = 12)
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
+
+            # Cell types (all hexahedrons)
+            f.write(f"CELL_TYPES {num_cells}\n")
+            for _ in range(num_cells):
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
+
+            # Cell data section
+            f.write(f"CELL_DATA {num_cells}\n")
+
+            # Phenotype data
+            phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
+            f.write(f"SCALARS Phenotype int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for phenotype in phenotypes:
+                f.write(f"{phenotype_map[phenotype]}\n")
+
+            # Gene network data (each gene as separate scalar field)
+            for gene_name in gene_nodes:
+                f.write(f"SCALARS {gene_name} int 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for i in range(len(positions)):
+                    cell_genes = gene_states.get(i, {})
+                    activation = 1 if cell_genes.get(gene_name, False) else 0
+                    f.write(f"{activation}\n")
+
+        print(f"[+] Complete VTK domain exported: {Path(output_path).name}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: 3D cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with {self.cell_size_um} um edge length")
+        print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
+        print(f"    Phenotypes: {list(phenotype_map.keys())}")
+
+        return output_path
+
+
+class VTKDomainLoader:
+    """Load complete domain description from enhanced VTK files"""
+
+    def __init__(self):
+        """Initialize VTK domain loader"""
+        pass
+
+    def load_complete_domain(self, vtk_path: str) -> Dict:
+        """
+        Load complete domain description from VTK file
+
+        Args:
+            vtk_path: Path to VTK domain file
+
+        Returns:
+            Dict containing positions, gene_states, phenotypes, metadata
+        """
+        print(f"[VTK] Loading complete domain from {vtk_path}")
+
+        with open(vtk_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # Parse metadata from comments
+        metadata = {}
+        gene_nodes = []
+        phenotype_types = []
+
+        in_metadata = False
+        for line in lines:
+            line = line.strip()
+            if line == "# METADATA_START":
+                in_metadata = True
+                continue
+            elif line == "# METADATA_END":
+                in_metadata = False
+                continue
+            elif in_metadata and line.startswith("# "):
+                # Parse metadata line
+                if ": " in line:
+                    key, value = line[2:].split(": ", 1)
+                    if key == "gene_nodes":
+                        gene_nodes = value.split(",") if value else []
+                    elif key == "phenotype_types":
+                        phenotype_types = value.split(",") if value else []
+                    else:
+                        # Try to convert to appropriate type
+                        try:
+                            if "." in value:
+                                metadata[key] = float(value)
+                            elif value.isdigit():
+                                metadata[key] = int(value)
+                            else:
+                                metadata[key] = value
+                        except ValueError:
+                            metadata[key] = value
+
+        # Parse cell positions from POINTS section
+        positions = []
+        points_section = False
+        cell_data_section = False
+        current_scalar = None
+        scalar_data = {}
+
+        for i, line in enumerate(lines):
+            line = line.strip()
+
+            if line.startswith("POINTS"):
+                points_section = True
+                total_points = int(line.split()[1])
+                continue
+            elif line.startswith("CELLS"):
+                points_section = False
+                continue
+            elif line.startswith("CELL_DATA"):
+                cell_data_section = True
+                continue
+            elif line.startswith("SCALARS"):
+                if cell_data_section:
+                    current_scalar = line.split()[1]
+                    scalar_data[current_scalar] = []
+                continue
+            elif line.startswith("LOOKUP_TABLE"):
+                continue
+
+            if points_section and line and not line.startswith("#"):
+                # Parse point coordinates (8 points per cell)
+                coords = list(map(float, line.split()))
+                if len(coords) == 3:
+                    positions.append(coords)
+            elif cell_data_section and current_scalar and line and not line.startswith("#") and not line.startswith("SCALARS"):
+                # Parse scalar data
+                try:
+                    value = int(line)
+                    scalar_data[current_scalar].append(value)
+                except ValueError:
+                    pass
+
+        # Convert point coordinates to cell centers (every 8 points = 1 cell)
+        cell_positions = []
+        cell_size_m = metadata.get('biocell_grid_size_um', 20.0) * 1e-6
+
+        for i in range(0, len(positions), 8):
+            if i + 7 < len(positions):
+                # Calculate cell center from cube vertices
+                cube_points = positions[i:i+8]
+                center_x = sum(p[0] for p in cube_points) / 8
+                center_y = sum(p[1] for p in cube_points) / 8
+                center_z = sum(p[2] for p in cube_points) / 8
+
+                # Convert back to biological grid coordinates
+                bio_x = center_x / cell_size_m
+                bio_y = center_y / cell_size_m
+                bio_z = center_z / cell_size_m
+
+                cell_positions.append([bio_x, bio_y, bio_z])
+
+        # Parse gene states and phenotypes
+        gene_states = {}
+        phenotypes = []
+
+        # Get phenotype mapping
+        phenotype_values = scalar_data.get('Phenotype', [])
+        phenotype_map = {i: p for i, p in enumerate(phenotype_types)}
+
+        for i in range(len(cell_positions)):
+            # Gene states for this cell
+            cell_genes = {}
+            for gene_name in gene_nodes:
+                if gene_name in scalar_data and i < len(scalar_data[gene_name]):
+                    cell_genes[gene_name] = bool(scalar_data[gene_name][i])
+            gene_states[i] = cell_genes
+
+            # Phenotype for this cell
+            if i < len(phenotype_values):
+                phenotype_idx = phenotype_values[i]
+                phenotype = phenotype_map.get(phenotype_idx, 'Unknown')
+                phenotypes.append(phenotype)
+            else:
+                phenotypes.append('Unknown')
+
+        result = {
+            'positions': np.array(cell_positions),
+            'gene_states': gene_states,
+            'phenotypes': phenotypes,
+            'metadata': metadata,
+            'gene_nodes': gene_nodes,
+            'phenotype_types': phenotype_types
+        }
+
+        print(f"[+] Loaded domain: {len(cell_positions)} cells")
+        print(f"    Cell size: {metadata.get('biocell_grid_size_um', 'unknown')} um")
+        print(f"    Gene nodes: {len(gene_nodes)}")
+        print(f"    Phenotypes: {len(set(phenotypes))} types")
+
+        return result
 
 
 class VTKCellExporter:

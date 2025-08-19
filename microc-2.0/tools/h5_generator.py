@@ -236,14 +236,44 @@ class H5Generator:
         # Create gene states H5 file
         self._create_gene_states_h5(gene_states_file, cell_ids, gene_states)
 
-        # Export VTK cubic cells using shared module
-        from vtk_export import export_h5_initial_conditions
-        vtk_file = export_h5_initial_conditions(positions, self.cell_size, output_prefix)
+        # Export comprehensive VTK domain file
+        from vtk_export import VTKDomainExporter
+
+        # Convert gene states from {gene_name: np.ndarray} to {cell_id: {gene_name: bool}}
+        gene_states_per_cell = {}
+        for i in range(len(positions)):
+            cell_genes = {}
+            for gene_name, gene_array in gene_states.items():
+                cell_genes[gene_name] = bool(gene_array[i])
+            gene_states_per_cell[i] = cell_genes
+
+        # Create metadata for VTK file
+        metadata = {
+            'description': f'MicroC domain with {self.cell_number} cells',
+            'simulated_time': 0.0,
+            'suggested_cell_size_um': self.cell_size,
+            'biocell_grid_size_um': self.cell_size,
+            'domain_bounds_um': f'sphere_radius_{self.sphere_radius}',
+            'generation_timestamp': datetime.now().isoformat(),
+            'sparseness': self.sparseness,
+            'sphere_radius_um': self.sphere_radius
+        }
+
+        # Export complete domain VTK file
+        exporter = VTKDomainExporter(self.cell_size)
+        vtk_file = output_dir / f"{output_prefix}_domain.vtk"
+        exporter.export_complete_domain(
+            positions=positions,
+            gene_states=gene_states_per_cell,
+            phenotypes=phenotypes,
+            metadata=metadata,
+            output_path=str(vtk_file)
+        )
 
         print(f"\n[+] Generated files in {output_dir}:")
         print(f"    Cell states: {cell_states_file.name}")
         print(f"    Gene states: {gene_states_file.name}")
-        print(f"    VTK cells: {Path(vtk_file).name}")
+        print(f"    VTK domain: {vtk_file.name}")
 
         return str(cell_states_file), str(gene_states_file)
 
