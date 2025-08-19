@@ -26,7 +26,7 @@ domain:
 # Time configuration with multi-timescale orchestration
 time:
   dt: 0.1
-  end_time: 0.5  # Longer test run for VTK export
+  end_time: 0.3  # Demo run for VTK export
   diffusion_step: 2      # Update diffusion every 2 steps (medium speed) CHANGE!
   intracellular_step: 1  # Update gene networks every step (fast)
   intercellular_step: 5  # Update cell interactions every 5 steps (slow)
@@ -50,7 +50,7 @@ output:
 # Initial state configuration
 initial_state:
   mode: "load_vtk"             # "generate" or "load"
-  file_path:  "tools/generated_h5/tumor_core4_cells.vtk"              # Path to initial state file (for load mode)
+  file_path:  "tools/generated_h5/tumor_core3_fixed_cells.vtk"              # Path to initial state file (for load mode)
   save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt
