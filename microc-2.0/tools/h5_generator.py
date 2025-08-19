@@ -39,16 +39,23 @@ class H5Generator:
         # Load gene activation probabilities
         self.gene_probs = self._load_gene_probabilities()
         
-        # Define ALL gene network nodes (from complete_gene_network_config.yaml)
+        # Define ALL gene network nodes (from jaya_microc.bnd - 106 nodes total)
         self.gene_nodes = [
-            # Input nodes (13)
-            'Oxygen_supply', 'Glucose_supply', 'ATP_Production_Rate',
-            'FGFR_stimulus', 'EGFR_stimulus', 'cMET_stimulus', 'MCT1_stimulus',
-            'EGFRI', 'FGFRI', 'cMETI', 'MCT1I', 'GLUT1I', 'Growth_Inhibitor',
-            # Internal nodes (7)
-            'p53', 'p21', 'BCL2', 'ERK', 'FOXO3', 'MYC', 'p70',
-            # Output nodes (4)
-            'Necrosis', 'Apoptosis', 'Growth_Arrest', 'Proliferation'
+            # Input nodes (25)
+            'DNA_damage', 'EGFRD', 'EGFRI', 'EGFR_stimulus', 'FGF', 'FGFRD', 'FGFRI', 'FGFR_stimulus',
+            'GI', 'GLUT1D', 'GLUT1I', 'Glucose', 'Glucose_supply', 'Growth_Inhibitor', 'HGF',
+            'MCT1D', 'MCT1I', 'MCT1_stimulus', 'MCT4D', 'MCT4I', 'Oxygen_supply', 'TGFBR_stimulus',
+            'cMETD', 'cMETI', 'cMET_stimulus',
+            # Logic nodes (81)
+            'AKT', 'AP1', 'ATF2', 'ATM', 'ATP_Production_Rate', 'AcetylCoA', 'Apoptosis', 'BCL2',
+            'BPG', 'CREB', 'Cell_Glucose', 'Cell_Lactate', 'DUSP1', 'EGFR', 'EGFRI_affinity', 'ELK1',
+            'ERK', 'ETC', 'F16BP', 'F6P', 'FGFR', 'FOS', 'FOXO3', 'FRS2', 'G6P', 'GA3P', 'GAB1',
+            'GADD45', 'GLUT1', 'GRB2', 'Growth_Arrest', 'HIF1', 'JNK', 'JUN', 'LDHA', 'LDHB', 'LOX',
+            'Lactate', 'MAP3K1_3', 'MAX', 'MCT1', 'MCT4', 'MDM2', 'MEK1_2', 'MSK', 'MTK1', 'MYC',
+            'Necrosis', 'PDH', 'PDK1', 'PEP', 'PG2', 'PG3', 'PI3K', 'PKC', 'PLCG', 'PPP2CA', 'PTEN',
+            'Proliferation', 'Proton', 'Pyruvate', 'RAF', 'RAS', 'RSK', 'SMAD', 'SOS', 'SPRY', 'TAK1',
+            'TAOK', 'TCA', 'TGFA', 'TGFBR', 'VEGF', 'cMET', 'glycoATP', 'mitoATP', 'p14', 'p21',
+            'p38', 'p53', 'p70'
         ]
         
         print(f"[*] H5 Generator initialized:")
