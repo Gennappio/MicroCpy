@@ -406,24 +406,44 @@ class VTKDomainExporter:
             f.write("ASCII\n")
             f.write("DATASET UNSTRUCTURED_GRID\n")
 
-            # Points (logical coordinates as-is, no physical conversion)
-            f.write(f"POINTS {len(positions)} float\n")
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = 0.5  # Half of unit cube size (1.0)
+
             for pos in positions:
                 # Use logical coordinates directly (biological grid coordinates)
-                x_logical = float(pos[0])
-                y_logical = float(pos[1])
-                z_logical = float(pos[2]) if len(pos) > 2 else 0.0
-                f.write(f"{x_logical} {y_logical} {z_logical}\n")
+                x_center = float(pos[0])
+                y_center = float(pos[1])
+                z_center = float(pos[2]) if len(pos) > 2 else 0.0
 
-            # Cells (each point is a vertex cell)
-            f.write(f"CELLS {len(positions)} {len(positions) * 2}\n")
+                # Generate 8 vertices for unit cube
+                vertices = [
+                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                ]
+
+                for vertex in vertices:
+                    f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+
+            # Cells (hexahedrons - 8 vertices per cube)
+            f.write(f"CELLS {len(positions)} {len(positions) * 9}\n")
             for i in range(len(positions)):
-                f.write(f"1 {i}\n")  # Each cell has 1 point
+                base_idx = i * 8
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
 
-            # Cell types (all vertices)
+            # Cell types (all hexahedrons)
             f.write(f"CELL_TYPES {len(positions)}\n")
             for i in range(len(positions)):
-                f.write("1\n")  # VTK_VERTEX = 1
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
 
             # Cell data
             f.write(f"CELL_DATA {len(positions)}\n")
@@ -451,8 +471,8 @@ class VTKDomainExporter:
 
         print(f"[+] Logical positions VTK exported: {Path(output_path).name}")
         print(f"    Format: Unstructured Grid (.vtk)")
-        print(f"    Cell representation: Point cloud (vertices)")
-        print(f"    Data: {len(positions)} points with logical coordinates")
+        print(f"    Cell representation: Unit cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with 1.0 unit edge length")
         print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
         print(f"    Phenotypes: {list(phenotype_map.keys())}")
 
@@ -645,7 +665,7 @@ class VTKCellExporter:
                                 output_path: str, scalar_name: str = "ATP_Type",
                                 title: str = "Logical Cell Positions"):
         """
-        Export cell logical positions (biological grid coordinates) as points in VTK format
+        Export cell logical positions (biological grid coordinates) as unit cubes in VTK format
 
         Args:
             positions: Nx3 array of cell positions (biological grid coordinates)
@@ -662,7 +682,7 @@ class VTKCellExporter:
         print(f"[*] Exporting VTK logical positions...")
         print(f"    Cell count: {len(positions)}")
         print(f"    Scalar field: {scalar_name}")
-        print(f"    Format: Point cloud (logical coordinates)")
+        print(f"    Format: Unit cubes (logical coordinates)")
 
         with open(output_path, 'w') as f:
             # VTK header
@@ -671,25 +691,44 @@ class VTKCellExporter:
             f.write("ASCII\n")
             f.write("DATASET UNSTRUCTURED_GRID\n")
 
-            # Points (logical coordinates as-is, no physical conversion)
-            f.write(f"POINTS {len(positions)} float\n")
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = 0.5  # Half of unit cube size (1.0)
 
             for pos in positions:
                 # Use logical coordinates directly (biological grid coordinates)
-                x_logical = float(pos[0])
-                y_logical = float(pos[1])
-                z_logical = float(pos[2]) if len(pos) > 2 else 0.0
-                f.write(f"{x_logical} {y_logical} {z_logical}\n")
+                x_center = float(pos[0])
+                y_center = float(pos[1])
+                z_center = float(pos[2]) if len(pos) > 2 else 0.0
 
-            # Cells (each point is a vertex cell)
-            f.write(f"CELLS {len(positions)} {len(positions) * 2}\n")
+                # Generate 8 vertices for unit cube
+                vertices = [
+                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                ]
+
+                for vertex in vertices:
+                    f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+
+            # Cells (hexahedrons - 8 vertices per cube)
+            f.write(f"CELLS {len(positions)} {len(positions) * 9}\n")
             for i in range(len(positions)):
-                f.write(f"1 {i}\n")  # Each cell has 1 point
+                base_idx = i * 8
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
 
-            # Cell types (all vertices)
+            # Cell types (all hexahedrons)
             f.write(f"CELL_TYPES {len(positions)}\n")
             for i in range(len(positions)):
-                f.write("1\n")  # VTK_VERTEX = 1
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
 
             # Cell data (scalars)
             f.write(f"CELL_DATA {len(positions)}\n")
@@ -700,8 +739,8 @@ class VTKCellExporter:
 
         print(f"[+] VTK logical positions exported: {Path(output_path).name}")
         print(f"    Format: Unstructured Grid (.vtk)")
-        print(f"    Cell representation: Point cloud (vertices)")
-        print(f"    Data: {len(positions)} points with logical coordinates")
+        print(f"    Cell representation: Unit cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with 1.0 unit edge length")
 
         return output_path
     
