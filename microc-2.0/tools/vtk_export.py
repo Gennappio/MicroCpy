@@ -284,11 +284,21 @@ class VTKDomainExporter:
 
             half_size = self.cell_size_m / 2.0  # Half cell size in meters
 
+            # Center positions around (0,0,0) for consistency
+            if len(positions) > 0:
+                # Calculate center of mass
+                center_x = sum(pos[0] for pos in positions) / len(positions)
+                center_y = sum(pos[1] for pos in positions) / len(positions)
+                center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+            else:
+                center_x = center_y = center_z = 0.0
+
             for pos in positions:
                 # Convert from biological grid coordinates to physical coordinates (meters)
-                x_center = pos[0] * self.cell_size_m
-                y_center = pos[1] * self.cell_size_m
-                z_center = pos[2] * self.cell_size_m if len(pos) > 2 else 0.0
+                # Center around (0,0,0) by subtracting center of mass
+                x_center = (pos[0] - center_x) * self.cell_size_m
+                y_center = (pos[1] - center_y) * self.cell_size_m
+                z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
 
                 # Generate 8 vertices of the cube around the center
                 vertices = [
@@ -465,7 +475,7 @@ class VTKDomainLoader:
                 center_y = sum(p[1] for p in cube_points) / 8
                 center_z = sum(p[2] for p in cube_points) / 8
 
-                # Convert back to biological grid coordinates
+                # Convert back to biological grid coordinates (preserve centering around 0,0,0)
                 bio_x = center_x / cell_size_m
                 bio_y = center_y / cell_size_m
                 bio_z = center_z / cell_size_m
@@ -573,11 +583,21 @@ class VTKCellExporter:
             
             half_size = self.cell_size_m / 2.0  # Half cell size in meters
             
+            # Center positions around (0,0,0) for consistency
+            if len(positions) > 0:
+                # Calculate center of mass
+                center_x = sum(pos[0] for pos in positions) / len(positions)
+                center_y = sum(pos[1] for pos in positions) / len(positions)
+                center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+            else:
+                center_x = center_y = center_z = 0.0
+
             for pos in positions:
                 # Convert from biological grid coordinates to physical coordinates (meters)
-                x_center = pos[0] * self.cell_size_m
-                y_center = pos[1] * self.cell_size_m
-                z_center = pos[2] * self.cell_size_m if len(pos) > 2 else 0.0
+                # Center around (0,0,0) by subtracting center of mass
+                x_center = (pos[0] - center_x) * self.cell_size_m
+                y_center = (pos[1] - center_y) * self.cell_size_m
+                z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
                 
                 # Generate 8 vertices of the cube around the center
                 vertices = [

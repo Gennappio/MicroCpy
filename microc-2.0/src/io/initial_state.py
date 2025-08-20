@@ -203,18 +203,14 @@ class VTKCellLoader:
             print(f"[*] Detected biological cell size: {self.cell_size_um:.2f} um")
 
             # Convert cell centers to biological grid coordinates
-            # First, find the bounding box to normalize coordinates to positive values
-            min_x = min(center[0] for center in cell_centers)
-            min_y = min(center[1] for center in cell_centers)
-            min_z = min(center[2] for center in cell_centers)
-
+            # Preserve centered positioning (don't shift to positive values)
             cell_size_m = avg_edge_length_m
 
             for center in cell_centers:
-                # Shift coordinates to make them positive, then convert to grid coordinates
-                bio_x = (center[0] - min_x) / cell_size_m
-                bio_y = (center[1] - min_y) / cell_size_m
-                bio_z = (center[2] - min_z) / cell_size_m
+                # Convert directly to biological grid coordinates (preserve centering around 0,0,0)
+                bio_x = center[0] / cell_size_m
+                bio_y = center[1] / cell_size_m
+                bio_z = center[2] / cell_size_m
                 self.cell_positions.append((bio_x, bio_y, bio_z))
 
         print(f"[+] Loaded {len(self.cell_positions)} cell positions")
