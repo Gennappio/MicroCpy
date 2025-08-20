@@ -431,10 +431,29 @@ class InitialStateManager:
         phenotypes = domain_data['phenotypes']
         metabolism = domain_data.get('metabolism', [])
         metadata = domain_data['metadata']
+        gene_nodes = domain_data.get('gene_nodes', [])
 
-        cell_size_um = metadata.get('biocell_grid_size_um', 20.0)
+        # Use cell size from YAML config, not VTK metadata
+        vtk_cell_size_um = metadata.get('biocell_grid_size_um', 20.0)
 
-        print(f"[INFO] Enhanced VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+        # Get YAML cell height and convert to float if it's a Length object
+        yaml_cell_height = getattr(self.config.domain, 'cell_height', 20.0)
+        if hasattr(yaml_cell_height, 'value'):
+            # It's a Length object, get the value in micrometers
+            # The value is already in the correct unit (micrometers), just extract it
+            yaml_cell_size_um = float(yaml_cell_height.value)
+        else:
+            # It's already a float in micrometers
+            yaml_cell_size_um = float(yaml_cell_height)
+
+        # Warning if VTK cube size differs from YAML cell height
+        if abs(vtk_cell_size_um - yaml_cell_size_um) > 0.1:  # Allow small floating point differences
+            print(f"[WARNING] VTK cube size ({vtk_cell_size_um:.2f} um) differs from YAML cell height ({yaml_cell_size_um:.2f} um)")
+            print(f"[WARNING] Using YAML cell height: {yaml_cell_size_um:.2f} um")
+
+        cell_size_um = yaml_cell_size_um
+
+        print(f"[INFO] Enhanced VTK file info: {len(positions)} cells, VTK cube size: {vtk_cell_size_um:.2f} um, using YAML cell size: {cell_size_um:.2f} um")
 
         if len(positions) == 0:
             print("[!] No cells in VTK file")
@@ -452,9 +471,21 @@ class InitialStateManager:
             cell_id = f"cell_{i:06d}"
 
             # Get gene states, phenotype, and metabolism for this cell
-            cell_gene_states = gene_states.get(i, {})
+            vtk_gene_states = gene_states.get(i, {})
             cell_phenotype = phenotypes[i] if i < len(phenotypes) else 'Quiescent'
             cell_metabolism = metabolism[i] if i < len(metabolism) else 0
+
+            # Initialize ALL gene network nodes for this cell
+            # Ensure every gene node from VTK is properly initialized
+            complete_gene_states = {}
+            for gene_name in gene_nodes:
+                # Use VTK gene state if available, otherwise default to False
+                complete_gene_states[gene_name] = vtk_gene_states.get(gene_name, False)
+
+            # Add any additional gene states from VTK that might not be in gene_nodes list
+            for gene_name, state in vtk_gene_states.items():
+                if gene_name not in complete_gene_states:
+                    complete_gene_states[gene_name] = state
 
             # Create cell with loaded data
             cell_init_data.append({
@@ -463,15 +494,21 @@ class InitialStateManager:
                 'phenotype': cell_phenotype,
                 'age': 0.0,  # Default age (could be added to VTK format later)
                 'division_count': 0,  # Default division count
-                'gene_states': cell_gene_states,
+                'gene_states': complete_gene_states,  # Complete gene network initialization
                 'metabolic_state': {'metabolism': cell_metabolism},  # Store metabolism value
                 'tq_wait_time': 0.0  # Default wait time
             })
 
         print(f"[OK] Successfully loaded {len(cell_init_data)} cells from enhanced VTK domain file")
-        print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
-        print(f"[OK] Loaded gene networks: {len(domain_data.get('gene_nodes', []))} nodes per cell")
+        print(f"[OK] Using biological cell size: {cell_size_um:.2f} um (from YAML config)")
+        print(f"[OK] Initialized gene networks: {len(gene_nodes)} nodes per cell")
         print(f"[OK] Loaded phenotypes: {len(set(phenotypes))} unique types")
+
+        # Debug: Show first cell's gene states to verify initialization
+        if cell_init_data and gene_nodes:
+            first_cell_genes = cell_init_data[0]['gene_states']
+            active_genes = sum(1 for state in first_cell_genes.values() if state)
+            print(f"[DEBUG] First cell has {active_genes}/{len(first_cell_genes)} active genes")
 
         return cell_init_data, cell_size_um
 
