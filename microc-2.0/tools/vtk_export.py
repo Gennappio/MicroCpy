@@ -362,6 +362,100 @@ class VTKDomainExporter:
         print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
         print(f"    Phenotypes: {list(phenotype_map.keys())}")
 
+        # Also export logical positions
+        logical_output_path = output_path.replace('_domain.vtk', '_logical.vtk')
+        self._export_logical_positions(positions, phenotypes, gene_states, gene_nodes,
+                                     metabolism, metadata, logical_output_path)
+
+        return output_path
+
+    def _export_logical_positions(self, positions: np.ndarray, phenotypes: List[str],
+                                gene_states: Dict, gene_nodes: List[str], metabolism: List[int],
+                                metadata: Dict, output_path: str) -> str:
+        """
+        Export logical positions (biological grid coordinates) with all gene and phenotype data
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            phenotypes: List of phenotype strings for each cell
+            gene_states: Dict mapping cell_id -> {gene_name: bool} for each cell
+            gene_nodes: List of all gene node names
+            metabolism: List of metabolism values for each cell
+            metadata: Dict with domain metadata
+            output_path: Path to save logical VTK file
+
+        Returns:
+            Path to exported logical VTK file
+        """
+
+        # Create phenotype mapping
+        phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
+
+        # Embed metadata in description line
+        metadata_str = (f"cells={len(positions)} "
+                      f"size={metadata.get('biocell_grid_size_um', self.cell_size_um)}um "
+                      f"genes={','.join(gene_nodes)} "
+                      f"phenotypes={','.join(sorted(set(phenotypes)))} "
+                      f"time={metadata.get('simulated_time', 0.0)} "
+                      f"bounds={metadata.get('domain_bounds_um', 'auto')}")
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            # VTK header with embedded metadata in description line
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"MicroC Logical Positions: {metadata.get('description', 'Generated domain')} | {metadata_str}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Points (logical coordinates as-is, no physical conversion)
+            f.write(f"POINTS {len(positions)} float\n")
+            for pos in positions:
+                # Use logical coordinates directly (biological grid coordinates)
+                x_logical = float(pos[0])
+                y_logical = float(pos[1])
+                z_logical = float(pos[2]) if len(pos) > 2 else 0.0
+                f.write(f"{x_logical} {y_logical} {z_logical}\n")
+
+            # Cells (each point is a vertex cell)
+            f.write(f"CELLS {len(positions)} {len(positions) * 2}\n")
+            for i in range(len(positions)):
+                f.write(f"1 {i}\n")  # Each cell has 1 point
+
+            # Cell types (all vertices)
+            f.write(f"CELL_TYPES {len(positions)}\n")
+            for i in range(len(positions)):
+                f.write("1\n")  # VTK_VERTEX = 1
+
+            # Cell data
+            f.write(f"CELL_DATA {len(positions)}\n")
+
+            # Phenotype data
+            f.write(f"SCALARS Phenotype int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for phenotype in phenotypes:
+                f.write(f"{phenotype_map[phenotype]}\n")
+
+            # Metabolism data
+            f.write(f"SCALARS Metabolism int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for metab in metabolism:
+                f.write(f"{metab}\n")
+
+            # Gene network data (each gene as separate scalar field)
+            for gene_name in gene_nodes:
+                f.write(f"SCALARS {gene_name} int 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for i in range(len(positions)):
+                    cell_genes = gene_states.get(i, {})
+                    activation = 1 if cell_genes.get(gene_name, False) else 0
+                    f.write(f"{activation}\n")
+
+        print(f"[+] Logical positions VTK exported: {Path(output_path).name}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: Point cloud (vertices)")
+        print(f"    Data: {len(positions)} points with logical coordinates")
+        print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
+        print(f"    Phenotypes: {list(phenotype_map.keys())}")
+
         return output_path
 
 
@@ -536,16 +630,80 @@ class VTKDomainLoader:
 
 class VTKCellExporter:
     """Shared VTK export functionality for cubic cell geometry"""
-    
+
     def __init__(self, cell_size_um: float = 5.0):
         """
         Initialize VTK exporter
-        
+
         Args:
             cell_size_um: Cell size in micrometers
         """
         self.cell_size_um = cell_size_um
         self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
+
+    def export_logical_positions(self, positions: np.ndarray, scalars: np.ndarray,
+                                output_path: str, scalar_name: str = "ATP_Type",
+                                title: str = "Logical Cell Positions"):
+        """
+        Export cell logical positions (biological grid coordinates) as points in VTK format
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            scalars: N array of scalar values for each cell
+            output_path: Path to save VTK file
+            scalar_name: Name of the scalar field
+            title: Title for VTK file
+        """
+
+        # Ensure output directory exists
+        output_dir = Path(output_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"[*] Exporting VTK logical positions...")
+        print(f"    Cell count: {len(positions)}")
+        print(f"    Scalar field: {scalar_name}")
+        print(f"    Format: Point cloud (logical coordinates)")
+
+        with open(output_path, 'w') as f:
+            # VTK header
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"{title}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Points (logical coordinates as-is, no physical conversion)
+            f.write(f"POINTS {len(positions)} float\n")
+
+            for pos in positions:
+                # Use logical coordinates directly (biological grid coordinates)
+                x_logical = float(pos[0])
+                y_logical = float(pos[1])
+                z_logical = float(pos[2]) if len(pos) > 2 else 0.0
+                f.write(f"{x_logical} {y_logical} {z_logical}\n")
+
+            # Cells (each point is a vertex cell)
+            f.write(f"CELLS {len(positions)} {len(positions) * 2}\n")
+            for i in range(len(positions)):
+                f.write(f"1 {i}\n")  # Each cell has 1 point
+
+            # Cell types (all vertices)
+            f.write(f"CELL_TYPES {len(positions)}\n")
+            for i in range(len(positions)):
+                f.write("1\n")  # VTK_VERTEX = 1
+
+            # Cell data (scalars)
+            f.write(f"CELL_DATA {len(positions)}\n")
+            f.write(f"SCALARS {scalar_name} int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for scalar in scalars:
+                f.write(f"{int(scalar)}\n")
+
+        print(f"[+] VTK logical positions exported: {Path(output_path).name}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: Point cloud (vertices)")
+        print(f"    Data: {len(positions)} points with logical coordinates")
+
+        return output_path
     
     def export_cubic_cells(self, positions: np.ndarray, scalars: np.ndarray, 
                           output_path: str, scalar_name: str = "ATP_Type",
@@ -686,21 +844,34 @@ class VTKCellExporter:
         # Extract positions and ATP types
         positions = np.array([pos for pos, _ in cell_data])
         atp_types = np.array([atp_type for _, atp_type in cell_data])
-        
+
         # Create output directory
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Generate output filename
+
+        # Generate output filenames
         vtk_filename = output_path / f"cells_step_{step:06d}.vtk"
-        
-        return self.export_cubic_cells(
+        logical_filename = output_path / f"cells_logical_step_{step:06d}.vtk"
+
+        # Export physical cubes
+        physical_result = self.export_cubic_cells(
             positions=positions,
             scalars=atp_types,
             output_path=str(vtk_filename),
             scalar_name=scalar_name,
             title=f"MicroC Simulation Cells - Step {step}"
         )
+
+        # Export logical positions
+        logical_result = self.export_logical_positions(
+            positions=positions,
+            scalars=atp_types,
+            output_path=str(logical_filename),
+            scalar_name=scalar_name,
+            title=f"MicroC Logical Positions - Step {step}"
+        )
+
+        return physical_result
 
 
 def get_atp_type_from_gene_states(gene_states: Dict[str, bool]) -> int:

@@ -50,7 +50,7 @@ output:
 # Initial state configuration
 initial_state:
   mode: "load_vtk"             # "generate" or "load"
-  file_path:  "tools/generated_h5/test_centering_domain.vtk"              # Path to initial state file (for load mode)
+  file_path:  "tools/generated_h5/test_logical_positions_domain.vtk"              # Path to initial state file (for load mode)
   save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt
