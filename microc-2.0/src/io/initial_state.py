@@ -423,6 +423,7 @@ class InitialStateManager:
         domain_data = loader.load_complete_domain(str(file_path))
 
         positions = domain_data['positions']
+        original_physical_positions = domain_data.get('original_physical_positions', [])
         gene_states = domain_data['gene_states']
         phenotypes = domain_data['phenotypes']
         metabolism = domain_data.get('metabolism', [])
@@ -458,55 +459,52 @@ class InitialStateManager:
         # Create cell initialization data with loaded gene states and phenotypes
         cell_init_data = []
 
-        # Calculate simulation grid bounds for coordinate transformation
+        # Calculate logical grid bounds for validation
         domain_size_um = self.config.domain.size_x.micrometers
         cell_height_um = self.config.domain.cell_height.micrometers
         grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
 
-        # Find coordinate bounds in VTK data for transformation
-        x_min = y_min = z_min = 0  # Default values
-        x_max = y_max = z_max = grid_max  # Default values
-
-        if positions:
+        # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
+        # Need to shift them to positive coordinates for the simulation grid
+        if len(positions) > 0:
+            # Calculate logical grid bounds for validation
             x_coords = [pos[0] for pos in positions]
             y_coords = [pos[1] for pos in positions]
-            z_coords = [pos[2] if len(pos) > 2 else 0 for pos in positions]
+            z_coords = [(pos[2] if len(pos) > 2 else 0) for pos in positions]
 
             x_min, x_max = min(x_coords), max(x_coords)
             y_min, y_max = min(y_coords), max(y_coords)
             z_min, z_max = min(z_coords), max(z_coords)
 
-            print(f"[INFO] VTK coordinate ranges: X({x_min:.2f}, {x_max:.2f}), Y({y_min:.2f}, {y_max:.2f}), Z({z_min:.2f}, {z_max:.2f})")
-            print(f"[INFO] Simulation grid bounds: (0, {grid_max})")
-            print(f"[INFO] Transforming {len(positions)} cell coordinates to fit simulation grid")
+            # Calculate center of VTK coordinates
+            x_center = (x_min + x_max) / 2
+            y_center = (y_min + y_max) / 2
+            z_center = (z_min + z_max) / 2
+
+            # Calculate domain center for positioning
+            domain_center = grid_max / 2
+
+            print(f"[INFO] VTK logical ranges: X({x_min:.1f}, {x_max:.1f}), Y({y_min:.1f}, {y_max:.1f}), Z({z_min:.1f}, {z_max:.1f})")
+            print(f"[INFO] VTK center: ({x_center:.1f}, {y_center:.1f}, {z_center:.1f})")
+            print(f"[INFO] Domain center: {domain_center:.1f}")
+            print(f"[INFO] Cell height: {cell_height_um} um")
+            print(f"[INFO] Logical grid bounds: (0, {grid_max})")
+        else:
+            x_center = y_center = z_center = 0
+            domain_center = grid_max / 2
 
         for i, pos in enumerate(positions):
-            # Transform coordinates to fit simulation grid (0 to grid_max)
-            if positions:  # Only transform if we have coordinate bounds
-                # Scale and shift coordinates to fit 0-grid_max range
-                x_range = x_max - x_min if x_max != x_min else 1
-                y_range = y_max - y_min if y_max != y_min else 1
-                z_range = z_max - z_min if z_max != z_min else 1
+            # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
+            # Shift them to center in the simulation domain (0, grid_max)
+            x_shifted = pos[0] - x_center + domain_center
+            y_shifted = pos[1] - y_center + domain_center
+            z_shifted = (pos[2] if len(pos) > 2 else 0) - z_center + domain_center
 
-                # Transform to 0-grid_max range with some margin
-                margin = 5  # Keep cells away from boundaries
-                usable_range = grid_max - 2 * margin
-
-                x_transformed = margin + (pos[0] - x_min) / x_range * usable_range
-                y_transformed = margin + (pos[1] - y_min) / y_range * usable_range
-                z_transformed = margin + ((pos[2] if len(pos) > 2 else 0) - z_min) / z_range * usable_range
-
-                # Convert numpy array to tuple/list and handle dimensions
-                if self.config.domain.dimensions == 2:
-                    pos = (float(x_transformed), float(y_transformed))  # Drop z coordinate, convert to float
-                else:
-                    pos = (float(x_transformed), float(y_transformed), float(z_transformed))  # Convert to float tuple
+            # Convert to tuple/list and handle dimensions
+            if self.config.domain.dimensions == 2:
+                logical_pos = (float(x_shifted), float(y_shifted))  # Drop z coordinate, convert to float
             else:
-                # Fallback: use original coordinates
-                if self.config.domain.dimensions == 2:
-                    pos = (float(pos[0]), float(pos[1]))  # Drop z coordinate, convert to float
-                else:
-                    pos = (float(pos[0]), float(pos[1]), float(pos[2]))  # Convert to float tuple
+                logical_pos = (float(x_shifted), float(y_shifted), float(z_shifted))  # Convert to float tuple
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -528,10 +526,28 @@ class InitialStateManager:
                 if gene_name not in complete_gene_states:
                     complete_gene_states[gene_name] = state
 
+            # Store original physical position for VTK export preservation
+            # Use original physical positions from VTK loader (in meters, convert to micrometers)
+            if i < len(original_physical_positions):
+                orig_pos_m = original_physical_positions[i]
+                original_physical_pos = (
+                    orig_pos_m[0] * 1e6,  # Convert m to um
+                    orig_pos_m[1] * 1e6,
+                    (orig_pos_m[2] if len(orig_pos_m) > 2 else 0) * 1e6
+                )
+            else:
+                # Fallback: reconstruct from biological grid coordinates using VTK cell size
+                original_physical_pos = (
+                    logical_pos[0] * vtk_cell_size_um,  # Convert biological grid to um using VTK cell size
+                    logical_pos[1] * vtk_cell_size_um,
+                    (logical_pos[2] if len(logical_pos) > 2 else 0) * vtk_cell_size_um
+                )
+
             # Create cell with loaded data
             cell_init_data.append({
                 'id': cell_id,
-                'position': pos,
+                'position': logical_pos,  # Logical position for simulation
+                'original_physical_position': original_physical_pos,  # Original physical position (um)
                 'phenotype': cell_phenotype,
                 'age': 0.0,  # Default age (could be added to VTK format later)
                 'division_count': 0,  # Default division count
@@ -582,63 +598,81 @@ class InitialStateManager:
         # Create cell initialization data with default values
         cell_init_data = []
 
-        # Calculate simulation grid bounds for coordinate transformation
+        # Calculate logical grid bounds for validation
         domain_size_um = self.config.domain.size_x.micrometers
         cell_height_um = self.config.domain.cell_height.micrometers
         grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
 
-        # Find coordinate bounds in VTK data for transformation
-        x_min = y_min = z_min = 0  # Default values
-        x_max = y_max = z_max = grid_max  # Default values
-
+        # Find physical coordinate bounds to center them properly
         if positions:
-            x_coords = [pos[0] for pos in positions]
-            y_coords = [pos[1] for pos in positions]
-            z_coords = [pos[2] if len(pos) > 2 else 0 for pos in positions]
+            # Positions are already in micrometers from VTKCellLoader
+            x_coords_um = [pos[0] for pos in positions]
+            y_coords_um = [pos[1] for pos in positions]
+            z_coords_um = [(pos[2] if len(pos) > 2 else 0) for pos in positions]
 
-            x_min, x_max = min(x_coords), max(x_coords)
-            y_min, y_max = min(y_coords), max(y_coords)
-            z_min, z_max = min(z_coords), max(z_coords)
+            x_min_um, x_max_um = min(x_coords_um), max(x_coords_um)
+            y_min_um, y_max_um = min(y_coords_um), max(y_coords_um)
+            z_min_um, z_max_um = min(z_coords_um), max(z_coords_um)
 
-            print(f"[INFO] VTK coordinate ranges: X({x_min:.2f}, {x_max:.2f}), Y({y_min:.2f}, {y_max:.2f}), Z({z_min:.2f}, {z_max:.2f})")
-            print(f"[INFO] Simulation grid bounds: (0, {grid_max})")
-            print(f"[INFO] Transforming {len(positions)} cell coordinates to fit simulation grid")
+            # Calculate center offset to shift coordinates to positive domain
+            x_center_um = (x_min_um + x_max_um) / 2
+            y_center_um = (y_min_um + y_max_um) / 2
+            z_center_um = (z_min_um + z_max_um) / 2
+
+            # Calculate domain center for positioning
+            domain_center_um = domain_size_um / 2
+
+            print(f"[INFO] VTK physical ranges (um): X({x_min_um:.1f}, {x_max_um:.1f}), Y({y_min_um:.1f}, {y_max_um:.1f}), Z({z_min_um:.1f}, {z_max_um:.1f})")
+            print(f"[INFO] VTK center (um): ({x_center_um:.1f}, {y_center_um:.1f}, {z_center_um:.1f})")
+            print(f"[INFO] Domain center (um): {domain_center_um:.1f}")
+            print(f"[INFO] Cell height: {cell_height_um} um")
+            print(f"[INFO] Logical grid bounds: (0, {grid_max})")
+        else:
+            x_center_um = y_center_um = z_center_um = 0
+            domain_center_um = domain_size_um / 2
 
         for i, pos in enumerate(positions):
-            # Transform coordinates to fit simulation grid (0 to grid_max)
-            if positions:  # Only transform if we have coordinate bounds
-                # Scale and shift coordinates to fit 0-grid_max range
-                x_range = x_max - x_min if x_max != x_min else 1
-                y_range = y_max - y_min if y_max != y_min else 1
-                z_range = z_max - z_min if z_max != z_min else 1
+            # Convert physical positions (micrometers) to logical grid coordinates
+            # 1. Shift to center the VTK coordinates in the domain
+            # 2. Convert to logical coordinates (grid units)
 
-                # Transform to 0-grid_max range with some margin
-                margin = 5  # Keep cells away from boundaries
-                usable_range = grid_max - 2 * margin
+            # Positions are already in micrometers from VTKCellLoader
+            x_um = pos[0]
+            y_um = pos[1]
+            z_um = (pos[2] if len(pos) > 2 else 0)
 
-                x_transformed = margin + (pos[0] - x_min) / x_range * usable_range
-                y_transformed = margin + (pos[1] - y_min) / y_range * usable_range
-                z_transformed = margin + ((pos[2] if len(pos) > 2 else 0) - z_min) / z_range * usable_range
+            # Shift coordinates to center VTK data in the domain
+            x_shifted_um = x_um - x_center_um + domain_center_um
+            y_shifted_um = y_um - y_center_um + domain_center_um
+            z_shifted_um = z_um - z_center_um + domain_center_um
 
-                # Convert 3D position to 2D if needed for 2D simulations
-                if self.config.domain.dimensions == 2:
-                    pos = (float(x_transformed), float(y_transformed))  # Drop z coordinate
-                else:
-                    pos = (float(x_transformed), float(y_transformed), float(z_transformed))
+            # Convert from physical coordinates (um) to logical coordinates (grid units)
+            x_logical = x_shifted_um / cell_height_um
+            y_logical = y_shifted_um / cell_height_um
+            z_logical = z_shifted_um / cell_height_um
+
+            # Convert 3D position to 2D if needed for 2D simulations
+            if self.config.domain.dimensions == 2:
+                pos = (float(x_logical), float(y_logical))  # Drop z coordinate
             else:
-                # Fallback: use original coordinates
-                if self.config.domain.dimensions == 2:
-                    pos = (pos[0], pos[1])  # Drop z coordinate
-                else:
-                    pos = pos  # Keep original 3D coordinates
+                pos = (float(x_logical), float(y_logical), float(z_logical))
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
 
+            # Store original physical position for VTK export preservation
+            # Positions from VTKCellLoader are biological grid coordinates, convert to physical coordinates (um)
+            original_physical_pos = (
+                positions[i][0] * cell_size_um,  # Convert biological grid to um
+                positions[i][1] * cell_size_um,
+                (positions[i][2] if len(positions[i]) > 2 else 0) * cell_size_um
+            )
+
             # Create cell with default values
             cell_init_data.append({
                 'id': cell_id,
-                'position': pos,
+                'position': pos,  # Logical position for simulation
+                'original_physical_position': original_physical_pos,  # Original physical position (um)
                 'phenotype': 'Quiescent',  # Default phenotype
                 'age': 0.0,  # Default age
                 'division_count': 0,  # Default division count
