@@ -33,7 +33,7 @@ class PhenotypeLogger:
             log_filename = f"phenotype_debug_{int(time.time())}.log"
             self.log_file = self.output_dir / log_filename
 
-            print(f"🐛 Creating debug log file: {self.log_file}")
+            print(f" Creating debug log file: {self.log_file}")
 
             # Write header
             with open(self.log_file, 'w', encoding='utf-8') as f:
@@ -285,7 +285,7 @@ class CellPopulation(ICellPopulation):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'initialize_cell_placement' is required but not found!\n"
+                f"[!] Custom function 'initialize_cell_placement' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -380,17 +380,17 @@ class CellPopulation(ICellPopulation):
 
             # Validate position
             if not self._is_valid_position(position):
-                print(f"⚠️  Invalid position {position}, skipping cell")
+                print(f"[WARNING]  Invalid position {position}, skipping cell")
                 continue
 
             # Check if position is occupied
             if position in self.state.spatial_grid:
-                print(f"⚠️  Position {position} occupied, skipping cell")
+                print(f"[WARNING]  Position {position} occupied, skipping cell")
                 continue
 
             # Check population limit
             if self.state.total_cells >= self.default_params['max_population_size']:
-                print(f"⚠️  Population limit reached, stopping cell initialization")
+                print(f"[WARNING]  Population limit reached, stopping cell initialization")
                 break
 
             # Create new cell
@@ -464,7 +464,7 @@ class CellPopulation(ICellPopulation):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'select_division_direction' is required but not found!\n"
+                f"[!] Custom function 'select_division_direction' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -555,7 +555,7 @@ class CellPopulation(ICellPopulation):
             self._last_cell_count = current_count
 
         if current_count != self._last_cell_count:
-            print(f"📊 CELL COUNT CHANGE: {self._last_cell_count} → {current_count}")
+            print(f"[CHART] CELL COUNT CHANGE: {self._last_cell_count} -> {current_count}")
             self._last_cell_count = current_count
 
         # Find dead cells
@@ -569,7 +569,7 @@ class CellPopulation(ICellPopulation):
             if should_die:
                 dead_cell_ids.append(cell_id)
                 # Debug ALL deaths
-                print(f"💀 DEATH: Cell {cell_id[:8]} at {cell.state.position}")
+                print(f" DEATH: Cell {cell_id[:8]} at {cell.state.position}")
                 print(f"   O2={local_env.get('oxygen', 'N/A'):.3f}, Glc={local_env.get('glucose', 'N/A'):.1f}, Age={cell.state.age}, Pheno={cell.state.phenotype}")
                 if hasattr(cell, 'state') and hasattr(cell.state, 'gene_states'):
                     gs = cell.state.gene_states
@@ -586,7 +586,7 @@ class CellPopulation(ICellPopulation):
             return []
 
         # Debug: Report cell deaths
-        print(f"💀 Removing {len(dead_cell_ids)} dead cells. Remaining: {len(self.state.cells) - len(dead_cell_ids)}")
+        print(f" Removing {len(dead_cell_ids)} dead cells. Remaining: {len(self.state.cells) - len(dead_cell_ids)}")
 
         # Remove dead cells
         new_cells = self.state.cells.copy()
@@ -673,7 +673,7 @@ class CellPopulation(ICellPopulation):
 
             # Compact debug for gene inputs (only first call) - TURNED OFF
             # if not hasattr(self, '_gene_input_debug_shown'):
-            #     print(f"🔍 Gene thresholds: {substance_name}>{threshold_config.threshold}={gene_inputs[gene_input_name]}")
+            #     print(f"[SEARCH] Gene thresholds: {substance_name}>{threshold_config.threshold}={gene_inputs[gene_input_name]}")
             #     self._gene_input_debug_shown = True
 
         # Handle composite gene inputs using configuration
@@ -849,7 +849,7 @@ class CellPopulation(ICellPopulation):
             else:
                 # Fail explicitly if custom function is not provided
                 raise RuntimeError(
-                    f"❌ Custom function 'update_cell_metabolic_state' is required but not found!\n"
+                    f"[!] Custom function 'update_cell_metabolic_state' is required but not found!\n"
                     f"   Please ensure your custom functions module defines this function.\n"
                     f"   Custom functions module: {cell.custom_functions}\n"
                     f"   This function is CRITICAL for calculating ATP rates and metabolic state."
@@ -906,7 +906,7 @@ class CellPopulation(ICellPopulation):
             cell_gene_network = cell.state.gene_network
             if cell_gene_network is None:
                 # Fallback: create a new gene network for this cell if it doesn't have one
-                print(f"⚠️  Cell {cell_id} missing gene network, creating new one")
+                print(f"[WARNING]  Cell {cell_id} missing gene network, creating new one")
                 self._initialize_cell_gene_network(cell)
                 cell_gene_network = cell.state.gene_network
 
@@ -970,7 +970,7 @@ class CellPopulation(ICellPopulation):
             #     pos = cell.state.position
             #     oxygen = local_env.get('oxygen', 0.0)
             #     glucose = local_env.get('glucose', 0.0)
-            #     print(f"🚨 APOPTOSIS CELL at {pos}: O2={oxygen:.3f}, Gluc={glucose:.3f}")
+            #     print(f" APOPTOSIS CELL at {pos}: O2={oxygen:.3f}, Gluc={glucose:.3f}")
             #     print(f"   Gene inputs: {gene_inputs}")
 
             # Debug apoptosis pathway components - TURNED OFF
@@ -1026,7 +1026,7 @@ class CellPopulation(ICellPopulation):
                 atp_rate = gene_states.get('ATP_Production_Rate', False)
                 mito_atp = gene_states.get('mitoATP', False)
                 glyco_atp = gene_states.get('glycoATP', False)
-                print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+                print(f"[SEARCH] ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
                 print(f"   Environmental: Oxygen_supply={gene_inputs.get('Oxygen_supply', False)}, Glucose_supply={gene_inputs.get('Glucose_supply', False)}")
 
             # NOTE: Debug logging moved to update_phenotypes() to log the correct final phenotype
@@ -1063,15 +1063,15 @@ class CellPopulation(ICellPopulation):
 
             # Avoid division by zero
             if total == 0:
-                print(f"\n📊 ATP PRODUCTION STATISTICS: No cells to analyze")
+                print(f"\n[CHART] ATP PRODUCTION STATISTICS: No cells to analyze")
                 return
 
-            print(f"\n📊 ATP PRODUCTION STATISTICS (Total cells: {total}):")
-            print(f"   🔋 ATP_Production_Rate=TRUE: {stats['atp_production_rate_true']} cells ({stats['atp_production_rate_true']/total*100:.1f}%)")
-            print(f"   ⚡ mitoATP only: {stats['mito_only']} cells ({stats['mito_only']/total*100:.1f}%)")
-            print(f"   🍯 glycoATP only: {stats['glyco_only']} cells ({stats['glyco_only']/total*100:.1f}%)")
-            print(f"   🚀 Both mitoATP & glycoATP: {stats['both_atp']} cells ({stats['both_atp']/total*100:.1f}%)")
-            print(f"   💀 No ATP production: {stats['no_atp']} cells ({stats['no_atp']/total*100:.1f}%)")
+            print(f"\n[CHART] ATP PRODUCTION STATISTICS (Total cells: {total}):")
+            print(f"    ATP_Production_Rate=TRUE: {stats['atp_production_rate_true']} cells ({stats['atp_production_rate_true']/total*100:.1f}%)")
+            print(f"   [FAST] mitoATP only: {stats['mito_only']} cells ({stats['mito_only']/total*100:.1f}%)")
+            print(f"    glycoATP only: {stats['glyco_only']} cells ({stats['glyco_only']/total*100:.1f}%)")
+            print(f"   [RUN] Both mitoATP & glycoATP: {stats['both_atp']} cells ({stats['both_atp']/total*100:.1f}%)")
+            print(f"    No ATP production: {stats['no_atp']} cells ({stats['no_atp']/total*100:.1f}%)")
             print()
 
     def update_phenotypes(self):
@@ -1187,7 +1187,7 @@ class CellPopulation(ICellPopulation):
             else:
                 # Fail explicitly if custom function is not provided
                 raise RuntimeError(
-                    f"❌ Custom function 'calculate_migration_probability' is required but not found!\n"
+                    f"[!] Custom function 'calculate_migration_probability' is required but not found!\n"
                     f"   Please ensure your custom functions module defines this function.\n"
                     f"   Custom functions module: {self.custom_functions}"
                 )
