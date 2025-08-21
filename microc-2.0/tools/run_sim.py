@@ -385,6 +385,12 @@ def setup_simulation(config, args, custom_functions_path=None):
         print(f"[DEBUG] VTK loading triggered - mode: {config.initial_state.mode}, path: {config.initial_state.file_path}")
         try:
             cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(config.initial_state.file_path)
+            print(f"[DEBUG] VTK loading successful, got {len(cell_data)} cells")
+            if cell_data:
+                first_cell = cell_data[0]
+                print(f"[DEBUG] First cell: ID={first_cell.get('id', 'None')}, position={first_cell.get('position', 'None')}, phenotype={first_cell.get('phenotype', 'None')}")
+                print(f"[DEBUG] First cell gene states: {len(first_cell.get('gene_states', {}))} genes")
+
             cells_loaded = population.initialize_cells(cell_data)
             print(f"   [+] Cells: {cells_loaded} (loaded from VTK file)")
             print(f"   [+] Detected cell size: {detected_cell_size_um:.2f} um")

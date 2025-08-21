@@ -363,9 +363,20 @@ class CellPopulation(ICellPopulation):
         cells_added = 0
 
         for cell_info in cell_data:
-            position = cell_info['position']
-            phenotype = cell_info.get('phenotype', 'Growth_Arrest')
+            # Ensure position is a clean tuple of floats (not numpy array)
+            raw_position = cell_info['position']
+            if hasattr(raw_position, '__iter__'):
+                position = tuple(float(x) for x in raw_position)
+            else:
+                position = (float(raw_position),)
+
+            # Ensure phenotype is a clean string
+            phenotype = str(cell_info.get('phenotype', 'Growth_Arrest'))
+
+            # Ensure cell_id is a clean string or None
             cell_id = cell_info.get('id', None)
+            if cell_id is not None:
+                cell_id = str(cell_id)
 
             # Validate position
             if not self._is_valid_position(position):

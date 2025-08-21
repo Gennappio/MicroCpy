@@ -459,9 +459,11 @@ class InitialStateManager:
         cell_init_data = []
 
         for i, pos in enumerate(positions):
-            # Convert 3D position to 2D if needed for 2D simulations
+            # Convert numpy array to tuple/list and handle dimensions
             if self.config.domain.dimensions == 2:
-                pos = (pos[0], pos[1])  # Drop z coordinate
+                pos = (float(pos[0]), float(pos[1]))  # Drop z coordinate, convert to float
+            else:
+                pos = (float(pos[0]), float(pos[1]), float(pos[2]))  # Convert to float tuple
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -505,6 +507,19 @@ class InitialStateManager:
             first_cell_genes = cell_init_data[0]['gene_states']
             active_genes = sum(1 for state in first_cell_genes.values() if state)
             print(f"[DEBUG] First cell has {active_genes}/{len(first_cell_genes)} active genes")
+
+        # Clean up any potential Unicode issues in gene node names
+        for cell_data in cell_init_data:
+            # Ensure gene state keys are clean ASCII strings
+            clean_gene_states = {}
+            for gene_name, state in cell_data['gene_states'].items():
+                # Convert gene name to clean ASCII string
+                clean_gene_name = str(gene_name).encode('ascii', 'ignore').decode('ascii')
+                clean_gene_states[clean_gene_name] = bool(state)
+            cell_data['gene_states'] = clean_gene_states
+
+            # Ensure phenotype is clean ASCII string
+            cell_data['phenotype'] = str(cell_data['phenotype']).encode('ascii', 'ignore').decode('ascii')
 
         return cell_init_data, cell_size_um
 
