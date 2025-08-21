@@ -458,12 +458,55 @@ class InitialStateManager:
         # Create cell initialization data with loaded gene states and phenotypes
         cell_init_data = []
 
+        # Calculate simulation grid bounds for coordinate transformation
+        domain_size_um = self.config.domain.size_x.micrometers
+        cell_height_um = self.config.domain.cell_height.micrometers
+        grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
+
+        # Find coordinate bounds in VTK data for transformation
+        x_min = y_min = z_min = 0  # Default values
+        x_max = y_max = z_max = grid_max  # Default values
+
+        if positions:
+            x_coords = [pos[0] for pos in positions]
+            y_coords = [pos[1] for pos in positions]
+            z_coords = [pos[2] if len(pos) > 2 else 0 for pos in positions]
+
+            x_min, x_max = min(x_coords), max(x_coords)
+            y_min, y_max = min(y_coords), max(y_coords)
+            z_min, z_max = min(z_coords), max(z_coords)
+
+            print(f"[INFO] VTK coordinate ranges: X({x_min:.2f}, {x_max:.2f}), Y({y_min:.2f}, {y_max:.2f}), Z({z_min:.2f}, {z_max:.2f})")
+            print(f"[INFO] Simulation grid bounds: (0, {grid_max})")
+            print(f"[INFO] Transforming {len(positions)} cell coordinates to fit simulation grid")
+
         for i, pos in enumerate(positions):
-            # Convert numpy array to tuple/list and handle dimensions
-            if self.config.domain.dimensions == 2:
-                pos = (float(pos[0]), float(pos[1]))  # Drop z coordinate, convert to float
+            # Transform coordinates to fit simulation grid (0 to grid_max)
+            if positions:  # Only transform if we have coordinate bounds
+                # Scale and shift coordinates to fit 0-grid_max range
+                x_range = x_max - x_min if x_max != x_min else 1
+                y_range = y_max - y_min if y_max != y_min else 1
+                z_range = z_max - z_min if z_max != z_min else 1
+
+                # Transform to 0-grid_max range with some margin
+                margin = 5  # Keep cells away from boundaries
+                usable_range = grid_max - 2 * margin
+
+                x_transformed = margin + (pos[0] - x_min) / x_range * usable_range
+                y_transformed = margin + (pos[1] - y_min) / y_range * usable_range
+                z_transformed = margin + ((pos[2] if len(pos) > 2 else 0) - z_min) / z_range * usable_range
+
+                # Convert numpy array to tuple/list and handle dimensions
+                if self.config.domain.dimensions == 2:
+                    pos = (float(x_transformed), float(y_transformed))  # Drop z coordinate, convert to float
+                else:
+                    pos = (float(x_transformed), float(y_transformed), float(z_transformed))  # Convert to float tuple
             else:
-                pos = (float(pos[0]), float(pos[1]), float(pos[2]))  # Convert to float tuple
+                # Fallback: use original coordinates
+                if self.config.domain.dimensions == 2:
+                    pos = (float(pos[0]), float(pos[1]))  # Drop z coordinate, convert to float
+                else:
+                    pos = (float(pos[0]), float(pos[1]), float(pos[2]))  # Convert to float tuple
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -539,10 +582,55 @@ class InitialStateManager:
         # Create cell initialization data with default values
         cell_init_data = []
 
+        # Calculate simulation grid bounds for coordinate transformation
+        domain_size_um = self.config.domain.size_x.micrometers
+        cell_height_um = self.config.domain.cell_height.micrometers
+        grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
+
+        # Find coordinate bounds in VTK data for transformation
+        x_min = y_min = z_min = 0  # Default values
+        x_max = y_max = z_max = grid_max  # Default values
+
+        if positions:
+            x_coords = [pos[0] for pos in positions]
+            y_coords = [pos[1] for pos in positions]
+            z_coords = [pos[2] if len(pos) > 2 else 0 for pos in positions]
+
+            x_min, x_max = min(x_coords), max(x_coords)
+            y_min, y_max = min(y_coords), max(y_coords)
+            z_min, z_max = min(z_coords), max(z_coords)
+
+            print(f"[INFO] VTK coordinate ranges: X({x_min:.2f}, {x_max:.2f}), Y({y_min:.2f}, {y_max:.2f}), Z({z_min:.2f}, {z_max:.2f})")
+            print(f"[INFO] Simulation grid bounds: (0, {grid_max})")
+            print(f"[INFO] Transforming {len(positions)} cell coordinates to fit simulation grid")
+
         for i, pos in enumerate(positions):
-            # Convert 3D position to 2D if needed for 2D simulations
-            if self.config.domain.dimensions == 2:
-                pos = (pos[0], pos[1])  # Drop z coordinate
+            # Transform coordinates to fit simulation grid (0 to grid_max)
+            if positions:  # Only transform if we have coordinate bounds
+                # Scale and shift coordinates to fit 0-grid_max range
+                x_range = x_max - x_min if x_max != x_min else 1
+                y_range = y_max - y_min if y_max != y_min else 1
+                z_range = z_max - z_min if z_max != z_min else 1
+
+                # Transform to 0-grid_max range with some margin
+                margin = 5  # Keep cells away from boundaries
+                usable_range = grid_max - 2 * margin
+
+                x_transformed = margin + (pos[0] - x_min) / x_range * usable_range
+                y_transformed = margin + (pos[1] - y_min) / y_range * usable_range
+                z_transformed = margin + ((pos[2] if len(pos) > 2 else 0) - z_min) / z_range * usable_range
+
+                # Convert 3D position to 2D if needed for 2D simulations
+                if self.config.domain.dimensions == 2:
+                    pos = (float(x_transformed), float(y_transformed))  # Drop z coordinate
+                else:
+                    pos = (float(x_transformed), float(y_transformed), float(z_transformed))
+            else:
+                # Fallback: use original coordinates
+                if self.config.domain.dimensions == 2:
+                    pos = (pos[0], pos[1])  # Drop z coordinate
+                else:
+                    pos = pos  # Keep original 3D coordinates
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
