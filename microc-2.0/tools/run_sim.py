@@ -684,6 +684,36 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
     else:
         num_steps = int(total_time / dt)
 
+    # Export initial VTK state before simulation starts (for verification)
+    print(f"\n[INIT] Exporting initial cell state for verification...")
+    try:
+        # Import VTK export functionality
+        import sys
+        sys.path.append('tools')
+        from vtk_export import export_microc_simulation_state
+
+        # Get cell size from detected value or config
+        cell_size_um = detected_cell_size_um if detected_cell_size_um else config.output.cell_size_um
+
+        # Export initial VTK file (step -1 to indicate pre-simulation)
+        vtk_output_dir = config.output_dir / "vtk_cells"
+        initial_vtk_file = export_microc_simulation_state(
+            population=population,
+            output_dir=str(vtk_output_dir),
+            step=-1,  # Use -1 to indicate initial state
+            cell_size_um=cell_size_um
+        )
+
+        if initial_vtk_file:
+            print(f"[+] Initial VTK state exported: {vtk_output_dir / 'cells_step_-00001.vtk'}")
+            print(f"    Use this file to verify gene network loading before simulation")
+        else:
+            print(f"[!] Initial VTK export failed - no cell data")
+
+    except Exception as e:
+        print(f"[!] Initial VTK export error: {e}")
+        print("   Continuing with simulation...")
+
     print(f"\n[RUN] Running simulation with multi-timescale orchestration...")
     print(f"   * Time step: {dt}")
     print(f"   * Total steps: {num_steps}")

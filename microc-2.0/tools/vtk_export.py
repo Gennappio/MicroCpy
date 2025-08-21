@@ -235,7 +235,8 @@ class VTKDomainExporter:
         self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
 
     def export_complete_domain(self, positions: np.ndarray, gene_states: Dict,
-                             phenotypes: List[str], metabolism: List[int], metadata: Dict, output_path: str) -> str:
+                             phenotypes: List[str], metabolism: List[int], metadata: Dict, output_path: str,
+                             original_physical_positions: List = None) -> str:
         """
         Export complete domain description with cells, gene networks, phenotypes, metabolism, and metadata
 
@@ -284,36 +285,69 @@ class VTKDomainExporter:
 
             half_size = self.cell_size_m / 2.0  # Half cell size in meters
 
-            # Center positions around (0,0,0) for consistency
-            if len(positions) > 0:
-                # Calculate center of mass
-                center_x = sum(pos[0] for pos in positions) / len(positions)
-                center_y = sum(pos[1] for pos in positions) / len(positions)
-                center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+            # Use original physical positions if available, otherwise convert from biological grid
+            if original_physical_positions and len(original_physical_positions) == len(positions):
+                print(f"[INFO] Using original physical positions for VTK export")
+                for i, orig_pos_um in enumerate(original_physical_positions):
+                    # Convert from micrometers to meters
+                    x_center = orig_pos_um[0] * 1e-6
+                    y_center = orig_pos_um[1] * 1e-6
+                    z_center = orig_pos_um[2] * 1e-6
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
             else:
-                center_x = center_y = center_z = 0.0
+                print(f"[INFO] Converting biological grid coordinates to physical coordinates")
+                # Center positions around (0,0,0) for consistency
+                if len(positions) > 0:
+                    # Calculate center of mass
+                    center_x = sum(pos[0] for pos in positions) / len(positions)
+                    center_y = sum(pos[1] for pos in positions) / len(positions)
+                    center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+                else:
+                    center_x = center_y = center_z = 0.0
 
-            for pos in positions:
-                # Convert from biological grid coordinates to physical coordinates (meters)
-                # Center around (0,0,0) by subtracting center of mass
-                x_center = (pos[0] - center_x) * self.cell_size_m
-                y_center = (pos[1] - center_y) * self.cell_size_m
-                z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
+                for pos in positions:
+                    # Convert from biological grid coordinates to physical coordinates (meters)
+                    # Center around (0,0,0) by subtracting center of mass
+                    x_center = (pos[0] - center_x) * self.cell_size_m
+                    y_center = (pos[1] - center_y) * self.cell_size_m
+                    z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
 
-                # Generate 8 vertices of the cube around the center
-                vertices = [
-                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
-                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
-                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
-                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
-                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
-                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
-                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
-                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
-                ]
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
 
-                for vertex in vertices:
-                    f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+
+                # Print success message for original positions
+                print(f"[+] Complete VTK domain exported: {Path(output_path).name}")
+                print(f"    Format: Unstructured Grid (.vtk)")
+                print(f"    Cell representation: 3D cubes (hexahedrons)")
+                print(f"    Data: {len(positions)} cubes with {self.cell_size_um} um edge length")
+                print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
+                print(f"    Phenotypes: {list(phenotype_map.keys())}")
 
             # Cell connectivity (hexahedrons)
             num_cells = len(positions)
@@ -362,8 +396,13 @@ class VTKDomainExporter:
         print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
         print(f"    Phenotypes: {list(phenotype_map.keys())}")
 
-        # Also export logical positions
-        logical_output_path = output_path.replace('_domain.vtk', '_logical.vtk')
+        # Also export logical positions (with proper filename)
+        if '_domain.vtk' in output_path:
+            logical_output_path = output_path.replace('_domain.vtk', '_logical.vtk')
+        else:
+            # For simulation files like cells_step_000000.vtk
+            logical_output_path = output_path.replace('.vtk', '_logical.vtk')
+
         self._export_logical_positions(positions, phenotypes, gene_states, gene_nodes,
                                      metabolism, metadata, logical_output_path)
 
@@ -469,13 +508,6 @@ class VTKDomainExporter:
                     activation = 1 if cell_genes.get(gene_name, False) else 0
                     f.write(f"{activation}\n")
 
-        print(f"[+] Logical positions VTK exported: {Path(output_path).name}")
-        print(f"    Format: Unstructured Grid (.vtk)")
-        print(f"    Cell representation: Unit cubes (hexahedrons)")
-        print(f"    Data: {len(positions)} cubes with 1.0 unit edge length")
-        print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
-        print(f"    Phenotypes: {list(phenotype_map.keys())}")
-
         return output_path
 
 
@@ -579,6 +611,7 @@ class VTKDomainLoader:
 
         # Convert point coordinates to cell centers (every 8 points = 1 cell)
         cell_positions = []
+        original_physical_positions = []  # Store original physical positions in meters
         cell_size_m = metadata.get('biocell_grid_size_um', 20.0) * 1e-6
 
         for i in range(0, len(positions), 8):
@@ -588,6 +621,9 @@ class VTKDomainLoader:
                 center_x = sum(p[0] for p in cube_points) / 8
                 center_y = sum(p[1] for p in cube_points) / 8
                 center_z = sum(p[2] for p in cube_points) / 8
+
+                # Store original physical position in meters
+                original_physical_positions.append([center_x, center_y, center_z])
 
                 # Convert back to biological grid coordinates (preserve centering around 0,0,0)
                 bio_x = center_x / cell_size_m
@@ -632,6 +668,7 @@ class VTKDomainLoader:
 
         result = {
             'positions': np.array(cell_positions),
+            'original_physical_positions': np.array(original_physical_positions),
             'gene_states': gene_states,
             'phenotypes': phenotypes,
             'metabolism': metabolism,
@@ -744,9 +781,10 @@ class VTKCellExporter:
 
         return output_path
     
-    def export_cubic_cells(self, positions: np.ndarray, scalars: np.ndarray, 
+    def export_cubic_cells(self, positions: np.ndarray, scalars: np.ndarray,
                           output_path: str, scalar_name: str = "ATP_Type",
-                          title: str = "Cubic Cells from MicroC"):
+                          title: str = "Cubic Cells from MicroC",
+                          use_original_positions: bool = False):
         """
         Export cell positions as cubic cells in VTK format
         
@@ -778,38 +816,66 @@ class VTKCellExporter:
             total_points = len(positions) * 8
             f.write(f"POINTS {total_points} float\n")
             
-            half_size = self.cell_size_m / 2.0  # Half cell size in meters
-            
-            # Center positions around (0,0,0) for consistency
-            if len(positions) > 0:
-                # Calculate center of mass
-                center_x = sum(pos[0] for pos in positions) / len(positions)
-                center_y = sum(pos[1] for pos in positions) / len(positions)
-                center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
-            else:
-                center_x = center_y = center_z = 0.0
+            if use_original_positions:
+                # Use original physical positions as-is (already in meters)
+                half_size = self.cell_size_m / 2.0  # Half cell size in meters
 
-            for pos in positions:
-                # Convert from biological grid coordinates to physical coordinates (meters)
-                # Center around (0,0,0) by subtracting center of mass
-                x_center = (pos[0] - center_x) * self.cell_size_m
-                y_center = (pos[1] - center_y) * self.cell_size_m
-                z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
-                
-                # Generate 8 vertices of the cube around the center
-                vertices = [
-                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
-                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
-                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
-                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
-                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
-                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
-                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
-                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
-                ]
-                
-                for vertex in vertices:
-                    f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+                for pos in positions:
+                    # Use original physical coordinates directly (already in meters)
+                    x_center = pos[0]
+                    y_center = pos[1]
+                    z_center = pos[2] if len(pos) > 2 else 0.0
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    # Write vertices
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+            else:
+                # Standard behavior: convert logical to physical and center around (0,0,0)
+                half_size = self.cell_size_m / 2.0  # Half cell size in meters
+
+                # Center positions around (0,0,0) for consistency
+                if len(positions) > 0:
+                    # Calculate center of mass
+                    center_x = sum(pos[0] for pos in positions) / len(positions)
+                    center_y = sum(pos[1] for pos in positions) / len(positions)
+                    center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+                else:
+                    center_x = center_y = center_z = 0.0
+
+                for pos in positions:
+                    # Convert from biological grid coordinates to physical coordinates (meters)
+                    # Center around (0,0,0) by subtracting center of mass
+                    x_center = (pos[0] - center_x) * self.cell_size_m
+                    y_center = (pos[1] - center_y) * self.cell_size_m
+                    z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    # Write vertices
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
             
             # Cells (hexahedrons - one per cell)
             f.write(f"\nCELLS {len(positions)} {len(positions) * 9}\n")
@@ -865,8 +931,9 @@ class VTKCellExporter:
             title="Initial Cubic Cells from MicroC H5 Generator"
         )
     
-    def export_simulation_state(self, cell_data: List[Tuple], output_dir: str, 
-                               step: int, scalar_name: str = "ATP_Type"):
+    def export_simulation_state(self, cell_data: List[Tuple], output_dir: str,
+                               step: int, scalar_name: str = "ATP_Type",
+                               original_positions_data: List = None):
         """
         Export simulation state with ATP production scalars
         
@@ -881,8 +948,36 @@ class VTKCellExporter:
             return None
         
         # Extract positions and ATP types
-        positions = np.array([pos for pos, _ in cell_data])
+        logical_positions = np.array([pos for pos, _ in cell_data])
         atp_types = np.array([atp_type for _, atp_type in cell_data])
+
+        # Use original physical positions if available, otherwise convert logical to physical
+        if original_positions_data and any(pos is not None for pos in original_positions_data):
+            # Use original physical positions (already in micrometers)
+            physical_positions = []
+            for i, orig_data in enumerate(original_positions_data):
+                if orig_data is not None:
+                    orig_pos, _ = orig_data
+                    # Convert from micrometers to meters for VTK
+                    physical_positions.append([
+                        orig_pos[0] * 1e-6,  # um to m
+                        orig_pos[1] * 1e-6,
+                        orig_pos[2] * 1e-6
+                    ])
+                else:
+                    # Fallback to logical position conversion
+                    logical_pos = logical_positions[i]
+                    physical_positions.append([
+                        logical_pos[0] * self.cell_size_m,
+                        logical_pos[1] * self.cell_size_m,
+                        (logical_pos[2] if len(logical_pos) > 2 else 0) * self.cell_size_m
+                    ])
+            physical_positions = np.array(physical_positions)
+            print(f"[INFO] Using original physical positions for {len([p for p in original_positions_data if p is not None])} cells")
+        else:
+            # Convert logical positions to physical positions (standard behavior)
+            physical_positions = logical_positions
+            print(f"[INFO] Using logical positions (no original physical positions available)")
 
         # Create output directory
         output_path = Path(output_dir)
@@ -892,18 +987,20 @@ class VTKCellExporter:
         vtk_filename = output_path / f"cells_step_{step:06d}.vtk"
         logical_filename = output_path / f"cells_logical_step_{step:06d}.vtk"
 
-        # Export physical cubes
+        # Export physical cubes using original or converted positions
+        use_original = original_positions_data and any(pos is not None for pos in original_positions_data)
         physical_result = self.export_cubic_cells(
-            positions=positions,
+            positions=physical_positions,
             scalars=atp_types,
             output_path=str(vtk_filename),
             scalar_name=scalar_name,
-            title=f"MicroC Simulation Cells - Step {step}"
+            title=f"MicroC Simulation Cells - Step {step}",
+            use_original_positions=use_original
         )
 
-        # Export logical positions
+        # Export logical positions (always use logical coordinates)
         logical_result = self.export_logical_positions(
-            positions=positions,
+            positions=logical_positions,
             scalars=atp_types,
             output_path=str(logical_filename),
             scalar_name=scalar_name,
@@ -968,24 +1065,98 @@ def export_h5_initial_conditions(positions: np.ndarray, cell_size_um: float,
 
 def export_microc_simulation_state(population, output_dir: str, step: int,
                                   cell_size_um: float) -> Optional[str]:
-    """Export simulation state for MicroC"""
-    exporter = VTKCellExporter(cell_size_um)
+    """Export simulation state for MicroC using comprehensive domain export (same as generation)"""
 
-    # Extract cell data with ATP types
-    cell_data = []
-    for cell in population.state.cells.values():
-        position = cell.state.position
+    if not population.state.cells:
+        print("[!] No cells to export")
+        return None
 
-        # Get ATP type from gene states (preferred method)
-        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
-            atp_type = get_atp_type_from_gene_states(cell.state.gene_states)
+    # Use the same comprehensive domain exporter as the original VTK generation
+    exporter = VTKDomainExporter(cell_size_um)
+
+    # Extract comprehensive cell data (same format as original VTK generation)
+    positions = []
+    gene_states = {}
+    phenotypes = []
+    metabolism = []
+    original_physical_positions = []
+
+    for i, (cell_id, cell) in enumerate(population.state.cells.items()):
+        # Use logical position for biological grid coordinates
+        positions.append(cell.state.position)
+
+        # Store original physical position if available
+        if hasattr(cell.state, 'original_physical_position') and cell.state.original_physical_position:
+            original_physical_positions.append(cell.state.original_physical_position)
         else:
-            # Fallback to phenotype-based mapping
-            atp_type = get_atp_type_from_phenotype(cell.state.phenotype)
+            original_physical_positions.append(None)
 
-        cell_data.append((position, atp_type))
+        # Extract gene states (same format as original)
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            gene_states[i] = cell.state.gene_states.copy()
+        else:
+            gene_states[i] = {}
 
-    return exporter.export_simulation_state(cell_data, output_dir, step)
+        # Extract phenotype
+        phenotypes.append(cell.state.phenotype)
+
+        # Extract metabolism from gene states (same logic as original generation)
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            mito_atp = cell.state.gene_states.get('mitoATP', False)
+            glyco_atp = cell.state.gene_states.get('glycoATP', False)
+
+            if mito_atp and glyco_atp:
+                metab = 3  # Mixed ATP
+            elif mito_atp:
+                metab = 2  # Mitochondrial ATP only
+            elif glyco_atp:
+                metab = 1  # Glycolytic ATP only
+            else:
+                metab = 0  # No ATP production
+        else:
+            metab = 0  # Default: no ATP production
+
+        metabolism.append(metab)
+
+    # Create metadata (same format as original generation)
+    from datetime import datetime
+    metadata = {
+        'description': f'MicroC simulation state at step {step}',
+        'simulated_time': step * 0.1,  # Assuming 0.1 time units per step
+        'suggested_cell_size_um': cell_size_um,
+        'biocell_grid_size_um': cell_size_um,
+        'domain_bounds_um': 'simulation_domain',
+        'generation_timestamp': datetime.now().isoformat(),
+        'simulation_step': step
+    }
+
+    # Create output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Export using the same comprehensive domain export as original generation
+    # Handle negative step numbers (e.g., -1 for initial state)
+    if step < 0:
+        vtk_filename = output_path / f"cells_step_{step:07d}.vtk"  # -0000001
+    else:
+        vtk_filename = output_path / f"cells_step_{step:06d}.vtk"   # 000000
+
+    # Filter out None values from original_physical_positions
+    filtered_original_positions = [pos for pos in original_physical_positions if pos is not None]
+    use_original_positions = len(filtered_original_positions) == len(positions)
+
+    result = exporter.export_complete_domain(
+        positions=np.array(positions),
+        gene_states=gene_states,
+        phenotypes=phenotypes,
+        metabolism=metabolism,
+        metadata=metadata,
+        output_path=str(vtk_filename),
+        original_physical_positions=filtered_original_positions if use_original_positions else None
+    )
+
+    print(f"[+] VTK cell state exported: {vtk_filename}")
+    return result
 
 
 def export_microc_substance_fields(simulator, output_dir: str, step: int) -> List[str]:
