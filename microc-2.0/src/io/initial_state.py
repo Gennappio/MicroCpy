@@ -274,7 +274,7 @@ class InitialStateManager:
             file_path: Path to save the HDF5 file
             step: Simulation step (for periodic saves)
         """
-        print("⚠️  H5 file generation has been removed from the core MicroC system.")
+        print("[WARNING]  H5 file generation has been removed from the core MicroC system.")
         print("   Use the external H5 generator tool instead:")
         print("   python run_microc.py --generate --cells 1000 --radius 50")
         print(f"   Skipping H5 save to {file_path}")
@@ -307,7 +307,7 @@ class InitialStateManager:
             version = meta.attrs.get('version', 'unknown')
             step = meta.attrs.get('step', 0)
             
-            print(f"📊 File info: {cell_count} cells, created {timestamp}, version {version}, step {step}")
+            print(f"[CHART] File info: {cell_count} cells, created {timestamp}, version {version}, step {step}")
             
             # Validate domain compatibility
             if 'domain_info' in meta.attrs:
@@ -315,7 +315,7 @@ class InitialStateManager:
                 self._validate_domain_compatibility(domain_info)
             
             if cell_count == 0:
-                print("⚠️  No cells in file")
+                print("[WARNING]  No cells in file")
                 return []
             
             # Load cell data
@@ -582,14 +582,14 @@ class InitialStateManager:
         # Check grid size
         if (saved_domain_info['nx'] != current_domain.nx or 
             saved_domain_info['ny'] != current_domain.ny):
-            print(f"⚠️  Grid size mismatch: saved ({saved_domain_info['nx']}, {saved_domain_info['ny']}), "
+            print(f"[WARNING]  Grid size mismatch: saved ({saved_domain_info['nx']}, {saved_domain_info['ny']}), "
                   f"current ({current_domain.nx}, {current_domain.ny})")
         
         # Check domain size
         size_tolerance = 1e-6  # 1 um tolerance
         if (abs(saved_domain_info['size_x'] - current_domain.size_x.meters) > size_tolerance or
             abs(saved_domain_info['size_y'] - current_domain.size_y.meters) > size_tolerance):
-            print(f"⚠️  Domain size mismatch: saved ({saved_domain_info['size_x']:.6f}, {saved_domain_info['size_y']:.6f}) m, "
+            print(f"[WARNING]  Domain size mismatch: saved ({saved_domain_info['size_x']:.6f}, {saved_domain_info['size_y']:.6f}) m, "
                   f"current ({current_domain.size_x.meters:.6f}, {current_domain.size_y.meters:.6f}) m")
         
         print("[OK] Domain compatibility validated")

@@ -215,7 +215,7 @@ substances:
     initial_value: 0.0e-6
     boundary_value: 0.0e-6
     boundary_type: "fixed"
-    unit: "μM"
+    unit: "uM"
 
 # Gene input associations - from associations.txt
 # Output	Input(Receptor)

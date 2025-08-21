@@ -235,20 +235,20 @@ def validate_configuration(config, config_path):
         print(f"[!] Configuration validation failed!")
         print(f"   Missing or invalid parameters:")
         for param in missing_params:
-            print(f"   • {param}")
+            print(f"   * {param}")
 
         print(f"\n[HELP] Configuration Help:")
-        print(f"   • Check example configurations in: tests/jayatilake_experiment/")
-        print(f"   • See complete reference: src/config/complete_substances_config.yaml")
-        print(f"   • Documentation: docs/running_simulations.md")
-        print(f"   • Required sections: domain, time, substances")
-        print(f"   • Optional sections: gene_network, associations, thresholds, output")
+        print(f"   * Check example configurations in: tests/jayatilake_experiment/")
+        print(f"   * See complete reference: src/config/complete_substances_config.yaml")
+        print(f"   * Documentation: docs/running_simulations.md")
+        print(f"   * Required sections: domain, time, substances")
+        print(f"   * Optional sections: gene_network, associations, thresholds, output")
         return False
 
     if warnings:
         print(f"[!] Configuration warnings:")
         for warning in warnings:
-            print(f"   • {warning}")
+            print(f"   * {warning}")
 
     print(f"[+] Configuration validation passed!")
     return True
@@ -271,19 +271,19 @@ def load_configuration(config_file, args):
         print(f"[!] Failed to load configuration - Missing required parameter: {e}")
         print(f"   This parameter is required in your YAML configuration file.")
         print(f"\n[HELP] Configuration Help:")
-        print(f"   • Check example configurations in: tests/jayatilake_experiment/")
-        print(f"   • See complete reference: src/config/complete_substances_config.yaml")
-        print(f"   • Required sections: domain, time, substances")
-        print(f"   • Each section has required parameters - see documentation")
+        print(f"   * Check example configurations in: tests/jayatilake_experiment/")
+        print(f"   * See complete reference: src/config/complete_substances_config.yaml")
+        print(f"   * Required sections: domain, time, substances")
+        print(f"   * Each section has required parameters - see documentation")
         sys.exit(1)
     except Exception as e:
         print(f"[!] Failed to load configuration: {e}")
         print(f"   This usually indicates a YAML syntax error or missing required sections.")
         print(f"   Please check your configuration file format.")
         print(f"\n[HELP] Common issues:")
-        print(f"   • YAML indentation must be consistent (use spaces, not tabs)")
-        print(f"   • Missing required sections: domain, time, substances")
-        print(f"   • Invalid YAML syntax (check colons, quotes, etc.)")
+        print(f"   * YAML indentation must be consistent (use spaces, not tabs)")
+        print(f"   * Missing required sections: domain, time, substances")
+        print(f"   * Invalid YAML syntax (check colons, quotes, etc.)")
         sys.exit(1)
 
     # Validate configuration
@@ -638,7 +638,7 @@ def print_detailed_status(step, num_steps, current_time, simulator, population, 
     for state, count in metabolic_counts.items():
         if count > 0:
             percentage_cells = (count / total_cells * 100) if total_cells > 0 else 0
-            print(f"     • {state}: {count} ({percentage_cells:.1f}%)")
+            print(f"     * {state}: {count} ({percentage_cells:.1f}%)")
 
     # Substance concentrations
     stats = simulator.get_summary_statistics()
@@ -685,16 +685,16 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
         num_steps = int(total_time / dt)
 
     print(f"\n[RUN] Running simulation with multi-timescale orchestration...")
-    print(f"   • Time step: {dt}")
-    print(f"   • Total steps: {num_steps}")
-    print(f"   • Total time: {total_time}")
-    print(f"   • Diffusion update interval: {config.time.diffusion_step}")
-    print(f"   • Intracellular update interval: {config.time.intracellular_step}")
-    print(f"   • Intercellular update interval: {config.time.intercellular_step}")
-    print(f"   • Data saving interval: {config.output.save_data_interval}")
-    print(f"   • Plot generation interval: {config.output.save_plots_interval}")
-    print(f"   • Status print interval: {config.output.status_print_interval}")
-    print(f"   • Output: {config.output_dir}")
+    print(f"   * Time step: {dt}")
+    print(f"   * Total steps: {num_steps}")
+    print(f"   * Total time: {total_time}")
+    print(f"   * Diffusion update interval: {config.time.diffusion_step}")
+    print(f"   * Intracellular update interval: {config.time.intracellular_step}")
+    print(f"   * Intercellular update interval: {config.time.intercellular_step}")
+    print(f"   * Data saving interval: {config.output.save_data_interval}")
+    print(f"   * Plot generation interval: {config.output.save_plots_interval}")
+    print(f"   * Status print interval: {config.output.status_print_interval}")
+    print(f"   * Output: {config.output_dir}")
 
     # Create output directory
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -1102,17 +1102,17 @@ def main():
     print("[+] SIMULATION COMPLETED SUCCESSFULLY!")
     print("=" * 50)
     print(f"[STATS] Results summary:")
-    print(f"   • Substances simulated: {len(config.substances)}")
-    print(f"   • Simulation steps: {len(results['time'])}")
-    print(f"   • Output directory: {config.output_dir}")
-    print(f"   • Plots directory: {config.plots_dir}")
+    print(f"   * Substances simulated: {len(config.substances)}")
+    print(f"   * Simulation steps: {len(results['time'])}")
+    print(f"   * Output directory: {config.output_dir}")
+    print(f"   * Plots directory: {config.plots_dir}")
 
     if args.save_data:
         
-        print(f"   • Data saved for analysis")
+        print(f"   * Data saved for analysis")
 
     if generated_plots:
-        print(f"   • Plots generated: {len(generated_plots)}")
+        print(f"   * Plots generated: {len(generated_plots)}")
 
     print(f"\n[RUN] To run again:")
     print(f"   python run_sim.py {args.config_file}")
