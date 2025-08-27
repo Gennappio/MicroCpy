@@ -3,14 +3,14 @@
 
 domain:
   size_x: 400.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 400.0
-  size_y_unit: "μm"
+  size_y_unit: "um"
   nx: 20
   ny: 20
   dimensions: 2
   cell_height: 20.0          # Biological cell height/thickness
-  cell_height_unit: "μm"     # Can be changed to make cells thicker/thinner
+  cell_height_unit: "um"     # Can be changed to make cells thicker/thinner
 
 time:
   dt: 0.01

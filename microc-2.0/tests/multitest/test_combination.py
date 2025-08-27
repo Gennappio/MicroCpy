@@ -26,7 +26,7 @@ def test_combination(combination_id):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
         
-        print("✓ Config file loaded successfully")
+        print("[+] Config file loaded successfully")
         
         # Extract substance concentrations
         substances = config_data['substances']
@@ -54,7 +54,7 @@ def test_combination(combination_id):
             print(f"\nERROR: Missing required sections: {missing_sections}")
             return False
         
-        print("✓ All required config sections present")
+        print("[+] All required config sections present")
         
         # Check domain configuration
         domain = config_data['domain']
@@ -62,7 +62,7 @@ def test_combination(combination_id):
             print(f"ERROR: Expected 1x1 grid, got {domain['nx']}x{domain['ny']}")
             return False
         
-        print("✓ Domain configured for single cell (1x1 grid)")
+        print("[+] Domain configured for single cell (1x1 grid)")
         
         # Check that diffusion is disabled
         diffusion_disabled = True
@@ -72,14 +72,14 @@ def test_combination(combination_id):
                 diffusion_disabled = False
         
         if diffusion_disabled:
-            print("✓ Diffusion disabled for all substances")
+            print("[+] Diffusion disabled for all substances")
         
         # Check output directories
         output_dir = config_data['output_dir']
         plots_dir = config_data['plots_dir']
         
         if f"combination_{combination_id:02d}" in output_dir and f"combination_{combination_id:02d}" in plots_dir:
-            print("✓ Output directories configured correctly")
+            print("[+] Output directories configured correctly")
         else:
             print(f"WARNING: Output directories may not be unique for this combination")
         
@@ -121,7 +121,7 @@ def main():
         print(f"Failed: {16 - sum(results)}")
         
         if all(results):
-            print("\n✓ All combinations configured correctly!")
+            print("\n[+] All combinations configured correctly!")
             print("You can now run individual simulations using:")
             print("  python tests/multitest/test_combination.py <0-15>")
         else:

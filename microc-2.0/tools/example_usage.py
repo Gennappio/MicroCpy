@@ -24,20 +24,20 @@ def run_command(cmd, description):
         if result.stderr:
             print("STDERR:", result.stderr)
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error: {e}")
+        print(f"[!] Error: {e}")
         print(f"STDOUT: {e.stdout}")
         print(f"STDERR: {e.stderr}")
     except FileNotFoundError:
-        print(f"❌ Command not found: {cmd[0]}")
+        print(f"[!] Command not found: {cmd[0]}")
 
 def main():
-    print("🧬 MicroC Cell State Analysis Tools - Example Usage")
+    print("[CELL] MicroC Cell State Analysis Tools - Example Usage")
     print("=" * 80)
     
     # Check if we have the initial state file
     initial_state_file = "initial_state_3D_S.h5"
     if not Path(initial_state_file).exists():
-        print(f"❌ Initial state file not found: {initial_state_file}")
+        print(f"[!] Initial state file not found: {initial_state_file}")
         print("Please run MicroC with save_initial_state: true first")
         return
     
@@ -73,9 +73,9 @@ def main():
     )
     
     print(f"\n{'='*80}")
-    print("✅ Example usage completed!")
-    print("📁 Check the 'exports' folder for CSV files")
-    print("📊 Check for JSON summary files in the current directory")
+    print("[+] Example usage completed!")
+    print("[FILE] Check the 'exports' folder for CSV files")
+    print("[STATS] Check for JSON summary files in the current directory")
     print("💡 Use --help with any tool for more options")
     print("=" * 80)
 

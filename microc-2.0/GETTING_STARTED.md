@@ -1,14 +1,14 @@
-# 🚀 Getting Started with MicroC 2.0
+# [RUN] Getting Started with MicroC 2.0
 
 Welcome to MicroC 2.0! This guide will walk you through setting up and running your first biological simulation.
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Python 3.8 or higher
 - pip package manager
 - Git (for cloning the repository)
 
-## 🔧 Step-by-Step Setup
+## [TOOL] Step-by-Step Setup
 
 ### Step 1: Create an Isolated Environment
 
@@ -47,7 +47,7 @@ Run the test suite to ensure everything is working:
 python -m pytest tests/ -v
 ```
 
-## 🏃‍♂️ Quick Start Examples
+##  Quick Start Examples
 
 ### Example 1: Run a Complete Demo
 
@@ -76,7 +76,7 @@ python run_sim.py config/simple_oxygen_glucose.yaml --steps 10 --verbose
 python run_sim.py config/simple_oxygen_glucose.yaml --output results/my_test
 ```
 
-## 📊 What You'll See
+## [CHART] What You'll See
 
 After running a simulation, you'll get:
 
@@ -84,7 +84,7 @@ After running a simulation, you'll get:
 - **Data**: Numerical results in the `results/` directory
 - **Performance metrics**: Timing and memory usage statistics
 
-## 🔍 Verify Your Setup
+## [SEARCH] Verify Your Setup
 
 Test that FiPy is working correctly:
 
@@ -92,14 +92,14 @@ Test that FiPy is working correctly:
 python -c "import fipy; print('FiPy version:', fipy.__version__)"
 ```
 
-## 🎯 Next Steps
+## [TARGET] Next Steps
 
 1. **Explore Examples**: Check out the `examples/` directory for more demos
 2. **Read Documentation**: Review the various `.md` files for detailed guides
 3. **Customize**: Create your own YAML configuration files
 4. **Experiment**: Modify parameters and see how they affect the simulation
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 If you encounter issues:
 
@@ -108,11 +108,11 @@ If you encounter issues:
 3. **Run tests**: Use `python -m pytest tests/ -v` to identify problems
 4. **Check FiPy**: Ensure FiPy is properly installed and importable
 
-## 📚 Additional Resources
+##  Additional Resources
 
 - `README.md`: Comprehensive project overview
 - `HOW_TO_RUN_NEW_SIMULATIONS.md`: Detailed simulation guide
 - `YAML_CONFIGURATION_GUIDE.md`: Configuration file documentation
 - `CUSTOM_FUNCTIONS_GUIDE.md`: Customization instructions
 
-Happy simulating! 🧬✨
+Happy simulating! 

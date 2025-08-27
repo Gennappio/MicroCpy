@@ -1,0 +1,70 @@
+# Simple Gradient Test Configuration
+# Test the new gradient boundary conditions
+
+domain:
+  size_x: 400.0
+  size_x_unit: "um"
+  size_y: 400.0  
+  size_y_unit: "um"
+  nx: 20
+  ny: 20
+  dimensions: 2
+
+time:
+  dt: 0.05
+  end_time: 1.0
+  diffusion_step: 5
+  intracellular_step: 1
+  intercellular_step: 10
+
+# Test substances with different boundary types
+substances:
+  # Original fixed boundary (constant value everywhere)
+  FixedSubstance:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.8
+    boundary_type: "fixed"  # Constant 0.8 on all boundaries
+    
+  # Linear gradient (0 left, 1 right, gradients top/bottom)
+  LinearGradientSubstance:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.5
+    boundary_type: "linear_gradient"  # 0 left -> 1 right
+    
+  # Custom gradient (uses custom functions)
+  CustomGradientSubstance:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 0.5
+    boundary_value: 0.5
+    boundary_type: "gradient"  # Custom pattern
+
+# Simple associations
+associations:
+  FixedSubstance: "Fixed_input"
+  LinearGradientSubstance: "Linear_input"
+  CustomGradientSubstance: "Custom_input"
+
+# Simple thresholds
+thresholds:
+  Fixed_input:
+    initial: 0.5
+    threshold: 0.7
+  Linear_input:
+    initial: 0.5
+    threshold: 0.5
+  Custom_input:
+    initial: 0.5
+    threshold: 0.5
+
+output_dir: "results/gradient_test"
+plots_dir: "plots/gradient_test"
+data_dir: "data/gradient_test"
+custom_functions_path: "config/custom_functions.py" 

@@ -27,17 +27,17 @@ def run_command(cmd, description):
             print("STDERR:", result.stderr)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error: {e}")
+        print(f"[!] Error: {e}")
         print(f"STDOUT: {e.stdout}")
         print(f"STDERR: {e.stderr}")
         return False
     except FileNotFoundError:
-        print(f"❌ Command not found: {cmd[0]}")
+        print(f"[!] Command not found: {cmd[0]}")
         return False
 
 def check_requirements():
     """Check if required packages are installed"""
-    print("🔍 Checking requirements...")
+    print("[*] Checking requirements...")
     
     required_packages = ['h5py', 'numpy', 'matplotlib', 'seaborn', 'pandas']
     optional_packages = ['plotly']
@@ -48,21 +48,21 @@ def check_requirements():
     for package in required_packages:
         try:
             __import__(package)
-            print(f"✅ {package}")
+            print(f"[+] {package}")
         except ImportError:
             missing_required.append(package)
-            print(f"❌ {package} (required)")
+            print(f"[!] {package} (required)")
     
     for package in optional_packages:
         try:
             __import__(package)
-            print(f"✅ {package} (optional)")
+            print(f"[+] {package} (optional)")
         except ImportError:
             missing_optional.append(package)
             print(f"⚠️  {package} (optional - interactive plots disabled)")
     
     if missing_required:
-        print(f"\n❌ Missing required packages: {', '.join(missing_required)}")
+        print(f"\n[!] Missing required packages: {', '.join(missing_required)}")
         print("Install with: pip install " + " ".join(missing_required))
         return False
     
@@ -73,27 +73,27 @@ def check_requirements():
     return True
 
 def main():
-    print("🧬 MicroC Cell State Visualization Demo")
+    print("[CELL] MicroC Cell State Visualization Demo")
     print("=" * 80)
     
     # Check requirements
     if not check_requirements():
-        print("\n❌ Please install missing requirements first")
+        print("\n[!] Please install missing requirements first")
         return
     
     # Check if we have the initial state file
     initial_state_file = "initial_state_3D_S.h5"
     if not Path(initial_state_file).exists():
-        print(f"❌ Initial state file not found: {initial_state_file}")
+        print(f"[!] Initial state file not found: {initial_state_file}")
         print("Please run MicroC with save_initial_state: true first")
         return
     
-    print(f"\n✅ Found initial state file: {initial_state_file}")
+    print(f"\n[+] Found initial state file: {initial_state_file}")
     
     # Create output directory
     output_dir = "demo_visualizations"
     Path(output_dir).mkdir(exist_ok=True)
-    print(f"📁 Output directory: {output_dir}")
+    print(f"[FILE] Output directory: {output_dir}")
     
     # Demo 1: Basic 2D visualization
     success = run_command(
@@ -103,7 +103,7 @@ def main():
     )
     
     if not success:
-        print("❌ Basic visualization failed. Check your setup.")
+        print("[!] Basic visualization failed. Check your setup.")
         return
     
     # Demo 2: 3D visualization
@@ -151,7 +151,7 @@ def main():
         )
         interactive_file = Path(output_dir) / f"{Path(initial_state_file).stem}_interactive_3d.html"
         if interactive_file.exists():
-            print(f"🌐 Interactive plot created: {interactive_file}")
+            print(f"Domain: Interactive plot created: {interactive_file}")
             print("   You can open this file in your web browser")
     except ImportError:
         print("⚠️  Plotly not available - skipping interactive 3D plot")
@@ -195,26 +195,26 @@ def main():
     image_files = [f for f in created_files if f.suffix.lower() in ['.png', '.jpg', '.jpeg']]
     html_files = [f for f in created_files if f.suffix.lower() == '.html']
     
-    print(f"📊 Created {len(image_files)} image files:")
+    print(f"[STATS] Created {len(image_files)} image files:")
     for img_file in sorted(image_files):
-        print(f"   📈 {img_file.relative_to(output_path)}")
+        print(f"   Step: {img_file.relative_to(output_path)}")
     
     if html_files:
-        print(f"\n🌐 Created {len(html_files)} interactive files:")
+        print(f"\nDomain: Created {len(html_files)} interactive files:")
         for html_file in sorted(html_files):
-            print(f"   🔗 {html_file.relative_to(output_path)}")
+            print(f"   [LINK] {html_file.relative_to(output_path)}")
     
-    print(f"\n📁 All files saved in: {output_dir}")
+    print(f"\n[FILE] All files saved in: {output_dir}")
     print("\n💡 Visualization Types Created:")
     print("   🗺️  2D/3D cell position plots")
-    print("   🎭 Phenotype distribution charts")
-    print("   🧬 Gene network activation heatmaps")
-    print("   🎯 Fate gene analysis plots")
-    print("   📊 Cell age distribution histograms")
+    print("   Phenotypes: Phenotype distribution charts")
+    print("   [CELL] Gene network activation heatmaps")
+    print("   [TARGET] Fate gene analysis plots")
+    print("   [STATS] Cell age distribution histograms")
     if html_files:
-        print("   🌐 Interactive 3D plots")
+        print("   Domain: Interactive 3D plots")
     if temporal_files:
-        print("   📈 Temporal evolution analysis")
+        print("   Step: Temporal evolution analysis")
     
     print("\n🚀 Next Steps:")
     print("   1. Open the image files to view static plots")
@@ -232,9 +232,9 @@ def main():
             subprocess.run(["open", str(output_path)], check=False)
         elif platform.system() == "Linux":
             subprocess.run(["xdg-open", str(output_path)], check=False)
-        print(f"\n📂 Opened output directory: {output_path}")
+        print(f"\n[*] Opened output directory: {output_path}")
     except:
-        print(f"\n📂 Please manually open: {output_path}")
+        print(f"\n[*] Please manually open: {output_path}")
 
 if __name__ == "__main__":
     main()

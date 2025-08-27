@@ -14,12 +14,12 @@ def run_single_combination(combination_id):
     config_file = f"tests/multitest/config_{combination_id:02d}.yaml"
     
     if not Path(config_file).exists():
-        print(f"❌ Config file not found: {config_file}")
+        print(f"[!] Config file not found: {config_file}")
         return False
     
-    print(f"🎯 Running Combination {combination_id:02d}")
+    print(f"[TARGET] Running Combination {combination_id:02d}")
     print(f"========================================")
-    print(f"📁 Config: {config_file}")
+    print(f"[FOLDER] Config: {config_file}")
     
     # Read the config to show substance concentrations
     try:
@@ -32,17 +32,17 @@ def run_single_combination(combination_id):
         glucose_conc = config_data['substances']['Glucose']['initial_value']
         tgfa_conc = config_data['substances']['TGFA']['initial_value']
         
-        print(f"🧬 Substance concentrations:")
+        print(f" Substance concentrations:")
         print(f"   Oxygen: {oxygen_conc:.3f} mM ({'HIGH' if oxygen_conc > 0.03 else 'LOW'})")
         print(f"   Lactate: {lactate_conc:.1f} mM ({'HIGH' if lactate_conc > 2.0 else 'LOW'})")
         print(f"   Glucose: {glucose_conc:.1f} mM ({'HIGH' if glucose_conc > 4.0 else 'LOW'})")
         print(f"   TGFA: {tgfa_conc:.1e} mM ({'HIGH' if tgfa_conc > 1.0e-6 else 'LOW'})")
         
     except Exception as e:
-        print(f"⚠️  Could not read config details: {e}")
+        print(f"[WARNING]  Could not read config details: {e}")
     
     # Run the simulation using run_sim.py
-    print("🚀 Running simulation...")
+    print("[RUN] Running simulation...")
     start_time = time.time()
     
     try:
@@ -54,7 +54,7 @@ def run_single_combination(combination_id):
         end_time = time.time()
         
         if result.returncode == 0:
-            print(f"✅ Simulation completed successfully in {end_time - start_time:.1f} seconds")
+            print(f"[+] Simulation completed successfully in {end_time - start_time:.1f} seconds")
             
             # Try to extract final phenotype from output
             final_phenotype = "Unknown"
@@ -65,25 +65,25 @@ def run_single_combination(combination_id):
                         final_phenotype = line.split(':')[-1].strip()
                         break
             
-            print(f"📊 Final phenotype: {final_phenotype}")
+            print(f"[CHART] Final phenotype: {final_phenotype}")
             
             # Show where plots were saved
             plots_dir = f"plots/multitest/combination_{combination_id:02d}"
             if Path(plots_dir).exists():
-                print(f"📁 Plots saved to: {plots_dir}")
+                print(f"[FOLDER] Plots saved to: {plots_dir}")
             
             return True
             
         else:
-            print(f"❌ Simulation failed with return code {result.returncode}")
+            print(f"[!] Simulation failed with return code {result.returncode}")
             print(f"Error output: {result.stderr}")
             return False
             
     except subprocess.TimeoutExpired:
-        print("❌ Simulation timed out after 120 seconds")
+        print("[!] Simulation timed out after 120 seconds")
         return False
     except Exception as e:
-        print(f"❌ Error running simulation: {e}")
+        print(f"[!] Error running simulation: {e}")
         return False
 
 def main():
@@ -97,9 +97,9 @@ def main():
     
     if arg.lower() == 'all':
         # Run all 16 tests
-        print("🎯 Multi-Test Runner")
+        print("[TARGET] Multi-Test Runner")
         print("========================================")
-        print("🧪 Running all 16 single-cell combination tests")
+        print(" Running all 16 single-cell combination tests")
         
         results = []
         start_time = time.time()
@@ -112,18 +112,18 @@ def main():
         end_time = time.time()
         
         # Print summary
-        print(f"🎉 ALL TESTS COMPLETED!")
+        print(f"[SUCCESS] ALL TESTS COMPLETED!")
         print(f"========================================")
-        print(f"⏱️  Total time: {end_time - start_time:.1f} seconds")
-        print(f"✅ Successful tests: {sum(results)}")
-        print(f"❌ Failed tests: {16 - sum(results)}")
+        print(f"  Total time: {end_time - start_time:.1f} seconds")
+        print(f"[+] Successful tests: {sum(results)}")
+        print(f"[!] Failed tests: {16 - sum(results)}")
         
         # List failed tests
         failed_tests = [i for i, success in enumerate(results) if not success]
         if failed_tests:
-            print(f"❌ Failed test IDs: {failed_tests}")
+            print(f"[!] Failed test IDs: {failed_tests}")
         
-        print(f"\n📁 Individual results saved in: plots/multitest/combination_XX/")
+        print(f"\n[FOLDER] Individual results saved in: plots/multitest/combination_XX/")
         
     else:
         # Run single test
@@ -132,9 +132,9 @@ def main():
             if 0 <= combination_id <= 15:
                 run_single_combination(combination_id)
             else:
-                print("❌ Combination ID must be between 0 and 15")
+                print("[!] Combination ID must be between 0 and 15")
         except ValueError:
-            print("❌ Invalid combination ID. Must be a number between 0-15 or 'all'")
+            print("[!] Invalid combination ID. Must be a number between 0-15 or 'all'")
 
 if __name__ == "__main__":
     main()

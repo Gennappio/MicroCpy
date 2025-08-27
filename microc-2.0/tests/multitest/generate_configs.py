@@ -198,7 +198,7 @@ def create_base_config():
                 "initial_value": 0.0e-6,
                 "boundary_value": 0.0e-6,
                 "boundary_type": "fixed",
-                "unit": "μM"
+                "unit": "uM"
             }
         }
     }
@@ -336,12 +336,12 @@ if __name__ == "__main__":
         "TGFA": {"high": 2.0e-6, "low": 5.0e-7}     # Above/below threshold 1.0e-6
     }
     
-    print("🎯 Generating 16 config files for systematic combination testing...")
-    print("📁 Each config has a single cell with different substance concentrations")
+    print("[TARGET] Generating 16 config files for systematic combination testing...")
+    print("[FOLDER] Each config has a single cell with different substance concentrations")
     
     # Generate all 16 combinations (2^4)
     for combination_id in range(16):
-        print(f"\n📝 Creating config {combination_id:02d}...")
+        print(f"\n[NOTE] Creating config {combination_id:02d}...")
         
         # Create base config
         config = create_base_config()
@@ -374,8 +374,8 @@ if __name__ == "__main__":
         glucose_state = "HIGH" if glucose_high else "LOW"
         tgfa_state = "HIGH" if tgfa_high else "LOW"
         
-        print(f"   🧬 Combination {combination_id:02d}: O2={oxygen_state}, Lac={lactate_state}, Gluc={glucose_state}, TGFA={tgfa_state}")
-        print(f"   📊 Values: O2={config['substances']['Oxygen']['initial_value']:.3f}, Lac={config['substances']['Lactate']['initial_value']:.1f}, Gluc={config['substances']['Glucose']['initial_value']:.1f}, TGFA={config['substances']['TGFA']['initial_value']:.1e}")
+        print(f"    Combination {combination_id:02d}: O2={oxygen_state}, Lac={lactate_state}, Gluc={glucose_state}, TGFA={tgfa_state}")
+        print(f"   [CHART] Values: O2={config['substances']['Oxygen']['initial_value']:.3f}, Lac={config['substances']['Lactate']['initial_value']:.1f}, Gluc={config['substances']['Glucose']['initial_value']:.1f}, TGFA={config['substances']['TGFA']['initial_value']:.1e}")
         
         # Save config file
         filename = f"config_{combination_id:02d}.yaml"
@@ -384,8 +384,8 @@ if __name__ == "__main__":
         with open(filepath, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
         
-        print(f"   ✅ Saved: {filename}")
+        print(f"   [+] Saved: {filename}")
     
-    print(f"\n🎉 Successfully generated 16 config files!")
-    print(f"📁 Location: tests/multitest/")
-    print(f"📋 Files: config_00.yaml to config_15.yaml")
+    print(f"\n[SUCCESS] Successfully generated 16 config files!")
+    print(f"[FOLDER] Location: tests/multitest/")
+    print(f" Files: config_00.yaml to config_15.yaml")

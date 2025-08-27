@@ -92,10 +92,10 @@ mypy src/
 #### Test Structure
 ```
 tests/
-├── unit/           # Unit tests for individual components
-├── integration/    # Integration tests for full workflows
-├── fixtures/       # Test data and configurations
-└── conftest.py     # Pytest configuration
+ unit/           # Unit tests for individual components
+ integration/    # Integration tests for full workflows
+ fixtures/       # Test data and configurations
+ conftest.py     # Pytest configuration
 ```
 
 #### Running Tests
@@ -163,14 +163,14 @@ twine check dist/*
 ### Package Structure
 ```
 microc-2.0/
-├── src/microc/          # Main package code
-├── tests/               # Test suite
-├── docs/                # Documentation
-├── examples/            # Example configurations
-├── setup.py             # Setup script
-├── pyproject.toml       # Modern Python packaging
-├── requirements.txt     # Dependencies
-└── Makefile            # Development commands
+ src/microc/          # Main package code
+ tests/               # Test suite
+ docs/                # Documentation
+ examples/            # Example configurations
+ setup.py             # Setup script
+ pyproject.toml       # Modern Python packaging
+ requirements.txt     # Dependencies
+ Makefile            # Development commands
 ```
 
 ## Documentation
@@ -190,13 +190,13 @@ make docs-clean
 ### Documentation Structure
 ```
 docs/
-├── source/
-│   ├── index.rst
-│   ├── api/
-│   ├── tutorials/
-│   └── examples/
-├── Makefile
-└── conf.py
+ source/
+    index.rst
+    api/
+    tutorials/
+    examples/
+ Makefile
+ conf.py
 ```
 
 ### Writing Documentation

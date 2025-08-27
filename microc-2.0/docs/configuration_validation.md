@@ -22,19 +22,19 @@ The validation system operates in two phases:
 ```yaml
 domain:
   size_x: 800.0           # Domain width
-  size_x_unit: "μm"       # Units for width
+  size_x_unit: "um"       # Units for width
   size_y: 800.0           # Domain height  
-  size_y_unit: "μm"       # Units for height
+  size_y_unit: "um"       # Units for height
   nx: 40                  # Grid cells in x direction
   ny: 40                  # Grid cells in y direction
   dimensions: 2           # Spatial dimensions (2D)
   cell_height: 20.0       # Cell thickness
-  cell_height_unit: "μm"  # Units for thickness
+  cell_height_unit: "um"  # Units for thickness
 ```
 
 **Validation Checks:**
 - `size_x`, `size_y`, `nx`, `ny` must be present and positive
-- Grid spacing (size/n) must be between 1-50 μm
+- Grid spacing (size/n) must be between 1-50 um
 - Grid must be square (dx = dy)
 
 ### Time Section (Required)
@@ -55,7 +55,7 @@ time:
 ```yaml
 substances:
   Oxygen:
-    diffusion_coeff: 2.1e-9    # m²/s (must be non-negative)
+    diffusion_coeff: 2.1e-9    # m/s (must be non-negative)
     initial_value: 0.21        # mM (initial concentration)
     boundary_value: 0.21       # mM (boundary concentration)
     boundary_type: "fixed"     # Boundary condition type
@@ -118,38 +118,38 @@ custom_functions_path: "path/to/custom_functions.py"
 
 ### Missing Parameter Errors
 ```
-❌ Configuration validation failed!
+[!] Configuration validation failed!
    Missing or invalid parameters:
-   • domain.nx and domain.ny
-   • substances.Oxygen.initial_value
-   • time.end_time must be positive
+   * domain.nx and domain.ny
+   * substances.Oxygen.initial_value
+   * time.end_time must be positive
 
-💡 Configuration Help:
-   • Check example configurations in: tests/jayatilake_experiment/
-   • See complete reference: src/config/complete_substances_config.yaml
-   • Documentation: docs/running_simulations.md
-   • Required sections: domain, time, substances
-   • Optional sections: gene_network, associations, thresholds, output
+[IDEA] Configuration Help:
+   * Check example configurations in: tests/jayatilake_experiment/
+   * See complete reference: src/config/complete_substances_config.yaml
+   * Documentation: docs/running_simulations.md
+   * Required sections: domain, time, substances
+   * Optional sections: gene_network, associations, thresholds, output
 ```
 
 ### YAML Syntax Errors
 ```
-❌ Failed to load configuration - Missing required parameter: 'nx'
+[!] Failed to load configuration - Missing required parameter: 'nx'
    This parameter is required in your YAML configuration file.
 
-💡 Configuration Help:
-   • Check example configurations in: tests/jayatilake_experiment/
-   • See complete reference: src/config/complete_substances_config.yaml
-   • Required sections: domain, time, substances
-   • Each section has required parameters - see documentation
+[IDEA] Configuration Help:
+   * Check example configurations in: tests/jayatilake_experiment/
+   * See complete reference: src/config/complete_substances_config.yaml
+   * Required sections: domain, time, substances
+   * Each section has required parameters - see documentation
 ```
 
 ### Common Issues
 ```
-💡 Common issues:
-   • YAML indentation must be consistent (use spaces, not tabs)
-   • Missing required sections: domain, time, substances
-   • Invalid YAML syntax (check colons, quotes, etc.)
+[IDEA] Common issues:
+   * YAML indentation must be consistent (use spaces, not tabs)
+   * Missing required sections: domain, time, substances
+   * Invalid YAML syntax (check colons, quotes, etc.)
 ```
 
 ## Example Configurations
@@ -158,9 +158,9 @@ custom_functions_path: "path/to/custom_functions.py"
 ```yaml
 domain:
   size_x: 800.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 800.0
-  size_y_unit: "μm"
+  size_y_unit: "um"
   nx: 40
   ny: 40
   dimensions: 2

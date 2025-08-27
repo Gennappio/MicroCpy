@@ -13,10 +13,10 @@ import random
 try:
     from fipy import Grid2D, CellVariable, DiffusionTerm, ImplicitSourceTerm, TransientTerm
     FIPY_AVAILABLE = True
-    print("✅ FiPy available")
+    print("[+] FiPy available")
 except ImportError:
     FIPY_AVAILABLE = False
-    print("❌ FiPy not available - install with: pip install fipy")
+    print("[!] FiPy not available - install with: pip install fipy")
     exit(1)
 
 def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_params: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -57,7 +57,7 @@ def custom_initialize_cell_placement(grid_size: Tuple[int, int], simulation_para
 
         radius += 1
 
-    print(f"✅ Placed {len(placements)} cells in expanding spherical pattern (radius: {radius-1})")
+    print(f"[+] Placed {len(placements)} cells in expanding spherical pattern (radius: {radius-1})")
     print(f"   Cell density: {len(placements)} cells in {(2*radius-1)**2} grid positions")
     print(f"   Placement matches jayatilake_experiment_config.yaml exactly")
     return placements
@@ -70,10 +70,10 @@ def create_source_field(cells: List[Dict[str, Any]], grid_size: Tuple[int, int],
     nx, ny = grid_size
     source_field = np.zeros(nx * ny)
     
-    # Calculate mesh cell volume (grid spacing × grid spacing × thickness)
-    mesh_cell_volume = mesh_dx * mesh_dy  # 20 μm thickness
+    # Calculate mesh cell volume (grid spacing x grid spacing x thickness)
+    mesh_cell_volume = mesh_dx * mesh_dy  # 20 um thickness
     
-    print(f"🔍 Mesh cell volume: {mesh_cell_volume:.2e} m³")
+    print(f"[SEARCH] Mesh cell volume: {mesh_cell_volume:.2e} m")
     
     for cell in cells:
         x, y = cell['position']
@@ -82,14 +82,14 @@ def create_source_field(cells: List[Dict[str, Any]], grid_size: Tuple[int, int],
             # Convert to FiPy index (column-major order)
             fipy_idx = x * ny + y
             
-            # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume
+            # Convert mol/s/cell to mol/(ms) by dividing by mesh cell volume
             volumetric_rate = uptake_rate / mesh_cell_volume  # Positive uptake rate
 
-            # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
+            # Convert to mM/s for FiPy (1 mol/m = 1000 mM)
             # For ImplicitSourceTerm(coeff=X), positive X means consumption (removes substance)
             source_field[fipy_idx] = volumetric_rate * 1000.0 *3000
     
-    print(f"🔍 Source field stats:")
+    print(f"[SEARCH] Source field stats:")
     print(f"   Non-zero cells: {np.count_nonzero(source_field)}")
     print(f"   Min rate: {np.min(source_field):.2e} mM/s")
     print(f"   Max rate: {np.max(source_field):.2e} mM/s")
@@ -100,16 +100,16 @@ def run_oxygen_simulation():
     """
     Run standalone oxygen diffusion simulation with FiPy.
     """
-    print("🧬 FiPy Oxygen Diffusion Test")
+    print(" FiPy Oxygen Diffusion Test")
     print("=" * 50)
     
     # Simulation parameters
-    domain_size = 600e-6  # 600 μm in meters
-    grid_size = (40, 40)  # 40×40 grid
+    domain_size = 600e-6  # 600 um in meters
+    grid_size = (40, 40)  # 40x40 grid
     nx, ny = grid_size
     
     # Oxygen parameters (scaled for mesh cell volume)
-    diffusion_coeff = 1.0e-9  # m²/s
+    diffusion_coeff = 1.0e-9  # m/s
     uptake_rate = 3.0e-17     # mol/s/cell (scaled down for mesh volume - shows same pattern as jayatilake)
     initial_value = 0.07      # mM
     boundary_value = 0.07     # mM
@@ -118,9 +118,9 @@ def run_oxygen_simulation():
     dx = domain_size / nx
     dy = domain_size / ny
     
-    print(f"📐 Domain: {domain_size*1e6:.0f} × {domain_size*1e6:.0f} μm")
-    print(f"📐 Grid: {nx} × {ny}")
-    print(f"📐 Spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
+    print(f" Domain: {domain_size*1e6:.0f} x {domain_size*1e6:.0f} um")
+    print(f" Grid: {nx} x {ny}")
+    print(f" Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} um")
     
     mesh = Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
     
@@ -140,12 +140,12 @@ def run_oxygen_simulation():
     source_var = CellVariable(mesh=mesh, value=source_field)
     
     # Create diffusion equation with source term
-    # 0 = ∇·(D∇C) + S
-    # For consumption, we want: 0 = ∇·(D∇C) - R*C where R > 0
+    # 0 = nabla(DnablaC) + S
+    # For consumption, we want: 0 = nabla(DnablaC) - R*C where R > 0
     # This means ImplicitSourceTerm(coeff=-R) where R is positive consumption rate
     equation = DiffusionTerm(coeff=diffusion_coeff) - ImplicitSourceTerm(coeff=source_var)
     
-    print("\n🚀 Solving steady-state diffusion equation...")
+    print("\n[RUN] Solving steady-state diffusion equation...")
     
     # Solve for steady state
     max_iterations = 1000
@@ -163,14 +163,14 @@ def run_oxygen_simulation():
         iteration += 1
     
     if iteration >= max_iterations:
-        print(f"⚠️  Did not converge after {max_iterations} iterations (residual: {residual:.2e})")
+        print(f"[WARNING]  Did not converge after {max_iterations} iterations (residual: {residual:.2e})")
     else:
-        print(f"✅ Converged in {iteration} iterations (residual: {residual:.2e})")
+        print(f"[+] Converged in {iteration} iterations (residual: {residual:.2e})")
     
     # Get results
     oxygen_concentrations = oxygen.value.reshape((nx, ny), order='F')  # Fortran order for FiPy
     
-    print(f"\n📊 Results:")
+    print(f"\n[CHART] Results:")
     print(f"   Oxygen range: {np.min(oxygen_concentrations):.6f} - {np.max(oxygen_concentrations):.6f} mM")
     
     # Plot results
@@ -186,7 +186,7 @@ def plot_results(oxygen_concentrations: np.ndarray, cells: List[Dict[str, Any]],
     nx, ny = grid_size
     
     # Create coordinate arrays
-    x = np.linspace(0, domain_size * 1e6, nx)  # Convert to μm
+    x = np.linspace(0, domain_size * 1e6, nx)  # Convert to um
     y = np.linspace(0, domain_size * 1e6, ny)
     X, Y = np.meshgrid(x, y)
     
@@ -196,8 +196,8 @@ def plot_results(oxygen_concentrations: np.ndarray, cells: List[Dict[str, Any]],
     # Plot 1: Oxygen concentration heatmap
     im1 = ax1.contourf(X, Y, oxygen_concentrations.T, levels=50, cmap='viridis')
     ax1.set_title('Oxygen Concentration (mM)')
-    ax1.set_xlabel('X (μm)')
-    ax1.set_ylabel('Y (μm)')
+    ax1.set_xlabel('X (um)')
+    ax1.set_ylabel('Y (um)')
     cbar1 = plt.colorbar(im1, ax=ax1)
     cbar1.set_label('Concentration (mM)')
     
@@ -211,8 +211,8 @@ def plot_results(oxygen_concentrations: np.ndarray, cells: List[Dict[str, Any]],
     im2 = ax2.imshow(oxygen_concentrations.T, extent=[0, domain_size*1e6, 0, domain_size*1e6], 
                      origin='lower', cmap='viridis', aspect='equal')
     ax2.set_title('Oxygen + Cell Positions')
-    ax2.set_xlabel('X (μm)')
-    ax2.set_ylabel('Y (μm)')
+    ax2.set_xlabel('X (um)')
+    ax2.set_ylabel('Y (um)')
     cbar2 = plt.colorbar(im2, ax=ax2)
     cbar2.set_label('Concentration (mM)')
     
@@ -230,7 +230,7 @@ def plot_results(oxygen_concentrations: np.ndarray, cells: List[Dict[str, Any]],
     plt.savefig('fipy_oxygen_test.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print(f"💾 Plot saved as 'fipy_oxygen_test.png'")
+    print(f"[SAVE] Plot saved as 'fipy_oxygen_test.png'")
 
 if __name__ == "__main__":
     # Set random seed for reproducible results
@@ -240,5 +240,5 @@ if __name__ == "__main__":
     # Run the simulation
     oxygen_concentrations, cells = run_oxygen_simulation()
     
-    print("\n🎉 FiPy test completed successfully!")
-    print(f"📊 Final oxygen range: {np.min(oxygen_concentrations):.6f} - {np.max(oxygen_concentrations):.6f} mM")
+    print("\n[SUCCESS] FiPy test completed successfully!")
+    print(f"[CHART] Final oxygen range: {np.min(oxygen_concentrations):.6f} - {np.max(oxygen_concentrations):.6f} mM")

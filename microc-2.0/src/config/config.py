@@ -28,13 +28,13 @@ class DomainConfig:
             raise ValueError(f"Grid must be square! "
                            f"dx = {actual_dx}, dy = {actual_dy}")
 
-        # Check reasonable grid spacing (1-50 μm)
-        if actual_dx.micrometers < 1.0 or actual_dx.micrometers > 50.0:
-            raise ValueError(f"Grid spacing {actual_dx} outside reasonable range (1-50 μm)")
+        # Check reasonable grid spacing (1-100 um) - increased limit for larger domains
+        if actual_dx.micrometers < 1.0 or actual_dx.micrometers > 100.0:
+            raise ValueError(f"Grid spacing {actual_dx} outside reasonable range (1-100 um)")
     
     @property
     def cell_volume_um3(self) -> float:
-        """Cell volume in μm³ - handles both 2D and 3D simulations"""
+        """Cell volume in um^3 - handles both 2D and 3D simulations"""
         dx_um = self.size_x.micrometers / self.nx
         dy_um = self.size_y.micrometers / self.ny
 

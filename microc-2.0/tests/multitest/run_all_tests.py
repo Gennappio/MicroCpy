@@ -23,24 +23,24 @@ from utils.hook_manager import HookManager
 
 def run_single_test(config_file, combination_id):
     """Run a single test with the given config file."""
-    print(f"\n🎯 Running Test {combination_id:02d}")
+    print(f"\n[TARGET] Running Test {combination_id:02d}")
     print(f"========================================")
-    print(f"📁 Config: {config_file}")
+    print(f"[FOLDER] Config: {config_file}")
     
     try:
         # Load configuration
         config = MicroCConfig.load_from_yaml(Path(config_file))
-        print("✅ Config loaded")
+        print("[+] Config loaded")
         
         # Create hook manager and load custom functions
         hook_manager = HookManager()
         if hasattr(config, 'custom_functions_path') and config.custom_functions_path:
             hook_manager.load_custom_functions(config.custom_functions_path)
-            print("✅ Custom functions loaded")
+            print("[+] Custom functions loaded")
         
         # Create simulator
         simulator = MicroCSimulator(config)
-        print(f"✅ Simulator created with {len(simulator.state.substances)} substances")
+        print(f"[+] Simulator created with {len(simulator.state.substances)} substances")
         
         # Create gene network and population
         gene_network = BooleanNetwork(config=config)
@@ -49,12 +49,12 @@ def run_single_test(config_file, combination_id):
             gene_network=gene_network,
             config=config
         )
-        print("✅ Gene network and population created")
+        print("[+] Gene network and population created")
         
         # Place single cell at center
         center_pos = (0, 0)  # 1x1 grid, so center is (0,0)
         population.add_cell(center_pos, phenotype="Proliferation")
-        print(f"✅ Placed 1 cell at {center_pos}")
+        print(f"[+] Placed 1 cell at {center_pos}")
         
         # Get substance concentrations for this combination
         oxygen_conc = config.substances.Oxygen.initial_value.value if hasattr(config.substances.Oxygen.initial_value, 'value') else config.substances.Oxygen.initial_value
@@ -62,7 +62,7 @@ def run_single_test(config_file, combination_id):
         glucose_conc = config.substances.Glucose.initial_value.value if hasattr(config.substances.Glucose.initial_value, 'value') else config.substances.Glucose.initial_value
         tgfa_conc = config.substances.TGFA.initial_value.value if hasattr(config.substances.TGFA.initial_value, 'value') else config.substances.TGFA.initial_value
         
-        print(f"🧬 Substance concentrations:")
+        print(f" Substance concentrations:")
         print(f"   Oxygen: {oxygen_conc:.3f} mM ({'HIGH' if oxygen_conc > 0.03 else 'LOW'})")
         print(f"   Lactate: {lactate_conc:.1f} mM ({'HIGH' if lactate_conc > 2.0 else 'LOW'})")
         print(f"   Glucose: {glucose_conc:.1f} mM ({'HIGH' if glucose_conc > 4.0 else 'LOW'})")
@@ -71,10 +71,10 @@ def run_single_test(config_file, combination_id):
         # Generate initial plots
         plotter = AutoPlotter(config, config.plots_dir)
         plotter.plot_initial_state_summary(population, simulator)
-        print("✅ Initial plots generated")
+        print("[+] Initial plots generated")
         
         # Run simulation for a few steps
-        print("🚀 Running simulation...")
+        print("[RUN] Running simulation...")
         initial_phenotype = None
         final_phenotype = None
         
@@ -116,10 +116,10 @@ def run_single_test(config_file, combination_id):
         
         # Generate final plots
         plotter.plot_final_state_summary(population, simulator)
-        print("✅ Final plots generated")
+        print("[+] Final plots generated")
         
         # Print results
-        print(f"📊 RESULTS:")
+        print(f"[CHART] RESULTS:")
         print(f"   Final phenotype: {final_phenotype}")
         print(f"   Plots saved to: {config.plots_dir}")
         
@@ -134,7 +134,7 @@ def run_single_test(config_file, combination_id):
         }
         
     except Exception as e:
-        print(f"❌ Error in test {combination_id:02d}: {str(e)}")
+        print(f"[!] Error in test {combination_id:02d}: {str(e)}")
         return {
             'combination_id': combination_id,
             'final_phenotype': 'ERROR',
@@ -144,21 +144,21 @@ def run_single_test(config_file, combination_id):
 
 def main():
     """Run all 16 combination tests."""
-    print("🎯 Multi-Test Runner")
+    print("[TARGET] Multi-Test Runner")
     print("========================================")
-    print("🧪 Running 16 single-cell combination tests")
-    print("📁 Each test has different substance concentrations")
+    print(" Running 16 single-cell combination tests")
+    print("[FOLDER] Each test has different substance concentrations")
     
     # Find all config files
     config_dir = Path("tests/multitest")
     config_files = sorted(config_dir.glob("config_*.yaml"))
     
     if len(config_files) != 16:
-        print(f"❌ Expected 16 config files, found {len(config_files)}")
+        print(f"[!] Expected 16 config files, found {len(config_files)}")
         print("   Run generate_configs.py first!")
         return
     
-    print(f"✅ Found {len(config_files)} config files")
+    print(f"[+] Found {len(config_files)} config files")
     
     # Run all tests
     results = []
@@ -172,14 +172,14 @@ def main():
     end_time = time.time()
     
     # Print summary
-    print(f"\n🎉 ALL TESTS COMPLETED!")
+    print(f"\n[SUCCESS] ALL TESTS COMPLETED!")
     print(f"========================================")
-    print(f"⏱️  Total time: {end_time - start_time:.1f} seconds")
-    print(f"✅ Successful tests: {sum(1 for r in results if r['success'])}")
-    print(f"❌ Failed tests: {sum(1 for r in results if not r['success'])}")
+    print(f"  Total time: {end_time - start_time:.1f} seconds")
+    print(f"[+] Successful tests: {sum(1 for r in results if r['success'])}")
+    print(f"[!] Failed tests: {sum(1 for r in results if not r['success'])}")
     
     # Print results table
-    print(f"\n📋 RESULTS SUMMARY:")
+    print(f"\n RESULTS SUMMARY:")
     print(f"{'ID':<3} {'O2':<8} {'Lac':<8} {'Gluc':<8} {'TGFA':<10} {'Final Phenotype':<15}")
     print(f"{'-'*3} {'-'*8} {'-'*8} {'-'*8} {'-'*10} {'-'*15}")
     
@@ -194,7 +194,7 @@ def main():
         else:
             print(f"{result['combination_id']:<3} {'ERROR':<8} {'ERROR':<8} {'ERROR':<8} {'ERROR':<10} {'ERROR':<15}")
     
-    print(f"\n📁 Individual results saved in: plots/multitest/combination_XX/")
+    print(f"\n[FOLDER] Individual results saved in: plots/multitest/combination_XX/")
 
 if __name__ == "__main__":
     main()

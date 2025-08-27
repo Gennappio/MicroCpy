@@ -1204,7 +1204,7 @@ def should_update_intercellular(current_step: int, last_update: int, interval: i
     # Debug intercellular timing (reduced output)
     should_update = (current_step - last_update) >= interval
     if should_update and (current_step <= 10 or current_step % 20 == 0):
-        print(f"🔄 INTERCELLULAR UPDATE: step={current_step}, last={last_update}, interval={interval}")
+        print(f"[INTERCELLULAR] UPDATE: step={current_step}, last={last_update}, interval={interval}")
 
     # Use standard interval-based updates
     return should_update

@@ -1,0 +1,476 @@
+# Jayatilake Metabolic Symbiosis Experiment Configuration
+# Based on: Jayatilake et al. "A computational model of metabolic symbiosis in cancer"
+# Replicates the NetLogo model parameters and gene network logic
+
+# Domain configuration - 3D spheroid simulation
+domain:
+  size_x: 1500.0
+  size_x_unit: "um"
+  size_y: 1500.0
+  size_y_unit: "um"
+  nx: 150
+  ny: 150
+  dimensions: 2
+  cell_height: 20.0          # Biological cell height/thickness (testing position changes)
+  cell_height_unit: "um"     # Can be changed to make cells thicker/thinner
+
+# Time configuration with multi-timescale orchestration
+time:
+  dt: 0.1
+  end_time: 500.0
+  diffusion_step: 2      # Update diffusion every 2 steps (medium speed)
+  intracellular_step: 1  # Update gene networks every step (fast)
+  intercellular_step: 5  # Update cell interactions every 5 steps (slow)
+
+# Diffusion solver configuration - time stepping for stability testing
+diffusion:
+  max_iterations: 1000        # Maximum iterations for steady state convergence
+  tolerance: 1e-6             # Convergence tolerance for steady state solver
+  solver_type: "time_stepping" # Use time stepping solver for stability
+  twodimensional_adjustment_coefficient: 1.0  # Fixed: Use proper volume calculation instead
+
+# Output and saving configuration
+output:
+  save_data_interval: 2500     # Save data every 10 steps
+  save_plots_interval: 2500        # Generate plots every 2 steps (for testing)
+  save_final_plots: true     # Always save plots at the end
+  save_initial_plots: true   # Always save plots at the beginning
+  status_print_interval: 2500  # Print detailed status every 10 steps
+
+# Substances - from diffusion-parameters.txt
+substances:
+# Name	Init.	BC	Dif.Coef.	Consumption	Production
+# FGF	  0.0e-6	0.0e-6	2.2e-10 	2.0e-18		0.0e-21
+# EGFRD	0.0e-3	0.0e-3	2.2e-10 	4.0e-17		0.0
+# FGFRD	0.0e-3	0.0e-3	2.2e-10 	4.0e-17		0.0
+# TGFA	0.000	  0.000	  5.18e-11	2.0e-17		2.0e-20
+# Oxygen	0.07	0.07	  1.0e-9		3.0e-17		0.00
+# Glucose	5.00	5.00	  6.70e-11	3.0e-15		0.00
+# GI	  0.000	  0.000	  5.18e-11	2.0e-17		0.0e-20
+# HGF	  2.0e-6	2.0e-6	8.50e-11 	2.0e-18		0.0e-21
+# cMETD	0.0e-3	0.0e-3	2.2e-10 	4.0e-17		0.0
+# H	    4e-5	  4e-5	  1.0e-9	  3.0e-15		2.0e-20
+# pH	  7.4	    7.4	    1.0e-9		0.0		    0.0
+# Lactate	5.00	1.00	  6.70e-11	0.0e-15		3.0e-15
+# MCT1D	  0.0e-6	0.0e-6	2.2e-10 	4.0e-17		0.0
+# GLUT1D	0.0e-6	0.0e-6	2.2e-10 	4.0e-17		0.0
+  FGF:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0e-21
+    uptake_rate: 2.0e-18
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.00
+    uptake_rate: 3.0e-17
+    initial_value: 0.07
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.0
+    uptake_rate: 3.0e-15
+    initial_value: 5.0
+    boundary_value: 5.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Lactate:
+    diffusion_coeff: 6.70e-11
+    production_rate: 3.0e-15
+    uptake_rate: 0.0e-15
+    initial_value: 5.00
+    boundary_value: 1.00
+    boundary_type: "fixed"
+    unit: "mM"
+
+  H:
+    diffusion_coeff: 1.0e-9
+    production_rate: 2.0e-20
+    uptake_rate: 3.0e-15
+    initial_value: 4.0e-5
+    boundary_value: 4.0e-5
+    boundary_type: "fixed"
+    unit: "mM"
+
+
+
+  EGF:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 2.0e-18
+    initial_value: 5.0e-7
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  TGFA:
+    diffusion_coeff: 5.18e-11
+    production_rate: 2.0e-20
+    uptake_rate: 2.0e-17
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+    unit: "uM"
+
+  HGF:
+    diffusion_coeff: 8.50e-11
+    production_rate: 0.0e-21
+    uptake_rate: 2.0e-18
+    initial_value: 2.0e-6
+    boundary_value: 2.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+  # Missing substances from diffusion-parameters.txt
+  EGFRD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  FGFRD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  GI:
+    diffusion_coeff: 5.18e-11
+    production_rate: 0.0e-20
+    uptake_rate: 2.0e-17
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+    unit: "mM"
+
+  cMETD:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  pH:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 0.0
+    initial_value: 7.4
+    boundary_value: 7.4
+    boundary_type: "fixed"
+    unit: "pH"
+
+  MCT1D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+  MCT4D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+  GLUT1D:
+    diffusion_coeff: 2.2e-10
+    production_rate: 0.0
+    uptake_rate: 4.0e-17
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+# Gene input associations - from associations.txt
+# Output	Input(Receptor)
+# FGF	FGFR_stimulus
+# TGFA	EGFR_stimulus
+# EGFRD	EGFRI
+# FGFRD	FGFRI
+# Oxygen	Oxygen_supply
+# Glucose	Glucose_supply
+# GI	Growth_Inhibitor
+# HGF	cMET_stimulus
+# cMETD	cMETI
+# H	NA
+# pH	NA
+# Lactate	MCT1_stimulus
+# MCT1D	MCT1I
+# MCT4D	MCT4I
+# GLUT1D	GLUT1I
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "MCT1_stimulus"
+  H: "Proton_level"
+  FGF: "FGFR_stimulus"
+  TGFA: "EGFR_stimulus"
+  HGF: "cMET_stimulus"
+  EGFRD: "EGFRI"
+  FGFRD: "FGFRI"
+  GI: "Growth_Inhibitor"
+  cMETD: "cMETI"
+  MCT1D: "MCT1I"
+  MCT4D: "MCT4I"
+  GLUT1D: "GLUT1I"
+  # pH has no direct association (NA in associations.txt)
+
+# Gene input thresholds - from input-parameters.txt
+# Input			Inital	Threshold
+# DNA_damage		    0	0.5
+# EGFR_stimulus		  0	1.0e-6
+# TGFBR_stimulus	  0	0.5
+# FGFR_stimulus		  0	1.0e-6
+# Oxygen_supply		  0.10	0.022
+# EGFRI			        0	5e-3
+# FGFRI			        0	5e-3
+# Glucose_supply	  5.0	4.0
+# Growth_Inhibitor	0.0	5e-5	
+# cMET_stimulus		  0	1.0e-6
+# cMETI			        0	5e-3
+# pH_min			      8.0	6.0
+# MCT1_stimulus		  5.0	1.5
+# MCT1I			        0	17.0e-6
+# MCT4I			        0	1.0
+# GLUT1I			      0	4.0e-6
+thresholds:
+  Oxygen_supply:
+    initial: 0.07
+    threshold: 0.022
+  Glucose_supply:
+    initial: 5.0
+    threshold: 4.0
+  MCT1_stimulus:
+    initial: 1.0
+    threshold: 1.5
+  Proton_level:
+    initial: 4.0e-5
+    threshold: 8.0e-5
+  FGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  EGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  cMET_stimulus:
+    initial: 0
+    threshold: 1.0e-6
+  Growth_Inhibitor:
+    initial: 0.0
+    threshold: 0.00005
+  DNA_damage:
+    initial: 0.0
+    threshold: 0.5
+  TGFBR_stimulus:
+    initial: 0.0
+    threshold: 0.5
+  GLUT1I:
+    initial: 0.0
+    threshold: 4.0e-6
+  GLUT1D:
+    initial: 0.0
+    threshold: 0.5
+  # Missing thresholds from input-parameters.txt
+  EGFRI:
+    initial: 0.0
+    threshold: 0.005
+  FGFRI:
+    initial: 0.0
+    threshold: 0.005
+  cMETI:
+    initial: 0.0
+    threshold: 0.005
+  MCT1I:
+    initial: 0.0
+    threshold: 1.7e-5
+  MCT4I:
+    initial: 0.0
+    threshold: 1.0
+  pH_min:
+    initial: 8.0
+    threshold: 6.0
+
+# No composite genes needed - all logic implemented in custom functions
+# The complex metabolic logic is handled in jayatilake_experiment_custom_functions.py
+
+# Gene network configuration - Metabolic symbiosis network
+gene_network:
+  # Path to the .bnd file containing the gene network logic
+  bnd_file: "tests/gradient/jaya_microc.bnd"
+
+  # Gene network propagation steps (NetLogo-style: sparse updates for realistic behavior)
+  # Based on analysis: 10-50 steps gives realistic apoptosis rates (0-2%)
+  # 100+ steps leads to over-convergence and excessive apoptosis
+  propagation_steps: 50
+
+  # NetLogo-style random initialization (50% chance True/False for non-fate genes)
+  # Fate nodes (Apoptosis, Proliferation, Growth_Arrest, Necrosis) always start as False
+  random_initialization: true
+
+  # Explicitly specify output nodes (phenotype + metabolic nodes)
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
+
+  nodes:
+    # Input nodes - all substance-associated nodes
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+    Glucose_supply:
+      is_input: true
+      default_state: true
+    MCT1_stimulus:
+      is_input: true
+      default_state: true
+    Proton_level:
+      is_input: true
+      default_state: false
+    FGFR_stimulus:
+      is_input: true
+      default_state: false
+    EGFR_stimulus:
+      is_input: true
+      default_state: false
+    cMET_stimulus:
+      is_input: true
+      default_state: false
+    Growth_Inhibitor:
+      is_input: true
+      default_state: false
+    DNA_damage:
+      is_input: true
+      default_state: false
+    TGFBR_stimulus:
+      is_input: true
+      default_state: false
+    GLUT1I:
+      is_input: true
+      default_state: false
+    GLUT1D:
+      is_input: true
+      default_state: false
+    EGFRI:
+      is_input: true
+      default_state: false
+    FGFRI:
+      is_input: true
+      default_state: false
+    cMETI:
+      is_input: true
+      default_state: false
+    MCT1I:
+      is_input: true
+      default_state: false
+    MCT4I:
+      is_input: true
+      default_state: false
+    GLUT1D:
+      is_input: true
+      default_state: false
+
+    # All gene network logic is defined in the .bnd file
+    # Config only specifies input node properties (default states)
+    # Output nodes are listed in output_nodes section above
+
+# Environment configuration
+environment:
+  ph: 7.4
+
+# Direct top-level parameters (precise paths required)
+# Cell behavior parameters
+cell_cycle_time: 240                      # Minimum time for cell division (240 iterations = 24 hours at dt=0.1)
+max_cell_age: 500.0                       # Maximum cell age in hours before death
+# Phenotype behaviors (dividing, death, persistent) are now default behaviors
+# Custom experiments can override these in custom functions if needed
+
+
+# Custom parameters (for custom functions - config agnostic)
+custom_parameters:
+  # ATP parameters
+  max_atp: 30                    # Maximum ATP per glucose molecule
+  atp_threshold: 0.8             # ATP threshold for proliferation
+
+  # Metabolic parameters
+  glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
+  proton_coefficient: 0.01       # Proton production coefficient
+  glucose_factor: 2              # Glucose consumption factor
+
+  # Michaelis constants (from Jayathilake et al. 2024)
+  KG: 0.5                        # Michaelis constant for glucose (mM)
+  KO2: 0.01                      # Michaelis constant for oxygen (mM)
+  KL: 1.0                        # Michaelis constant for lactate (mM)
+
+  # NetLogo-compatible Michaelis-Menten parameters (from NetLogo MicroC)
+  the_optimal_oxygen: 0.005      # Km for oxygen uptake (mM) - NetLogo value
+  the_optimal_glucose: 0.04      # Km for glucose uptake (mM) - NetLogo value
+  the_optimal_lactate: 0.04      # Km for lactate uptake (mM) - NetLogo value
+  oxygen_vmax: 1.0e-16           # Maximum oxygen consumption rate (mol/cell/s) - Increased for visible gradients
+  glucose_vmax: 3.0e-15          # Maximum glucose consumption rate (mol/cell/s) - NetLogo value
+
+  # Metabolic rate constants
+  mu_o2: 1.0e-15                 # Oxygen utilization rate (mol/s/cell)
+  A0: 30.0                       # Reference ATP yield factor
+  beta: 0.1                      # Proportionality constant for proton release
+  K_glyco: 0.5                   # Weighting factor for glycoATP contribution to oxygen consumption
+
+  # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
+  # TGFA (Growth factor of EGFR)
+  # Note: These rates are defined here (not in diffusion-parameters.txt) because:
+  # - diffusion-parameters.txt only has consumption/production rates for basic diffusion
+  # - Custom metabolism functions need specific kinetic parameters from Jayatilake paper
+  # - These values override/supplement the basic diffusion parameters for cellular metabolism
+  tgfa_consumption_rate: 2.0e-20  # TGFA consumption rate (mol/s/cell) - from Jayatilake Table
+  tgfa_production_rate: 2.0e-17   # TGFA production rate (mol/s/cell) - from Jayatilake Table
+
+  # HGF (Growth factor of cMET)
+  hgf_consumption_rate: 2.0e-18   # HGF consumption rate (mol/s/cell) - from Jayatilake Table
+  hgf_production_rate: 0.0        # HGF production rate (mol/s/cell) - from Jayatilake Table
+
+  # FGF (from diffusion-parameters.txt)
+  fgf_consumption_rate: 2.0e-18   # FGF consumption rate (mol/s/cell)
+  fgf_production_rate: 0.0        # FGF production rate (mol/s/cell)
+
+  # Metabolism exception thresholds (from Jayathilake et al. 2024, pages 5-7)
+  min_glucose_for_glycolysis: 0.1      # Minimum glucose for glycolysis (mM)
+  min_oxygen_for_oxphos: 0.01          # Minimum oxygen for OXPHOS (mM)
+  min_lactate_for_consumption: 0.1     # Minimum lactate for consumption (mM)
+  glucose_depletion_threshold: 0.05    # Glucose depletion threshold (mM)
+  lactate_saturation_threshold: 8.0    # Lactate saturation threshold (mM)
+  oxygen_switch_threshold: 0.015       # Oxygen threshold for metabolic switch (mM)
+  ph_inhibition_threshold: 1.0e-4      # H+ concentration for pH inhibition (mM)
+
+  # Necrosis thresholds
+  necrosis_threshold_oxygen: 0.011
+  necrosis_threshold_glucose: 0.23
+
+  # Spheroid parameters
+  initial_cell_count: 200
+  maximum_cell_count: 5000
+
+  # Shedding parameters
+  shedding_rate: 0.01
+  shedding_starting_time: 0
+
+output_dir: "results/jayatilake_gradient"
+plots_dir: "plots/jayatilake_gradient"
+data_dir: "data/jayatilake_gradient"
+custom_functions_path: "tests/gradient/jayatilake_gradient_custom_functions.py"

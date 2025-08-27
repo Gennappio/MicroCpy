@@ -21,14 +21,14 @@ class MeshManager:
     
     def _validate_config(self):
         """Validate domain configuration - flexible grid spacing"""
-        # Check grid spacing is reasonable (1-50 μm)
+        # Check grid spacing is reasonable (1-50 um)
         actual_spacing_um = self.config.size_x.micrometers / self.config.nx
 
-        if actual_spacing_um < 1.0 or actual_spacing_um > 50.0:
+        if actual_spacing_um < 1.0 or actual_spacing_um > 100.0:
             raise DomainError(
                 f"GRID SPACING ERROR!\n"
-                f"Domain: {self.config.size_x} ÷ {self.config.nx} = {actual_spacing_um:.1f} μm per cell\n"
-                f"Reasonable range: 1-50 μm per cell\n"
+                f"Domain: {self.config.size_x} / {self.config.nx} = {actual_spacing_um:.1f} um per cell\n"
+                f"Reasonable range: 1-100 um per cell\n"
                 f"Current spacing is {'too fine' if actual_spacing_um < 1.0 else 'too coarse'}"
             )
 
@@ -39,8 +39,8 @@ class MeshManager:
         if abs(spacing_x - spacing_y) > 0.1:
             raise DomainError(
                 f"GRID MUST HAVE CONSISTENT SPACING!\n"
-                f"X spacing: {spacing_x:.1f} μm\n"
-                f"Y spacing: {spacing_y:.1f} μm"
+                f"X spacing: {spacing_x:.1f} um\n"
+                f"Y spacing: {spacing_y:.1f} um"
             )
 
         # For 3D, also check Z spacing
@@ -52,8 +52,8 @@ class MeshManager:
             if abs(spacing_x - spacing_z) > 0.1:
                 raise DomainError(
                     f"GRID MUST HAVE CONSISTENT SPACING!\n"
-                    f"X spacing: {spacing_x:.1f} μm\n"
-                    f"Z spacing: {spacing_z:.1f} μm"
+                    f"X spacing: {spacing_x:.1f} um\n"
+                    f"Z spacing: {spacing_z:.1f} um"
                 )
     
     def _create_mesh(self) -> Union[Grid2D, Grid3D]:
@@ -65,21 +65,40 @@ class MeshManager:
         if self.config.dimensions == 3:
             dz = self.config.size_z.meters / self.config.nz
             print(f"Creating 3D mesh:")
-            print(f"  Domain: {self.config.size_x} × {self.config.size_y} × {self.config.size_z}")
-            print(f"  Grid: {self.config.nx} × {self.config.ny} × {self.config.nz}")
-            print(f"  Spacing: {dx*1e6:.1f} × {dy*1e6:.1f} × {dz*1e6:.1f} μm")
+            print(f"  Domain: {self.config.size_x} x {self.config.size_y} x {self.config.size_z}")
+            print(f"  Grid: {self.config.nx} x {self.config.ny} x {self.config.nz}")
+            print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
 
             mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=self.config.nx, ny=self.config.ny, nz=self.config.nz)
+            print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
         else:
             print(f"Creating 2D mesh:")
-            print(f"  Domain: {self.config.size_x} × {self.config.size_y}")
-            print(f"  Grid: {self.config.nx} × {self.config.ny}")
-            print(f"  Spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
+            print(f"  Domain: {self.config.size_x} x {self.config.size_y}")
+            print(f"  Grid: {self.config.nx} x {self.config.ny}")
+            print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} um")
 
             mesh = Grid2D(dx=dx, dy=dy, nx=self.config.nx, ny=self.config.ny)
+            print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
 
         return mesh
-    
+
+    def center_mesh_at_origin(self):
+        """
+        Center the mesh at origin after FiPy variables are created.
+        This should be called after all FiPy setup is complete.
+        """
+        if self.config.dimensions == 3:
+            offset_x = -self.config.size_x.meters / 2
+            offset_y = -self.config.size_y.meters / 2
+            offset_z = -self.config.size_z.meters / 2
+            self.mesh = self.mesh + ((offset_x, offset_y, offset_z))
+            print(f"[MESH] Centered 3D domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+        else:
+            offset_x = -self.config.size_x.meters / 2
+            offset_y = -self.config.size_y.meters / 2
+            self.mesh = self.mesh + ((offset_x, offset_y))
+            print(f"[MESH] Centered 2D domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+
     def _validate_mesh(self):
         """Ensure mesh properties match configuration"""
         # Check mesh spacing matches config
@@ -99,12 +118,12 @@ class MeshManager:
             if self.mesh.shape != expected_shape:
                 raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.mesh.shape}")
 
-        print(f"✅ Mesh validation passed:")
+        print(f"[OK] Mesh validation passed:")
         print(f"  Shape: {self.mesh.shape}")
         if self.config.dimensions == 3:
-            print(f"  Spacing: {self.mesh.dx*1e6:.1f} × {self.mesh.dy*1e6:.1f} × {self.mesh.dz*1e6:.1f} μm")
+            print(f"  Spacing: {self.mesh.dx*1e6:.1f} x {self.mesh.dy*1e6:.1f} x {self.mesh.dz*1e6:.1f} um")
         else:
-            print(f"  Spacing: {self.mesh.dx*1e6:.1f} × {self.mesh.dy*1e6:.1f} μm")
+            print(f"  Spacing: {self.mesh.dx*1e6:.1f} x {self.mesh.dy*1e6:.1f} um")
         print(f"  Total cells: {self.mesh.numberOfCells}")
     
     @property
@@ -120,7 +139,7 @@ class MeshManager:
             volume_m3 = area_m2 * height_m
 
         # Validate against expected volume (based on config)
-        expected_volume_m3 = self.config.cell_volume_um3 * 1e-18  # Convert μm³ to m³
+        expected_volume_m3 = self.config.cell_volume_um3 * 1e-18  # Convert um³ to m³
         if abs(volume_m3 - expected_volume_m3) > 1e-18:
             raise DomainError(f"Volume calculation error: got {volume_m3:.2e} m³, expected {expected_volume_m3:.2e} m³")
 
@@ -128,7 +147,7 @@ class MeshManager:
     
     @property 
     def cell_volume_um3(self) -> float:
-        """Cell volume in μm³ for easier reading"""
+        """Cell volume in um³ for easier reading"""
         return self.cell_volume_m3 * 1e18
     
     def get_metadata(self) -> dict:
@@ -168,13 +187,13 @@ class MeshManager:
 
         # Check spacing
         if abs(metadata['dx_um'] - expected_spacing_um) > 0.1:
-            raise DomainError(f"Spacing validation failed: {metadata['dx_um']:.1f} μm vs expected {expected_spacing_um} μm")
+            raise DomainError(f"Spacing validation failed: {metadata['dx_um']:.1f} um vs expected {expected_spacing_um} um")
 
         # Check volume
         if abs(metadata['cell_volume_um3'] - expected_volume_um3) > 100:
-            raise DomainError(f"Volume validation failed: {metadata['cell_volume_um3']:.0f} μm³ vs expected {expected_volume_um3} μm³")
+            raise DomainError(f"Volume validation failed: {metadata['cell_volume_um3']:.0f} um³ vs expected {expected_volume_um3} um³")
         
-        print(f"✅ Mesh validation successful:")
-        print(f"  Grid spacing: {metadata['dx_um']:.1f} μm ✓")
-        print(f"  Cell volume: {metadata['cell_volume_um3']:.0f} μm³ ✓")
-        print(f"  Domain size: {metadata['domain_x_um']:.0f} × {metadata['domain_y_um']:.0f} μm ✓")
+        print(f"[OK] Mesh validation successful:")
+        print(f"  Grid spacing: {metadata['dx_um']:.1f} um [OK]")
+        print(f"  Cell volume: {metadata['cell_volume_um3']:.0f} um³ [OK]")
+        print(f"  Domain size: {metadata['domain_x_um']:.0f} x {metadata['domain_y_um']:.0f} um [OK]")

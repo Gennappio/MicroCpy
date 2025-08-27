@@ -164,7 +164,7 @@ print(f"Updating gene: {selected_gene} -> {new_state}")
 
 - **Small networks** (<50 nodes): 1000 runs in ~10 seconds
 - **Large networks** (>200 nodes): Consider reducing runs or steps
-- **Memory usage**: Scales with number of runs (raw results stored for runs ≤ 10)
+- **Memory usage**: Scales with number of runs (raw results stored for runs <= 10)
 
 ## Integration
 

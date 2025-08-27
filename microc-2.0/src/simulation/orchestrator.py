@@ -132,7 +132,7 @@ class TimescaleOrchestrator(ITimescaleOrchestrator):
 
         if not self.custom_functions:
             raise RuntimeError(
-                f"❌ Custom functions module is required but not provided!\n"
+                f"[!] Custom functions module is required but not provided!\n"
                 f"   The orchestrator requires custom timing functions: {required_functions}\n"
                 f"   Please provide a custom functions module with these functions."
             )
@@ -144,7 +144,7 @@ class TimescaleOrchestrator(ITimescaleOrchestrator):
 
         if missing_functions:
             raise RuntimeError(
-                f"❌ Required timing functions are missing from custom functions module!\n"
+                f"[!] Required timing functions are missing from custom functions module!\n"
                 f"   Missing functions: {missing_functions}\n"
                 f"   Custom functions module: {self.custom_functions}\n"
                 f"   Please ensure your custom functions module defines all required timing functions."
@@ -163,7 +163,7 @@ class TimescaleOrchestrator(ITimescaleOrchestrator):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom timing function 'should_update_diffusion' is required but not found!\n"
+                f"[!] Custom timing function 'should_update_diffusion' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -183,7 +183,7 @@ class TimescaleOrchestrator(ITimescaleOrchestrator):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom timing function 'should_update_intracellular' is required but not found!\n"
+                f"[!] Custom timing function 'should_update_intracellular' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -203,7 +203,7 @@ class TimescaleOrchestrator(ITimescaleOrchestrator):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom timing function 'should_update_intercellular' is required but not found!\n"
+                f"[!] Custom timing function 'should_update_intercellular' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )

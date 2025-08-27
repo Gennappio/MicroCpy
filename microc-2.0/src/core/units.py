@@ -30,7 +30,7 @@ class Length:
         return self.meters / other.meters
     
     def __repr__(self) -> str:
-        return f"Length({self.value} {self.unit} = {self.meters:.2e} m = {self.micrometers:.1f} μm)"
+        return f"Length({self.value} {self.unit} = {self.meters:.2e} m = {self.micrometers:.1f} um)"
 
 @dataclass(frozen=True) 
 class Concentration:
