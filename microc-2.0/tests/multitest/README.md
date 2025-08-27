@@ -11,7 +11,7 @@ The multi-test system creates 16 separate configuration files, each representing
 - **16 total combinations**: All possible HIGH/LOW combinations (2^4 = 16)
 
 Each configuration file:
-- Has a **single cell** in a **small domain** (40μm × 40μm, 1×1 grid)
+- Has a **single cell** in a **small domain** (40um x 40um, 1x1 grid)
 - Uses **fixed concentrations** (no diffusion)
 - Uses the **complete Jayatilake gene network**
 - Saves results to **separate output directories**

@@ -3,11 +3,11 @@
 
 domain:
   size_x: 400.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 400.0  
-  size_y_unit: "μm"
-  nx: 80    # 5 μm per cell (was 20)
-  ny: 80    # 5 μm per cell (was 20)
+  size_y_unit: "um"
+  nx: 80    # 5 um per cell (was 20)
+  ny: 80    # 5 um per cell (was 20)
   dimensions: 2
 
 time:

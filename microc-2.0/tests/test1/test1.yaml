@@ -3,9 +3,9 @@
 
 domain:
   size_x: 200.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 200.0  
-  size_y_unit: "μm"
+  size_y_unit: "um"
   nx: 10
   ny: 10
   dimensions: 2

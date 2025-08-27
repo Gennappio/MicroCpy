@@ -1,4 +1,4 @@
-# MicroC 2.0 🧬
+# MicroC 2.0 
 
 ## Overview
 
@@ -10,7 +10,7 @@ MicroC 2.0 is a multi-scale biological simulation framework that integrates:
 - **Complete configurability** - every parameter comes from YAML configuration
 
 
-## 📦 Installation
+##  Installation
 
 ### Quick Installation
 ```bash
@@ -40,7 +40,7 @@ make ci-test
 make docs
 ```
 
-## 🏃‍♂️ Quick Start
+##  Quick Start
 
 ### Basic Simulation
 ```python
@@ -58,8 +58,8 @@ from config import DomainConfig, SubstanceConfig
 
 # Create domain
 domain = DomainConfig(
-    size_x=Length(800.0, "μm"),
-    size_y=Length(800.0, "μm"),
+    size_x=Length(800.0, "um"),
+    size_y=Length(800.0, "um"),
     nx=40, ny=40
 )
 mesh = MeshManager(domain)
@@ -81,7 +81,7 @@ cell_reactions = population.get_substance_reactions()
 simulator.solve_steady_state(cell_reactions)
 ```
 
-## 🏗️ Architecture
+##  Architecture
 
 ### Core Components
 
@@ -104,7 +104,7 @@ simulator.solve_steady_state(cell_reactions)
    - `base.py`: Abstract base classes and contracts
    - `hooks.py`: Customization and extension system
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 # Run all tests
@@ -117,7 +117,7 @@ python -m pytest tests/test_simulation.py -v    # Simulation engine tests
 python -m pytest tests/test_interfaces.py -v    # Interface contract tests
 ```
 
-## 📊 Performance
+## [CHART] Performance
 
 MicroC 2.0 includes comprehensive performance monitoring:
 
@@ -138,7 +138,7 @@ print(f"CPU: {stats['current_metrics']['cpu_percent']:.1f}%")
 print(f"Memory: {stats['current_metrics']['memory_mb']:.1f} MB")
 ```
 
-## 🔧 Customization
+## [TOOL] Customization
 
 ### Hook System
 ```python
@@ -166,7 +166,7 @@ class CustomCell(Cell):
 population = CellPopulation(grid_size=(40, 40), cell_class=CustomCell)
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -176,13 +176,13 @@ population = CellPopulation(grid_size=(40, 40), cell_class=CustomCell)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
-## 📚 Documentation
+##  Documentation
 
 - **API Reference**: See docstrings in source code
 - **Examples**: Check `examples/` directory
 - **Getting Started**: See `GETTING_STARTED.md`
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -194,8 +194,8 @@ population = CellPopulation(grid_size=(40, 40), cell_class=CustomCell)
 2. **Unit Conversion Errors**: Check that all quantities have proper units
    ```python
    from core.units import Length
-   size = Length(800.0, "μm")  # ✅ Correct
-   size = 800.0                # ❌ Will cause errors
+   size = Length(800.0, "um")  # [+] Correct
+   size = 800.0                # [!] Will cause errors
    ```
 
 3. **Memory Issues**: Use performance monitoring to track memory usage
@@ -204,7 +204,7 @@ population = CellPopulation(grid_size=(40, 40), cell_class=CustomCell)
    monitor.set_threshold('memory_mb', 1000.0)  # Alert at 1GB
    ```
 
-## 🛠️ Development and Build System
+##  Development and Build System
 
 ### Make Commands
 ```bash
@@ -231,15 +231,15 @@ make clean              # Clean build artifacts
 ### Project Structure
 ```
 microc-2.0/
-├── src/microc/          # Main package code
-├── tests/               # Test suite
-├── docs/                # Documentation
-├── examples/            # Example configurations
-├── setup.py             # Setup script
-├── pyproject.toml       # Modern Python packaging
-├── requirements.txt     # Dependencies
-├── Makefile            # Development commands
-└── README.md           # This file
+ src/microc/          # Main package code
+ tests/               # Test suite
+ docs/                # Documentation
+ examples/            # Example configurations
+ setup.py             # Setup script
+ pyproject.toml       # Modern Python packaging
+ requirements.txt     # Dependencies
+ Makefile            # Development commands
+ README.md           # This file
 ```
 
 ### Documentation
@@ -247,7 +247,7 @@ microc-2.0/
 - [Custom Functions and Gene Manipulation](docs/custom_functions_and_gene_manipulation.md)
 - [Building and Development](docs/building_and_development.md)
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Please see our [Building and Development Guide](docs/building_and_development.md) for details on:
 - Setting up development environment
@@ -255,11 +255,11 @@ We welcome contributions! Please see our [Building and Development Guide](docs/b
 - Testing requirements
 - Documentation guidelines
 
-## 📄 License
+##  License
 
 MIT License - see LICENSE file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - FiPy team for the excellent PDE solving framework
 - NumPy and SciPy communities for foundational scientific computing

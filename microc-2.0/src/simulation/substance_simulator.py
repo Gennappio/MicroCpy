@@ -93,7 +93,7 @@ class SubstanceSimulator(ISubstanceSimulator):
                 self._default_apply_boundary_conditions()
                 break  # Exit the loop since we're using default for all faces
         except Exception as e:
-            print(f"💥 Error applying boundary conditions for {self.substance_config.name}: {e}")
+            print(f" Error applying boundary conditions for {self.substance_config.name}: {e}")
     
     def _default_apply_boundary_conditions(self):
         """Default boundary condition application"""
@@ -126,7 +126,7 @@ class SubstanceSimulator(ISubstanceSimulator):
             
             # Check for NaN/Inf values which indicate divergence
             if np.any(np.isnan(self.concentration.value)) or np.any(np.isinf(self.concentration.value)):
-                print(f"💥 DIVERGENCE DETECTED for {self.substance_config.name}")
+                print(f" DIVERGENCE DETECTED for {self.substance_config.name}")
                 self.state = self.state.with_updates(converged=False)
                 return False
 
@@ -139,7 +139,7 @@ class SubstanceSimulator(ISubstanceSimulator):
             return True
 
         except Exception as e:
-            print(f"💥 FiPy solver failed for {self.substance_config.name}: {e}")
+            print(f" FiPy solver failed for {self.substance_config.name}: {e}")
             self.state = self.state.with_updates(converged=False)
             return False
     

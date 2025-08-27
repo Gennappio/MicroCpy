@@ -111,13 +111,13 @@ class BooleanNetwork(IGeneNetwork):
                     )
                     nodes_created += 1
 
-            # print(f"✅ Loaded {nodes_created} nodes from .bnd file")
+            # print(f"[+] Loaded {nodes_created} nodes from .bnd file")
 
             # Identify input and output nodes
             self._identify_input_output_nodes()
 
         except Exception as e:
-            print(f"❌ Error loading .bnd file {bnd_file}: {e}")
+            print(f"[!] Error loading .bnd file {bnd_file}: {e}")
             import traceback
             traceback.print_exc()
 
@@ -205,8 +205,8 @@ class BooleanNetwork(IGeneNetwork):
                 self.output_nodes.add(node_name)
                 node.is_output = True
 
-        # print(f"✅ Identified {len(self.input_nodes)} input nodes: {sorted(self.input_nodes)}")
-        # print(f"✅ Identified {len(self.output_nodes)} output nodes: {sorted(self.output_nodes)}")
+        # print(f"[+] Identified {len(self.input_nodes)} input nodes: {sorted(self.input_nodes)}")
+        # print(f"[+] Identified {len(self.output_nodes)} output nodes: {sorted(self.output_nodes)}")
 
     def _load_from_config(self, gene_network_config):
         """Load network from configuration object"""
@@ -219,10 +219,10 @@ class BooleanNetwork(IGeneNetwork):
         if hasattr(gene_network_config, 'bnd_file') and gene_network_config.bnd_file:
             bnd_path = Path(gene_network_config.bnd_file)
             if bnd_path.exists():
-                # print(f"✅ Loading gene network from .bnd file: {bnd_path}")
+                # print(f"[+] Loading gene network from .bnd file: {bnd_path}")
                 self._load_from_bnd_file(bnd_path)
             else:
-                print(f"⚠️  .bnd file not found: {bnd_path}")
+                print(f"[WARNING]  .bnd file not found: {bnd_path}")
 
         # Then, create/override nodes from config
         for name, node_config in gene_network_config.nodes.items():
@@ -278,13 +278,13 @@ class BooleanNetwork(IGeneNetwork):
         if not self.input_nodes and not self.output_nodes:
             self._identify_input_output_nodes()
 
-        # print(f"✅ Loaded gene network from config: {len(self.nodes)} nodes")
-        # print(f"✅ Input nodes: {sorted(self.input_nodes)}")
-        # print(f"✅ Output nodes: {sorted(self.output_nodes)}")
+        # print(f"[+] Loaded gene network from config: {len(self.nodes)} nodes")
+        # print(f"[+] Input nodes: {sorted(self.input_nodes)}")
+        # print(f"[+] Output nodes: {sorted(self.output_nodes)}")
 
     def _create_minimal_network(self):
         """Create minimal network - only essential nodes for basic functionality"""
-        print("⚠️  Using minimal gene network - configure via config.py for full functionality")
+        print("[WARNING]  Using minimal gene network - configure via config.py for full functionality")
 
         # Minimal input nodes
         essential_inputs = [
@@ -321,7 +321,7 @@ class BooleanNetwork(IGeneNetwork):
         self.input_nodes = set(essential_inputs)
         self.output_nodes = set(essential_outputs)
 
-        print(f"✅ Created minimal gene network: {len(essential_inputs)} inputs, {len(essential_outputs)} outputs")
+        print(f"[+] Created minimal gene network: {len(essential_inputs)} inputs, {len(essential_outputs)} outputs")
     
     def fix_node(self, node_name: str, state: bool):
         """Fix a node to a specific state - IDENTICAL to gene_simulator.py"""

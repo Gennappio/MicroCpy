@@ -1,0 +1,430 @@
+# Jayatilake Metabolic Symbiosis Experiment Configuration - CHESSBOARD VERSION
+# Based on: Jayatilake et al. "A computational model of metabolic symbiosis in cancer"
+# Modified to create artificial chessboard environment with all 2^4 substance combinations
+
+# Domain configuration - 4x4 grid for systematic combinations
+domain:
+  size_x: 160.0  # 4x4 grid with 40um spacing
+  size_x_unit: "um"
+  size_y: 160.0
+  size_y_unit: "um"
+  nx: 4  # 4x4 grid = 16 zones (2^4 combinations)
+  ny: 4
+  dimensions: 2
+  cell_height: 40.0  # Cell size matches grid spacing
+  cell_height_unit: "um"
+
+# Time configuration with multi-timescale orchestration - MODIFIED FOR ARTIFICIAL ENVIRONMENT
+time:
+  dt: 0.1
+  end_time: 100.0  # Shorter simulation for testing
+  diffusion_step: 999999  # DISABLE diffusion (artificial environment)
+  intracellular_step: 1  # Update gene networks every step (fast)
+  intercellular_step: 999999  # DISABLE intercellular updates (artificial environment)
+
+# Diffusion solver configuration - DISABLED FOR ARTIFICIAL ENVIRONMENT
+diffusion:
+  max_iterations: 1        # Minimal iterations (no diffusion)
+  tolerance: 1e-6
+  solver_type: "steady_state"  # No time stepping needed
+  twodimensional_adjustment_coefficient: 1.0
+
+# Output and saving configuration
+output:
+  save_data_interval: 10     # Save data frequently for testing
+  save_plots_interval: 10    # Generate plots frequently
+  save_final_plots: true
+  save_initial_plots: true
+  status_print_interval: 10
+
+# Substances - SAME AS JAYATILAKE but with DISABLED DIFFUSION
+substances:
+  Oxygen:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 0.07  # Will be overridden by chessboard pattern
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Glucose:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0  # Will be overridden by chessboard pattern
+    boundary_value: 5.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Lactate:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 1.0  # Will be overridden by chessboard pattern
+    boundary_value: 1.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+  H:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 4.0e-5  # Will be overridden by chessboard pattern
+    boundary_value: 4.0e-5
+    boundary_type: "fixed"
+    unit: "mM"
+
+  FGF:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0e-7  # Will be overridden by chessboard pattern
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  EGF:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0e-7  # Will be overridden by chessboard pattern
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  TGFA:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0e-7  # Will be overridden by chessboard pattern
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  VEGF:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0e-7  # Will be overridden by chessboard pattern
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  HGF:
+    diffusion_coeff: 0.0  # DISABLED for artificial environment
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED for artificial environment
+    initial_value: 5.0e-7  # Will be overridden by chessboard pattern
+    boundary_value: 5.0e-7
+    boundary_type: "fixed"
+    unit: "uM"
+
+  # Missing substances from diffusion-parameters.txt - ALL DISABLED FOR ARTIFICIAL ENVIRONMENT
+  EGFRD:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  FGFRD:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  GI:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.000
+    boundary_value: 0.000
+    boundary_type: "fixed"
+    unit: "mM"
+
+  cMETD:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.0e-3
+    boundary_value: 0.0e-3
+    boundary_type: "fixed"
+    unit: "mM"
+
+  pH:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 7.4
+    boundary_value: 7.4
+    boundary_type: "fixed"
+    unit: "pH"
+
+  MCT1D:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+  GLUT1D:
+    diffusion_coeff: 0.0  # DISABLED
+    production_rate: 0.0
+    uptake_rate: 0.0  # DISABLED
+    initial_value: 0.0e-6
+    boundary_value: 0.0e-6
+    boundary_type: "fixed"
+    unit: "uM"
+
+# Gene input associations - SAME AS JAYATILAKE
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "MCT1_stimulus"
+  H: "Proton_level"
+  FGF: "FGFR_stimulus"
+  EGF: "EGFR_stimulus"
+  HGF: "cMET_stimulus"
+  # Drug inhibitions
+  EGFRD: "EGFRI"
+  FGFRD: "FGFRI"
+  GI: "Growth_Inhibitor"
+  cMETD: "cMETI"
+  MCT1D: "MCT1I"
+  GLUT1D: "GLUT1I"
+  TGFA: "EGFR_stimulus"
+  # pH has no direct association (NA in associations.txt)
+
+# Gene input thresholds - SAME AS JAYATILAKE
+thresholds:
+  Oxygen_supply:
+    initial: 0.07
+    threshold: 0.022
+  Glucose_supply:
+    initial: 5.0
+    threshold: 4.0
+  MCT1_stimulus:
+    initial: 1.0
+    threshold: 1.5
+  Proton_level:
+    initial: 4.0e-5
+    threshold: 8.0e-5
+  FGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  EGFR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  cMET_stimulus:
+    initial: 2.0e-6
+    threshold: 1.0e-6
+  Growth_Inhibitor:
+    initial: 0.0
+    threshold: 0.00005
+  DNA_damage:
+    initial: 0.0
+    threshold: 0.5
+  TGFBR_stimulus:
+    initial: 0.0
+    threshold: 1.0e-6
+  GLUT1I:
+    initial: 0.0
+    threshold: 4.0e-6
+  GLUT1D:
+    initial: 0.0
+    threshold: 0.5
+  # Missing thresholds from input-parameters.txt
+  EGFRI:
+    initial: 0.0
+    threshold: 0.005
+  FGFRI:
+    initial: 0.0
+    threshold: 0.005
+  cMETI:
+    initial: 0.0
+    threshold: 0.005
+  MCT1I:
+    initial: 0.0
+    threshold: 1.7e-5
+  MCT4I:
+    initial: 0.0
+    threshold: 1.0
+  pH_min:
+    initial: 8.0
+    threshold: 6.0
+
+# Gene network configuration - SAME AS JAYATILAKE
+gene_network:
+  # Path to the .bnd file containing the gene network logic
+  bnd_file: "tests/jayatilake_experiment/jaya_microc.bnd"
+
+  # Gene network propagation steps (NetLogo-style: sparse updates for realistic behavior)
+  # Based on analysis: 10-50 steps gives realistic apoptosis rates (0-2%)
+  # 100+ steps leads to over-convergence and excessive apoptosis
+  propagation_steps: 50
+
+  # NetLogo-style random initialization (50% chance True/False for non-fate genes)
+  # Fate nodes (Apoptosis, Proliferation, Growth_Arrest, Necrosis) always start as False
+  random_initialization: true
+
+  # Explicitly specify output nodes (phenotype + metabolic nodes)
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
+
+  nodes:
+    # Input nodes - all substance-associated nodes
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+    Glucose_supply:
+      is_input: true
+      default_state: true
+    MCT1_stimulus:
+      is_input: true
+      default_state: true
+    Proton_level:
+      is_input: true
+      default_state: false
+    FGFR_stimulus:
+      is_input: true
+      default_state: false
+    EGFR_stimulus:
+      is_input: true
+      default_state: false
+    cMET_stimulus:
+      is_input: true
+      default_state: false
+    Growth_Inhibitor:
+      is_input: true
+      default_state: false
+    DNA_damage:
+      is_input: true
+      default_state: false
+    TGFBR_stimulus:
+      is_input: true
+      default_state: false
+    GLUT1I:
+      is_input: true
+      default_state: false
+    GLUT1D:
+      is_input: true
+      default_state: false
+    EGFRI:
+      is_input: true
+      default_state: false
+    FGFRI:
+      is_input: true
+      default_state: false
+    cMETI:
+      is_input: true
+      default_state: false
+    MCT1I:
+      is_input: true
+      default_state: false
+    MCT4I:
+      is_input: true
+      default_state: false
+    GLUT1D:
+      is_input: true
+      default_state: false
+
+    # All gene network logic is defined in the .bnd file
+    # Config only specifies input node properties (default states)
+    # Output nodes are listed in output_nodes section above
+
+# Environment configuration - SAME AS JAYATILAKE
+environment:
+  ph: 7.4
+
+# Direct top-level parameters - SAME AS JAYATILAKE
+cell_cycle_time: 240                      # Minimum time for cell division (240 iterations = 24 hours at dt=0.1)
+max_cell_age: 500.0                       # Maximum cell age in hours before death
+
+# Custom parameters - SAME AS JAYATILAKE + CHESSBOARD MODIFICATIONS
+custom_parameters:
+  # ATP parameters
+  max_atp: 30                    # Maximum ATP per glucose molecule
+  atp_threshold: 0.8             # ATP threshold for proliferation
+
+  # Metabolic parameters
+  glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
+  proton_coefficient: 0.01       # Proton production coefficient
+  glucose_factor: 2              # Glucose consumption factor
+
+  # Michaelis constants (from Jayathilake et al. 2024)
+  KG: 0.5                        # Michaelis constant for glucose (mM)
+  KO2: 0.01                      # Michaelis constant for oxygen (mM)
+  KL: 1.0                        # Michaelis constant for lactate (mM)
+
+  # NetLogo-compatible Michaelis-Menten parameters (from NetLogo MicroC)
+  the_optimal_oxygen: 0.005      # Km for oxygen uptake (mM) - NetLogo value
+  the_optimal_glucose: 0.04      # Km for glucose uptake (mM) - NetLogo value
+  the_optimal_lactate: 0.04      # Km for lactate uptake (mM) - NetLogo value
+  oxygen_vmax: 3.0e-17           # Maximum oxygen consumption rate (mol/cell/s) - NetLogo value
+  glucose_vmax: 3.0e-15          # Maximum glucose consumption rate (mol/cell/s) - NetLogo value
+
+  # Metabolic rate constants
+  mu_o2: 1.0e-15                 # Oxygen utilization rate (mol/s/cell)
+  A0: 30.0                       # Reference ATP yield factor
+  beta: 0.1                      # Proportionality constant for proton release
+  K_glyco: 0.5                   # Weighting factor for glycoATP contribution to oxygen consumption
+
+  # Growth factor rate constants (Jayatilake et al. 2024 - Table values)
+  tgfa_consumption_rate: 2.0e-20  # TGFA consumption rate (mol/s/cell) - from Jayatilake Table
+  tgfa_production_rate: 2.0e-17   # TGFA production rate (mol/s/cell) - from Jayatilake Table
+
+  # HGF (Growth factor of cMET)
+  hgf_consumption_rate: 2.0e-18   # HGF consumption rate (mol/s/cell) - from Jayatilake Table
+  hgf_production_rate: 0.0        # HGF production rate (mol/s/cell) - from Jayatilake Table
+
+  # FGF (from diffusion-parameters.txt)
+  fgf_consumption_rate: 2.0e-18   # FGF consumption rate (mol/s/cell)
+  fgf_production_rate: 0.0        # FGF production rate (mol/s/cell)
+
+  # Metabolism exception thresholds (from Jayathilake et al. 2024, pages 5-7)
+  min_glucose_for_glycolysis: 0.1      # Minimum glucose for glycolysis (mM)
+  min_oxygen_for_oxphos: 0.01          # Minimum oxygen for OXPHOS (mM)
+  min_lactate_for_consumption: 0.1     # Minimum lactate for consumption (mM)
+  glucose_depletion_threshold: 0.05    # Glucose depletion threshold (mM)
+  lactate_saturation_threshold: 8.0    # Lactate saturation threshold (mM)
+  oxygen_switch_threshold: 0.015       # Oxygen threshold for metabolic switch (mM)
+  ph_inhibition_threshold: 1.0e-4      # H+ concentration for pH inhibition (mM)
+
+  # Necrosis thresholds
+  necrosis_threshold_oxygen: 0.011
+  necrosis_threshold_glucose: 0.23
+
+  # CHESSBOARD MODIFICATIONS: Spheroid parameters
+  initial_cell_count: 16  # MODIFIED: One cell per zone (4x4 grid = 2^4 combinations)
+  maximum_cell_count: 16  # MODIFIED: No growth in artificial environment
+
+  # Shedding parameters - DISABLED for artificial environment
+  shedding_rate: 0.0      # MODIFIED: No shedding in artificial environment
+  shedding_starting_time: 0
+
+  # CHESSBOARD-SPECIFIC: Substance concentration levels for systematic combination testing
+  # Each substance has exactly 2 values: above and below threshold
+
+  oxygen_high: 0.06    # Above threshold (0.022)
+  oxygen_low: 0.01     # Below threshold
+
+  glucose_high: 6.0    # Above threshold (4.0)
+  glucose_low: 2.0     # Below threshold
+
+  lactate_high: 3.0    # Above threshold (1.5)
+  lactate_low: 0.5     # Below threshold
+
+  tgfa_high: 2.0e-6    # Above threshold (1.0e-6)
+  tgfa_low: 5.0e-7     # Below threshold
+
+output_dir: "results/chessboard_experiment"
+plots_dir: "plots/chessboard_experiment"
+data_dir: "data/chessboard_experiment"
+custom_functions_path: "tests/chessboard_experiment/chessboard_custom_functions.py"

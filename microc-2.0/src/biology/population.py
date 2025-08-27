@@ -410,6 +410,8 @@ class CellPopulation(ICellPopulation):
                 updates['tq_wait_time'] = float(cell_info['tq_wait_time'])
             if 'metabolic_state' in cell_info:
                 updates['metabolic_state'] = cell_info['metabolic_state'].copy()
+            if 'original_physical_position' in cell_info:
+                updates['original_physical_position'] = cell_info['original_physical_position']
 
             # Apply gene states if provided (overrides random initialization)
             if 'gene_states' in cell_info and cell_info['gene_states']:

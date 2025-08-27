@@ -25,6 +25,7 @@ class CellState:
     gene_states: Dict[str, bool] = field(default_factory=dict)
     tq_wait_time: float = 0.0  # Time waiting in Growth_Arrest state (TQ time)
     gene_network: Optional[object] = None  # Each cell has its own gene network instance
+    original_physical_position: Optional[Tuple[float, float, float]] = None  # Original physical position from VTK (um)
     
     def with_updates(self, **kwargs) -> 'CellState':
         """Create new CellState with updates (immutable pattern)"""
@@ -37,7 +38,8 @@ class CellState:
             'metabolic_state': self.metabolic_state.copy(),
             'gene_states': self.gene_states.copy(),
             'tq_wait_time': self.tq_wait_time,
-            'gene_network': self.gene_network  # Keep reference to gene network
+            'gene_network': self.gene_network,  # Keep reference to gene network
+            'original_physical_position': self.original_physical_position  # Preserve original physical position
         }
         updates.update(kwargs)
         return CellState(**updates)
@@ -103,7 +105,7 @@ class Cell(ICell):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'update_cell_phenotype' is required but not found!\n"
+                f"[!] Custom function 'update_cell_phenotype' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -130,7 +132,7 @@ class Cell(ICell):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'calculate_cell_metabolism' is required but not found!\n"
+                f"[!] Custom function 'calculate_cell_metabolism' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -150,7 +152,7 @@ class Cell(ICell):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'should_divide' is required but not found!\n"
+                f"[!] Custom function 'should_divide' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )
@@ -168,7 +170,7 @@ class Cell(ICell):
         else:
             # Fail explicitly if custom function is not provided
             raise RuntimeError(
-                f"❌ Custom function 'check_cell_death' is required but not found!\n"
+                f"[!] Custom function 'check_cell_death' is required but not found!\n"
                 f"   Please ensure your custom functions module defines this function.\n"
                 f"   Custom functions module: {self.custom_functions}"
             )

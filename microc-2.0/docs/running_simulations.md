@@ -101,7 +101,7 @@ gene_network:
 ```yaml
 substances:
   SubstanceName:
-    diffusion_coeff: 1.0e-9     # m²/s
+    diffusion_coeff: 1.0e-9     # m/s
     production_rate: 1.0e-18    # mol/cell/s
     uptake_rate: 1.0e-18        # mol/cell/s
     initial_value: 1.0e-6       # M (molarity)

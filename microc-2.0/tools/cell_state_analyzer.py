@@ -45,7 +45,7 @@ class CellStateAnalyzer:
     
     def _load_file(self):
         """Load data from HDF5 file"""
-        print(f"📂 Loading file: {self.file_path}")
+        print(f"[*] Loading file: {self.file_path}")
         
         with h5py.File(self.file_path, 'r') as f:
             # Load metadata
@@ -85,26 +85,26 @@ class CellStateAnalyzer:
                     'values': metab_group['values'][:]
                 }
         
-        print(f"✅ File loaded successfully")
+        print(f"[+] File loaded successfully")
     
     def display_summary(self):
         """Display file summary"""
         print("\n" + "="*60)
-        print("📊 CELL STATE FILE SUMMARY")
+        print("[STATS] CELL STATE FILE SUMMARY")
         print("="*60)
         
         # File info
-        print(f"📁 File: {self.file_path.name}")
-        print(f"📏 Size: {self.file_path.stat().st_size / 1024:.1f} KB")
+        print(f"[FILE] File: {self.file_path.name}")
+        print(f"Size: Size: {self.file_path.stat().st_size / 1024:.1f} KB")
         
         # Metadata
         if self.metadata:
-            print(f"\n📋 Metadata:")
+            print(f"\n[INFO] Metadata:")
             for key, value in self.metadata.items():
                 if key == 'domain_info':
                     try:
                         domain = json.loads(value)
-                        print(f"   {key}: {domain['dimensions']}D, {domain['nx']}×{domain['ny']}×{domain.get('nz', 1)}")
+                        print(f"   {key}: {domain['dimensions']}D, {domain['nx']}x{domain['ny']}x{domain.get('nz', 1)}")
                     except:
                         print(f"   {key}: {value}")
                 else:
@@ -113,7 +113,7 @@ class CellStateAnalyzer:
         # Cell statistics
         if self.cell_data:
             cell_count = len(self.cell_data['ids'])
-            print(f"\n🧬 Cell Data:")
+            print(f"\n[CELL] Cell Data:")
             print(f"   Cell count: {cell_count}")
             print(f"   Position dimensions: {self.cell_data['positions'].shape[1]}D")
             print(f"   Age range: {self.cell_data['ages'].min():.1f} - {self.cell_data['ages'].max():.1f}")
@@ -130,9 +130,9 @@ class CellStateAnalyzer:
         if self.gene_data:
             gene_count = len(self.gene_data['gene_names'])
             cell_count = self.gene_data['states'].shape[0]
-            print(f"\n🧬 Gene Network Data:")
+            print(f"\n[CELL] Gene Network Data:")
             print(f"   Gene count: {gene_count}")
-            print(f"   States matrix: {cell_count} cells × {gene_count} genes")
+            print(f"   States matrix: {cell_count} cells x {gene_count} genes")
             
             # Gene activation statistics
             activation_rates = self.gene_data['states'].mean(axis=0)
@@ -153,23 +153,23 @@ class CellStateAnalyzer:
         # Metabolic data
         if self.metabolic_data:
             metabolite_count = len(self.metabolic_data['metabolite_names'])
-            print(f"\n🧪 Metabolic Data:")
+            print(f"\n[METAB] Metabolic Data:")
             print(f"   Metabolite count: {metabolite_count}")
-            print(f"   Values matrix: {self.metabolic_data['values'].shape[0]} cells × {metabolite_count} metabolites")
+            print(f"   Values matrix: {self.metabolic_data['values'].shape[0]} cells x {metabolite_count} metabolites")
     
     def display_detailed_cells(self, max_cells: int = 10):
         """Display detailed information for first N cells"""
         if not self.cell_data:
-            print("❌ No cell data available")
+            print("[!] No cell data available")
             return
         
-        print(f"\n📋 DETAILED CELL INFORMATION (first {max_cells} cells)")
+        print(f"\n[INFO] DETAILED CELL INFORMATION (first {max_cells} cells)")
         print("-" * 80)
         
         cell_count = min(max_cells, len(self.cell_data['ids']))
         
         for i in range(cell_count):
-            print(f"\n🧬 Cell {i+1}:")
+            print(f"\n[CELL] Cell {i+1}:")
             print(f"   ID: {self.cell_data['ids'][i]}")
             print(f"   Position: {tuple(self.cell_data['positions'][i])}")
             print(f"   Phenotype: {self.cell_data['phenotypes'][i]}")
@@ -191,25 +191,25 @@ class CellStateAnalyzer:
     def display_gene_analysis(self):
         """Display detailed gene network analysis"""
         if not self.gene_data:
-            print("❌ No gene network data available")
+            print("[!] No gene network data available")
             return
         
-        print(f"\n🧬 GENE NETWORK ANALYSIS")
+        print(f"\n[CELL] GENE NETWORK ANALYSIS")
         print("-" * 60)
         
         gene_names = self.gene_data['gene_names']
         states_matrix = self.gene_data['states']
         cell_count, gene_count = states_matrix.shape
         
-        print(f"📊 Network size: {cell_count} cells × {gene_count} genes")
+        print(f"[STATS] Network size: {cell_count} cells x {gene_count} genes")
         
         # Activation statistics
         activation_rates = states_matrix.mean(axis=0)
-        print(f"📊 Overall activation rate: {activation_rates.mean():.3f}")
+        print(f"[STATS] Overall activation rate: {activation_rates.mean():.3f}")
         
         # Key fate genes analysis
         fate_genes = ['Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis']
-        print(f"\n🎯 Fate Gene Analysis:")
+        print(f"\n[TARGET] Fate Gene Analysis:")
         for fate_gene in fate_genes:
             if fate_gene in gene_names:
                 gene_idx = gene_names.index(fate_gene)
@@ -219,7 +219,7 @@ class CellStateAnalyzer:
         
         # Input genes analysis
         input_genes = ['Oxygen_supply', 'Glucose_supply', 'MCT1_stimulus']
-        print(f"\n📥 Input Gene Analysis:")
+        print(f"\n[INPUT] Input Gene Analysis:")
         for input_gene in input_genes:
             if input_gene in gene_names:
                 gene_idx = gene_names.index(input_gene)
@@ -228,7 +228,7 @@ class CellStateAnalyzer:
                 print(f"   {input_gene}: {active_count}/{cell_count} cells ({activation_rate:.3f})")
         
         # Gene correlation analysis
-        print(f"\n🔗 Gene Correlation Analysis (top 5 pairs):")
+        print(f"\n[LINK] Gene Correlation Analysis (top 5 pairs):")
         correlations = []
         for i in range(gene_count):
             for j in range(i+1, gene_count):
@@ -238,7 +238,7 @@ class CellStateAnalyzer:
         
         correlations.sort(reverse=True)
         for corr, gene1, gene2 in correlations[:5]:
-            print(f"   {gene1} ↔ {gene2}: {corr:.3f}")
+            print(f"   {gene1} <-> {gene2}: {corr:.3f}")
     
     def export_to_csv(self, output_dir: str = "exports"):
         """Export data to CSV files"""
@@ -247,7 +247,7 @@ class CellStateAnalyzer:
         
         base_name = self.file_path.stem
         
-        print(f"\n💾 Exporting data to CSV files...")
+        print(f"\n[SAVE] Exporting data to CSV files...")
         
         # Export cell data
         if self.cell_data:
@@ -264,7 +264,7 @@ class CellStateAnalyzer:
             
             cell_file = output_path / f"{base_name}_cells.csv"
             cell_df.to_csv(cell_file, index=False)
-            print(f"   ✅ Cell data: {cell_file}")
+            print(f"   [+] Cell data: {cell_file}")
         
         # Export gene states
         if self.gene_data:
@@ -276,7 +276,7 @@ class CellStateAnalyzer:
             
             gene_file = output_path / f"{base_name}_gene_states.csv"
             gene_df.to_csv(gene_file)
-            print(f"   ✅ Gene states: {gene_file}")
+            print(f"   [+] Gene states: {gene_file}")
         
         # Export metabolic states
         if self.metabolic_data:
@@ -288,9 +288,9 @@ class CellStateAnalyzer:
             
             metab_file = output_path / f"{base_name}_metabolic_states.csv"
             metab_df.to_csv(metab_file)
-            print(f"   ✅ Metabolic states: {metab_file}")
+            print(f"   [+] Metabolic states: {metab_file}")
         
-        print(f"✅ Export completed to {output_path}")
+        print(f"[+] Export completed to {output_path}")
     
     def export_summary_json(self, output_file: str = None):
         """Export summary statistics to JSON"""
@@ -353,7 +353,7 @@ class CellStateAnalyzer:
         with open(output_file, 'w') as f:
             json.dump(summary, f, indent=2)
         
-        print(f"💾 Summary exported to: {output_file}")
+        print(f"[SAVE] Summary exported to: {output_file}")
 
 
 def main():
@@ -408,10 +408,10 @@ Examples:
         if args.export_json:
             analyzer.export_summary_json()
         
-        print(f"\n✅ Analysis completed successfully!")
+        print(f"\n[+] Analysis completed successfully!")
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[!] Error: {e}")
         sys.exit(1)
 
 

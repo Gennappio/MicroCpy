@@ -47,13 +47,20 @@ class CellStateVisualizer:
         self.file_path = Path(file_path)
         if not self.file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
-        
+
         self.metadata = {}
         self.cell_data = {}
         self.gene_data = {}
         self.metabolic_data = {}
-        
+
         self._load_file()
+
+    def _clean_filename(self, filename: str) -> str:
+        """Remove timestamp from filename for cleaner titles"""
+        import re
+        # Remove patterns like _20250806_185622 (date_time)
+        cleaned = re.sub(r'_\d{8}_\d{6}', '', filename)
+        return cleaned
         
         # Set up plotting style
         plt.style.use('default')
@@ -138,17 +145,16 @@ class CellStateVisualizer:
         all_coords = np.array(all_coords)
         z_coords = np.array(z_coords)
 
-        # Find the Z slice with most cells (same logic as H5 reader)
+        # For 2D visualization, show ALL cells projected onto X-Y plane
+        # No Z-slice filtering - show complete cell population
+        positions_fipy = all_coords[:, :2]  # Only X,Y coordinates (all cells)
+
+        # Find the Z slice with most cells for title information
         unique_z, counts = np.unique(z_coords, return_counts=True)
         middle_z = unique_z[np.argmax(counts)]
+        z_range = f"{z_coords.min():.1f} to {z_coords.max():.1f}"
 
-        # Filter cells in the displayed slice (±1 for visibility, same as H5 reader)
-        slice_mask = np.abs(z_coords - middle_z) <= 1
-        positions_fipy = all_coords[slice_mask][:, :2]  # Only X,Y coordinates
-
-        # Filter other data arrays to match
-        if len(phenotypes) == len(positions):
-            phenotypes = [phenotypes[i] for i in range(len(phenotypes)) if slice_mask[i]]
+        # No filtering needed - use all data
 
         fig, ax = plt.subplots(figsize=(12, 10))
 
@@ -176,8 +182,9 @@ class CellStateVisualizer:
 
         ax.set_xlabel('X Grid Index')
         ax.set_ylabel('Y Grid Index')
-        ax.set_title(f'Cell Positions - {self.file_path.name} (Z slice {middle_z}±1)\n'
-                    f'Showing {len(positions_fipy)} of {len(positions)} cells, Step {self.metadata.get("step", "unknown")}')
+        clean_name = self._clean_filename(self.file_path.stem)
+        ax.set_title(f'Cell Positions - {clean_name} (All cells, Z: {z_range})\n'
+                    f'Showing {len(positions_fipy)} cells, Step {self.metadata.get("step", "unknown")}')
         ax.grid(True, alpha=0.3)
         ax.set_aspect('equal')
 
@@ -241,7 +248,8 @@ class CellStateVisualizer:
         ax.set_xlabel('X Grid Coordinate')
         ax.set_ylabel('Y Grid Coordinate')
         ax.set_zlabel('Z Grid Coordinate')
-        ax.set_title(f'3D Cell Positions - {self.file_path.name}\n'
+        clean_name = self._clean_filename(self.file_path.stem)
+        ax.set_title(f'3D Cell Positions - {clean_name}\n'
                     f'{len(positions)} cells, Step {self.metadata.get("step", "unknown")}')
 
         plt.tight_layout()
@@ -286,7 +294,8 @@ class CellStateVisualizer:
                    cbar_kws={'label': 'Gene Active'},
                    ax=ax)
         
-        ax.set_title(f'Gene Activation Heatmap - {self.file_path.name}\n'
+        clean_name = self._clean_filename(self.file_path.stem)
+        ax.set_title(f'Gene Activation Heatmap - {clean_name}\n'
                     f'Top {n_genes} most variable genes, {n_cells} random cells')
         ax.set_xlabel('Genes')
         ax.set_ylabel('Cells')
@@ -329,7 +338,8 @@ class CellStateVisualizer:
         ax2.pie(counts, labels=unique_phenotypes, autopct='%1.1f%%', colors=colors)
         ax2.set_title('Phenotype Distribution (Percentages)')
         
-        fig.suptitle(f'Cell Phenotypes - {self.file_path.name}\n'
+        clean_name = self._clean_filename(self.file_path.stem)
+        fig.suptitle(f'Cell Phenotypes - {clean_name}\n'
                     f'Total: {len(phenotypes)} cells, Step {self.metadata.get("step", "unknown")}')
         
         plt.tight_layout()
@@ -395,7 +405,8 @@ class CellStateVisualizer:
             ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01*max(cell_counts),
                     str(int(count)), ha='center', va='bottom')
         
-        fig.suptitle(f'Fate Gene Analysis - {self.file_path.name}\n'
+        clean_name = self._clean_filename(self.file_path.stem)
+        fig.suptitle(f'Fate Gene Analysis - {clean_name}\n'
                     f'Total: {states_matrix.shape[0]} cells, Step {self.metadata.get("step", "unknown")}')
         
         plt.tight_layout()
@@ -444,7 +455,8 @@ class CellStateVisualizer:
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         
-        fig.suptitle(f'Cell Age Analysis - {self.file_path.name}\n'
+        clean_name = self._clean_filename(self.file_path.stem)
+        fig.suptitle(f'Cell Age Analysis - {clean_name}\n'
                     f'Total: {len(ages)} cells, Step {self.metadata.get("step", "unknown")}')
         
         plt.tight_layout()
@@ -497,8 +509,9 @@ class CellStateVisualizer:
             hovertemplate='%{text}<extra></extra>'
         ))
         
+        clean_name = self._clean_filename(self.file_path.stem)
         fig.update_layout(
-            title=f'Interactive 3D Cell Positions - {self.file_path.name}<br>'
+            title=f'Interactive 3D Cell Positions - {clean_name}<br>'
                   f'{len(positions)} cells, Step {self.metadata.get("step", "unknown")}',
             scene=dict(
                 xaxis_title='X Position (m)',
@@ -581,7 +594,7 @@ class TemporalAnalyzer:
 
     def _load_temporal_data(self):
         """Load data from multiple time points"""
-        print(f"📂 Loading {len(self.file_paths)} time points...")
+        print(f"[*] Loading {len(self.file_paths)} time points...")
 
         for file_path in sorted(self.file_paths):
             if not file_path.exists():
@@ -813,10 +826,25 @@ Examples:
                 visualizer.plot_age_distribution(save_path_func("ages"))
             
             # Default behavior - show basic plots
-            if not any([args.positions_2d, args.positions_3d, args.interactive_3d, 
+            if not any([args.positions_2d, args.positions_3d, args.interactive_3d,
                        args.gene_heatmap, args.phenotypes, args.fate_genes, args.ages]):
                 print("[*] Creating default visualizations...")
-                visualizer.plot_cell_positions_2d(save_path_func("positions_2d"))
+
+                # Auto-detect 3D data and create appropriate plots
+                if (visualizer.cell_data and
+                    visualizer.cell_data['positions'].shape[1] >= 3 and
+                    len(np.unique(visualizer.cell_data['positions'][:, 2])) > 1):
+                    print("[*] 3D data detected - creating 3D visualizations")
+                    visualizer.plot_cell_positions_3d(save_path_func("positions_3d"))
+                    if PLOTLY_AVAILABLE:
+                        interactive_path = None if args.show else f"{args.output_dir}/{visualizer.file_path.stem}_interactive_3d.html"
+                        visualizer.create_interactive_3d_plot(interactive_path)
+                    else:
+                        print("[*] Plotly not available - skipping interactive 3D plot")
+                else:
+                    print("[*] 2D data detected - creating 2D visualizations")
+                    visualizer.plot_cell_positions_2d(save_path_func("positions_2d"))
+
                 visualizer.plot_phenotype_distribution(save_path_func("phenotypes"))
                 if visualizer.gene_data:
                     visualizer.plot_fate_genes_analysis(save_path_func("fate_genes"))

@@ -22,7 +22,7 @@ def custom_calculate_boundary_conditions(substance_name: str, position: Tuple[fl
     
     if substance_name == "CustomGradientSubstance":
         # Example 1: Simple linear gradient (0 at left, 1 at right)
-        # Assuming domain is 400 μm = 400e-6 m wide
+        # Assuming domain is 400 um = 400e-6 m wide
         domain_width = 400e-6  # meters
         normalized_x = x / domain_width
         return normalized_x

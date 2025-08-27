@@ -3,7 +3,7 @@
 ## Overview
 This document describes the fundamental transformation of the gene network update mechanism in `src/biology/gene_network.py` from batch synchronous/asynchronous updates to NetLogo-style single-gene updates.
 
-## 🔄 Complete Gene Network Update Strategy Overhaul
+##  Complete Gene Network Update Strategy Overhaul
 
 ### Problem: Oscillating Gene Networks
 The original implementation used batch updates (synchronous or asynchronous) that caused:
@@ -12,11 +12,11 @@ The original implementation used batch updates (synchronous or asynchronous) tha
 - **Unrealistic behavior**: ATP genes showing False despite proper inputs
 
 ### Root Cause Analysis
-1. **Synchronous batch updates**: All genes updated simultaneously → feedback loops → oscillations
-2. **Asynchronous batch updates**: Random order updates → temporal dependencies → chaos
-3. **Multiple steps**: Compound effects of batch updates → amplified instabilities
+1. **Synchronous batch updates**: All genes updated simultaneously -> feedback loops -> oscillations
+2. **Asynchronous batch updates**: Random order updates -> temporal dependencies -> chaos
+3. **Multiple steps**: Compound effects of batch updates -> amplified instabilities
 
-## 🎯 NetLogo-Style Solution Implementation
+## [TARGET] NetLogo-Style Solution Implementation
 
 ### Inspiration: Original NetLogo Model
 Analysis of `microC_Metabolic_Symbiosis.nlogo3d` revealed the correct approach:
@@ -53,7 +53,7 @@ def _default_step(self, num_steps: int = 1) -> Dict[str, bool]:
         self._netlogo_single_gene_update()
 ```
 
-## 🔬 NetLogo Single Gene Update Implementation
+##  NetLogo Single Gene Update Implementation
 
 ### Core Algorithm
 ```python
@@ -118,7 +118,7 @@ def _netlogo_single_gene_update(self):
         gene_node.current_state = new_state
 ```
 
-## 📊 Configuration Changes
+## [CHART] Configuration Changes
 
 ### Return All States Instead of Output-Only
 ```python
@@ -130,10 +130,10 @@ return self.get_all_states()
 ```
 
 ### Impact
-- **mitoATP** and **glycoATP** were not output nodes → not returned → appeared as False
+- **mitoATP** and **glycoATP** were not output nodes -> not returned -> appeared as False
 - Now all gene states are available for cellular decision-making
 
-## 🎯 Key Algorithmic Differences
+## [TARGET] Key Algorithmic Differences
 
 ### NetLogo vs. Previous Approaches
 
@@ -151,47 +151,47 @@ return self.get_all_states()
 3. **Natural damping**: Random selection prevents systematic oscillations
 4. **Biological timing**: Mimics real gene expression kinetics
 
-## 🧬 Biological Accuracy Improvements
+##  Biological Accuracy Improvements
 
 ### Metabolic Pathway Functionality
 The NetLogo approach enables proper modeling of:
 
 1. **Glucose Uptake Pathway**:
    ```
-   Glucose_supply → GLUT1 → Cell_Glucose → G6P
+   Glucose_supply -> GLUT1 -> Cell_Glucose -> G6P
    ```
 
 2. **Glycolytic ATP Production**:
    ```
-   G6P → F6P → ... → PEP → glycoATP (when !LDHB)
+   G6P -> F6P -> ... -> PEP -> glycoATP (when !LDHB)
    ```
 
 3. **Mitochondrial ATP Production**:
    ```
-   Pyruvate → AcetylCoA → TCA → ETC → mitoATP (when Oxygen_supply)
+   Pyruvate -> AcetylCoA -> TCA -> ETC -> mitoATP (when Oxygen_supply)
    ```
 
 4. **ATP Integration**:
    ```
-   mitoATP | glycoATP → ATP_Production_Rate
+   mitoATP | glycoATP -> ATP_Production_Rate
    ```
 
 ### Results Comparison
 
 | Condition | Previous Result | NetLogo Result | Biological Expectation |
 |-----------|----------------|----------------|----------------------|
-| **Oxygen + Glucose** | ATP=False | ATP=True | ✅ ATP production |
-| **mitoATP** | False | True | ✅ Mitochondrial respiration |
-| **glycoATP** | False | True | ✅ Glycolytic backup |
-| **Cell survival** | 1% (99% false apoptosis) | 90%+ | ✅ Realistic |
+| **Oxygen + Glucose** | ATP=False | ATP=True | [+] ATP production |
+| **mitoATP** | False | True | [+] Mitochondrial respiration |
+| **glycoATP** | False | True | [+] Glycolytic backup |
+| **Cell survival** | 1% (99% false apoptosis) | 90%+ | [+] Realistic |
 
-## 🔧 Debug and Monitoring Enhancements
+## [TOOL] Debug and Monitoring Enhancements
 
 ### Real-time Gene Update Tracking
 ```python
 # Debug output for key metabolic genes
 if selected_gene in ['mitoATP', 'glycoATP', 'ATP_Production_Rate']:
-    print(f"🔍 NetLogo update: {selected_gene} → {new_state}")
+    print(f"[SEARCH] NetLogo update: {selected_gene} -> {new_state}")
 ```
 
 ### Impact
@@ -199,21 +199,21 @@ if selected_gene in ['mitoATP', 'glycoATP', 'ATP_Production_Rate']:
 - Helps validate metabolic pathway functionality
 - Facilitates debugging of complex biological networks
 
-## 🎉 Key Outcomes
+## [SUCCESS] Key Outcomes
 
 ### Before Changes:
-- ❌ Gene networks oscillated indefinitely
-- ❌ ATP production pathways non-functional
-- ❌ Unrealistic cellular metabolism
-- ❌ 99% false apoptosis rates
+- [!] Gene networks oscillated indefinitely
+- [!] ATP production pathways non-functional
+- [!] Unrealistic cellular metabolism
+- [!] 99% false apoptosis rates
 
 ### After Changes:
-- ✅ Stable gene network convergence
-- ✅ Functional ATP production (both mitochondrial and glycolytic)
-- ✅ Realistic metabolic regulation
-- ✅ Biologically accurate cell survival rates
+- [+] Stable gene network convergence
+- [+] Functional ATP production (both mitochondrial and glycolytic)
+- [+] Realistic metabolic regulation
+- [+] Biologically accurate cell survival rates
 
-## 🔬 Research Implications
+##  Research Implications
 
 The NetLogo-style gene network implementation enables:
 1. **Metabolic symbiosis studies**: Proper ATP production modeling

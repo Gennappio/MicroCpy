@@ -3,7 +3,7 @@
 ## Overview
 This document describes the critical bug fixes and improvements made to `src/biology/population.py` to resolve gene network integration issues and ensure proper cellular behavior.
 
-## 🐛 Critical Bug Fix: Gene State Caching Indentation Error
+##  Critical Bug Fix: Gene State Caching Indentation Error
 
 ### Problem
 **Lines 495-499**: Gene state caching was incorrectly placed OUTSIDE the cell iteration loop, causing only the last processed cell to have its gene states cached.
@@ -29,10 +29,10 @@ for cell_id, cell in self.state.cells.items():
 ```
 
 ### Impact
-- **Before**: Only 1 out of 100 cells had gene states → 99% false apoptosis
-- **After**: All 100 cells have gene states → Realistic cellular behavior
+- **Before**: Only 1 out of 100 cells had gene states -> 99% false apoptosis
+- **After**: All 100 cells have gene states -> Realistic cellular behavior
 
-## 🔧 Gene Network Reset Implementation
+## [TOOL] Gene Network Reset Implementation
 
 ### Problem
 All cells were sharing the same gene network instance, causing state contamination between cells.
@@ -54,7 +54,7 @@ self.gene_network.set_input_states(gene_inputs)
 - Prevents cross-contamination between cells
 - Enables deterministic gene network behavior
 
-## 📊 Configuration Parameter Cleanup
+## [CHART] Configuration Parameter Cleanup
 
 ### Problem
 Confusing dual configuration parameters:
@@ -82,7 +82,7 @@ steps = self.config.gene_network.propagation_steps
 - Forces explicit configuration of propagation steps
 - Makes gene network behavior predictable
 
-## 🔍 Enhanced Debug Output
+## [SEARCH] Enhanced Debug Output
 
 ### Added Comprehensive Debugging
 ```python
@@ -91,7 +91,7 @@ if self._gene_output_debug_count == 1:
     atp_rate = gene_states.get('ATP_Production_Rate', False)
     mito_atp = gene_states.get('mitoATP', False)
     glyco_atp = gene_states.get('glycoATP', False)
-    print(f"🔍 ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
+    print(f"[SEARCH] ATP Gene outputs: ATP_Rate={atp_rate}, mitoATP={mito_atp}, glycoATP={glyco_atp}")
     
     # Debug glucose uptake pathway
     glut1 = gene_states.get('GLUT1', False)
@@ -105,7 +105,7 @@ if self._gene_output_debug_count == 1:
 - Helps identify gene network convergence issues
 - Facilitates debugging of complex biological networks
 
-## 📈 ATP Statistics Collection
+## [GRAPH] ATP Statistics Collection
 
 ### Added Comprehensive ATP Tracking
 ```python
@@ -139,22 +139,22 @@ else:
 - Enables validation of metabolic pathway functionality
 - Supports research into metabolic heterogeneity
 
-## 🎯 Key Outcomes
+## [TARGET] Key Outcomes
 
 ### Before Changes:
-- ❌ 99% false apoptosis due to missing gene states
-- ❌ Gene network oscillations and instability
-- ❌ Inconsistent cellular behavior
-- ❌ No ATP production visibility
+- [!] 99% false apoptosis due to missing gene states
+- [!] Gene network oscillations and instability
+- [!] Inconsistent cellular behavior
+- [!] No ATP production visibility
 
 ### After Changes:
-- ✅ Realistic apoptosis rates (0-10%)
-- ✅ Stable gene network convergence
-- ✅ Consistent cellular behavior across all cells
-- ✅ Functional ATP production pathways
-- ✅ Clear configuration and debugging
+- [+] Realistic apoptosis rates (0-10%)
+- [+] Stable gene network convergence
+- [+] Consistent cellular behavior across all cells
+- [+] Functional ATP production pathways
+- [+] Clear configuration and debugging
 
-## 🔬 Biological Accuracy Improvements
+##  Biological Accuracy Improvements
 
 The changes enable realistic modeling of:
 1. **Glucose uptake** via GLUT1 transporters

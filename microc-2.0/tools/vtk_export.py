@@ -145,6 +145,12 @@ class VTKSubstanceFieldExporter:
                 # Default spacing
                 dx = dy = dz = 1.0
 
+            # Calculate centered origin for VTK export
+            # The FiPy mesh is centered at origin, so VTK should also be centered
+            origin_x = -nx * dx / 2.0
+            origin_y = -ny * dy / 2.0
+            origin_z = -nz * dz / 2.0 if is_3d else 0.0
+
             # Reshape concentration data to grid
             expected_size = nx * ny * nz if is_3d else nx * ny
             if len(concentration_values) != expected_size:
@@ -161,6 +167,7 @@ class VTKSubstanceFieldExporter:
                 concentrations=concentrations_grid,
                 substance_name=substance_name,
                 dx=dx, dy=dy, dz=dz,
+                origin_x=origin_x, origin_y=origin_y, origin_z=origin_z,
                 output_path=output_path,
                 step=step,
                 is_3d=is_3d
@@ -173,8 +180,9 @@ class VTKSubstanceFieldExporter:
             return False
 
     def _write_vtk_structured_grid(self, concentrations: np.ndarray, substance_name: str,
-                                 dx: float, dy: float, dz: float, output_path: str,
-                                 step: int, is_3d: bool = True):
+                                 dx: float, dy: float, dz: float,
+                                 origin_x: float, origin_y: float, origin_z: float,
+                                 output_path: str, step: int, is_3d: bool = True):
         """
         Write concentration data to VTK structured grid format
 
@@ -182,6 +190,7 @@ class VTKSubstanceFieldExporter:
             concentrations: 2D or 3D array of concentration values
             substance_name: Name of the substance
             dx, dy, dz: Grid spacing in meters
+            origin_x, origin_y, origin_z: Grid origin coordinates in meters
             output_path: Output file path
             step: Simulation step number
             is_3d: Whether this is a 3D grid
@@ -207,8 +216,8 @@ class VTKSubstanceFieldExporter:
             # Grid spacing
             f.write(f"SPACING {dx:.6e} {dy:.6e} {dz:.6e}\n")
 
-            # Origin
-            f.write("ORIGIN 0.0 0.0 0.0\n")
+            # Origin - now centered to match FiPy mesh centering
+            f.write(f"ORIGIN {origin_x:.6e} {origin_y:.6e} {origin_z:.6e}\n")
 
             # Cell data (concentration values)
             total_cells = nx * ny * nz

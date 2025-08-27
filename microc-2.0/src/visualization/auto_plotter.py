@@ -603,7 +603,11 @@ Simulation Summary:
         cell_colors_used = {}  # Initialize outside the if block
         if cell_data:
             for pos, phenotype in cell_data:
-                x, y = pos
+                # Handle both 2D and 3D positions
+                if len(pos) == 2:
+                    x, y = pos
+                else:  # 3D position
+                    x, y, z = pos  # Take x,y for 2D plot
 
                 # Use simple phenotype-based colors (no gene network evaluation)
                 # This shows the TRUE initial state before any processing

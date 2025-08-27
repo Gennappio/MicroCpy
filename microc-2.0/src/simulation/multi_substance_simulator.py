@@ -125,27 +125,16 @@ class MultiSubstanceSimulator:
                 config=substance_config
             )
             
-            print(f"✅ Initialized {name}: {initial_conc} {substance_config.initial_value.unit}")
+            print(f"[OK] Initialized {name}: {initial_conc} {substance_config.initial_value.unit}")
     
     def _setup_fipy(self):
         """Setup FiPy variables for diffusion simulation"""
         if not FIPY_AVAILABLE:
             return
-        
-        # Create FiPy mesh
-        dx = self.config.domain.size_x.meters / self.config.domain.nx
-        dy = self.config.domain.size_y.meters / self.config.domain.ny
 
-        if self.config.domain.dimensions == 3:
-            dz = self.config.domain.size_z.meters / self.config.domain.nz
-            self.fipy_mesh = Grid3D(dx=dx, dy=dy, dz=dz,
-                                   nx=self.config.domain.nx,
-                                   ny=self.config.domain.ny,
-                                   nz=self.config.domain.nz)
-        else:
-            self.fipy_mesh = Grid2D(dx=dx, dy=dy,
-                                   nx=self.config.domain.nx,
-                                   ny=self.config.domain.ny)
+        # Use the centered mesh from MeshManager instead of creating our own
+        # This ensures consistent coordinate system across all components
+        self.fipy_mesh = self.mesh_manager.mesh
         
         # Create FiPy variables for each substance
         for name, substance_state in self.state.substances.items():
@@ -175,6 +164,10 @@ class MultiSubstanceSimulator:
                 self._apply_gradient_boundary_conditions(var, name, boundary_value)
             
             self.fipy_variables[name] = var
+
+        # Center the mesh at origin after all FiPy variables and boundary conditions are set
+        # This ensures proper coordinate system alignment
+        self.mesh_manager.center_mesh_at_origin()
     
     def _apply_gradient_boundary_conditions(self, var, substance_name, default_boundary_value):
         """Apply gradient boundary conditions: 0 on left, 1 on right, gradients on top/bottom"""
@@ -269,7 +262,7 @@ class MultiSubstanceSimulator:
 
         # DEBUG: Show which substances are being processed
         # substance_names = list(self.state.substances.keys())
-        # print(f"🔄 DIFFUSION UPDATE: Processing {len(substance_names)} substances: {substance_names}")
+        # print(f"[DIFF] DIFFUSION UPDATE: Processing {len(substance_names)} substances: {substance_names}")
 
         for name, substance_state in self.state.substances.items():
             if name not in self.fipy_variables:
@@ -304,13 +297,13 @@ class MultiSubstanceSimulator:
             # DEBUG: Check if source field has any non-zero values
             non_zero_count = np.count_nonzero(source_field)
             if non_zero_count > 0:
-                print(f"🔍 {name}: {non_zero_count} non-zero source terms, range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+                print(f"[DEBUG] {name}: {non_zero_count} non-zero source terms, range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
             else:
-                print(f"⚠️  {name}: NO source terms! All zeros.")
+                print(f"[!] {name}: NO source terms! All zeros.")
 
             # DEBUG: Comprehensive debugging for lactate diffusion issue
             # if name == 'Lactate':
-            #     print(f"\n🔍 DEBUGGING LACTATE DIFFUSION SOLVER:")
+            #     print(f"\n[DEBUG] DEBUGGING LACTATE DIFFUSION SOLVER:")
             #     print(f"   Substance: {name}")
             #     print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
             #
@@ -322,7 +315,7 @@ class MultiSubstanceSimulator:
             #         for i, idx in enumerate(non_zero_indices[:5]):
             #             print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
             #     else:
-            #         print(f"   ⚠️  NO SOURCE TERMS FOUND! This explains uniform concentrations!")
+            #         print(f"   [!] NO SOURCE TERMS FOUND! This explains uniform concentrations!")
             #
             #     # Check initial concentrations
             #     initial_min = float(np.min(var.value))
@@ -373,11 +366,11 @@ class MultiSubstanceSimulator:
                 res = equation.solve(var=var, solver=solver)
                 # DEBUG: Uncomment to see solver results
                 # if res is not None:
-                #     print(f"✅ {name} solver finished. Final residual: {res:.2e}")
+                #     print(f"[OK] {name} solver finished. Final residual: {res:.2e}")
                 # else:
-                #     print(f"✅ {name} solver finished.")
+                #     print(f"[OK] {name} solver finished.")
             except Exception as e:
-                print(f"💥 Error during {name} solve: {e}")
+                print(f"[ERROR] Error during {name} solve: {e}")
 
             # DEBUG: Show solver results for lactate
             # if name == 'Lactate':
@@ -396,9 +389,9 @@ class MultiSubstanceSimulator:
             #         print(f"   🎯 MATCHES current MicroC behavior (nearly uniform)")
             #         print(f"   ❌ BUT standalone test shows this should be ~0.2 mM range!")
             #     elif final_range > 0.1:
-            #         print(f"   ✅ SIGNIFICANT GRADIENTS like standalone test")
+            #         print(f"   [OK] SIGNIFICANT GRADIENTS like standalone test")
             #     else:
-            #         print(f"   📊 SMALL GRADIENTS detected")
+            #         print(f"   [INFO] SMALL GRADIENTS detected")
 
             # Update our state
             if self.config.domain.dimensions == 3:
@@ -439,7 +432,7 @@ class MultiSubstanceSimulator:
             mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
 
         # Optional debug output for cell height effect (uncomment for debugging)
-        # print(f"🔍 CELL HEIGHT DEBUG:")
+        # print(f"[DEBUG] CELL HEIGHT DEBUG:")
         # print(f"   Cell height: {self.config.domain.cell_height}")
         # print(f"   Mesh cell volume: {mesh_cell_volume:.2e} m³")
         # print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
@@ -505,7 +498,7 @@ class MultiSubstanceSimulator:
 
                 # DEBUG: Print reaction terms being passed to FiPy for lactate
                 # if substance_name == 'Lactate' and reaction_rate != 0.0:
-                #     print(f"🔍 FIPY SOURCE TERM {substance_name} at ({x},{y}):")
+                #     print(f"[DEBUG] FIPY SOURCE TERM {substance_name} at ({x},{y}):")
                 #     print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
                 #     print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
                 #     print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")

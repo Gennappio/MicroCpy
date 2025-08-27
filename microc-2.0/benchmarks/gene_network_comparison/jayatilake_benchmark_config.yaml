@@ -4,9 +4,9 @@
 # Domain configuration - minimal for testing
 domain:
   size_x: 100.0
-  size_x_unit: "μm"
+  size_x_unit: "um"
   size_y: 100.0
-  size_y_unit: "μm"
+  size_y_unit: "um"
   nx: 5
   ny: 5
   dimensions: 2
