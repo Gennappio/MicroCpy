@@ -496,15 +496,15 @@ class MultiSubstanceSimulator:
 
             source_field[fipy_idx] = final_rate
 
-                # DEBUG: Print reaction terms being passed to FiPy for lactate
-                # if substance_name == 'Lactate' and reaction_rate != 0.0:
-                #     print(f"[DEBUG] FIPY SOURCE TERM {substance_name} at ({x},{y}):")
-                #     print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
-                #     print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
-                #     print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")
-                #     print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
-                #     print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
-                #     print(f"   fipy_idx: {fipy_idx}")
+            # DEBUG: Print reaction terms being passed to FiPy for key substances
+            if substance_name in ['Lactate', 'Oxygen', 'Glucose'] and reaction_rate != 0.0:
+                print(f"[DEBUG] FIPY SOURCE TERM {substance_name} at ({x},{y}):")
+                print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
+                print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
+                print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")
+                print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
+                print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
+                print(f"   fipy_idx: {fipy_idx}")
 
 
         return source_field
