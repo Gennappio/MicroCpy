@@ -10,11 +10,11 @@ log_simulation_status: true
 
 # Domain configuration - 3D spheroid simulation
 domain:
-  size_x: 2000.0
+  size_x: 400.0
   size_x_unit: "um"
-  size_y: 2000.0
+  size_y: 400.0
   size_y_unit: "um"
-  size_z: 2000.0
+  size_z: 400.0
   size_z_unit: "um"
   nx: 25
   ny: 25
@@ -26,10 +26,10 @@ domain:
 # Time configuration with multi-timescale orchestration
 time:
   dt: 0.1
-  end_time: 1.0  # Extended run for more data points
-  diffusion_step: 2      # Update diffusion every 2 steps (medium speed) CHANGE!
+  end_time: 0.1  # Short run for testing
+  diffusion_step: 1      # Update diffusion every step (fast) - FIXED: was 2, preventing diffusion from running
   intracellular_step: 1  # Update gene networks every step (fast)
-  intercellular_step: 5  # Update cell interactions every 5 steps (slow)
+  intercellular_step: 1  # Update cell interactions every 5 steps (slow)
 
 # Diffusion solver configuration - MATCH STANDALONE
 diffusion:
@@ -50,7 +50,7 @@ output:
 # Initial state configuration
 initial_state:
   mode: "load_vtk"             # "generate" or "load"
-  file_path:  "tools/generated_h5/my_complete_domain_domain.vtk"              # Path to initial state file (for load mode)
+  file_path:  "tools/generated_h5/cells_200um_domain_domain.vtk"              # Path to initial state file (for load mode)
   save_initial_state: true     # Save initial state after generation
 
 # Substances - from diffusion-parameters.txt
@@ -457,7 +457,7 @@ custom_parameters:
   necrosis_threshold_glucose: 0.23
 
   # Spheroid parameters
-  initial_cell_count: 1000
+  initial_cell_count: 50
   maximum_cell_count: 5000
 
   # Shedding parameters

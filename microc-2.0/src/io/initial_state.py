@@ -462,12 +462,13 @@ class InitialStateManager:
         # Calculate logical grid bounds for validation
         domain_size_um = self.config.domain.size_x.micrometers
         cell_height_um = self.config.domain.cell_height.micrometers
-        grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
+        # Use actual grid dimensions from config instead of calculated value
+        grid_max = self.config.domain.nx - 1  # e.g., 25-1 = 24 (max index)
 
         # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
-        # Need to shift them to positive coordinates for the simulation grid
+        # Need to map them to biological grid coordinates [0, biological_grid_size)
         if len(positions) > 0:
-            # Calculate logical grid bounds for validation
+            # Calculate VTK coordinate bounds
             x_coords = [pos[0] for pos in positions]
             y_coords = [pos[1] for pos in positions]
             z_coords = [(pos[2] if len(pos) > 2 else 0) for pos in positions]
@@ -476,35 +477,76 @@ class InitialStateManager:
             y_min, y_max = min(y_coords), max(y_coords)
             z_min, z_max = min(z_coords), max(z_coords)
 
-            # Calculate center of VTK coordinates
+            # Calculate VTK span and center
+            x_span = x_max - x_min
+            y_span = y_max - y_min
+            z_span = z_max - z_min
             x_center = (x_min + x_max) / 2
             y_center = (y_min + y_max) / 2
             z_center = (z_min + z_max) / 2
 
-            # Calculate domain center for positioning
-            domain_center = grid_max / 2
+            # Calculate biological grid size (from domain config)
+            bio_grid_x = int(self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers)
+            bio_grid_y = int(self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers)
+            bio_grid_z = int(self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers) if self.config.domain.dimensions == 3 else 1
 
             print(f"[INFO] VTK logical ranges: X({x_min:.1f}, {x_max:.1f}), Y({y_min:.1f}, {y_max:.1f}), Z({z_min:.1f}, {z_max:.1f})")
             print(f"[INFO] VTK center: ({x_center:.1f}, {y_center:.1f}, {z_center:.1f})")
-            print(f"[INFO] Domain center: {domain_center:.1f}")
+            print(f"[INFO] VTK span: ({x_span:.1f}, {y_span:.1f}, {z_span:.1f})")
+            print(f"[INFO] Biological grid size: ({bio_grid_x}, {bio_grid_y}, {bio_grid_z})")
             print(f"[INFO] Cell height: {cell_height_um} um")
-            print(f"[INFO] Logical grid bounds: (0, {grid_max})")
         else:
             x_center = y_center = z_center = 0
-            domain_center = grid_max / 2
+            x_span = y_span = z_span = 1
+            bio_grid_x = bio_grid_y = bio_grid_z = 1
 
         for i, pos in enumerate(positions):
             # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
-            # Shift them to center in the simulation domain (0, grid_max)
-            x_shifted = pos[0] - x_center + domain_center
-            y_shifted = pos[1] - y_center + domain_center
-            z_shifted = (pos[2] if len(pos) > 2 else 0) - z_center + domain_center
+            # Map them to biological grid coordinates [0, bio_grid_size) while preserving relative positions
 
-            # Convert to tuple/list and handle dimensions
-            if self.config.domain.dimensions == 2:
-                logical_pos = (float(x_shifted), float(y_shifted))  # Drop z coordinate, convert to float
+            # Scale and shift VTK coordinates to fit in biological grid
+            # Map VTK range to biological grid range with some margin
+            margin = 0.1  # 10% margin to avoid edge effects
+            usable_bio_x = bio_grid_x * (1 - 2 * margin)
+            usable_bio_y = bio_grid_y * (1 - 2 * margin)
+            usable_bio_z = bio_grid_z * (1 - 2 * margin) if self.config.domain.dimensions == 3 else 1
+
+            # Scale VTK coordinates to fit in usable biological grid space
+            if x_span > 0:
+                x_scaled = (pos[0] - x_center) * (usable_bio_x / x_span)
             else:
-                logical_pos = (float(x_shifted), float(y_shifted), float(z_shifted))  # Convert to float tuple
+                x_scaled = 0
+
+            if y_span > 0:
+                y_scaled = (pos[1] - y_center) * (usable_bio_y / y_span)
+            else:
+                y_scaled = 0
+
+            if z_span > 0 and self.config.domain.dimensions == 3:
+                z_scaled = ((pos[2] if len(pos) > 2 else 0) - z_center) * (usable_bio_z / z_span)
+            else:
+                z_scaled = 0
+
+            # Shift to center in biological grid
+            x_shifted = x_scaled + bio_grid_x / 2
+            y_shifted = y_scaled + bio_grid_y / 2
+            z_shifted = z_scaled + bio_grid_z / 2 if self.config.domain.dimensions == 3 else 0
+
+            # Convert to integer biological grid coordinates and validate bounds
+            x_bio = int(round(x_shifted))
+            y_bio = int(round(y_shifted))
+            z_bio = int(round(z_shifted)) if self.config.domain.dimensions == 3 else 0
+
+            # Clamp to valid biological grid bounds
+            x_bio = max(0, min(bio_grid_x - 1, x_bio))
+            y_bio = max(0, min(bio_grid_y - 1, y_bio))
+            z_bio = max(0, min(bio_grid_z - 1, z_bio)) if self.config.domain.dimensions == 3 else 0
+
+            # Create position tuple
+            if self.config.domain.dimensions == 2:
+                logical_pos = (x_bio, y_bio)
+            else:
+                logical_pos = (x_bio, y_bio, z_bio)
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -601,7 +643,8 @@ class InitialStateManager:
         # Calculate logical grid bounds for validation
         domain_size_um = self.config.domain.size_x.micrometers
         cell_height_um = self.config.domain.cell_height.micrometers
-        grid_max = int(domain_size_um / cell_height_um)  # e.g., 500/5 = 100
+        # Use actual grid dimensions from config instead of calculated value
+        grid_max = self.config.domain.nx - 1  # e.g., 25-1 = 24 (max index)
 
         # Find physical coordinate bounds to center them properly
         if positions:

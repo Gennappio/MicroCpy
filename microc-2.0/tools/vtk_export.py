@@ -264,6 +264,9 @@ class VTKDomainExporter:
         output_dir = Path(output_path).parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Create phenotype mapping early to avoid UnboundLocalError
+        phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
+
         print(f"[*] Exporting complete VTK domain...")
         print(f"    Cell size: {self.cell_size_um} um")
         print(f"    Cell count: {len(positions)}")
@@ -377,7 +380,6 @@ class VTKDomainExporter:
             f.write(f"CELL_DATA {num_cells}\n")
 
             # Phenotype data
-            phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
             f.write(f"SCALARS Phenotype int 1\n")
             f.write("LOOKUP_TABLE default\n")
             for phenotype in phenotypes:

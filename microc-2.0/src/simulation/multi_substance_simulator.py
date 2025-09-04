@@ -301,6 +301,28 @@ class MultiSubstanceSimulator:
             else:
                 print(f"[!] {name}: NO source terms! All zeros.")
 
+            # DEBUG: Enable detailed debugging for Oxygen
+            if name == 'Oxygen':
+                print(f"\n[DEBUG] DEBUGGING OXYGEN DIFFUSION SOLVER:")
+                print(f"   Substance: {name}")
+                print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
+
+                # Check source field before negation
+                non_zero_indices = np.where(source_field != 0)[0]
+                print(f"   Source field: {len(non_zero_indices)} non-zero terms")
+                if len(non_zero_indices) > 0:
+                    print(f"   Range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+                    for i, idx in enumerate(non_zero_indices[:5]):
+                        print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
+                else:
+                    print(f"   [!] NO SOURCE TERMS FOUND! This explains uniform concentrations!")
+
+                # Check initial concentrations
+                initial_min = float(np.min(var.value))
+                initial_max = float(np.max(var.value))
+                initial_mean = float(np.mean(var.value))
+                print(f"   Initial concentrations: min={initial_min:.6f}, max={initial_max:.6f}, mean={initial_mean:.6f} mM")
+
             # DEBUG: Comprehensive debugging for lactate diffusion issue
             # if name == 'Lactate':
             #     print(f"\n[DEBUG] DEBUGGING LACTATE DIFFUSION SOLVER:")
@@ -364,11 +386,26 @@ class MultiSubstanceSimulator:
 
             try:
                 res = equation.solve(var=var, solver=solver)
-                # DEBUG: Uncomment to see solver results
-                # if res is not None:
-                #     print(f"[OK] {name} solver finished. Final residual: {res:.2e}")
-                # else:
-                #     print(f"[OK] {name} solver finished.")
+                # DEBUG: Show solver results for Oxygen
+                if name == 'Oxygen':
+                    if res is not None:
+                        print(f"   [OK] {name} solver finished. Final residual: {res:.2e}")
+                    else:
+                        print(f"   [OK] {name} solver finished.")
+
+                    # Check final concentrations
+                    final_min = float(np.min(var.value))
+                    final_max = float(np.max(var.value))
+                    final_mean = float(np.mean(var.value))
+                    final_range = final_max - final_min
+                    print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
+                    print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
+
+                    # Compare with expected behavior
+                    if final_range < 0.0001:
+                        print(f"   🎯 PROBLEM: Nearly uniform concentrations despite source terms!")
+                    else:
+                        print(f"   ✅ SUCCESS: Concentration gradients detected!")
             except Exception as e:
                 print(f"[ERROR] Error during {name} solve: {e}")
 

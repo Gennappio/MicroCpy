@@ -481,11 +481,11 @@ def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: D
     # Initialize reactions for all substances
     # CRITICAL: Use CAPITALIZED keys to match diffusion system expectations
     reactions = {
-        # Metabolic substances - use hardcoded reasonable values
-        'Oxygen': -5.9e-19,      # Oxygen consumption (mol/s/cell)
-        'Glucose': -7.2e-21,     # Glucose consumption (mol/s/cell)
-        'Lactate': +2.24e-19,    # Lactate production (mol/s/cell) - FIXED to correct value
-        'H': 0.0,                # Proton production
+        # Metabolic substances - use more realistic values for visible effects
+        'Oxygen': -5.9e-15,      # Oxygen consumption (mol/s/cell) - increased by 10^4
+        'Glucose': -7.2e-17,     # Glucose consumption (mol/s/cell) - increased by 10^4
+        'Lactate': +2.24e-15,    # Lactate production (mol/s/cell) - increased by 10^4
+        'H': +1.0e-16,           # Proton production (mol/s/cell) - small positive value
         'pH': 0.0,               # pH (derived from H+)
 
         # Growth factors (small rates)
@@ -1231,10 +1231,18 @@ def should_update_intracellular(current_step: int, last_update: int, interval: i
 def should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if diffusion should be updated this step.
-    For Jayatilake experiment: Use standard interval-based updates.
+    For Jayatilake experiment: Use standard interval-based updates, but always update at step 0.
     """
-    # Use standard interval-based updates
-    return (current_step - last_update) >= interval
+    # Always update at step 0 to ensure initial diffusion
+    if current_step == 0:
+        print(f"[DIFFUSION] FORCING UPDATE at step 0")
+        return True
+
+    # Use standard interval-based updates for other steps
+    should_update = (current_step - last_update) >= interval
+    if should_update:
+        print(f"[DIFFUSION] UPDATE: step={current_step}, last={last_update}, interval={interval}")
+    return should_update
 
 def should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
