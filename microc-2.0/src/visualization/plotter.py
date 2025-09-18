@@ -141,8 +141,8 @@ class SimulationPlotter:
         
         return fig
     
-    def plot_cell_population(self, population, title: str = "Cell Population", 
-                           save_path: Optional[str] = None) -> plt.Figure:
+    def plot_cell_population(self, population, title: str = "Cell Population",
+                           save_path: Optional[str] = None, simulator=None) -> plt.Figure:
         """Plot cell population distribution"""
         
         fig, ax = plt.subplots(figsize=self.config.figsize)
@@ -152,47 +152,75 @@ class SimulationPlotter:
         
         # Plot cells by phenotype with custom colors if available
         cell_colors_used = {}
+
+        # Necrosis thresholds from Jayatilake experiment
+        necrosis_threshold_oxygen = 0.011  # the-necrosis-threshold
+        necrosis_threshold_glucose = 0.23  # the-necrosis-threshold-g
+
         for (pos, phenotype) in positions:
             x, y = pos
+
+            # Check for necrosis conditions first if simulator is available
+            is_necrotic_by_environment = False
+            if simulator and hasattr(simulator, 'state'):
+                try:
+                    local_env = simulator.state.get_local_environment(pos)
+                    oxygen_conc = local_env.get('oxygen_concentration', float('inf'))
+                    glucose_conc = local_env.get('glucose_concentration', float('inf'))
+
+                    # Mark as necrotic if BOTH oxygen AND glucose are below thresholds
+                    if oxygen_conc < necrosis_threshold_oxygen and glucose_conc < necrosis_threshold_glucose:
+                        is_necrotic_by_environment = True
+                except Exception as e:
+                    # If we can't get environment data, continue with normal coloring
+                    pass
 
             # Try to get custom cell color first
             interior_color = '#D3D3D3'  # default light gray interior
             border_color = '#808080'    # default gray border
-            try:
-                # Try to get the actual cell object to get gene states
-                cell = population.get_cell_at_position(pos)
-                if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
-                    gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
-                    custom_color = population.custom_functions.get_cell_color(
-                        cell=cell,
-                        gene_states=gene_states,
-                        config=population.config
-                    )
-                    if custom_color and '|' in custom_color:
-                        # Parse new format: "interior_color|border_color"
-                        interior_color, border_color = custom_color.split('|', 1)
-                    elif custom_color:
-                        # Legacy format: use as both interior and border
-                        interior_color = custom_color
-                        border_color = custom_color
-                    else:
-                        # Only use phenotype fallback if custom function returns None
-                        enhanced_phenotype_colors = {
-                            **self.phenotype_colors,
-                            'growth_arrest': '#FFA500',  # Orange - different from proliferation
-                            'proliferation': '#90EE90'   # Light green - different from quiescence
-                        }
-                        border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
-                        interior_color = '#D3D3D3'  # Light gray interior
-            except Exception as e:
-                # Fallback to enhanced phenotype colors only on error
-                enhanced_phenotype_colors = {
-                    **self.phenotype_colors,
-                    'growth_arrest': '#FFA500',  # Orange - different from proliferation
-                    'proliferation': '#90EE90'   # Light green - different from quiescence
-                }
-                border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
-                interior_color = '#D3D3D3'  # Light gray interior
+
+            # Override with necrosis if environmental conditions are met
+            if is_necrotic_by_environment:
+                interior_color = 'black'
+                border_color = 'black'
+                phenotype = 'Necrosis'  # Override phenotype for legend
+            # Only try custom coloring if not already marked as necrotic by environment
+            if not is_necrotic_by_environment:
+                try:
+                    # Try to get the actual cell object to get gene states
+                    cell = population.get_cell_at_position(pos)
+                    if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
+                        gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
+                        custom_color = population.custom_functions.get_cell_color(
+                            cell=cell,
+                            gene_states=gene_states,
+                            config=population.config
+                        )
+                        if custom_color and '|' in custom_color:
+                            # Parse new format: "interior_color|border_color"
+                            interior_color, border_color = custom_color.split('|', 1)
+                        elif custom_color:
+                            # Legacy format: use as both interior and border
+                            interior_color = custom_color
+                            border_color = custom_color
+                        else:
+                            # Only use phenotype fallback if custom function returns None
+                            enhanced_phenotype_colors = {
+                                **self.phenotype_colors,
+                                'growth_arrest': '#FFA500',  # Orange - different from proliferation
+                                'proliferation': '#90EE90'   # Light green - different from quiescence
+                            }
+                            border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                            interior_color = '#D3D3D3'  # Light gray interior
+                except Exception as e:
+                    # Fallback to enhanced phenotype colors only on error
+                    enhanced_phenotype_colors = {
+                        **self.phenotype_colors,
+                        'growth_arrest': '#FFA500',  # Orange - different from proliferation
+                        'proliferation': '#90EE90'   # Light green - different from quiescence
+                    }
+                    border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                    interior_color = '#D3D3D3'  # Light gray interior
 
             # Track colors used for legend - separate interior and border
             # Interior colors represent metabolic states
@@ -256,8 +284,8 @@ class SimulationPlotter:
                               label=state.replace('Border: ', '').capitalize())
                     for state, color in sorted(border_items.items())
                 ]
-                ax.legend(handles=border_elements, loc='upper right',
-                         bbox_to_anchor=(1.15, 0.7),
+                ax.legend(handles=border_elements, loc='lower left',
+                         bbox_to_anchor=(0, 0),
                          title='Phenotypes (Border)')
         
         # Formatting
@@ -411,47 +439,75 @@ class SimulationPlotter:
         ax2 = fig.add_subplot(gs[0, 2])
         positions = population.get_cell_positions()
         cell_colors_used = {}
+
+        # Necrosis thresholds from Jayatilake experiment
+        necrosis_threshold_oxygen = 0.011  # the-necrosis-threshold
+        necrosis_threshold_glucose = 0.23  # the-necrosis-threshold-g
+
         for (pos, phenotype) in positions:
             x, y = pos
+
+            # Check for necrosis conditions first if simulator is available
+            is_necrotic_by_environment = False
+            if simulator and hasattr(simulator, 'state'):
+                try:
+                    local_env = simulator.state.get_local_environment(pos)
+                    oxygen_conc = local_env.get('oxygen_concentration', float('inf'))
+                    glucose_conc = local_env.get('glucose_concentration', float('inf'))
+
+                    # Mark as necrotic if BOTH oxygen AND glucose are below thresholds
+                    if oxygen_conc < necrosis_threshold_oxygen and glucose_conc < necrosis_threshold_glucose:
+                        is_necrotic_by_environment = True
+                except Exception as e:
+                    # If we can't get environment data, continue with normal coloring
+                    pass
 
             # Try to get custom cell color first
             interior_color = '#D3D3D3'  # default light gray interior
             border_color = '#808080'    # default gray border
-            try:
-                # Try to get the actual cell object to get gene states
-                cell = population.get_cell_at_position(pos)
-                if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
-                    gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
-                    custom_color = population.custom_functions.get_cell_color(
-                        cell=cell,
-                        gene_states=gene_states,
-                        config=population.config
-                    )
-                    if custom_color and '|' in custom_color:
-                        # Parse new format: "interior_color|border_color"
-                        interior_color, border_color = custom_color.split('|', 1)
-                    elif custom_color:
-                        # Legacy format: use as both interior and border
-                        interior_color = custom_color
-                        border_color = custom_color
-                    else:
-                        # Only use phenotype fallback if custom function returns None
-                        enhanced_phenotype_colors = {
-                            **self.phenotype_colors,
-                            'growth_arrest': '#FFA500',  # Orange - different from proliferation
-                            'proliferation': '#90EE90'   # Light green - different from quiescence
-                        }
-                        border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
-                        interior_color = '#D3D3D3'  # Light gray interior
-            except Exception as e:
-                # Fallback to enhanced phenotype colors only on error
-                enhanced_phenotype_colors = {
-                    **self.phenotype_colors,
-                    'growth_arrest': '#FFA500',  # Orange - different from proliferation
-                    'proliferation': '#90EE90'   # Light green - different from quiescence
-                }
-                border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
-                interior_color = '#D3D3D3'  # Light gray interior
+
+            # Override with necrosis if environmental conditions are met
+            if is_necrotic_by_environment:
+                interior_color = 'black'
+                border_color = 'black'
+                phenotype = 'Necrosis'  # Override phenotype for legend
+            # Only try custom coloring if not already marked as necrotic by environment
+            if not is_necrotic_by_environment:
+                try:
+                    # Try to get the actual cell object to get gene states
+                    cell = population.get_cell_at_position(pos)
+                    if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
+                        gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
+                        custom_color = population.custom_functions.get_cell_color(
+                            cell=cell,
+                            gene_states=gene_states,
+                            config=population.config
+                        )
+                        if custom_color and '|' in custom_color:
+                            # Parse new format: "interior_color|border_color"
+                            interior_color, border_color = custom_color.split('|', 1)
+                        elif custom_color:
+                            # Legacy format: use as both interior and border
+                            interior_color = custom_color
+                            border_color = custom_color
+                        else:
+                            # Only use phenotype fallback if custom function returns None
+                            enhanced_phenotype_colors = {
+                                **self.phenotype_colors,
+                                'growth_arrest': '#FFA500',  # Orange - different from proliferation
+                                'proliferation': '#90EE90'   # Light green - different from quiescence
+                            }
+                            border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                            interior_color = '#D3D3D3'  # Light gray interior
+                except Exception as e:
+                    # Fallback to enhanced phenotype colors only on error
+                    enhanced_phenotype_colors = {
+                        **self.phenotype_colors,
+                        'growth_arrest': '#FFA500',  # Orange - different from proliferation
+                        'proliferation': '#90EE90'   # Light green - different from quiescence
+                    }
+                    border_color = enhanced_phenotype_colors.get(phenotype, '#808080')
+                    interior_color = '#D3D3D3'  # Light gray interior
 
             # Track colors used for legend - separate interior and border
             # Interior colors represent metabolic states

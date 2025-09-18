@@ -70,6 +70,7 @@ def run_single_test(config_file, combination_id):
         
         # Generate initial plots
         plotter = AutoPlotter(config, config.plots_dir)
+        plotter.set_simulator(simulator)
         plotter.plot_initial_state_summary(population, simulator)
         print("✅ Initial plots generated")
         

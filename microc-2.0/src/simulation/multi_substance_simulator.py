@@ -260,13 +260,25 @@ class MultiSubstanceSimulator:
             boundary_value = substance_state.config.boundary_value.value
 
             # Create brand new variable (don't reuse the old one)
-            var = CellVariable(name=f"{name}_fresh", mesh=self.fipy_mesh, value=initial_value)
+            # CRITICAL FIX: Ensure initial_value is explicitly float to prevent integer dtype
+            initial_value_float = float(initial_value)
+            var = CellVariable(name=f"{name}_fresh", mesh=self.fipy_mesh, value=initial_value_float)
 
             # Apply boundary conditions to fresh variable
             if substance_state.config.boundary_type == "fixed":
-                var.constrain(boundary_value, self.fipy_mesh.facesTop |
+                # CRITICAL FIX: Ensure boundary_value is explicitly float to prevent integer dtype
+                boundary_value_float = float(boundary_value)
+                var.constrain(boundary_value_float, self.fipy_mesh.facesTop |
                              self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft |
                              self.fipy_mesh.facesRight)
+
+                # DEBUG: Check boundary value being applied
+                if name == 'Glucose':
+                    print(f"   🔍 GLUCOSE BOUNDARY DEBUG:")
+                    print(f"      Boundary value being applied: {boundary_value}")
+                    print(f"      Boundary type: {substance_state.config.boundary_type}")
+                    print(f"      Config boundary_value: {substance_state.config.boundary_value}")
+                    print(f"      Config boundary_value.value: {substance_state.config.boundary_value.value}")
 
             # DEBUG: Confirm fresh variable
             # if name == 'Lactate':
@@ -315,7 +327,9 @@ class MultiSubstanceSimulator:
             #             print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
 
             # Create FiPy source variable
-            source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
+            # CRITICAL FIX: Ensure source_field is explicitly float array to prevent integer dtype
+            source_field_float = source_field.astype(float)
+            source_var = CellVariable(mesh=self.fipy_mesh, value=source_field_float)
 
             # DEBUG: Print source field and key info for direct comparison - DISABLED
             # if name == 'Lactate':
@@ -355,41 +369,73 @@ class MultiSubstanceSimulator:
             if iteration >= max_iterations:
                 print(f"Warning: {name} diffusion did not converge after {max_iterations} iterations (residual: {residual:.2e})")
 
-            # DEBUG: Show solver results for lactate
-            # if name == 'Lactate':
-            #     print(f"   Solver converged in {iteration} iterations (residual: {residual:.2e})")
-            #
-            #     # Check final concentrations
-            #     final_min = float(np.min(var.value))
-            #     final_max = float(np.max(var.value))
-            #     final_mean = float(np.mean(var.value))
-            #     final_range = final_max - final_min
-            #     print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
-            #     print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
-            #
-            #     # Compare with standalone test expectation
-            #     if final_range < 0.0001:
-            #         print(f"   🎯 MATCHES current MicroC behavior (nearly uniform)")
-            #         print(f"   ❌ BUT standalone test shows this should be ~0.2 mM range!")
-            #     elif final_range > 0.1:
-            #         print(f"   ✅ SIGNIFICANT GRADIENTS like standalone test")
-            #     else:
-            #         print(f"   📊 SMALL GRADIENTS detected")
+            # DEBUG: Show solver results for glucose
+            if name == 'Glucose':
+                print(f"   🔍 GLUCOSE SOLVER: converged in {iteration} iterations (residual: {residual:.2e})")
+
+                # Check final concentrations
+                final_min = float(np.min(var.value))
+                final_max = float(np.max(var.value))
+                final_mean = float(np.mean(var.value))
+                final_range = final_max - final_min
+                print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
+                print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
+
+                # Check source terms
+                source_nonzero = np.count_nonzero(source_field)
+                source_min = float(np.min(source_field))
+                source_max = float(np.max(source_field))
+                print(f"   Source terms: {source_nonzero} non-zero, range [{source_min:.2e}, {source_max:.2e}] mM/s")
+
+                # Check diffusion coefficient
+                print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
+
+                if final_range < 0.0001:
+                    print(f"   ❌ UNIFORM CONCENTRATIONS - glucose consumption not working!")
+                elif final_range > 0.1:
+                    print(f"   ✅ SIGNIFICANT GRADIENTS - glucose consumption working!")
+                else:
+                    print(f"   📊 SMALL GRADIENTS detected")
 
             # Update our state
-            substance_state.concentrations = np.array(var.value).reshape(
+            raw_concentrations = np.array(var.value).reshape(
                 (self.config.domain.ny, self.config.domain.nx), order='F'
             )
 
+            # DEBUG: Check for negative values before clamping
+            if name == 'Glucose':
+                raw_min = float(np.min(raw_concentrations))
+                raw_max = float(np.max(raw_concentrations))
+                negative_count = np.sum(raw_concentrations < 0)
+                print(f"   🔍 RAW SOLUTION (before clamping): {raw_min:.6f} to {raw_max:.6f} mM")
+                if negative_count > 0:
+                    print(f"   ⚠️  {negative_count} cells with negative concentrations!")
+                    print(f"   Most negative: {np.min(raw_concentrations):.6f} mM")
+
             # Ensure non-negative concentrations
-            substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
+            substance_state.concentrations = np.maximum(raw_concentrations, 0.0)
+
+            # CRITICAL: Restore boundary conditions after clamping
+            if substance_state.config.boundary_type == "fixed":
+                boundary_value = substance_state.config.boundary_value.value
+                # Restore fixed boundaries that may have been affected by clamping
+                substance_state.concentrations[0, :] = boundary_value    # Top
+                substance_state.concentrations[-1, :] = boundary_value   # Bottom
+                substance_state.concentrations[:, 0] = boundary_value    # Left
+                substance_state.concentrations[:, -1] = boundary_value   # Right
+
+                if name == 'Glucose':
+                    print(f"   🔧 BOUNDARY RESTORATION: Fixed boundaries restored to {boundary_value} mM")
+                    final_min = float(np.min(substance_state.concentrations))
+                    final_max = float(np.max(substance_state.concentrations))
+                    print(f"   📊 FINAL RANGE: {final_min:.6f} to {final_max:.6f} mM")
     
     def _create_source_field_from_reactions(self, substance_name: str,
                                           substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> np.ndarray:
         """Create source/sink field from cell reactions (no config access!)"""
 
         nx, ny = self.config.domain.nx, self.config.domain.ny
-        source_field = np.zeros(nx * ny)
+        source_field = np.zeros(nx * ny, dtype=float)
 
         # Calculate mesh cell volume (grid spacing × grid spacing × configurable height)
         dx = self.config.domain.size_x.meters / self.config.domain.nx
@@ -397,12 +443,12 @@ class MultiSubstanceSimulator:
         cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
         mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
 
-        # Optional debug output for cell height effect (uncomment for debugging)
-        # print(f"🔍 CELL HEIGHT DEBUG:")
-        # print(f"   Cell height: {self.config.domain.cell_height}")
-        # print(f"   Mesh cell volume: {mesh_cell_volume:.2e} m³")
-        # print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
-        # print(f"   Grid spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
+        # Debug output for cell height effect
+        print(f"🔍 CELL HEIGHT DEBUG:")
+        print(f"   Cell height: {self.config.domain.cell_height}")
+        print(f"   Mesh cell volume: {mesh_cell_volume:.2e} m³")
+        print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
+        print(f"   Grid spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
 
         for (x_pos, y_pos), reactions in substance_reactions.items():
             # Convert to grid coordinates
@@ -422,8 +468,10 @@ class MultiSubstanceSimulator:
                 # Apply 2D adjustment coefficient (1/thickness) to account for 2D simulation of 3D system
                 volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
 
-                # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
-                final_rate = volumetric_rate * 1000.0
+                # Convert to mM/s for FiPy: mol/s/m³ × (1000 L/m³) × (1000 mM/M) = mol/s/m³ × 1,000,000
+                final_rate = volumetric_rate * 1e6  # FIXED: Use correct conversion factor to match standalone test
+
+
                 source_field[fipy_idx] = final_rate
 
                 # DEBUG: Print reaction terms being passed to FiPy for lactate

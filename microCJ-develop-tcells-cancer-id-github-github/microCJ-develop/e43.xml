@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+	<!-- to perform sensitivity analysis, write one setting as [0-100, 10], to do 10 different runs with values 0, 10, 20,
+		 and so on. For strings and booleans [true-false]. ONLY ONE setting can be sensitivity analysed at a time -->
+	<general>
+		<starting-cells>200</starting-cells>
+		<!--in um-->
+		<cell-radius>10</cell-radius>
+		<!-- if this is left blank or with a non-present filename, the default one will be used -->
+		<graph-file>network_gef</graph-file>
+		<!--number of steps that must pass before a proliferation/growth arrest decision can be made -->
+		<decision-window>200</decision-window>
+		<!--number of steps a cell will be under growth arrest after that fate has been activated -->
+		<arrest-time>3</arrest-time>
+		<!-- should growth arrest be executed immediately or go through the decision window -->
+		<instant-arrest>false</instant-arrest>
+		<!-- one of random, off, on, or a number representing the probability of each gene being on at the start -->
+		<initial-states>[0.0-1.0,0.25]</initial-states>
+		<!-- size of preloaded grid, number of voxels created will be [diffusion-grid-size]^3. Leave as 1 for the grid to grow as needed -->
+		<diffusion-grid-size>4</diffusion-grid-size>
+		<!-- in um -->
+		<diffusion-voxel-size>20</diffusion-voxel-size>
+		<shoving>false</shoving>
+		<!-- Chance of a node randomly mutating. Set to 0 to deactivate random mutations -->
+		<random-mutations>0</random-mutations>
+		<!-- Whether cells belonging to the same mutation group are placed close together -->
+		<close-group-placement>false</close-group-placement>
+		<!--Whether diffusion simulation is activated or not. If not, the other diffusion settings won't be read-->
+		<diffusion>true</diffusion>
+		<!-- Milliseconds between steps, an integer -->
+		<step-delay>1</step-delay>
+		<!-- to turn snapshots off, set this to 0. Otherwise, set it to the number of steps after which a snapshot will be created.
+			For example, 3 means a snapshot will be made every 3 steps -->
+		<snapshots>0</snapshots>
+		<!-- can be one of 'random', 'square', 'hexagonal'.
+			This will be ignored if gene-status-data.spatial is true, in that case a special importer distributor will be used -->
+		<distributor-2d>random</distributor-2d>
+		<!-- can be one of 'random', 'square', 'hexagonal'. -->
+		<distributor-3d>random</distributor-3d>
+		<!-- set to true so the distributor will cache the initial position of cells and reuse it any time the simulation is run with the same parameters. -->
+		<cache-positions>true</cache-positions>
+		<!-- one of 'sync', 'async', or 'prob' -->
+		<network>sync</network>
+	</general>
+	<gene-status-data>
+		<!-- the on/off switch for importing the data. If false, only mutations from the settings below  will be imported-->
+		<parse>false</parse>
+		<!-- a string to identify the specific file from where to import the data -->
+		<id></id>
+		<!--If this is true, coordinates for cell location will be taken from sc/coordinates.csv file -->
+		<spatial>false</spatial>
+		<!-- Whether gene status will be translated cell by cell or in clusters. Will only apply if 'parse' is set to true -->
+		<single-cell>false</single-cell>
+	</gene-status-data>
+	<!-- If gene-status-data.parse is true, the mutation groups have to share name with a cluster from the data. -->
+	<mutations>
+		<group>
+			<name>WT</name>
+			<percent>20</percent>
+		</group>
+		<group>
+			<name>EGFR+</name>
+			<percent>20</percent>
+			<mutation>
+				<node>EGFR</node>
+				<sign>true</sign>
+				<p>1000</p>
+			</mutation>
+		</group>
+		<group>
+			<name>p53-</name>
+			<percent>20</percent>
+			<mutation>
+				<node>p53</node>
+				<sign>false</sign>
+				<p>1000</p>
+			</mutation>
+		</group>
+		<group>
+			<name>EGFR+p53-</name>
+			<percent>20</percent>
+			<mutation>
+				<node>EGFR</node>
+				<sign>true</sign>
+				<p>1000</p>
+			</mutation>
+			<mutation>
+				<node>p53</node>
+				<sign>false</sign>
+				<p>1000</p>
+			</mutation>
+		</group>
+		<group>
+			<name>EGFR+p53-PTEN-</name>
+			<percent>20</percent>
+			<mutation>
+				<node>EGFR</node>
+				<sign>true</sign>
+				<p>1000</p>
+			</mutation>
+			<mutation>
+				<node>p53</node>
+				<sign>false</sign>
+				<p>1000</p>
+			</mutation>
+			<mutation>
+				<node>PTEN</node>
+				<sign>false</sign>
+				<p>1000</p>
+			</mutation>
+		</group>
+	</mutations>
+
+	<diffusibles>
+		<diffusible>
+			<name>oxygen</name>
+			<type>nutrient</type>
+			<input-node>oxygen_supply</input-node>
+			<!-- in mM -->
+			<initial-concentration>0.28</initial-concentration>
+			<!-- in mM -->
+			<optimal-concentration>0.28</optimal-concentration>
+			<!-- in m^2/s -->
+			<diffusion-coefficient>1E-9</diffusion-coefficient>
+			<!-- in mM -->
+			<threshold>0.02</threshold>
+			<!-- in mM/s/cell -->
+			<consumption>5E-3</consumption>
+		</diffusible>
+		<diffusible>
+			<name>EGF</name>
+			<type>factor</type>
+			<input-node>EGFR_stimulus</input-node>
+			<output-node>EGF</output-node>
+			<initial-concentration>0</initial-concentration>
+			<diffusion-coefficient>2.7E-11</diffusion-coefficient>
+			<threshold>5E-4</threshold>
+			<consumption>5E-4</consumption>
+			<production>5E-4</production>
+		</diffusible>
+	</diffusibles>
+	<stats filename="stats-e43">
+		<stat>alive_cell_count</stat>
+		<stat>alive_cell_count_by_group</stat>
+	</stats>
+		<timepoint-stats>
+		<stat>
+			<type>node_status_by_cell</type>
+			<timepoint>[1-3003,200]</timepoint>
+		</stat>
+	</timepoint-stats>
+</settings>

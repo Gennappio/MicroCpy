@@ -942,10 +942,10 @@ class CellPopulation(ICellPopulation):
         # Log phenotype update summary
         self.phenotype_logger.log_phenotype_update_end(phenotype_changes)
 
-        # Print compact phenotype summary
-        if phenotype_changes:
-            changes_str = ", ".join([f"{k}:{v}" for k, v in phenotype_changes.items()])
-            print(f"🧬 Phenotype changes: {changes_str}")
+        # # Print compact phenotype summary
+        # if phenotype_changes:
+        #     changes_str = ", ".join([f"{k}:{v}" for k, v in phenotype_changes.items()])
+        #     print(f"🧬 Phenotype changes: {changes_str}")
 
         # Update state
         self.state = self.state.with_updates(cells=updated_cells)

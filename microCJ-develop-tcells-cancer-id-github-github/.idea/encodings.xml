@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/microCJ-develop/cli/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/cli/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/gui/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/gui/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/microCJ-develop/src/main/resources" charset="UTF-8" />
+  </component>
+</project>

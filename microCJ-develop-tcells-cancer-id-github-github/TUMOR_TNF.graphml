@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+<key attr.name="label" attr.type="string" for="node" id="label"/>
+<key attr.name="weight" attr.type="double" for="edge" id="weight"/>
+<key attr.name="kind" attr.type="string" for="node" id="kind"/>
+<key attr.name="rule" attr.type="string" for="node" id="rule"/>
+<key attr.name="value" attr.type="string" for="node" id="value"/>
+<key attr.name="sign" attr.type="string" for="edge" id="sign"/>
+<graph edgedefault="directed">
+<node id="Oxygen_supply">
+<data key="label">Oxygen_supply</data>
+<data key="kind">input</data>
+</node>
+<node id="TNFA">
+<data key="label">TNFA</data>
+<data key="kind">input</data>
+</node>
+<node id="TNFR">
+<data key="label">TNFR</data>
+<data key="kind">input</data>
+</node>
+<node id="FASL">
+<data key="label">FASL</data>
+<data key="kind">input</data>
+</node>
+<node id="RIP1">
+<data key="label">RIP1</data>
+<data key="kind">gene</data>
+<data key="rule">not CASP8 and (TNFR or FASL)</data>
+<data key="value">1</data>
+</node>
+<node id="cIAP">
+<data key="label">cIAP</data>
+<data key="kind">gene</data>
+<data key="rule">(NFkB or cIAP) and not MOMP</data>
+<data key="value">1</data>
+</node>
+<node id="CASP8">
+<data key="label">CASP8</data>
+<data key="kind">gene</data>
+<data key="rule">(TNFR or FASL or CASP3) and not NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="ROS">
+<data key="label">ROS</data>
+<data key="kind">gene</data>
+<data key="rule">not NFkB and (RIP1 or MPT)</data>
+<data key="value">1</data>
+</node>
+<node id="MPT">
+<data key="label">MPT</data>
+<data key="kind">gene</data>
+<data key="rule">ROS and not NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="MOMP">
+<data key="label">MOMP</data>
+<data key="kind">gene</data>
+<data key="rule">MPT or (CASP8 and not NFkB)</data>
+<data key="value">1</data>
+</node>
+<node id="NFkB">
+<data key="label">NFkB</data>
+<data key="kind">gene</data>
+<data key="rule">cIAP and RIP1 and not CASP3</data>
+<data key="value">1</data>
+</node>
+<node id="ATP">
+<data key="label">ATP</data>
+<data key="kind">gene</data>
+<data key="rule">not MPT</data>
+<data key="value">1</data>
+</node>
+<node id="CASP3">
+<data key="label">CASP3</data>
+<data key="kind">gene</data>
+<data key="rule">ATP and MOMP and not NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="Survival">
+<data key="label">Survival</data>
+<data key="kind">gene</data>
+<data key="rule">NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="Apoptosis">
+<data key="label">Apoptosis</data>
+<data key="kind">fate</data>
+<data key="rule">CASP3 or not ATP</data>
+<data key="value">1</data>
+</node>
+<node id="Proliferation">
+<data key="label">Proliferation</data>
+<data key="kind">fate</data>
+<data key="rule">Survival</data>
+<data key="value">1</data>
+</node>
+<edge id="cIAP:NFkB" source="cIAP" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cIAP:cIAP" source="cIAP" target="cIAP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:cIAP" source="NFkB" target="cIAP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:Survival" source="NFkB" target="Survival">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:CASP3" source="NFkB" target="CASP3">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFkB:MOMP" source="NFkB" target="MOMP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFkB:ROS" source="NFkB" target="ROS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFkB:CASP8" source="NFkB" target="CASP8">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFkB:MPT" source="NFkB" target="MPT">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="RIP1:NFkB" source="RIP1" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RIP1:ROS" source="RIP1" target="ROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MOMP:CASP3" source="MOMP" target="CASP3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MOMP:cIAP" source="MOMP" target="cIAP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="MPT:ROS" source="MPT" target="ROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MPT:MOMP" source="MPT" target="MOMP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MPT:ATP" source="MPT" target="ATP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="CASP3:CASP8" source="CASP3" target="CASP8">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CASP3:Apoptosis" source="CASP3" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CASP3:NFkB" source="CASP3" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="CASP8:MOMP" source="CASP8" target="MOMP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CASP8:RIP1" source="CASP8" target="RIP1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ATP:CASP3" source="ATP" target="CASP3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATP:Apoptosis" source="ATP" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Survival:Proliferation" source="Survival" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FASL:RIP1" source="FASL" target="RIP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FASL:CASP8" source="FASL" target="CASP8">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TNFR:RIP1" source="TNFR" target="RIP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TNFR:CASP8" source="TNFR" target="CASP8">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ROS:MPT" source="ROS" target="MPT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+</graph>
+</graphml>

@@ -566,6 +566,16 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
             # Get reactions from population (calls custom metabolism functions with current concentrations)
             substance_reactions = population.get_substance_reactions(current_concentrations)
 
+            # 🚨 DEBUG: Check if reactions are being passed to diffusion solver
+            if step % 1 == 0:  # Debug every step
+                total_reactions = len(substance_reactions)
+                glucose_reactions = sum(1 for pos, reactions in substance_reactions.items() if 'Glucose' in reactions and reactions['Glucose'] != 0)
+                if glucose_reactions > 0:
+                    sample_pos = next(iter(substance_reactions.keys()))
+                    sample_reactions = substance_reactions[sample_pos]
+                    print(f"🔄 DIFFUSION UPDATE Step {step}: {total_reactions} cells, {glucose_reactions} with glucose consumption")
+                    print(f"   Sample reactions at {sample_pos}: {sample_reactions}")
+
             # Update substance diffusion with reactions (steady state - no dt needed)
             simulator.update(substance_reactions)
 
@@ -621,6 +631,7 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
         if should_generate_plots:
             print(f"\n📊 Generating intermediate plots at step {step + 1}...")
             plotter = AutoPlotter(config, config.plots_dir)
+            plotter.set_simulator(simulator)
 
             # Generate substance heatmaps for current state
             for substance_name in config.substances.keys():
@@ -749,6 +760,7 @@ def generate_initial_plots(config, simulator, population, args):
 
     # Create plotter
     plotter = AutoPlotter(config, config.plots_dir)
+    plotter.set_simulator(simulator)
 
     # Generate initial state summary
     try:
@@ -772,6 +784,7 @@ def generate_plots(config, results, simulator, population, args):
 
     # Create plotter
     plotter = AutoPlotter(config, config.plots_dir)
+    plotter.set_simulator(simulator)
 
     # Generate all plots
     generated_plots = plotter.generate_all_plots(results, simulator, population)

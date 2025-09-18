@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+	<!-- to perform sensitivity analysis, write one setting as [0-100, 10], to do 10 different runs with values 0, 10, 20,
+		 and so on. For strings and booleans [true-false]. ONLY ONE setting can be sensitivity analysed at a time -->
+	<general>
+		<starting-cells>100</starting-cells>
+		<!--in um-->
+		<cell-radius>10</cell-radius>
+		<!-- if this is left blank or with a non-present filename, the default one will be used -->
+		<graph-file>rodrigeuez_tcr_tlr5</graph-file>
+		<!--number of steps that must pass before a proliferation/growth arrest decision can be made -->
+		<decision-window>10</decision-window>
+		<!--number of steps a cell will be under growth arrest after that fate has been activated -->
+		<arrest-time>10</arrest-time>
+		<!-- should growth arrest be executed immediately or go through the decision window -->
+		<instant-arrest>false</instant-arrest>
+		<!-- one of random, off, on, or a number representing the probability of each gene being on at the start -->
+		<initial-states>random</initial-states>
+		<!-- size of preloaded grid, number of voxels created will be [diffusion-grid-size]^3. Leave as 1 for the grid to grow as needed -->
+		<diffusion-grid-size>4</diffusion-grid-size>
+		<!-- in um -->
+		<diffusion-voxel-size>20</diffusion-voxel-size>
+		<shoving>false</shoving>
+		<!-- Chance of a node randomly mutating. Set to 0 to deactivate random mutations -->
+		<random-mutations>0</random-mutations>
+		<!-- Whether cells belonging to the same mutation group are placed close together -->
+		<close-group-placement>false</close-group-placement>
+		<!--Whether diffusion simulation is activated or not. If not, the other diffusion settings won't be read-->
+		<diffusion>true</diffusion>
+		<!-- Milliseconds between steps, an integer -->
+		<step-delay>1</step-delay>
+		<!-- to turn snapshots off, set this to 0. Otherwise, set it to the number of steps after which a snapshot will be created.
+			For example, 3 means a snapshot will be made every 3 steps -->
+		<snapshots>0</snapshots>
+		<!-- can be one of 'random', 'square', 'hexagonal'.
+			This will be ignored if gene-status-data.spatial is true, in that case a special importer distributor will be used -->
+		<distributor-2d>random</distributor-2d>
+		<!-- can be one of 'random', 'square', 'hexagonal'. -->
+		<distributor-3d>random</distributor-3d>
+		<!-- set to true so the distributor will cache the initial position of cells and reuse it any time the simulation is run with the same parameters. -->
+		<cache-positions>true</cache-positions>
+		<!-- one of 'sync', 'async', or 'prob' -->
+		<network>sync</network>
+	</general>
+	<gene-status-data>
+		<!-- the on/off switch for importing the data. If false, only mutations from the settings below  will be imported-->
+		<parse>false</parse>
+		<!-- a string to identify the specific file from where to import the data -->
+		<id></id>
+		<!--If this is true, coordinates for cell location will be taken from sc/coordinates.csv file -->
+		<spatial>false</spatial>
+		<!-- Whether gene status will be translated cell by cell or in clusters. Will only apply if 'parse' is set to true -->
+		<single-cell>false</single-cell>
+	</gene-status-data>
+	<!-- If gene-status-data.parse is true, the mutation groups have to share name with a cluster from the data. -->
+	<mutations>
+		<group>
+			<name>TCR+</name>
+			<percent>100</percent>
+			<mutation>
+				<node>TCR</node>
+				<sign>true</sign>
+				<p>1000</p>
+			</mutation>
+		</group>
+	</mutations>
+	<fixed-inputs>
+		<input></input>
+	</fixed-inputs>
+	<diffusibles>
+		<diffusible>
+			<name>oxygen</name>
+			<type>nutrient</type>
+			<input-node>oxygen_supply</input-node>
+			<!-- in mM -->
+			<initial-concentration>0.28</initial-concentration>
+			<!-- in m^2/s -->
+			<diffusion-coefficient>1E-9</diffusion-coefficient>
+			<!-- in mM -->
+			<threshold>0.022</threshold>
+			<!-- in mol/s/cell -->
+			<consumption>3E-17</consumption>
+		</diffusible>
+	</diffusibles>
+	<stats filename="stats-default">
+		<stat>alive_cell_count</stat>
+		<stat option="oxygen_supply">cells_expressing_node</stat>
+	</stats><!-- other possible stats:
+		cells_expressing_node_by_group
+		real_time -->
+	<timepoint-stats>
+	</timepoint-stats><!-- possible time point stats:
+	node_status_by_cell
+	gene_rules_by_cell
+	concentration_by_voxel
+	coordinates_by_cell-->
+</settings>

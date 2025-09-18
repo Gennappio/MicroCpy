@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteRepositoriesConfiguration">
+    <remote-repository>
+      <option name="id" value="local-libs" />
+      <option name="name" value="local" />
+      <option name="url" value="file:///C:\oncologyphd\microCJ-develop-tcells\microCJ-develop\gui/local-libs" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Central Repository" />
+      <option name="url" value="https://repo.maven.apache.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local-libs" />
+      <option name="name" value="local" />
+      <option name="url" value="file:///C:\oncologyphd\microCJ-develop-tcells-cancer-id-github\microCJ-develop\gui/local-libs" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local-libs" />
+      <option name="name" value="local" />
+      <option name="url" value="file:///C:\oncologyphd\microCJ-develop-tcells-cancer-id\microCJ-develop\gui/local-libs" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Maven Central repository" />
+      <option name="url" value="https://repo1.maven.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="jboss.community" />
+      <option name="name" value="JBoss Community repository" />
+      <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local-libs" />
+      <option name="name" value="local" />
+      <option name="url" value="file:///C:\oncologyphd\microCJ-develop\microCJ-develop\gui/local-libs" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven-snapshots" />
+      <option name="name" value="maven-snapshots" />
+      <option name="url" value="https://oss.sonatype.org/content/repositories/snapshots" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local-libs" />
+      <option name="name" value="local" />
+      <option name="url" value="file:///C:\oncologyphd\microCJ-develop-tcells-cancer\microCJ-develop\gui/local-libs" />
+    </remote-repository>
+  </component>
+</project>

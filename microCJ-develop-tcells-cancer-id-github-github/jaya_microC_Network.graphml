@@ -1,0 +1,1264 @@
+<?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+<key attr.name="label" attr.type="string" for="node" id="label"/>
+<key attr.name="weight" attr.type="double" for="edge" id="weight"/>
+<key attr.name="kind" attr.type="string" for="node" id="kind"/>
+<key attr.name="rule" attr.type="string" for="node" id="rule"/>
+<key attr.name="value" attr.type="string" for="node" id="value"/>
+<key attr.name="sign" attr.type="string" for="edge" id="sign"/>
+<graph edgedefault="directed">
+<node id="EGFR_stimulus">
+<data key="label">EGFR_stimulus</data>
+<data key="kind">input</data>
+</node>
+<node id="FGFR_stimulus">
+<data key="label">FGFR_stimulus</data>
+<data key="kind">input</data>
+</node>
+<node id="TGFBR_stimulus">
+<data key="label">TGFBR_stimulus</data>
+<data key="kind">input</data>
+</node>
+<node id="DNA_damage">
+<data key="label">DNA_damage</data>
+<data key="kind">input</data>
+</node>
+<node id="Apoptosis">
+<data key="label">Apoptosis</data>
+<data key="kind">fate</data>
+<data key="rule">not BCL2 and not ERK and FOXO3 and p53</data>
+<data key="value">1</data>
+</node>
+<node id="Growth_Arrest">
+<data key="label">Growth_Arrest</data>
+<data key="kind">fate</data>
+<data key="rule">p21</data>
+<data key="value">1</data>
+</node>
+<node id="Proliferation">
+<data key="label">Proliferation</data>
+<data key="kind">fate</data>
+<data key="rule">p70 and MYC and not p21 and not Growth_Inhibitor and ATP_Production_Rate</data>
+<data key="value">1</data>
+</node>
+<node id="ERK">
+<data key="label">ERK</data>
+<data key="kind">gene</data>
+<data key="rule">MEK1_2</data>
+<data key="value">1</data>
+</node>
+<node id="p38">
+<data key="label">p38</data>
+<data key="kind">gene</data>
+<data key="rule">(TAOK and MAP3K1_3) or (MAP3K1_3 and MTK1) or (TAOK and MTK1) or (TAK1 and MTK1) or (TAK1 and MAP3K1_3) or (TAK1 and TAOK) or ((TAOK or MTK1 or MAP3K1_3 or TAK1) and not DUSP1)</data>
+<data key="value">1</data>
+</node>
+<node id="JNK">
+<data key="label">JNK</data>
+<data key="kind">gene</data>
+<data key="rule">(TAOK and MAP3K1_3) or (MAP3K1_3 and MTK1) or (TAOK and MTK1) or (TAK1 and MTK1) or (TAK1 and MAP3K1_3) or (TAK1 and TAOK) or ((TAOK or MTK1 or MAP3K1_3 or TAK1) and not DUSP1)</data>
+<data key="value">1</data>
+</node>
+<node id="p53">
+<data key="label">p53</data>
+<data key="kind">gene</data>
+<data key="rule">(ATM and p38) or ((ATM or p38) and not MDM2)</data>
+<data key="value">1</data>
+</node>
+<node id="p21">
+<data key="label">p21</data>
+<data key="kind">gene</data>
+<data key="rule">not AKT and p53</data>
+<data key="value">1</data>
+</node>
+<node id="TGFBR">
+<data key="label">TGFBR</data>
+<data key="kind">gene</data>
+<data key="rule">TGFBR_stimulus</data>
+<data key="value">1</data>
+</node>
+<node id="EGFR">
+<data key="label">EGFR</data>
+<data key="kind">gene</data>
+<data key="rule">(EGFR_stimulus or SPRY) and not (PKC or GRB2 or EGFRI_affinity)</data>
+<data key="value">1</data>
+</node>
+<node id="FGFR">
+<data key="label">FGFR</data>
+<data key="kind">gene</data>
+<data key="rule">FGFR_stimulus and not (GRB2 or PKC or FGFRI)</data>
+<data key="value">1</data>
+</node>
+<node id="ATM">
+<data key="label">ATM</data>
+<data key="kind">gene</data>
+<data key="rule">DNA_damage</data>
+<data key="value">1</data>
+</node>
+<node id="TAOK">
+<data key="label">TAOK</data>
+<data key="kind">gene</data>
+<data key="rule">ATM</data>
+<data key="value">1</data>
+</node>
+<node id="MAX">
+<data key="label">MAX</data>
+<data key="kind">gene</data>
+<data key="rule">p38</data>
+<data key="value">1</data>
+</node>
+<node id="GRB2">
+<data key="label">GRB2</data>
+<data key="kind">gene</data>
+<data key="rule">EGFR or FRS2 or TGFBR or cMET</data>
+<data key="value">1</data>
+</node>
+<node id="FRS2">
+<data key="label">FRS2</data>
+<data key="kind">gene</data>
+<data key="rule">FGFR and not SPRY and not GRB2</data>
+<data key="value">1</data>
+</node>
+<node id="PI3K">
+<data key="label">PI3K</data>
+<data key="kind">gene</data>
+<data key="rule">GAB1 or (RAS and SOS)</data>
+<data key="value">1</data>
+</node>
+<node id="AP1">
+<data key="label">AP1</data>
+<data key="kind">gene</data>
+<data key="rule">JUN and (FOS or ATF2)</data>
+<data key="value">1</data>
+</node>
+<node id="PPP2CA">
+<data key="label">PPP2CA</data>
+<data key="kind">gene</data>
+<data key="rule">p38</data>
+<data key="value">1</data>
+</node>
+<node id="MEK1_2">
+<data key="label">MEK1_2</data>
+<data key="kind">gene</data>
+<data key="rule">(RAF or MAP3K1_3) and not (PPP2CA or AP1)</data>
+<data key="value">1</data>
+</node>
+<node id="DUSP1">
+<data key="label">DUSP1</data>
+<data key="kind">gene</data>
+<data key="rule">CREB</data>
+<data key="value">1</data>
+</node>
+<node id="MYC">
+<data key="label">MYC</data>
+<data key="kind">gene</data>
+<data key="rule">(MSK and MAX) or (MSK and AKT)</data>
+<data key="value">1</data>
+</node>
+<node id="AKT">
+<data key="label">AKT</data>
+<data key="kind">gene</data>
+<data key="rule">PDK1 and not PTEN</data>
+<data key="value">1</data>
+</node>
+<node id="PLCG">
+<data key="label">PLCG</data>
+<data key="kind">gene</data>
+<data key="rule">EGFR or FGFR or cMET</data>
+<data key="value">1</data>
+</node>
+<node id="PKC">
+<data key="label">PKC</data>
+<data key="kind">gene</data>
+<data key="rule">PLCG</data>
+<data key="value">1</data>
+</node>
+<node id="GADD45">
+<data key="label">GADD45</data>
+<data key="kind">gene</data>
+<data key="rule">SMAD or p53</data>
+<data key="value">1</data>
+</node>
+<node id="ELK1">
+<data key="label">ELK1</data>
+<data key="kind">gene</data>
+<data key="rule">ERK or JNK or p38</data>
+<data key="value">1</data>
+</node>
+<node id="FOS">
+<data key="label">FOS</data>
+<data key="kind">gene</data>
+<data key="rule">ERK and RSK and (ELK1 or CREB)</data>
+<data key="value">1</data>
+</node>
+<node id="ATF2">
+<data key="label">ATF2</data>
+<data key="kind">gene</data>
+<data key="rule">JNK or p38</data>
+<data key="value">1</data>
+</node>
+<node id="JUN">
+<data key="label">JUN</data>
+<data key="kind">gene</data>
+<data key="rule">JNK</data>
+<data key="value">1</data>
+</node>
+<node id="MSK">
+<data key="label">MSK</data>
+<data key="kind">gene</data>
+<data key="rule">ERK or p38</data>
+<data key="value">1</data>
+</node>
+<node id="CREB">
+<data key="label">CREB</data>
+<data key="kind">gene</data>
+<data key="rule">MSK</data>
+<data key="value">1</data>
+</node>
+<node id="RSK">
+<data key="label">RSK</data>
+<data key="kind">gene</data>
+<data key="rule">ERK</data>
+<data key="value">1</data>
+</node>
+<node id="SMAD">
+<data key="label">SMAD</data>
+<data key="kind">gene</data>
+<data key="rule">TGFBR</data>
+<data key="value">1</data>
+</node>
+<node id="MTK1">
+<data key="label">MTK1</data>
+<data key="kind">gene</data>
+<data key="rule">GADD45</data>
+<data key="value">1</data>
+</node>
+<node id="SPRY">
+<data key="label">SPRY</data>
+<data key="kind">gene</data>
+<data key="rule">ERK</data>
+<data key="value">1</data>
+</node>
+<node id="RAF">
+<data key="label">RAF</data>
+<data key="kind">gene</data>
+<data key="rule">(RAS or PKC) and not (ERK or AKT)</data>
+<data key="value">1</data>
+</node>
+<node id="GAB1">
+<data key="label">GAB1</data>
+<data key="kind">gene</data>
+<data key="rule">GRB2 or PI3K</data>
+<data key="value">1</data>
+</node>
+<node id="PDK1">
+<data key="label">PDK1</data>
+<data key="kind">gene</data>
+<data key="rule">PI3K or HIF1 or MYC</data>
+<data key="value">1</data>
+</node>
+<node id="p70">
+<data key="label">p70</data>
+<data key="kind">gene</data>
+<data key="rule">PDK1 and ERK</data>
+<data key="value">1</data>
+</node>
+<node id="p14">
+<data key="label">p14</data>
+<data key="kind">gene</data>
+<data key="rule">MYC</data>
+<data key="value">1</data>
+</node>
+<node id="FOXO3">
+<data key="label">FOXO3</data>
+<data key="kind">gene</data>
+<data key="rule">JNK and not AKT</data>
+<data key="value">1</data>
+</node>
+<node id="RAS">
+<data key="label">RAS</data>
+<data key="kind">gene</data>
+<data key="rule">SOS or PLCG</data>
+<data key="value">1</data>
+</node>
+<node id="SOS">
+<data key="label">SOS</data>
+<data key="kind">gene</data>
+<data key="rule">GRB2 and not RSK</data>
+<data key="value">1</data>
+</node>
+<node id="MDM2">
+<data key="label">MDM2</data>
+<data key="kind">gene</data>
+<data key="rule">(p53 or AKT) and not p14</data>
+<data key="value">1</data>
+</node>
+<node id="BCL2">
+<data key="label">BCL2</data>
+<data key="kind">gene</data>
+<data key="rule">CREB and AKT</data>
+<data key="value">1</data>
+</node>
+<node id="TAK1">
+<data key="label">TAK1</data>
+<data key="kind">gene</data>
+<data key="rule">TGFBR</data>
+<data key="value">1</data>
+</node>
+<node id="MAP3K1_3">
+<data key="label">MAP3K1_3</data>
+<data key="kind">gene</data>
+<data key="rule">RAS</data>
+<data key="value">1</data>
+</node>
+<node id="PTEN">
+<data key="label">PTEN</data>
+<data key="kind">gene</data>
+<data key="rule">p53</data>
+<data key="value">1</data>
+</node>
+<node id="HIF1">
+<data key="label">HIF1</data>
+<data key="kind">gene</data>
+<data key="rule">p70 and ERK and not Oxygen_supply</data>
+<data key="value">1</data>
+</node>
+<node id="LOX">
+<data key="label">LOX</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1</data>
+<data key="value">1</data>
+</node>
+<node id="VEGF">
+<data key="label">VEGF</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1</data>
+<data key="value">1</data>
+</node>
+<node id="Oxygen_supply">
+<data key="label">Oxygen_supply</data>
+<data key="kind">input</data>
+</node>
+<node id="Necrosis">
+<data key="label">Necrosis</data>
+<data key="kind">fate</data>
+<data key="rule">not Oxygen_supply and not Cell_Glucose</data>
+<data key="value">1</data>
+</node>
+<node id="FGF">
+<data key="label">FGF</data>
+<data key="kind">input</data>
+</node>
+<node id="TGFA">
+<data key="label">TGFA</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1</data>
+<data key="value">1</data>
+</node>
+<node id="EGFRI">
+<data key="label">EGFRI</data>
+<data key="kind">input</data>
+</node>
+<node id="EGFRD">
+<data key="label">EGFRD</data>
+<data key="kind">input</data>
+</node>
+<node id="FGFRI">
+<data key="label">FGFRI</data>
+<data key="kind">input</data>
+</node>
+<node id="FGFRD">
+<data key="label">FGFRD</data>
+<data key="kind">input</data>
+</node>
+<node id="Glucose">
+<data key="label">Glucose</data>
+<data key="kind">input</data>
+</node>
+<node id="Glucose_supply">
+<data key="label">Glucose_supply</data>
+<data key="kind">input</data>
+</node>
+<node id="GLUT1">
+<data key="label">GLUT1</data>
+<data key="kind">gene</data>
+<data key="rule">(HIF1 or not p53 or MYC) and not GLUT1I</data>
+<data key="value">1</data>
+</node>
+<node id="Growth_Inhibitor">
+<data key="label">Growth_Inhibitor</data>
+<data key="kind">input</data>
+</node>
+<node id="GI">
+<data key="label">GI</data>
+<data key="kind">input</data>
+</node>
+<node id="EGFRI_affinity">
+<data key="label">EGFRI_affinity</data>
+<data key="kind">gene</data>
+<data key="rule">EGFRI</data>
+<data key="value">1</data>
+</node>
+<node id="Cell_Glucose">
+<data key="label">Cell_Glucose</data>
+<data key="kind">gene</data>
+<data key="rule">GLUT1 and Glucose_supply</data>
+<data key="value">1</data>
+</node>
+<node id="G6P">
+<data key="label">G6P</data>
+<data key="kind">gene</data>
+<data key="rule">Cell_Glucose</data>
+<data key="value">1</data>
+</node>
+<node id="F6P">
+<data key="label">F6P</data>
+<data key="kind">gene</data>
+<data key="rule">G6P</data>
+<data key="value">1</data>
+</node>
+<node id="F16BP">
+<data key="label">F16BP</data>
+<data key="kind">gene</data>
+<data key="rule">F6P</data>
+<data key="value">1</data>
+</node>
+<node id="GA3P">
+<data key="label">GA3P</data>
+<data key="kind">gene</data>
+<data key="rule">F16BP</data>
+<data key="value">1</data>
+</node>
+<node id="BPG">
+<data key="label">BPG</data>
+<data key="kind">gene</data>
+<data key="rule">GA3P</data>
+<data key="value">1</data>
+</node>
+<node id="PG3">
+<data key="label">PG3</data>
+<data key="kind">gene</data>
+<data key="rule">BPG</data>
+<data key="value">1</data>
+</node>
+<node id="PG2">
+<data key="label">PG2</data>
+<data key="kind">gene</data>
+<data key="rule">PG3</data>
+<data key="value">1</data>
+</node>
+<node id="PEP">
+<data key="label">PEP</data>
+<data key="kind">gene</data>
+<data key="rule">PG2</data>
+<data key="value">1</data>
+</node>
+<node id="Pyruvate">
+<data key="label">Pyruvate</data>
+<data key="kind">gene</data>
+<data key="rule">PEP or (LDHB and Cell_Lactate)</data>
+<data key="value">1</data>
+</node>
+<node id="Cell_Lactate">
+<data key="label">Cell_Lactate</data>
+<data key="kind">gene</data>
+<data key="rule">(Pyruvate and LDHA) or (Pyruvate and not p53) or MCT1</data>
+<data key="value">1</data>
+</node>
+<node id="AcetylCoA">
+<data key="label">AcetylCoA</data>
+<data key="kind">gene</data>
+<data key="rule">Pyruvate and PDH</data>
+<data key="value">1</data>
+</node>
+<node id="TCA">
+<data key="label">TCA</data>
+<data key="kind">gene</data>
+<data key="rule">AcetylCoA</data>
+<data key="value">1</data>
+</node>
+<node id="ETC">
+<data key="label">ETC</data>
+<data key="kind">gene</data>
+<data key="rule">TCA and Oxygen_supply</data>
+<data key="value">1</data>
+</node>
+<node id="mitoATP">
+<data key="label">mitoATP</data>
+<data key="kind">gene</data>
+<data key="rule">ETC</data>
+<data key="value">1</data>
+</node>
+<node id="PDH">
+<data key="label">PDH</data>
+<data key="kind">gene</data>
+<data key="rule">not PDK1 or p53 or LDHB</data>
+<data key="value">1</data>
+</node>
+<node id="LDHA">
+<data key="label">LDHA</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1 and MYC</data>
+<data key="value">1</data>
+</node>
+<node id="cMET">
+<data key="label">cMET</data>
+<data key="kind">gene</data>
+<data key="rule">cMET_stimulus and not (PKC or cMETI)</data>
+<data key="value">1</data>
+</node>
+<node id="cMET_stimulus">
+<data key="label">cMET_stimulus</data>
+<data key="kind">input</data>
+</node>
+<node id="cMETI">
+<data key="label">cMETI</data>
+<data key="kind">input</data>
+</node>
+<node id="HGF">
+<data key="label">HGF</data>
+<data key="kind">input</data>
+</node>
+<node id="cMETD">
+<data key="label">cMETD</data>
+<data key="kind">input</data>
+</node>
+<node id="glycoATP">
+<data key="label">glycoATP</data>
+<data key="kind">gene</data>
+<data key="rule">PEP and not LDHB</data>
+<data key="value">1</data>
+</node>
+<node id="ATP_Production_Rate">
+<data key="label">ATP_Production_Rate</data>
+<data key="kind">gene</data>
+<data key="rule">mitoATP or glycoATP</data>
+<data key="value">1</data>
+</node>
+<node id="MCT4">
+<data key="label">MCT4</data>
+<data key="kind">gene</data>
+<data key="rule">Cell_Lactate and not MCT1</data>
+<data key="value">1</data>
+</node>
+<node id="MCT1">
+<data key="label">MCT1</data>
+<data key="kind">gene</data>
+<data key="rule">Oxygen_supply and MCT1_stimulus and not MCT1I</data>
+<data key="value">1</data>
+</node>
+<node id="LDHB">
+<data key="label">LDHB</data>
+<data key="kind">gene</data>
+<data key="rule">MCT1</data>
+<data key="value">1</data>
+</node>
+<node id="Lactate">
+<data key="label">Lactate</data>
+<data key="kind">gene</data>
+<data key="rule">MCT4</data>
+<data key="value">1</data>
+</node>
+<node id="MCT1_stimulus">
+<data key="label">MCT1_stimulus</data>
+<data key="kind">input</data>
+</node>
+<node id="Proton">
+<data key="label">Proton</data>
+<data key="kind">gene</data>
+<data key="rule">MCT4</data>
+<data key="value">1</data>
+</node>
+<node id="MCT1I">
+<data key="label">MCT1I</data>
+<data key="kind">input</data>
+</node>
+<node id="MCT1D">
+<data key="label">MCT1D</data>
+<data key="kind">input</data>
+</node>
+<node id="GLUT1I">
+<data key="label">GLUT1I</data>
+<data key="kind">input</data>
+</node>
+<node id="GLUT1D">
+<data key="label">GLUT1D</data>
+<data key="kind">input</data>
+</node>
+<edge id="ERK:MSK" source="ERK" target="MSK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:RSK" source="ERK" target="RSK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:SPRY" source="ERK" target="SPRY">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:FOS" source="ERK" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:ELK1" source="ERK" target="ELK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:Apoptosis" source="ERK" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ERK:p70" source="ERK" target="p70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:RAF" source="ERK" target="RAF">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ERK:HIF1" source="ERK" target="HIF1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FOS:AP1" source="FOS" target="AP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GADD45:MTK1" source="GADD45" target="MTK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AKT:FOXO3" source="AKT" target="FOXO3">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AKT:p21" source="AKT" target="p21">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AKT:BCL2" source="AKT" target="BCL2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AKT:MYC" source="AKT" target="MYC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AKT:MDM2" source="AKT" target="MDM2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AKT:RAF" source="AKT" target="RAF">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AKT:p70" source="AKT" target="p70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATF2:AP1" source="ATF2" target="AP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLUT1I:GLUT1" source="GLUT1I" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Growth_Inhibitor:Proliferation" source="Growth_Inhibitor" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="MCT1_stimulus:MCT1" source="MCT1_stimulus" target="MCT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MYC:p14" source="MYC" target="p14">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MYC:Proliferation" source="MYC" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MYC:PDK1" source="MYC" target="PDK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MYC:LDHA" source="MYC" target="LDHA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MYC:GLUT1" source="MYC" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ETC:mitoATP" source="ETC" target="mitoATP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PG3:PG2" source="PG3" target="PG2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:LOX" source="HIF1" target="LOX">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:VEGF" source="HIF1" target="VEGF">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:TGFA" source="HIF1" target="TGFA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:GLUT1" source="HIF1" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:PDK1" source="HIF1" target="PDK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1:LDHA" source="HIF1" target="LDHA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:PPP2CA" source="p38" target="PPP2CA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:MSK" source="p38" target="MSK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:p53" source="p38" target="p53">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:MAX" source="p38" target="MAX">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:ELK1" source="p38" target="ELK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p38:ATF2" source="p38" target="ATF2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="F16BP:GA3P" source="F16BP" target="GA3P">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMETI:cMET" source="cMETI" target="cMET">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="EGFRI_affinity:EGFR" source="EGFRI_affinity" target="EGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="BCL2:Apoptosis" source="BCL2" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Cell_Glucose:G6P" source="Cell_Glucose" target="G6P">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Cell_Glucose:Necrosis" source="Cell_Glucose" target="Necrosis">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="EGFR_stimulus:EGFR" source="EGFR_stimulus" target="EGFR">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMET_stimulus:cMET" source="cMET_stimulus" target="cMET">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PTEN:AKT" source="PTEN" target="AKT">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Pyruvate:Cell_Lactate" source="Pyruvate" target="Cell_Lactate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Pyruvate:AcetylCoA" source="Pyruvate" target="AcetylCoA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PG2:PEP" source="PG2" target="PEP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="DUSP1:p38" source="DUSP1" target="p38">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="DUSP1:JNK" source="DUSP1" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mitoATP:ATP_Production_Rate" source="mitoATP" target="ATP_Production_Rate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FGFRI:FGFR" source="FGFRI" target="FGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GRB2:GAB1" source="GRB2" target="GAB1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GRB2:SOS" source="GRB2" target="SOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GRB2:FGFR" source="GRB2" target="FGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GRB2:EGFR" source="GRB2" target="EGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GRB2:FRS2" source="GRB2" target="FRS2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="p14:MDM2" source="p14" target="MDM2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="PLCG:RAS" source="PLCG" target="RAS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PLCG:PKC" source="PLCG" target="PKC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="BPG:PG3" source="BPG" target="PG3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TGFBR:SMAD" source="TGFBR" target="SMAD">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TGFBR:TAK1" source="TGFBR" target="TAK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TGFBR:GRB2" source="TGFBR" target="GRB2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FGFR:FRS2" source="FGFR" target="FRS2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FGFR:PLCG" source="FGFR" target="PLCG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SPRY:EGFR" source="SPRY" target="EGFR">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SPRY:FRS2" source="SPRY" target="FRS2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Glucose_supply:Cell_Glucose" source="Glucose_supply" target="Cell_Glucose">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="G6P:F6P" source="G6P" target="F6P">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PPP2CA:MEK1_2" source="PPP2CA" target="MEK1_2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="PEP:Pyruvate" source="PEP" target="Pyruvate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PEP:glycoATP" source="PEP" target="glycoATP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FGFR_stimulus:FGFR" source="FGFR_stimulus" target="FGFR">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MDM2:p53" source="MDM2" target="p53">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="MAX:MYC" source="MAX" target="MYC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SOS:RAS" source="SOS" target="RAS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SOS:PI3K" source="SOS" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CREB:FOS" source="CREB" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CREB:DUSP1" source="CREB" target="DUSP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CREB:BCL2" source="CREB" target="BCL2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="EGFR:GRB2" source="EGFR" target="GRB2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="EGFR:PLCG" source="EGFR" target="PLCG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATP_Production_Rate:Proliferation" source="ATP_Production_Rate" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MAP3K1_3:MEK1_2" source="MAP3K1_3" target="MEK1_2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MAP3K1_3:JNK" source="MAP3K1_3" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MAP3K1_3:p38" source="MAP3K1_3" target="p38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LDHA:Cell_Lactate" source="LDHA" target="Cell_Lactate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PI3K:PDK1" source="PI3K" target="PDK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PI3K:GAB1" source="PI3K" target="GAB1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT4:Lactate" source="MCT4" target="Lactate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT4:Proton" source="MCT4" target="Proton">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKC:EGFR" source="PKC" target="EGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="PKC:RAF" source="PKC" target="RAF">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKC:FGFR" source="PKC" target="FGFR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="PKC:cMET" source="PKC" target="cMET">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="FRS2:GRB2" source="FRS2" target="GRB2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GA3P:BPG" source="GA3P" target="BPG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p70:Proliferation" source="p70" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p70:HIF1" source="p70" target="HIF1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AcetylCoA:TCA" source="AcetylCoA" target="TCA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="EGFRI:EGFRI_affinity" source="EGFRI" target="EGFRI_affinity">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TCA:ETC" source="TCA" target="ETC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FOXO3:Apoptosis" source="FOXO3" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MEK1_2:ERK" source="MEK1_2" target="ERK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AP1:MEK1_2" source="AP1" target="MEK1_2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GAB1:PI3K" source="GAB1" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TGFBR_stimulus:TGFBR" source="TGFBR_stimulus" target="TGFBR">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MSK:CREB" source="MSK" target="CREB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MSK:MYC" source="MSK" target="MYC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SMAD:GADD45" source="SMAD" target="GADD45">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMET:GRB2" source="cMET" target="GRB2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMET:PLCG" source="cMET" target="PLCG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LDHB:glycoATP" source="LDHB" target="glycoATP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LDHB:Pyruvate" source="LDHB" target="Pyruvate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LDHB:PDH" source="LDHB" target="PDH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MTK1:p38" source="MTK1" target="p38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MTK1:JNK" source="MTK1" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RSK:FOS" source="RSK" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RSK:SOS" source="RSK" target="SOS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="glycoATP:ATP_Production_Rate" source="glycoATP" target="ATP_Production_Rate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT1:Cell_Lactate" source="MCT1" target="Cell_Lactate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT1:LDHB" source="MCT1" target="LDHB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT1:MCT4" source="MCT1" target="MCT4">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="RAS:RAF" source="RAS" target="RAF">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAS:MAP3K1_3" source="RAS" target="MAP3K1_3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAS:PI3K" source="RAS" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TAK1:JNK" source="TAK1" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TAK1:p38" source="TAK1" target="p38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="DNA_damage:ATM" source="DNA_damage" target="ATM">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="JNK:ELK1" source="JNK" target="ELK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="JNK:ATF2" source="JNK" target="ATF2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="JNK:JUN" source="JNK" target="JUN">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="JNK:FOXO3" source="JNK" target="FOXO3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ELK1:FOS" source="ELK1" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK1:p70" source="PDK1" target="p70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK1:AKT" source="PDK1" target="AKT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK1:PDH" source="PDK1" target="PDH">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="JUN:AP1" source="JUN" target="AP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLUT1:Cell_Glucose" source="GLUT1" target="Cell_Glucose">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDH:AcetylCoA" source="PDH" target="AcetylCoA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATM:TAOK" source="ATM" target="TAOK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATM:p53" source="ATM" target="p53">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TAOK:p38" source="TAOK" target="p38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TAOK:JNK" source="TAOK" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p21:Proliferation" source="p21" target="Proliferation">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="p21:Growth_Arrest" source="p21" target="Growth_Arrest">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="F6P:F16BP" source="F6P" target="F16BP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Cell_Lactate:MCT4" source="Cell_Lactate" target="MCT4">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Cell_Lactate:Pyruvate" source="Cell_Lactate" target="Pyruvate">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:GADD45" source="p53" target="GADD45">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:p21" source="p53" target="p21">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:MDM2" source="p53" target="MDM2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:Apoptosis" source="p53" target="Apoptosis">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:PTEN" source="p53" target="PTEN">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="p53:GLUT1" source="p53" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="p53:Cell_Lactate" source="p53" target="Cell_Lactate">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="p53:PDH" source="p53" target="PDH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAF:MEK1_2" source="RAF" target="MEK1_2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Oxygen_supply:HIF1" source="Oxygen_supply" target="HIF1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Oxygen_supply:Necrosis" source="Oxygen_supply" target="Necrosis">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="Oxygen_supply:ETC" source="Oxygen_supply" target="ETC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="Oxygen_supply:MCT1" source="Oxygen_supply" target="MCT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MCT1I:MCT1" source="MCT1I" target="MCT1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+</graph>
+</graphml>

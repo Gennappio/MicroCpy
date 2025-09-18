@@ -1,0 +1,1696 @@
+<?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+<key attr.name="label" attr.type="string" for="node" id="label"/>
+<key attr.name="weight" attr.type="double" for="edge" id="weight"/>
+<key attr.name="kind" attr.type="string" for="node" id="kind"/>
+<key attr.name="rule" attr.type="string" for="node" id="rule"/>
+<key attr.name="value" attr.type="string" for="node" id="value"/>
+<key attr.name="sign" attr.type="string" for="edge" id="sign"/>
+<graph edgedefault="directed">
+<node id="Oxygen_supply">
+<data key="label">Oxygen_supply</data>
+<data key="kind">input</data>
+</node>
+<node id="TCR">
+<data key="label">TCR</data>
+<data key="kind">input</data>
+</node>
+<node id="CD28">
+<data key="label">CD28</data>
+<data key="kind">input</data>
+</node>
+<node id="LCK">
+<data key="label">LCK</data>
+<data key="kind">gene</data>
+<data key="rule">(TCR and CD28 and (SHP2 or not SHP2)) or (TCR and not CD28 and not SHP2)</data>
+<data key="value">1</data>
+</node>
+<node id="FYN">
+<data key="label">FYN</data>
+<data key="kind">gene</data>
+<data key="rule">TCR</data>
+<data key="value">1</data>
+</node>
+<node id="ZAP70">
+<data key="label">ZAP70</data>
+<data key="kind">gene</data>
+<data key="rule">(LCK and FYN and CD28 and (not SHP2 or SHP2) and not cROS) or (not LCK and FYN and CD28 and not SHP2 and not cROS) or (LCK and not FYN and CD28 and not SHP2 and not cROS)</data>
+<data key="value">1</data>
+</node>
+<node id="LAT">
+<data key="label">LAT</data>
+<data key="kind">gene</data>
+<data key="rule">ZAP70 and not cROS</data>
+<data key="value">1</data>
+</node>
+<node id="SLP76">
+<data key="label">SLP76</data>
+<data key="kind">gene</data>
+<data key="rule">LAT and ZAP70</data>
+<data key="value">1</data>
+</node>
+<node id="ITK">
+<data key="label">ITK</data>
+<data key="kind">gene</data>
+<data key="rule">SLP76 and (VAV1 or LCK or ZAP70 or LAT or PI3K)</data>
+<data key="value">1</data>
+</node>
+<node id="VAV1">
+<data key="label">VAV1</data>
+<data key="kind">gene</data>
+<data key="rule">ITK and SLP76</data>
+<data key="value">1</data>
+</node>
+<node id="RASGRP">
+<data key="label">RASGRP</data>
+<data key="kind">gene</data>
+<data key="rule">DAG and PKCTH</data>
+<data key="value">1</data>
+</node>
+<node id="SOS">
+<data key="label">SOS</data>
+<data key="kind">gene</data>
+<data key="rule">GRB2 and RAS</data>
+<data key="value">1</data>
+</node>
+<node id="GRB2">
+<data key="label">GRB2</data>
+<data key="kind">gene</data>
+<data key="rule">LAT</data>
+<data key="value">1</data>
+</node>
+<node id="PLCg">
+<data key="label">PLCg</data>
+<data key="kind">gene</data>
+<data key="rule">SLP76 and ITK and LAT</data>
+<data key="value">1</data>
+</node>
+<node id="PI3K">
+<data key="label">PI3K</data>
+<data key="kind">gene</data>
+<data key="rule">(SLP76 and CD28 and (not CBLB or CBLB)) or (not SLP76 and CD28 and not CBLB) or (SLP76 and not CD28 and not CBLB)</data>
+<data key="value">1</data>
+</node>
+<node id="PIP3">
+<data key="label">PIP3</data>
+<data key="kind">gene</data>
+<data key="rule">PI3K and not PTEN</data>
+<data key="value">1</data>
+</node>
+<node id="PDK">
+<data key="label">PDK</data>
+<data key="kind">gene</data>
+<data key="rule">PIP3 or PKCTH</data>
+<data key="value">1</data>
+</node>
+<node id="DAG">
+<data key="label">DAG</data>
+<data key="kind">gene</data>
+<data key="rule">PLCg</data>
+<data key="value">1</data>
+</node>
+<node id="PKCTH">
+<data key="label">PKCTH</data>
+<data key="kind">gene</data>
+<data key="rule">DAG and LCK and PDK</data>
+<data key="value">1</data>
+</node>
+<node id="RAC1">
+<data key="label">RAC1</data>
+<data key="kind">gene</data>
+<data key="rule">TRPM2 or VAV1</data>
+<data key="value">1</data>
+</node>
+<node id="AKT">
+<data key="label">AKT</data>
+<data key="kind">gene</data>
+<data key="rule">PIP3 and PDK and TORC2</data>
+<data key="value">1</data>
+</node>
+<node id="NOX2">
+<data key="label">NOX2</data>
+<data key="kind">gene</data>
+<data key="rule">RAC1 and PKCTH and ERK and P38 and cNADPH_NADP</data>
+<data key="value">1</data>
+</node>
+<node id="DUOX1">
+<data key="label">DUOX1</data>
+<data key="kind">gene</data>
+<data key="rule">cCa and PKCTH</data>
+<data key="value">1</data>
+</node>
+<node id="SHP2">
+<data key="label">SHP2</data>
+<data key="kind">gene</data>
+<data key="rule">not (cROS or LCK)</data>
+<data key="value">1</data>
+</node>
+<node id="PTEN">
+<data key="label">PTEN</data>
+<data key="kind">gene</data>
+<data key="rule">not (cROS or LCK or AKT)</data>
+<data key="value">1</data>
+</node>
+<node id="CBLB">
+<data key="label">CBLB</data>
+<data key="kind">gene</data>
+<data key="rule">not LCK</data>
+<data key="value">1</data>
+</node>
+<node id="RAS">
+<data key="label">RAS</data>
+<data key="kind">gene</data>
+<data key="rule">RASGRP or SOS</data>
+<data key="value">1</data>
+</node>
+<node id="TRPM2">
+<data key="label">TRPM2</data>
+<data key="kind">gene</data>
+<data key="rule">cROS</data>
+<data key="value">1</data>
+</node>
+<node id="PMCA">
+<data key="label">PMCA</data>
+<data key="kind">gene</data>
+<data key="rule">not STIM</data>
+<data key="value">1</data>
+</node>
+<node id="ORAI1">
+<data key="label">ORAI1</data>
+<data key="kind">gene</data>
+<data key="rule">STIM and not cROS</data>
+<data key="value">1</data>
+</node>
+<node id="IP3">
+<data key="label">IP3</data>
+<data key="kind">gene</data>
+<data key="rule">PLCg</data>
+<data key="value">1</data>
+</node>
+<node id="IP3R">
+<data key="label">IP3R</data>
+<data key="kind">gene</data>
+<data key="rule">IP3 or cROS</data>
+<data key="value">1</data>
+</node>
+<node id="STIM">
+<data key="label">STIM</data>
+<data key="kind">gene</data>
+<data key="rule">IP3R or cROS</data>
+<data key="value">1</data>
+</node>
+<node id="CALM">
+<data key="label">CALM</data>
+<data key="kind">gene</data>
+<data key="rule">cCa</data>
+<data key="value">1</data>
+</node>
+<node id="CALN">
+<data key="label">CALN</data>
+<data key="kind">gene</data>
+<data key="rule">CALM</data>
+<data key="value">1</data>
+</node>
+<node id="RAF">
+<data key="label">RAF</data>
+<data key="kind">gene</data>
+<data key="rule">RAS</data>
+<data key="value">1</data>
+</node>
+<node id="MEK">
+<data key="label">MEK</data>
+<data key="kind">gene</data>
+<data key="rule">RAF</data>
+<data key="value">1</data>
+</node>
+<node id="MAP3K11">
+<data key="label">MAP3K11</data>
+<data key="kind">gene</data>
+<data key="rule">HPK1</data>
+<data key="value">1</data>
+</node>
+<node id="MAP2K4">
+<data key="label">MAP2K4</data>
+<data key="kind">gene</data>
+<data key="rule">MAP3K11 or ASK1</data>
+<data key="value">1</data>
+</node>
+<node id="MKK3">
+<data key="label">MKK3</data>
+<data key="kind">gene</data>
+<data key="rule">ASK1</data>
+<data key="value">1</data>
+</node>
+<node id="ASK1">
+<data key="label">ASK1</data>
+<data key="kind">gene</data>
+<data key="rule">not cTRX</data>
+<data key="value">1</data>
+</node>
+<node id="HPK1">
+<data key="label">HPK1</data>
+<data key="kind">gene</data>
+<data key="rule">LAT</data>
+<data key="value">1</data>
+</node>
+<node id="HV1">
+<data key="label">HV1</data>
+<data key="kind">gene</data>
+<data key="rule">cROS</data>
+<data key="value">1</data>
+</node>
+<node id="mCa">
+<data key="label">mCa</data>
+<data key="kind">gene</data>
+<data key="rule">cCa:2</data>
+<data key="kind">gene</data>
+<data key="rule">cCa:1</data>
+<data key="value">1</data>
+</node>
+<node id="mROS">
+<data key="label">mROS</data>
+<data key="kind">gene</data>
+<data key="rule">(not (mPRX or mGPX) and (cROS or ETC or mGR or mTR)) or (cROS and (mPRX or mGPX or ETC or mGR or mTR))</data>
+<data key="kind">gene</data>
+<data key="rule">((not mPRX and mGPX) or (mPRX and not mGPX)) and (ETC or mGR or mTR) and not cROS</data>
+<data key="value">1</data>
+</node>
+<node id="mQH2_Q">
+<data key="label">mQH2_Q</data>
+<data key="kind">gene</data>
+<data key="rule">ETC and mdH</data>
+<data key="kind">gene</data>
+<data key="rule">ETC and not mdH</data>
+<data key="value">1</data>
+</node>
+<node id="mNADH_NAD">
+<data key="label">mNADH_NAD</data>
+<data key="kind">gene</data>
+<data key="rule">(KrebsCycle or mPDH or FAO) and not ETC</data>
+<data key="kind">gene</data>
+<data key="rule">(KrebsCycle or mPDH or FAO) and ETC</data>
+<data key="value">1</data>
+</node>
+<node id="mGSH_GSSG">
+<data key="label">mGSH_GSSG</data>
+<data key="kind">gene</data>
+<data key="rule">mGR and not mGPX</data>
+<data key="kind">gene</data>
+<data key="rule">mGR and mGPX</data>
+<data key="value">1</data>
+</node>
+<node id="mdH">
+<data key="label">mdH</data>
+<data key="kind">gene</data>
+<data key="rule">ETC and not ATPSyn</data>
+<data key="kind">gene</data>
+<data key="rule">ETC and ATPSyn</data>
+<data key="value">1</data>
+</node>
+<node id="mNADPH_NADP">
+<data key="label">mNADPH_NADP</data>
+<data key="kind">gene</data>
+<data key="rule">(mNNT:2 and not mIDH2) or (mNNT:2 and mIDH2) or (mNNT:1 and mIDH2)</data>
+<data key="kind">gene</data>
+<data key="rule">(not mNNT and mIDH2) or (mNNT:1 and not mIDH2)</data>
+<data key="value">1</data>
+</node>
+<node id="mNNT">
+<data key="label">mNNT</data>
+<data key="kind">gene</data>
+<data key="rule">(mNADH_NAD:2 and mdH:2) or (mNADH_NAD:1 and mdH:2) or (mNADH_NAD:2 and mdH:1)</data>
+<data key="kind">gene</data>
+<data key="rule">mNADH_NAD:1 and mdH:1</data>
+<data key="value">1</data>
+</node>
+<node id="mIDH2">
+<data key="label">mIDH2</data>
+<data key="kind">gene</data>
+<data key="rule">KrebsCycle</data>
+<data key="value">1</data>
+</node>
+<node id="mGPX">
+<data key="label">mGPX</data>
+<data key="kind">gene</data>
+<data key="rule">mGSH_GSSG:2 and not mROS</data>
+<data key="kind">gene</data>
+<data key="rule">mGSH_GSSG:1 and not mROS</data>
+<data key="value">1</data>
+</node>
+<node id="mGR">
+<data key="label">mGR</data>
+<data key="kind">gene</data>
+<data key="rule">mGSH_GSSG:2 and (mNADPH_NADP:1 or mNADPH_NADP:2)</data>
+<data key="kind">gene</data>
+<data key="rule">(mNADPH_NADP:1 and not mGSH_GSSG) or (mNADPH_NADP:1 and mGSH_GSSG:1) or (mNADPH_NADP:2 and not mGSH_GSSG) or (mNADPH_NADP:2 and mGSH_GSSG:1)</data>
+<data key="value">1</data>
+</node>
+<node id="mPDHP">
+<data key="label">mPDHP</data>
+<data key="kind">gene</data>
+<data key="rule">mCa and not mNADH_NAD</data>
+<data key="value">1</data>
+</node>
+<node id="mTR">
+<data key="label">mTR</data>
+<data key="kind">gene</data>
+<data key="rule">mTRX:2 and mNADPH_NADP:2</data>
+<data key="kind">gene</data>
+<data key="rule">(mNADPH_NADP:1 and not mTRX) or (mNADPH_NADP:1 and mTRX:1) or (mNADPH_NADP:2 and not mTRX) or (mNADPH_NADP:2 and mTRX:1) or (mNADPH_NADP:1 and mTRX:2)</data>
+<data key="value">1</data>
+</node>
+<node id="mTRX">
+<data key="label">mTRX</data>
+<data key="kind">gene</data>
+<data key="rule">mTR and not mROS</data>
+<data key="kind">gene</data>
+<data key="rule">mTR and mROS:1</data>
+<data key="value">1</data>
+</node>
+<node id="mPRX">
+<data key="label">mPRX</data>
+<data key="kind">gene</data>
+<data key="rule">(mTRX and not mROS) or (mTRX:2 and mROS)</data>
+<data key="value">1</data>
+</node>
+<node id="mShuttle">
+<data key="label">mShuttle</data>
+<data key="kind">gene</data>
+<data key="rule">mIDH2 and mNADPH_NADP</data>
+<data key="value">1</data>
+</node>
+<node id="mPDH">
+<data key="label">mPDH</data>
+<data key="kind">gene</data>
+<data key="rule">(mPDHP or PYR) and not mPDHK and not mNADH_NAD</data>
+<data key="value">1</data>
+</node>
+<node id="mPDHK">
+<data key="label">mPDHK</data>
+<data key="kind">gene</data>
+<data key="rule">not mNADH_NAD and HIF1A</data>
+<data key="value">1</data>
+</node>
+<node id="mATP_ADP">
+<data key="label">mATP_ADP</data>
+<data key="kind">gene</data>
+<data key="rule">ATPSyn</data>
+<data key="value">1</data>
+</node>
+<node id="cCa">
+<data key="label">cCa</data>
+<data key="kind">gene</data>
+<data key="rule">(IP3R and ORAI1 and TRPM2 and not PMCA) or (IP3R and ORAI1 and not TRPM2 and not PMCA) or (IP3R and not ORAI1 and TRPM2 and not PMCA)</data>
+<data key="kind">gene</data>
+<data key="rule">(IP3R and not ORAI1 and not TRPM2 and not PMCA) or (not IP3R and not ORAI1 and TRPM2 and not PMCA) or (not IP3R and ORAI1 and TRPM2 and not PMCA) or (not IP3R and ORAI1 and not TRPM2 and not PMCA)</data>
+<data key="value">1</data>
+</node>
+<node id="cROS">
+<data key="label">cROS</data>
+<data key="kind">gene</data>
+<data key="rule">(not (cPRX or cGPX) and (NOX2 or mROS or DUOX1 or cTR or cGR)) or (mROS and (cPRX or cGPX or NOX2 or DUOX1 or cTR or cGR))</data>
+<data key="kind">gene</data>
+<data key="rule">((cPRX and not cGPX) or (not cPRX and cGPX)) and (NOX2 or DUOX1 or cTR or cGR) and not mROS</data>
+<data key="value">1</data>
+</node>
+<node id="cNADPH_NADP">
+<data key="label">cNADPH_NADP</data>
+<data key="kind">gene</data>
+<data key="rule">(mShuttle and PPP and GLUTAMINOLYSIS) or (not mShuttle and PPP and GLUTAMINOLYSIS) or (mShuttle and not PPP and GLUTAMINOLYSIS) or (mShuttle and PPP and not GLUTAMINOLYSIS)</data>
+<data key="kind">gene</data>
+<data key="rule">(mShuttle and not PPP and not GLUTAMINOLYSIS) or (not mShuttle and PPP and not GLUTAMINOLYSIS) or (not mShuttle and not PPP and GLUTAMINOLYSIS)</data>
+<data key="value">1</data>
+</node>
+<node id="cGSH_GSSG">
+<data key="label">cGSH_GSSG</data>
+<data key="kind">gene</data>
+<data key="rule">cGR and not cGPX</data>
+<data key="kind">gene</data>
+<data key="rule">cGR and cGPX</data>
+<data key="value">1</data>
+</node>
+<node id="cATP_ADP">
+<data key="label">cATP_ADP</data>
+<data key="kind">gene</data>
+<data key="rule">GLYCOLYSIS</data>
+<data key="value">1</data>
+</node>
+<node id="AMP_ATP">
+<data key="label">AMP_ATP</data>
+<data key="kind">gene</data>
+<data key="rule">not cATP_ADP and not GLYCOLYSIS</data>
+<data key="value">1</data>
+</node>
+<node id="cTRX">
+<data key="label">cTRX</data>
+<data key="kind">gene</data>
+<data key="rule">cTR and not cROS</data>
+<data key="kind">gene</data>
+<data key="rule">cTR and cROS:1</data>
+<data key="value">1</data>
+</node>
+<node id="cGR">
+<data key="label">cGR</data>
+<data key="kind">gene</data>
+<data key="rule">cGSH_GSSG:2 and (cNADPH_NADP:1 or cNADPH_NADP:2)</data>
+<data key="kind">gene</data>
+<data key="rule">(cNADPH_NADP:1 and not cGSH_GSSG) or (cNADPH_NADP:1 and cGSH_GSSG:1) or (cNADPH_NADP:2 and not cGSH_GSSG) or (cNADPH_NADP:2 and cGSH_GSSG:1)</data>
+<data key="value">1</data>
+</node>
+<node id="cGPX">
+<data key="label">cGPX</data>
+<data key="kind">gene</data>
+<data key="rule">cGSH_GSSG:2 and not cROS</data>
+<data key="kind">gene</data>
+<data key="rule">cGSH_GSSG:1 and not cROS</data>
+<data key="value">1</data>
+</node>
+<node id="cTR">
+<data key="label">cTR</data>
+<data key="kind">gene</data>
+<data key="rule">cTRX:2 and cNADPH_NADP:2</data>
+<data key="kind">gene</data>
+<data key="rule">(cNADPH_NADP:1 and not cTRX) or (cNADPH_NADP:1 and cTRX:1) or (cNADPH_NADP:2 and not cTRX) or (cNADPH_NADP:2 and cTRX:1) or (cNADPH_NADP:1 and cTRX:2)</data>
+<data key="value">1</data>
+</node>
+<node id="cPRX">
+<data key="label">cPRX</data>
+<data key="kind">gene</data>
+<data key="rule">cTRX and not (cROS and LCK)</data>
+<data key="value">1</data>
+</node>
+<node id="TORC1">
+<data key="label">TORC1</data>
+<data key="kind">gene</data>
+<data key="rule">(PDK or AKT) and not AMPK</data>
+<data key="value">1</data>
+</node>
+<node id="TORC2">
+<data key="label">TORC2</data>
+<data key="kind">gene</data>
+<data key="rule">PIP3</data>
+<data key="value">1</data>
+</node>
+<node id="SGK">
+<data key="label">SGK</data>
+<data key="kind">gene</data>
+<data key="rule">PDK and TORC2</data>
+<data key="value">1</data>
+</node>
+<node id="LKB">
+<data key="label">LKB</data>
+<data key="kind">gene</data>
+<data key="rule">LCK</data>
+<data key="value">1</data>
+</node>
+<node id="AMPK">
+<data key="label">AMPK</data>
+<data key="kind">gene</data>
+<data key="rule">(LKB or CAMK2 or AMP_ATP) and not cATP_ADP</data>
+<data key="value">1</data>
+</node>
+<node id="CAMK2">
+<data key="label">CAMK2</data>
+<data key="kind">gene</data>
+<data key="rule">CALM</data>
+<data key="value">1</data>
+</node>
+<node id="PHD">
+<data key="label">PHD</data>
+<data key="kind">gene</data>
+<data key="rule">not cROS and not KrebsCycle</data>
+<data key="value">1</data>
+</node>
+<node id="IKK">
+<data key="label">IKK</data>
+<data key="kind">gene</data>
+<data key="rule">PKCTH or CAMK2 or MAP3K11</data>
+<data key="value">1</data>
+</node>
+<node id="IkB">
+<data key="label">IkB</data>
+<data key="kind">gene</data>
+<data key="rule">not IKK</data>
+<data key="value">1</data>
+</node>
+<node id="PKCA">
+<data key="label">PKCA</data>
+<data key="kind">gene</data>
+<data key="rule">cCa</data>
+<data key="value">1</data>
+</node>
+<node id="CPT1">
+<data key="label">CPT1</data>
+<data key="kind">gene</data>
+<data key="rule">not FAS</data>
+<data key="value">1</data>
+</node>
+<node id="PYR">
+<data key="label">PYR</data>
+<data key="kind">gene</data>
+<data key="rule">GLYCOLYSIS and not mPDH</data>
+<data key="value">1</data>
+</node>
+<node id="AcetylCoA">
+<data key="label">AcetylCoA</data>
+<data key="kind">gene</data>
+<data key="rule">(mPDH or FAO) and not FAS</data>
+<data key="value">1</data>
+</node>
+<node id="GLUT1">
+<data key="label">GLUT1</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1A or cMYC</data>
+<data key="value">1</data>
+</node>
+<node id="GLYCOLYSIS">
+<data key="label">GLYCOLYSIS</data>
+<data key="kind">gene</data>
+<data key="rule">HIF1A or cMYC</data>
+<data key="value">1</data>
+</node>
+<node id="FAO">
+<data key="label">FAO</data>
+<data key="kind">gene</data>
+<data key="rule">CPT1</data>
+<data key="value">1</data>
+</node>
+<node id="FAS">
+<data key="label">FAS</data>
+<data key="kind">gene</data>
+<data key="rule">TORC1 and not AMPK</data>
+<data key="value">1</data>
+</node>
+<node id="GLUTAMINOLYSIS">
+<data key="label">GLUTAMINOLYSIS</data>
+<data key="kind">gene</data>
+<data key="rule">cMYC</data>
+<data key="value">1</data>
+</node>
+<node id="PPP">
+<data key="label">PPP</data>
+<data key="kind">gene</data>
+<data key="rule">cMYC</data>
+<data key="value">1</data>
+</node>
+<node id="KrebsCycle">
+<data key="label">KrebsCycle</data>
+<data key="kind">gene</data>
+<data key="rule">mCa and (AcetylCoA or GLUTAMINOLYSIS) and not mNADH_NAD</data>
+<data key="kind">gene</data>
+<data key="rule">(AcetylCoA or GLUTAMINOLYSIS) and not mCa and not mNADH_NAD</data>
+<data key="value">1</data>
+</node>
+<node id="ETC">
+<data key="label">ETC</data>
+<data key="kind">gene</data>
+<data key="rule">mNADH_NAD and mQH2_Q</data>
+<data key="kind">gene</data>
+<data key="rule">(not mNADH_NAD and mQH2_Q) or (mNADH_NAD:1 and not mQH2_Q) or (mNADH_NAD:2 and not mQH2_Q)</data>
+<data key="value">1</data>
+</node>
+<node id="ATPSyn">
+<data key="label">ATPSyn</data>
+<data key="kind">gene</data>
+<data key="rule">mdH and not mROS and not mCa</data>
+<data key="value">1</data>
+</node>
+<node id="P38">
+<data key="label">P38</data>
+<data key="kind">gene</data>
+<data key="rule">MKK3 or ZAP70</data>
+<data key="value">1</data>
+</node>
+<node id="ERK">
+<data key="label">ERK</data>
+<data key="kind">gene</data>
+<data key="rule">MEK</data>
+<data key="value">1</data>
+</node>
+<node id="FOS">
+<data key="label">FOS</data>
+<data key="kind">gene</data>
+<data key="rule">ERK or P38</data>
+<data key="value">1</data>
+</node>
+<node id="cJUN">
+<data key="label">cJUN</data>
+<data key="kind">gene</data>
+<data key="rule">JNK and cTRX</data>
+<data key="value">1</data>
+</node>
+<node id="JNK">
+<data key="label">JNK</data>
+<data key="kind">gene</data>
+<data key="rule">MAP2K4</data>
+<data key="value">1</data>
+</node>
+<node id="HIF1A">
+<data key="label">HIF1A</data>
+<data key="kind">gene</data>
+<data key="rule">TORC1 or not PHD</data>
+<data key="value">1</data>
+</node>
+<node id="cMYC">
+<data key="label">cMYC</data>
+<data key="kind">gene</data>
+<data key="rule">TORC1 and ERK</data>
+<data key="value">1</data>
+</node>
+<node id="FOXO">
+<data key="label">FOXO</data>
+<data key="kind">gene</data>
+<data key="rule">not AKT and not SGK and AMPK</data>
+<data key="value">1</data>
+</node>
+<node id="AP1">
+<data key="label">AP1</data>
+<data key="kind">gene</data>
+<data key="rule">FOS and cJUN</data>
+<data key="value">1</data>
+</node>
+<node id="NFkB">
+<data key="label">NFkB</data>
+<data key="kind">gene</data>
+<data key="rule">not (cROS or IkB) and PKCA</data>
+<data key="value">1</data>
+</node>
+<node id="NFAT">
+<data key="label">NFAT</data>
+<data key="kind">gene</data>
+<data key="rule">CALN</data>
+<data key="value">1</data>
+</node>
+<node id="IL2">
+<data key="label">IL2</data>
+<data key="kind">gene</data>
+<data key="rule">AP1 and NFAT and NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="CD69">
+<data key="label">CD69</data>
+<data key="kind">gene</data>
+<data key="rule">NFkB and HIF1A</data>
+<data key="value">1</data>
+</node>
+<node id="QUIESCENCE">
+<data key="label">QUIESCENCE</data>
+<data key="kind">fate</data>
+<data key="rule">FOXO and not (AP1 or NFkB or NFAT or cMYC)</data>
+<data key="value">1</data>
+</node>
+<node id="ACTIVATION">
+<data key="label">ACTIVATION</data>
+<data key="kind">fate</data>
+<data key="rule">AP1 and NFAT and NFkB and GLYCOLYSIS and GLUTAMINOLYSIS and not FAO and FAS and PPP and not ATPSyn</data>
+<data key="value">1</data>
+</node>
+<node id="ANERGY">
+<data key="label">ANERGY</data>
+<data key="kind">fate</data>
+<data key="rule">NFAT and not FOXO and not AP1 and not NFkB</data>
+<data key="value">1</data>
+</node>
+<node id="METABOLIC_ANERGY">
+<data key="label">METABOLIC_ANERGY</data>
+<data key="kind">fate</data>
+<data key="rule">GLYCOLYSIS and KrebsCycle and not (FAS and GLUTAMINOLYSIS)</data>
+<data key="value">1</data>
+</node>
+<edge id="MAP2K4:JNK" source="MAP2K4" target="JNK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cTRX:ASK1" source="cTRX" target="ASK1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="LAT:SLP76" source="LAT" target="SLP76">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LAT:HPK1" source="LAT" target="HPK1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LAT:ITK" source="LAT" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LAT:PLCg" source="LAT" target="PLCg">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LAT:GRB2" source="LAT" target="GRB2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mTR:mROS" source="mTR" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="PI3K:PIP3" source="PI3K" target="PIP3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PI3K:ITK" source="PI3K" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TRPM2:RAC1" source="TRPM2" target="RAC1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TRPM2:cCa" source="TRPM2" target="cCa">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="JNK:cJUN" source="JNK" target="cJUN">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="IP3R:STIM" source="IP3R" target="STIM">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="IP3R:cCa" source="IP3R" target="cCa">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FOXO:QUIESCENCE" source="FOXO" target="QUIESCENCE">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FOXO:ANERGY" source="FOXO" target="ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="MKK3:P38" source="MKK3" target="P38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SOS:RAS" source="SOS" target="RAS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMYC:GLYCOLYSIS" source="cMYC" target="GLYCOLYSIS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMYC:GLUT1" source="cMYC" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMYC:GLUTAMINOLYSIS" source="cMYC" target="GLUTAMINOLYSIS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMYC:PPP" source="cMYC" target="PPP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cMYC:QUIESCENCE" source="cMYC" target="QUIESCENCE">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="SHP2:LCK" source="SHP2" target="LCK">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="SHP2:ZAP70" source="SHP2" target="ZAP70">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mQH2_Q:ETC" source="mQH2_Q" target="ETC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="DUOX1:cROS" source="DUOX1" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CALN:NFAT" source="CALN" target="NFAT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="mNADPH_NADP:mShuttle" source="mNADPH_NADP" target="mShuttle">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PLCg:DAG" source="PLCg" target="DAG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PLCg:IP3" source="PLCg" target="IP3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAF:MEK" source="RAF" target="MEK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CPT1:FAO" source="CPT1" target="FAO">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK:AKT" source="PDK" target="AKT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK:SGK" source="PDK" target="SGK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK:TORC1" source="PDK" target="TORC1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PDK:PKCTH" source="PDK" target="PKCTH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="STIM:ORAI1" source="STIM" target="ORAI1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="STIM:PMCA" source="STIM" target="PMCA">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ORAI1:cCa" source="ORAI1" target="cCa">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CAMK2:AMPK" source="CAMK2" target="AMPK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CAMK2:IKK" source="CAMK2" target="IKK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="ZAP70:LAT" source="ZAP70" target="LAT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ZAP70:SLP76" source="ZAP70" target="SLP76">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ZAP70:ITK" source="ZAP70" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ZAP70:P38" source="ZAP70" target="P38">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cJUN:AP1" source="cJUN" target="AP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mCa:KrebsCycle" source="mCa" target="KrebsCycle">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mCa:mPDHP" source="mCa" target="mPDHP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mCa:ATPSyn" source="mCa" target="ATPSyn">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="TORC1:HIF1A" source="TORC1" target="HIF1A">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TORC1:cMYC" source="TORC1" target="cMYC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TORC1:FAS" source="TORC1" target="FAS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1A:GLYCOLYSIS" source="HIF1A" target="GLYCOLYSIS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1A:mPDHK" source="HIF1A" target="mPDHK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1A:GLUT1" source="HIF1A" target="GLUT1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HIF1A:CD69" source="HIF1A" target="CD69">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:IL2" source="NFkB" target="IL2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:ACTIVATION" source="NFkB" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:CD69" source="NFkB" target="CD69">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFkB:ANERGY" source="NFkB" target="ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFkB:QUIESCENCE" source="NFkB" target="QUIESCENCE">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="PKCA:NFkB" source="PKCA" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="KrebsCycle:mIDH2" source="KrebsCycle" target="mIDH2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="KrebsCycle:PHD" source="KrebsCycle" target="PHD">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="KrebsCycle:METABOLIC_ANERGY" source="KrebsCycle" target="METABOLIC_ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RASGRP:RAS" source="RASGRP" target="RAS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="PKCTH:IKK" source="PKCTH" target="IKK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKCTH:RASGRP" source="PKCTH" target="RASGRP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKCTH:PDK" source="PKCTH" target="PDK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKCTH:DUOX1" source="PKCTH" target="DUOX1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PKCTH:NOX2" source="PKCTH" target="NOX2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PYR:mPDH" source="PYR" target="mPDH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="DAG:PKCTH" source="DAG" target="PKCTH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="DAG:RASGRP" source="DAG" target="RASGRP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AMP_ATP:AMPK" source="AMP_ATP" target="AMPK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATPSyn:mATP_ADP" source="ATPSyn" target="mATP_ADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ATPSyn:mdH" source="ATPSyn" target="mdH">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ATPSyn:ACTIVATION" source="ATPSyn" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AKT:FOXO" source="AKT" target="FOXO">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AKT:TORC1" source="AKT" target="TORC1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AKT:PTEN" source="AKT" target="PTEN">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AP1:IL2" source="AP1" target="IL2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AP1:ACTIVATION" source="AP1" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AP1:ANERGY" source="AP1" target="ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AP1:QUIESCENCE" source="AP1" target="QUIESCENCE">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cTR:cROS" source="cTR" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="GLYCOLYSIS:PYR" source="GLYCOLYSIS" target="PYR">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLYCOLYSIS:cATP_ADP" source="GLYCOLYSIS" target="cATP_ADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLYCOLYSIS:AMP_ATP" source="GLYCOLYSIS" target="AMP_ATP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GLYCOLYSIS:ACTIVATION" source="GLYCOLYSIS" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLYCOLYSIS:METABOLIC_ANERGY" source="GLYCOLYSIS" target="METABOLIC_ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPDHK:mPDH" source="mPDHK" target="mPDH">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NOX2:cROS" source="NOX2" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cROS:ORAI1" source="cROS" target="ORAI1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cROS:IP3R" source="cROS" target="IP3R">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cROS:TRPM2" source="cROS" target="TRPM2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cROS:NFkB" source="cROS" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cROS:ZAP70" source="cROS" target="ZAP70">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cROS:LAT" source="cROS" target="LAT">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cROS:cGPX" source="cROS" target="cGPX">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cROS:PHD" source="cROS" target="PHD">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cROS:STIM" source="cROS" target="STIM">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cROS:HV1" source="cROS" target="HV1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cROS:cPRX" source="cROS" target="cPRX">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cROS:mROS" source="cROS" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="HPK1:MAP3K11" source="HPK1" target="MAP3K11">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PHD:HIF1A" source="PHD" target="HIF1A">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mGPX:mGSH_GSSG" source="mGPX" target="mGSH_GSSG">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mGPX:mROS" source="mGPX" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="IKK:IkB" source="IKK" target="IkB">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="NFAT:IL2" source="NFAT" target="IL2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFAT:ACTIVATION" source="NFAT" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFAT:ANERGY" source="NFAT" target="ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="NFAT:QUIESCENCE" source="NFAT" target="QUIESCENCE">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LKB:AMPK" source="LKB" target="AMPK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PPP:cNADPH_NADP" source="PPP" target="cNADPH_NADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PPP:ACTIVATION" source="PPP" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cCa:CALM" source="cCa" target="CALM">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="cCa:PKCA" source="cCa" target="PKCA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AMPK:TORC1" source="AMPK" target="TORC1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="AMPK:FOXO" source="AMPK" target="FOXO">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AMPK:FAS" source="AMPK" target="FAS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LCK:ZAP70" source="LCK" target="ZAP70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LCK:ITK" source="LCK" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LCK:PKCTH" source="LCK" target="PKCTH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LCK:LKB" source="LCK" target="LKB">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="LCK:cPRX" source="LCK" target="cPRX">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LCK:SHP2" source="LCK" target="SHP2">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LCK:CBLB" source="LCK" target="CBLB">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="LCK:PTEN" source="LCK" target="PTEN">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="FOS:AP1" source="FOS" target="AP1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PIP3:PDK" source="PIP3" target="PDK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PIP3:AKT" source="PIP3" target="AKT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PIP3:TORC2" source="PIP3" target="TORC2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="P38:NOX2" source="P38" target="NOX2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="P38:FOS" source="P38" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MEK:ERK" source="MEK" target="ERK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CD28:ZAP70" source="CD28" target="ZAP70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CD28:LCK" source="CD28" target="LCK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CD28:PI3K" source="CD28" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="AcetylCoA:KrebsCycle" source="AcetylCoA" target="KrebsCycle">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CALM:CALN" source="CALM" target="CALN">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="CALM:CAMK2" source="CALM" target="CAMK2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPRX:mROS" source="mPRX" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cPRX:cROS" source="cPRX" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="GLUTAMINOLYSIS:cNADPH_NADP" source="GLUTAMINOLYSIS" target="cNADPH_NADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLUTAMINOLYSIS:KrebsCycle" source="GLUTAMINOLYSIS" target="KrebsCycle">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLUTAMINOLYSIS:ACTIVATION" source="GLUTAMINOLYSIS" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GLUTAMINOLYSIS:METABOLIC_ANERGY" source="GLUTAMINOLYSIS" target="METABOLIC_ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mROS:mGPX" source="mROS" target="mGPX">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="mROS:cROS" source="mROS" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mROS:ATPSyn" source="mROS" target="ATPSyn">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mROS:mPRX" source="mROS" target="mPRX">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cATP_ADP:AMP_ATP" source="cATP_ADP" target="AMP_ATP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cATP_ADP:AMPK" source="cATP_ADP" target="AMPK">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="VAV1:ITK" source="VAV1" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="VAV1:RAC1" source="VAV1" target="RAC1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mShuttle:cNADPH_NADP" source="mShuttle" target="cNADPH_NADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FAO:mNADH_NAD" source="FAO" target="mNADH_NAD">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FAO:AcetylCoA" source="FAO" target="AcetylCoA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FAO:ACTIVATION" source="FAO" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="IkB:NFkB" source="IkB" target="NFkB">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ERK:FOS" source="ERK" target="FOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:cMYC" source="ERK" target="cMYC">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ERK:NOX2" source="ERK" target="NOX2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="GRB2:SOS" source="GRB2" target="SOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAC1:NOX2" source="RAC1" target="NOX2">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="ETC:mROS" source="ETC" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="ETC:mNADH_NAD" source="ETC" target="mNADH_NAD">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cGR:cGSH_GSSG" source="cGR" target="cGSH_GSSG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cGR:cROS" source="cGR" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPDH:mNADH_NAD" source="mPDH" target="mNADH_NAD">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPDH:AcetylCoA" source="mPDH" target="AcetylCoA">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPDH:PYR" source="mPDH" target="PYR">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="CBLB:PI3K" source="CBLB" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="MAP3K11:MAP2K4" source="MAP3K11" target="MAP2K4">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="MAP3K11:IKK" source="MAP3K11" target="IKK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mGR:mROS" source="mGR" target="mROS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mGR:mGSH_GSSG" source="mGR" target="mGSH_GSSG">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ASK1:MKK3" source="ASK1" target="MKK3">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ASK1:MAP2K4" source="ASK1" target="MAP2K4">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SLP76:PI3K" source="SLP76" target="PI3K">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SLP76:PLCg" source="SLP76" target="PLCg">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SLP76:ITK" source="SLP76" target="ITK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SLP76:VAV1" source="SLP76" target="VAV1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TORC2:SGK" source="TORC2" target="SGK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TORC2:AKT" source="TORC2" target="AKT">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAS:SOS" source="RAS" target="SOS">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="RAS:RAF" source="RAS" target="RAF">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TCR:LCK" source="TCR" target="LCK">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="TCR:FYN" source="TCR" target="FYN">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="PTEN:PIP3" source="PTEN" target="PIP3">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="IP3:IP3R" source="IP3" target="IP3R">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FAS:CPT1" source="FAS" target="CPT1">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="FAS:AcetylCoA" source="FAS" target="AcetylCoA">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="FAS:ACTIVATION" source="FAS" target="ACTIVATION">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="FAS:METABOLIC_ANERGY" source="FAS" target="METABOLIC_ANERGY">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mdH:mQH2_Q" source="mdH" target="mQH2_Q">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="mNADH_NAD:KrebsCycle" source="mNADH_NAD" target="KrebsCycle">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mNADH_NAD:mPDHP" source="mNADH_NAD" target="mPDHP">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mNADH_NAD:mPDH" source="mNADH_NAD" target="mPDH">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="mNADH_NAD:mPDHK" source="mNADH_NAD" target="mPDHK">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="null" source="null" target="null">
+<data key="weight">1.0</data>
+<data key="sign">null</data>
+</edge>
+<edge id="PMCA:cCa" source="PMCA" target="cCa">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="FYN:ZAP70" source="FYN" target="ZAP70">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mIDH2:mNADPH_NADP" source="mIDH2" target="mNADPH_NADP">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mIDH2:mShuttle" source="mIDH2" target="mShuttle">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="SGK:FOXO" source="SGK" target="FOXO">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="ITK:PLCg" source="ITK" target="PLCg">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="ITK:VAV1" source="ITK" target="VAV1">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="mPDHP:mPDH" source="mPDHP" target="mPDH">
+<data key="weight">1.0</data>
+<data key="sign">positive</data>
+</edge>
+<edge id="cGPX:cGSH_GSSG" source="cGPX" target="cGSH_GSSG">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+<edge id="cGPX:cROS" source="cGPX" target="cROS">
+<data key="weight">1.0</data>
+<data key="sign">negative</data>
+</edge>
+</graph>
+</graphml>

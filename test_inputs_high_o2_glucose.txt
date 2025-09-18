@@ -1,0 +1,47 @@
+# Input conditions for high O2 + high glucose + low growth factors
+# This should result in OXPHOS and proliferation
+
+# High oxygen and glucose supply
+Oxygen_supply = true
+Glucose_supply = true
+
+# Low growth factor stimuli (matching our config)
+EGFR_stimulus = false
+FGFR_stimulus = false
+TGFBR_stimulus = false
+cMET_stimulus = false
+
+# No growth inhibitors
+Growth_Inhibitor = false
+DNA_damage = false
+
+# No transporter inhibitors
+EGFRI = false
+FGFRI = false
+GLUT1I = false
+MCT1I = false
+MCT4I = false
+cMETI = false
+
+# No external growth factors (they should be produced internally)
+FGF = false
+HGF = false
+
+# No external receptor degradation
+EGFRD = false
+FGFRD = false
+cMETD = false
+
+# No external transporter degradation  
+GLUT1D = false
+MCT1D = false
+MCT4D = false
+
+# No external growth inhibitor
+GI = false
+
+# No MCT1 stimulus (let it be determined by oxygen)
+MCT1_stimulus = false
+
+# External glucose available
+Glucose = true

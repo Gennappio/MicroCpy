@@ -40,6 +40,11 @@ class AutoPlotter:
         self.config = config
         self.plots_dir = Path(plots_dir)
         self.plots_dir.mkdir(parents=True, exist_ok=True)
+        self.simulator = None  # Will be set when available
+
+    def set_simulator(self, simulator):
+        """Set the simulator for environmental data access"""
+        self.simulator = simulator
 
     def _get_threshold_for_substance(self, substance_name):
         """Get the threshold value for a substance if it has a gene network association."""
@@ -72,13 +77,15 @@ class AutoPlotter:
         """Plot concentration heatmap for a single substance with detailed debugging"""
 
         # DEBUG: Print actual concentration values
-        # print(f"🔍 DEBUG {substance_name} heatmap:")
-        # print(f"   Array shape: {concentrations.shape}")
-        # print(f"   Array dtype: {concentrations.dtype}")
-        # print(f"   Raw min: {concentrations.min():.8f}")
-        # print(f"   Raw max: {concentrations.max():.8f}")
-        # print(f"   Raw mean: {concentrations.mean():.8f}")
-        # print(f"   Sample values: {concentrations.flat[:5]}")
+        print(f"🔍 DEBUG {substance_name} heatmap:")
+        print(f"   Array shape: {concentrations.shape}")
+        print(f"   Array dtype: {concentrations.dtype}")
+        print(f"   Raw min: {concentrations.min():.8f}")
+        print(f"   Raw max: {concentrations.max():.8f}")
+        print(f"   Raw mean: {concentrations.mean():.8f}")
+        print(f"   Sample values: {concentrations.flat[:5]}")
+        print(f"   Unique values count: {len(np.unique(concentrations))}")
+        print(f"   First 10 unique values: {np.unique(concentrations)[:10]}")
 
         fig, ax = plt.subplots(figsize=(12, 10))
 
@@ -147,15 +154,41 @@ class AutoPlotter:
 
 
             cell_counter = 0
+
+            # Necrosis thresholds from Jayatilake experiment
+            necrosis_threshold_oxygen = 0.011  # the-necrosis-threshold
+            necrosis_threshold_glucose = 0.23  # the-necrosis-threshold-g
+
             for (x, y), phenotype in cell_data:
                 cell_counter += 1
                 # Convert grid coordinates to physical coordinates
                 phys_x = (x + 0.5) * grid_spacing
                 phys_y = (y + 0.5) * grid_spacing
 
+                # Check for necrosis conditions first if simulator is available
+                is_necrotic_by_environment = False
+                if hasattr(self, 'simulator') and self.simulator and hasattr(self.simulator, 'state'):
+                    try:
+                        local_env = self.simulator.state.get_local_environment((x, y))
+                        oxygen_conc = local_env.get('oxygen_concentration', float('inf'))
+                        glucose_conc = local_env.get('glucose_concentration', float('inf'))
+
+                        # Mark as necrotic if BOTH oxygen AND glucose are below thresholds
+                        if oxygen_conc < necrosis_threshold_oxygen and glucose_conc < necrosis_threshold_glucose:
+                            is_necrotic_by_environment = True
+                    except Exception as e:
+                        # If we can't get environment data, continue with normal coloring
+                        pass
+
                 # Get cell color from custom function if available
                 interior_color = 'lightgray'  # default interior
                 border_color = 'gray'  # default border
+
+                # If necrotic by environment, we will force a black BORDER but keep interior color from metabolism
+                necrotic_env = is_necrotic_by_environment
+                if necrotic_env:
+                    phenotype = 'Necrosis'  # Override phenotype label for legend
+                # Always try custom coloring to compute interior metabolic state (even if necrotic)
                 try:
                     # Try to get the actual cell object to get gene states
                     cell = population.get_cell_at_position((x, y))
@@ -186,6 +219,9 @@ class AutoPlotter:
                             }
                             border_color = phenotype_color_map.get(phenotype, 'gray')
                             interior_color = 'lightgray'
+                        # Enforce black border if necrotic by environment (do not override interior)
+                        if necrotic_env:
+                            border_color = 'black'
                     else:
                         # Use phenotype-based colors as fallback
                         phenotype_color_map = {
@@ -330,8 +366,8 @@ class AutoPlotter:
                                        edgecolor=color, linewidth=2)
                                  for state, color in sorted(border_items.items())]
 
-                border_legend = ax.legend(handles=border_elements, loc='upper left',
-                                        bbox_to_anchor=(0, 0.7),
+                border_legend = ax.legend(handles=border_elements, loc='lower left',
+                                        bbox_to_anchor=(0, 0),
                                         title='🧬 Phenotypes (Border)', fontsize=9,
                                         title_fontsize=10, frameon=True, fancybox=True,
                                         shadow=True, facecolor='white', edgecolor='black',

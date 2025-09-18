@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE gxl SYSTEM "http://ginsim.org/GINML_2_2.dtd">
+<gxl xmlns:xlink="http://www.w3.org/1999/xlink">
+  <graph class="regulatory" id="TUMOR_TNF" nodeorder="TNFR FASL RIP1 cIAP CASP8 ROS MPT MOMP NFkB ATP CASP3 Survival Apoptosis Proliferation">
+    <nodestyle background="#ffffff" foreground="#000000" text="#000000" shape="RECTANGLE" width="45" height="25" properties="intermediate:#ffff00 active:#ffc800"/>
+    <nodestyle name="Node style" background="#cccccc" shape="ELLIPSE" width="90"/>
+    <nodestyle name="Node style 2" background="#ffffff" shape="RECTANGLE" width="115"/>
+    <edgestyle color="#000000" pattern="SIMPLE" line_width="1" properties="positive:#00c800 negative:#c80000 dual:#0000c8"/>
+    <node id="TNFR" maxvalue="1" input="true">
+      <nodevisualsetting x="84" y="46" style="Node style"/>
+    </node>
+    <node id="FASL" maxvalue="1" input="true">
+      <nodevisualsetting x="592" y="49" style="Node style"/>
+    </node>
+    <node id="RIP1" maxvalue="1">
+      <value val="1">
+        <exp str="!CASP8 &amp; (TNFR | FASL)"/>
+      </value>
+      <nodevisualsetting x="162" y="127" style="Node style"/>
+    </node>
+    <node id="cIAP" maxvalue="1">
+      <value val="1">
+        <exp str="(NFkB | cIAP) &amp; !MOMP"/>
+      </value>
+      <nodevisualsetting x="182" y="213" style="Node style"/>
+    </node>
+    <node id="CASP8" maxvalue="1">
+      <value val="1">
+        <exp str="(TNFR | FASL | CASP3) &amp; !NFkB"/>
+      </value>
+      <nodevisualsetting x="592" y="155" style="Node style"/>
+    </node>
+    <node id="ROS" maxvalue="1">
+      <value val="1">
+        <exp str="!NFkB &amp; (RIP1 | MPT)"/>
+      </value>
+      <nodevisualsetting x="279" y="272" style="Node style"/>
+    </node>
+    <node id="MPT" maxvalue="1">
+      <value val="1">
+        <exp str="ROS &amp; !NFkB"/>
+      </value>
+      <nodevisualsetting x="422" y="273" style="Node style"/>
+    </node>
+    <node id="MOMP" maxvalue="1">
+      <value val="1">
+        <exp str="MPT | (CASP8 &amp; !NFkB)"/>
+      </value>
+      <nodevisualsetting x="558" y="272" style="Node style"/>
+    </node>
+    <node id="NFkB" maxvalue="1">
+      <value val="1">
+        <exp str="cIAP &amp; RIP1 &amp; !CASP3"/>
+        <exp str=""/>
+      </value>
+      <nodevisualsetting x="61" y="317" style="Node style"/>
+    </node>
+    <node id="ATP" maxvalue="1">
+      <value val="1">
+        <exp str="!MPT"/>
+      </value>
+      <nodevisualsetting x="431" y="337" style="Node style"/>
+    </node>
+    <node id="CASP3" maxvalue="1">
+      <value val="1">
+        <exp str="ATP &amp; MOMP &amp; !NFkB"/>
+      </value>
+      <nodevisualsetting x="593" y="379" style="Node style"/>
+    </node>
+    <node id="Survival" maxvalue="1">
+      <value val="1">
+        <exp str="NFkB"/>
+      </value>
+      <nodevisualsetting x="46" y="462" style="Node style"/>
+    </node>
+    <node id="Apoptosis" maxvalue="1">
+      <value val="1">
+        <exp str="CASP3 | !ATP"/>
+      </value>
+      <nodevisualsetting x="580" y="469" style="Node style 2"/>
+    </node>
+    <node id="Proliferation" maxvalue="1">
+      <value val="1">
+        <exp str="Survival"/>
+      </value>
+      <nodevisualsetting x="41" y="549" style="Node style 2"/>
+    </node>
+    <edge id="cIAP:NFkB" from="cIAP" to="NFkB" minvalue="1" sign="positive">
+      <edgevisualsetting points="121,219" anchor="NE" style=""/>
+    </edge>
+    <edge id="cIAP:cIAP" from="cIAP" to="cIAP" minvalue="1" sign="positive">
+      <edgevisualsetting anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:cIAP" from="NFkB" to="cIAP" minvalue="1" sign="positive">
+      <edgevisualsetting points="191,332 191,253" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:Survival" from="NFkB" to="Survival" minvalue="1" sign="positive">
+      <edgevisualsetting points="96,402" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:CASP3" from="NFkB" to="CASP3" minvalue="1" sign="negative">
+      <edgevisualsetting points="115,391 459,392 485,393 540,393" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:MOMP" from="NFkB" to="MOMP" minvalue="1" sign="negative">
+      <edgevisualsetting points="174,324 174,257 606,255" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:ROS" from="NFkB" to="ROS" minvalue="1" sign="negative">
+      <edgevisualsetting points="324,338" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:CASP8" from="NFkB" to="CASP8" minvalue="1" sign="negative">
+      <edgevisualsetting points="379,335 379,183" anchor="NE" style=""/>
+    </edge>
+    <edge id="NFkB:MPT" from="NFkB" to="MPT" minvalue="1" sign="negative">
+      <edgevisualsetting points="387,345 387,312 464,312" anchor="NE" style=""/>
+    </edge>
+    <edge id="RIP1:NFkB" from="RIP1" to="NFkB" minvalue="1" sign="positive">
+      <edgevisualsetting points="199,180 97,182" anchor="NE" style=""/>
+    </edge>
+    <edge id="RIP1:ROS" from="RIP1" to="ROS" minvalue="1" sign="positive">
+      <edgevisualsetting points="228,186 327,187" anchor="NE" style=""/>
+    </edge>
+    <edge id="MOMP:CASP3" from="MOMP" to="CASP3" minvalue="1" sign="positive">
+      <edgevisualsetting points="661,294" anchor="NE" style=""/>
+    </edge>
+    <edge id="MOMP:cIAP" from="MOMP" to="cIAP" minvalue="1" sign="negative">
+      <edgevisualsetting points="602,318 224,319" anchor="NE" style=""/>
+    </edge>
+    <edge id="MPT:ROS" from="MPT" to="ROS" minvalue="1" sign="positive">
+      <edgevisualsetting anchor="NE" style=""/>
+    </edge>
+    <edge id="MPT:MOMP" from="MPT" to="MOMP" minvalue="1" sign="positive">
+      <edgevisualsetting anchor="NE" style=""/>
+    </edge>
+    <edge id="MPT:ATP" from="MPT" to="ATP" minvalue="1" sign="negative">
+      <edgevisualsetting points="482,308" anchor="NE" style=""/>
+    </edge>
+    <edge id="CASP3:CASP8" from="CASP3" to="CASP8" minvalue="1" sign="positive">
+      <edgevisualsetting points="730,386 732,167" anchor="NE" style=""/>
+    </edge>
+    <edge id="CASP3:Apoptosis" from="CASP3" to="Apoptosis" minvalue="1" sign="positive">
+      <edgevisualsetting points="629,425" anchor="NE" style=""/>
+    </edge>
+    <edge id="CASP3:NFkB" from="CASP3" to="NFkB" minvalue="1" sign="negative">
+      <edgevisualsetting points="103,404" anchor="NE" style=""/>
+    </edge>
+    <edge id="CASP8:MOMP" from="CASP8" to="MOMP" minvalue="1" sign="positive">
+      <edgevisualsetting points="669,282" anchor="NE" style=""/>
+    </edge>
+    <edge id="CASP8:RIP1" from="CASP8" to="RIP1" minvalue="1" sign="negative">
+      <edgevisualsetting points="318,177 317,148" anchor="NE" style=""/>
+    </edge>
+    <edge id="ATP:CASP3" from="ATP" to="CASP3" minvalue="1" sign="positive">
+      <edgevisualsetting points="620,345" anchor="NE" style=""/>
+    </edge>
+    <edge id="ATP:Apoptosis" from="ATP" to="Apoptosis" minvalue="1" sign="negative">
+      <edgevisualsetting points="513,487" anchor="NE" style=""/>
+    </edge>
+    <edge id="Survival:Proliferation" from="Survival" to="Proliferation" minvalue="1" sign="positive">
+      <edgevisualsetting points="87,528" anchor="NE" style=""/>
+    </edge>
+    <edge id="FASL:RIP1" from="FASL" to="RIP1" minvalue="1" sign="positive">
+      <edgevisualsetting points="617,138" anchor="NE" style=""/>
+    </edge>
+    <edge id="FASL:CASP8" from="FASL" to="CASP8" minvalue="1" sign="positive">
+      <edgevisualsetting anchor="NE" style=""/>
+    </edge>
+    <edge id="TNFR:RIP1" from="TNFR" to="RIP1" minvalue="1" sign="positive">
+      <edgevisualsetting points="117,143" anchor="NE" style=""/>
+    </edge>
+    <edge id="TNFR:CASP8" from="TNFR" to="CASP8" minvalue="1" sign="positive">
+      <edgevisualsetting points="365,62 365,170" anchor="NE" style=""/>
+    </edge>
+    <edge id="ROS:MPT" from="ROS" to="MPT" minvalue="1" sign="positive">
+      <edgevisualsetting anchor="NE" style=""/>
+    </edge>
+  </graph>
+</gxl>
