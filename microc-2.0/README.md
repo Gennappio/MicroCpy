@@ -73,12 +73,24 @@ microc-2.0/
 ├── tests/                 # Example configurations
 │   ├── jayatilake_experiment/  # Main tumor model
 │   └── csv_export_test/        # 2D CSV workflow
+├── benchmarks/            # Validation and performance testing
 └── README.md
 ```
 
 ## Requirements
 - Python 3.8+
 - FiPy, NumPy, Matplotlib, PyYAML
+
+## Validation and Benchmarks
+
+Run validation tests to ensure accuracy:
+```bash
+# Standalone FiPy validation
+python benchmarks/standalone_steadystate_fipy_3D.py
+
+# Gene network comparison
+python benchmarks/gene_network_standalone.py
+```
 
 ## Help
 ```bash
