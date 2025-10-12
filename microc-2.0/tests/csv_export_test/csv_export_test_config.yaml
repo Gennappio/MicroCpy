@@ -1,0 +1,111 @@
+# CSV Export Test Configuration
+# Tests the new CSV export functionality for 2D simulations
+
+domain:
+  size_x: 200.0
+  size_x_unit: "um"
+  size_y: 200.0
+  size_y_unit: "um"
+  nx: 10
+  ny: 10
+  dimensions: 2
+  cell_height: 20.0          # Biological cell height/thickness
+  cell_height_unit: "um"
+
+time:
+  dt: 0.1
+  end_time: 1.0  # Short test run
+  diffusion_step: 2
+  intracellular_step: 1
+  intercellular_step: 5
+
+# Diffusion solver configuration
+diffusion:
+  max_iterations: 1000
+  tolerance: 1e-6
+  solver_type: "steady_state"
+  twodimensional_adjustment_coefficient: 1.0
+
+# Output and saving configuration
+output:
+  save_data_interval: 2        # Save data every 2 steps
+  save_plots_interval: 5       # Generate plots every 5 steps
+  save_final_plots: true
+  save_initial_plots: true
+  status_print_interval: 2     # Print status every 2 steps
+  save_cellstate_interval: 2   # Save CSV cell states every 2 steps
+  cell_size_um: 20.0           # Cell size for export
+
+# Initial state configuration (CSV for 2D)
+initial_state:
+  file_path: "example_2d_cells.csv"
+
+# Substances configuration
+substances:
+  Lactate:
+    diffusion_coeff: 1.8e-10
+    production_rate: 3.0e-15
+    uptake_rate: 0.0
+    initial_value: 1.0
+    boundary_value: 1.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+  Glucose:
+    diffusion_coeff: 6.70e-11
+    production_rate: 0.0
+    uptake_rate: 3.0e-15
+    initial_value: 5.0
+    boundary_value: 5.0
+    boundary_type: "fixed"
+    unit: "mM"
+
+# Substance-gene associations
+associations:
+  Lactate: "Lactate"
+  Glucose: "Glucose"
+
+# Thresholds for gene activation
+thresholds:
+  Lactate:
+    threshold: 2.0
+  Glucose:
+    threshold: 3.0
+
+# Gene network configuration
+gene_network:
+  bnd_file: "jaya_microc.bnd"
+  propagation_steps: 10
+  random_initialization: true
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
+
+  nodes:
+    # Input nodes - simplified for test
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+    Glucose_supply:
+      is_input: true
+      default_state: true
+    Lactate:
+      is_input: true
+      default_state: false
+    DNA_damage:
+      is_input: true
+      default_state: false
+
+# Environment configuration
+environment:
+  ph: 7.4
+
+# Custom parameters
+custom_parameters:
+  cell_cycle_time: 240
+  max_cell_age: 500.0
+
+output_dir: "results/csv_export_test"
+plots_dir: "results/csv_export_test/plots"
+data_dir: "results/csv_export_test/data"
+custom_functions_path: "jayatilake_experiment_cell_functions.py"
+debug_phenotype_detailed: false
+log_simulation_status: false

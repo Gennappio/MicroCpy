@@ -1,0 +1,10 @@
+Oxygen_supply=ON
+Glucose_supply=ON
+MCT1_stimulus=OFF
+Proton_level=OFF
+FGFR_stimulus=OFF
+EGFR_stimulus=OFF
+cMET_stimulus=OFF
+Growth_Inhibitor=OFF
+DNA_damage=OFF
+TGFBR_stimulus=OFF

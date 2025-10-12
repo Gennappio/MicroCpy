@@ -1,0 +1,1236 @@
+#!/usr/bin/env python3
+"""
+Shared VTK Export Module for MicroC 2.0
+
+This module provides VTK export functionality that can be used by:
+1. CSV generator (initial conditions with scalar 0)
+2. MicroC simulation (runtime data with ATP scalars)
+
+The VTK files contain cubic cell geometry with scalar data for visualization.
+"""
+
+import numpy as np
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Union
+from datetime import datetime
+
+# Check if FiPy is available for substance field export
+try:
+    from fipy import CellVariable
+    FIPY_AVAILABLE = True
+except ImportError:
+    FIPY_AVAILABLE = False
+
+
+class VTKSubstanceFieldExporter:
+    """VTK export functionality for substance concentration fields"""
+
+    def __init__(self):
+        """Initialize VTK substance field exporter"""
+        pass
+
+    def export_substance_fields(self, simulator, output_dir: str, step: int) -> List[str]:
+        """
+        Export all substance concentration fields to VTK structured grid format
+
+        Args:
+            simulator: Multi-substance simulator with FiPy variables
+            output_dir: Output directory path
+            step: Simulation step number
+
+        Returns:
+            List of exported VTK file paths
+        """
+        if not FIPY_AVAILABLE:
+            print("[!] FiPy not available - cannot export substance fields")
+            return []
+
+        if not hasattr(simulator, 'fipy_variables') or not simulator.fipy_variables:
+            print("[!] No FiPy variables found in simulator")
+            return []
+
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        exported_files = []
+
+        print(f"[VTK] Exporting {len(simulator.fipy_variables)} substance fields...")
+
+        for substance_name, fipy_var in simulator.fipy_variables.items():
+            try:
+                # Generate output filename
+                vtk_filename = output_path / f"{substance_name}_field_step_{step:06d}.vtk"
+
+                # Export this substance field
+                success = self._export_single_substance_field(
+                    substance_name=substance_name,
+                    fipy_var=fipy_var,
+                    mesh=simulator.fipy_mesh,
+                    output_path=str(vtk_filename),
+                    step=step
+                )
+
+                if success:
+                    exported_files.append(str(vtk_filename))
+                    print(f"   [OK] {substance_name}: {vtk_filename.name}")
+                else:
+                    print(f"   [!] Failed to export {substance_name}")
+
+            except Exception as e:
+                print(f"   [!] Error exporting {substance_name}: {e}")
+
+        print(f"[VTK] Exported {len(exported_files)} substance field files")
+        return exported_files
+
+    def _export_single_substance_field(self, substance_name: str, fipy_var, mesh,
+                                     output_path: str, step: int) -> bool:
+        """
+        Export a single substance field to VTK structured grid format
+
+        Args:
+            substance_name: Name of the substance
+            fipy_var: FiPy CellVariable containing concentration data
+            mesh: FiPy mesh object
+            output_path: Output file path
+            step: Simulation step number
+
+        Returns:
+            True if export successful, False otherwise
+        """
+        try:
+            # Get concentration values
+            concentration_values = np.array(fipy_var.value)
+
+            # Get mesh dimensions - improved detection
+            total_cells = len(concentration_values)
+
+            # Try to get dimensions from mesh attributes
+            if hasattr(mesh, 'nx') and hasattr(mesh, 'ny') and hasattr(mesh, 'nz'):
+                # 3D mesh
+                nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
+                is_3d = True
+                is_3d = True
+            elif hasattr(mesh, 'nx') and hasattr(mesh, 'ny'):
+                # 2D mesh
+                nx, ny = mesh.nx, mesh.ny
+                nz = 1
+                is_3d = False
+            elif hasattr(mesh, 'args') and len(mesh.args) >= 6:
+                # 3D mesh - extract from args
+                nx, ny, nz = mesh.args[3], mesh.args[4], mesh.args[5]
+                is_3d = True
+            else:
+                # Try to infer from total cell count
+                # Try 3D case first (cube root)
+                cube_root = int(np.round(total_cells**(1/3)))
+                if cube_root**3 == total_cells:
+                    nx = ny = nz = cube_root
+                    is_3d = True
+                # Try 2D case (square root)
+                elif total_cells == int(np.sqrt(total_cells))**2:
+                    nx = ny = int(np.sqrt(total_cells))
+                    nz = 1
+                    is_3d = False
+                else:
+                    print(f"[!] Cannot determine mesh dimensions for {substance_name} with {total_cells} cells")
+                    return False
+
+            # Get mesh spacing
+            if hasattr(mesh, 'dx'):
+                dx = float(mesh.dx)
+                dy = float(mesh.dy) if hasattr(mesh, 'dy') else dx
+                dz = float(mesh.dz) if hasattr(mesh, 'dz') else dx
+            else:
+                # Default spacing
+                dx = dy = dz = 1.0
+
+            # Calculate centered origin for VTK export
+            # The FiPy mesh is centered at origin, so VTK should also be centered
+            origin_x = -nx * dx / 2.0
+            origin_y = -ny * dy / 2.0
+            origin_z = -nz * dz / 2.0 if is_3d else 0.0
+
+            # Reshape concentration data to grid
+            expected_size = nx * ny * nz if is_3d else nx * ny
+            if len(concentration_values) != expected_size:
+                print(f"[!] Size mismatch for {substance_name}: got {len(concentration_values)}, expected {expected_size}")
+                return False
+
+            if is_3d:
+                concentrations_grid = concentration_values.reshape((nx, ny, nz))
+            else:
+                concentrations_grid = concentration_values.reshape((nx, ny))
+
+            # Export to VTK
+            self._write_vtk_structured_grid(
+                concentrations=concentrations_grid,
+                substance_name=substance_name,
+                dx=dx, dy=dy, dz=dz,
+                origin_x=origin_x, origin_y=origin_y, origin_z=origin_z,
+                output_path=output_path,
+                step=step,
+                is_3d=is_3d
+            )
+
+            return True
+
+        except Exception as e:
+            print(f"[!] Error in _export_single_substance_field for {substance_name}: {e}")
+            return False
+
+    def _write_vtk_structured_grid(self, concentrations: np.ndarray, substance_name: str,
+                                 dx: float, dy: float, dz: float,
+                                 origin_x: float, origin_y: float, origin_z: float,
+                                 output_path: str, step: int, is_3d: bool = True):
+        """
+        Write concentration data to VTK structured grid format
+
+        Args:
+            concentrations: 2D or 3D array of concentration values
+            substance_name: Name of the substance
+            dx, dy, dz: Grid spacing in meters
+            origin_x, origin_y, origin_z: Grid origin coordinates in meters
+            output_path: Output file path
+            step: Simulation step number
+            is_3d: Whether this is a 3D grid
+        """
+        if is_3d:
+            nx, ny, nz = concentrations.shape
+        else:
+            nx, ny = concentrations.shape
+            nz = 1
+            # Add z dimension for VTK
+            concentrations = concentrations.reshape((nx, ny, 1))
+
+        with open(output_path, 'w') as f:
+            # VTK header
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"{substance_name} concentration field - Step {step}\n")
+            f.write("ASCII\n")
+            f.write("DATASET STRUCTURED_POINTS\n")
+
+            # Grid dimensions (number of points = cells + 1)
+            f.write(f"DIMENSIONS {nx+1} {ny+1} {nz+1}\n")
+
+            # Grid spacing
+            f.write(f"SPACING {dx:.6e} {dy:.6e} {dz:.6e}\n")
+
+            # Origin - now centered to match FiPy mesh centering
+            f.write(f"ORIGIN {origin_x:.6e} {origin_y:.6e} {origin_z:.6e}\n")
+
+            # Cell data (concentration values)
+            total_cells = nx * ny * nz
+            f.write(f"CELL_DATA {total_cells}\n")
+
+            # Scalar data
+            f.write(f"SCALARS {substance_name}_concentration float 1\n")
+            f.write("LOOKUP_TABLE default\n")
+
+            # Write concentration values
+            for k in range(nz):
+                for j in range(ny):
+                    for i in range(nx):
+                        conc = concentrations[i, j, k] if is_3d else concentrations[i, j, 0]
+                        f.write(f"{conc:.6e}\n")
+
+
+class VTKDomainExporter:
+    """Enhanced VTK export for complete domain description with gene networks and metadata"""
+
+    def __init__(self, cell_size_um: float):
+        """Initialize with cell size in micrometers"""
+        self.cell_size_um = cell_size_um
+        self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
+
+    def export_complete_domain(self, positions: np.ndarray, gene_states: Dict,
+                             phenotypes: List[str], metabolism: List[int], metadata: Dict, output_path: str,
+                             original_physical_positions: List = None) -> str:
+        """
+        Export complete domain description with cells, gene networks, phenotypes, metabolism, and metadata
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            gene_states: Dict mapping cell_id -> {gene_name: bool} for each cell
+            phenotypes: List of phenotype strings for each cell
+            metabolism: List of metabolism values (0=none, 1=glycoATP, 2=mitoATP, 3=mixed)
+            metadata: Dict with domain metadata (description, time, bounds, etc.)
+            output_path: Path to save VTK file
+
+        Returns:
+            Path to exported VTK file
+        """
+        # Ensure output directory exists
+        output_dir = Path(output_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create phenotype mapping early to avoid UnboundLocalError
+        phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
+
+        print(f"[*] Exporting complete VTK domain...")
+        print(f"    Cell size: {self.cell_size_um} um")
+        print(f"    Cell count: {len(positions)}")
+        print(f"    Gene networks: {len(gene_states)} cells")
+        print(f"    Phenotypes: {len(set(phenotypes))} unique types")
+
+        # Get all gene node names from first cell
+        gene_nodes = list(next(iter(gene_states.values())).keys()) if gene_states else []
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            # VTK header with embedded metadata in description line
+            # Encode metadata as JSON-like string in the description
+            metadata_str = (f"cells={len(positions)} "
+                          f"size={metadata.get('biocell_grid_size_um', self.cell_size_um)}um "
+                          f"genes={','.join(gene_nodes)} "
+                          f"phenotypes={','.join(sorted(set(phenotypes)))} "
+                          f"time={metadata.get('simulated_time', 0.0)} "
+                          f"bounds={metadata.get('domain_bounds_um', 'auto')}")
+
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"MicroC Domain: {metadata.get('description', 'Generated domain')} | {metadata_str}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = self.cell_size_m / 2.0  # Half cell size in meters
+
+            # Use original physical positions if available, otherwise convert from biological grid
+            if original_physical_positions and len(original_physical_positions) == len(positions):
+                print(f"[INFO] Using original physical positions for VTK export")
+                for i, orig_pos_um in enumerate(original_physical_positions):
+                    # Convert from micrometers to meters
+                    x_center = orig_pos_um[0] * 1e-6
+                    y_center = orig_pos_um[1] * 1e-6
+                    z_center = orig_pos_um[2] * 1e-6
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+            else:
+                print(f"[INFO] Converting biological grid coordinates to physical coordinates")
+                # Center positions around (0,0,0) for consistency
+                if len(positions) > 0:
+                    # Calculate center of mass
+                    center_x = sum(pos[0] for pos in positions) / len(positions)
+                    center_y = sum(pos[1] for pos in positions) / len(positions)
+                    center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+                else:
+                    center_x = center_y = center_z = 0.0
+
+                for pos in positions:
+                    # Convert from biological grid coordinates to physical coordinates (meters)
+                    # Center around (0,0,0) by subtracting center of mass
+                    x_center = (pos[0] - center_x) * self.cell_size_m
+                    y_center = (pos[1] - center_y) * self.cell_size_m
+                    z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+
+                # Print success message for original positions
+                print(f"[+] Complete VTK domain exported: {Path(output_path).name}")
+                print(f"    Format: Unstructured Grid (.vtk)")
+                print(f"    Cell representation: 3D cubes (hexahedrons)")
+                print(f"    Data: {len(positions)} cubes with {self.cell_size_um} um edge length")
+                print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
+                print(f"    Phenotypes: {list(phenotype_map.keys())}")
+
+            # Cell connectivity (hexahedrons)
+            num_cells = len(positions)
+            f.write(f"CELLS {num_cells} {num_cells * 9}\n")  # 9 = 8 vertices + 1 count
+
+            for i in range(num_cells):
+                base_idx = i * 8
+                # Hexahedron connectivity (VTK_HEXAHEDRON = 12)
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
+
+            # Cell types (all hexahedrons)
+            f.write(f"CELL_TYPES {num_cells}\n")
+            for _ in range(num_cells):
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
+
+            # Cell data section
+            f.write(f"CELL_DATA {num_cells}\n")
+
+            # Phenotype data
+            f.write(f"SCALARS Phenotype int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for phenotype in phenotypes:
+                f.write(f"{phenotype_map[phenotype]}\n")
+
+            # Metabolism data (0=none, 1=glycoATP, 2=mitoATP, 3=mixed)
+            f.write(f"SCALARS Metabolism int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for metab in metabolism:
+                f.write(f"{metab}\n")
+
+            # Gene network data (each gene as separate scalar field)
+            for gene_name in gene_nodes:
+                f.write(f"SCALARS {gene_name} int 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for i in range(len(positions)):
+                    cell_genes = gene_states.get(i, {})
+                    activation = 1 if cell_genes.get(gene_name, False) else 0
+                    f.write(f"{activation}\n")
+
+        print(f"[+] Complete VTK domain exported: {Path(output_path).name}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: 3D cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with {self.cell_size_um} um edge length")
+        print(f"    Gene networks: {len(gene_nodes)} nodes per cell")
+        print(f"    Phenotypes: {list(phenotype_map.keys())}")
+
+        # Also export logical positions (with proper filename)
+        if '_domain.vtk' in output_path:
+            logical_output_path = output_path.replace('_domain.vtk', '_logical.vtk')
+        else:
+            # For simulation files like cells_step_000000.vtk
+            logical_output_path = output_path.replace('.vtk', '_logical.vtk')
+
+        self._export_logical_positions(positions, phenotypes, gene_states, gene_nodes,
+                                     metabolism, metadata, logical_output_path)
+
+        return output_path
+
+    def _export_logical_positions(self, positions: np.ndarray, phenotypes: List[str],
+                                gene_states: Dict, gene_nodes: List[str], metabolism: List[int],
+                                metadata: Dict, output_path: str) -> str:
+        """
+        Export logical positions (biological grid coordinates) with all gene and phenotype data
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            phenotypes: List of phenotype strings for each cell
+            gene_states: Dict mapping cell_id -> {gene_name: bool} for each cell
+            gene_nodes: List of all gene node names
+            metabolism: List of metabolism values for each cell
+            metadata: Dict with domain metadata
+            output_path: Path to save logical VTK file
+
+        Returns:
+            Path to exported logical VTK file
+        """
+
+        # Create phenotype mapping
+        phenotype_map = {p: i for i, p in enumerate(sorted(set(phenotypes)))}
+
+        # Embed metadata in description line
+        metadata_str = (f"cells={len(positions)} "
+                      f"size={metadata.get('biocell_grid_size_um', self.cell_size_um)}um "
+                      f"genes={','.join(gene_nodes)} "
+                      f"phenotypes={','.join(sorted(set(phenotypes)))} "
+                      f"time={metadata.get('simulated_time', 0.0)} "
+                      f"bounds={metadata.get('domain_bounds_um', 'auto')}")
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            # VTK header with embedded metadata in description line
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"MicroC Logical Positions: {metadata.get('description', 'Generated domain')} | {metadata_str}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = 0.5  # Half of unit cube size (1.0)
+
+            for pos in positions:
+                # Use logical coordinates directly (biological grid coordinates)
+                x_center = float(pos[0])
+                y_center = float(pos[1])
+                z_center = float(pos[2]) if len(pos) > 2 else 0.0
+
+                # Generate 8 vertices for unit cube
+                vertices = [
+                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                ]
+
+                for vertex in vertices:
+                    f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+
+            # Cells (hexahedrons - 8 vertices per cube)
+            f.write(f"CELLS {len(positions)} {len(positions) * 9}\n")
+            for i in range(len(positions)):
+                base_idx = i * 8
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
+
+            # Cell types (all hexahedrons)
+            f.write(f"CELL_TYPES {len(positions)}\n")
+            for i in range(len(positions)):
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
+
+            # Cell data
+            f.write(f"CELL_DATA {len(positions)}\n")
+
+            # Phenotype data
+            f.write(f"SCALARS Phenotype int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for phenotype in phenotypes:
+                f.write(f"{phenotype_map[phenotype]}\n")
+
+            # Metabolism data
+            f.write(f"SCALARS Metabolism int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for metab in metabolism:
+                f.write(f"{metab}\n")
+
+            # Gene network data (each gene as separate scalar field)
+            for gene_name in gene_nodes:
+                f.write(f"SCALARS {gene_name} int 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for i in range(len(positions)):
+                    cell_genes = gene_states.get(i, {})
+                    activation = 1 if cell_genes.get(gene_name, False) else 0
+                    f.write(f"{activation}\n")
+
+        return output_path
+
+
+class VTKDomainLoader:
+    """Load complete domain description from enhanced VTK files"""
+
+    def __init__(self):
+        """Initialize VTK domain loader"""
+        pass
+
+    def load_complete_domain(self, vtk_path: str) -> Dict:
+        """
+        Load complete domain description from VTK file
+
+        Args:
+            vtk_path: Path to VTK domain file
+
+        Returns:
+            Dict containing positions, gene_states, phenotypes, metadata
+        """
+        print(f"[VTK] Loading complete domain from {vtk_path}")
+
+        with open(vtk_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # Parse metadata from description line
+        metadata = {}
+        gene_nodes = []
+        phenotype_types = []
+
+        # Look for description line (second line)
+        if len(lines) >= 2:
+            desc_line = lines[1].strip()
+            if "|" in desc_line:
+                # Extract metadata part after the "|"
+                parts = desc_line.split("|", 1)
+                if len(parts) == 2:
+                    metadata_part = parts[1].strip()
+
+                    # Parse key=value pairs
+                    for item in metadata_part.split():
+                        if "=" in item:
+                            key, value = item.split("=", 1)
+                            if key == "genes":
+                                gene_nodes = value.split(",") if value else []
+                            elif key == "phenotypes":
+                                phenotype_types = value.split(",") if value else []
+                            elif key == "cells":
+                                metadata['cell_count'] = int(value)
+                            elif key == "size":
+                                # Extract numeric value from "20.0um" format
+                                size_str = value.replace("um", "")
+                                metadata['biocell_grid_size_um'] = float(size_str)
+                            elif key == "time":
+                                metadata['simulated_time'] = float(value)
+                            elif key == "bounds":
+                                metadata['domain_bounds_um'] = value
+                            else:
+                                metadata[key] = value
+
+        # Parse cell positions from POINTS section
+        positions = []
+        points_section = False
+        cell_data_section = False
+        current_scalar = None
+        scalar_data = {}
+
+        for i, line in enumerate(lines):
+            line = line.strip()
+
+            if line.startswith("POINTS"):
+                points_section = True
+                total_points = int(line.split()[1])
+                continue
+            elif line.startswith("CELLS"):
+                points_section = False
+                continue
+            elif line.startswith("CELL_DATA"):
+                cell_data_section = True
+                continue
+            elif line.startswith("SCALARS"):
+                if cell_data_section:
+                    current_scalar = line.split()[1]
+                    scalar_data[current_scalar] = []
+                continue
+            elif line.startswith("LOOKUP_TABLE"):
+                continue
+
+            if points_section and line and not line.startswith("#"):
+                # Parse point coordinates (8 points per cell)
+                coords = list(map(float, line.split()))
+                if len(coords) == 3:
+                    positions.append(coords)
+            elif cell_data_section and current_scalar and line and not line.startswith("#") and not line.startswith("SCALARS"):
+                # Parse scalar data
+                try:
+                    value = int(line)
+                    scalar_data[current_scalar].append(value)
+                except ValueError:
+                    pass
+
+        # Convert point coordinates to cell centers (every 8 points = 1 cell)
+        cell_positions = []
+        original_physical_positions = []  # Store original physical positions in meters
+        cell_size_m = metadata.get('biocell_grid_size_um', 20.0) * 1e-6
+
+        for i in range(0, len(positions), 8):
+            if i + 7 < len(positions):
+                # Calculate cell center from cube vertices
+                cube_points = positions[i:i+8]
+                center_x = sum(p[0] for p in cube_points) / 8
+                center_y = sum(p[1] for p in cube_points) / 8
+                center_z = sum(p[2] for p in cube_points) / 8
+
+                # Store original physical position in meters
+                original_physical_positions.append([center_x, center_y, center_z])
+
+                # Convert back to biological grid coordinates (preserve centering around 0,0,0)
+                bio_x = center_x / cell_size_m
+                bio_y = center_y / cell_size_m
+                bio_z = center_z / cell_size_m
+
+                cell_positions.append([bio_x, bio_y, bio_z])
+
+        # Parse gene states, phenotypes, and metabolism
+        gene_states = {}
+        phenotypes = []
+        metabolism = []
+
+        # Get phenotype mapping
+        phenotype_values = scalar_data.get('Phenotype', [])
+        phenotype_map = {i: p for i, p in enumerate(phenotype_types)}
+
+        # Get metabolism values
+        metabolism_values = scalar_data.get('Metabolism', [])
+
+        for i in range(len(cell_positions)):
+            # Gene states for this cell
+            cell_genes = {}
+            for gene_name in gene_nodes:
+                if gene_name in scalar_data and i < len(scalar_data[gene_name]):
+                    cell_genes[gene_name] = bool(scalar_data[gene_name][i])
+            gene_states[i] = cell_genes
+
+            # Phenotype for this cell
+            if i < len(phenotype_values):
+                phenotype_idx = phenotype_values[i]
+                phenotype = phenotype_map.get(phenotype_idx, 'Unknown')
+                phenotypes.append(phenotype)
+            else:
+                phenotypes.append('Unknown')
+
+            # Metabolism for this cell
+            if i < len(metabolism_values):
+                metabolism.append(metabolism_values[i])
+            else:
+                metabolism.append(0)  # Default to none
+
+        result = {
+            'positions': np.array(cell_positions),
+            'original_physical_positions': np.array(original_physical_positions),
+            'gene_states': gene_states,
+            'phenotypes': phenotypes,
+            'metabolism': metabolism,
+            'metadata': metadata,
+            'gene_nodes': gene_nodes,
+            'phenotype_types': phenotype_types
+        }
+
+        print(f"[+] Loaded domain: {len(cell_positions)} cells")
+        print(f"    Cell size: {metadata.get('biocell_grid_size_um', 'unknown')} um")
+        print(f"    Gene nodes: {len(gene_nodes)}")
+        print(f"    Phenotypes: {len(set(phenotypes))} types")
+
+        return result
+
+
+class VTKCellExporter:
+    """Shared VTK export functionality for cubic cell geometry"""
+
+    def __init__(self, cell_size_um: float = 5.0):
+        """
+        Initialize VTK exporter
+
+        Args:
+            cell_size_um: Cell size in micrometers
+        """
+        self.cell_size_um = cell_size_um
+        self.cell_size_m = cell_size_um * 1e-6  # Convert to meters
+
+    def export_logical_positions(self, positions: np.ndarray, scalars: np.ndarray,
+                                output_path: str, scalar_name: str = "ATP_Type",
+                                title: str = "Logical Cell Positions"):
+        """
+        Export cell logical positions (biological grid coordinates) as unit cubes in VTK format
+
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            scalars: N array of scalar values for each cell
+            output_path: Path to save VTK file
+            scalar_name: Name of the scalar field
+            title: Title for VTK file
+        """
+
+        # Ensure output directory exists
+        output_dir = Path(output_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"[*] Exporting VTK logical positions...")
+        print(f"    Cell count: {len(positions)}")
+        print(f"    Scalar field: {scalar_name}")
+        print(f"    Format: Unit cubes (logical coordinates)")
+
+        with open(output_path, 'w') as f:
+            # VTK header
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"{title}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+
+            half_size = 0.5  # Half of unit cube size (1.0)
+
+            for pos in positions:
+                # Use logical coordinates directly (biological grid coordinates)
+                x_center = float(pos[0])
+                y_center = float(pos[1])
+                z_center = float(pos[2]) if len(pos) > 2 else 0.0
+
+                # Generate 8 vertices for unit cube
+                vertices = [
+                    [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                    [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                    [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                    [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                    [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                    [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                    [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                    [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                ]
+
+                for vertex in vertices:
+                    f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+
+            # Cells (hexahedrons - 8 vertices per cube)
+            f.write(f"CELLS {len(positions)} {len(positions) * 9}\n")
+            for i in range(len(positions)):
+                base_idx = i * 8
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} "
+                       f"{base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
+
+            # Cell types (all hexahedrons)
+            f.write(f"CELL_TYPES {len(positions)}\n")
+            for i in range(len(positions)):
+                f.write("12\n")  # VTK_HEXAHEDRON = 12
+
+            # Cell data (scalars)
+            f.write(f"CELL_DATA {len(positions)}\n")
+            f.write(f"SCALARS {scalar_name} int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for scalar in scalars:
+                f.write(f"{int(scalar)}\n")
+
+        print(f"[+] VTK logical positions exported: {Path(output_path).name}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: Unit cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with 1.0 unit edge length")
+
+        return output_path
+    
+    def export_cubic_cells(self, positions: np.ndarray, scalars: np.ndarray,
+                          output_path: str, scalar_name: str = "ATP_Type",
+                          title: str = "Cubic Cells from MicroC",
+                          use_original_positions: bool = False):
+        """
+        Export cell positions as cubic cells in VTK format
+        
+        Args:
+            positions: Nx3 array of cell positions (biological grid coordinates)
+            scalars: N array of scalar values for each cell
+            output_path: Path to save VTK file
+            scalar_name: Name of the scalar field
+            title: Title for VTK file
+        """
+        
+        # Ensure output directory exists
+        output_dir = Path(output_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"[*] Exporting VTK cubic cells...")
+        print(f"    Cell size: {self.cell_size_um} um")
+        print(f"    Cell count: {len(positions)}")
+        print(f"    Scalar field: {scalar_name}")
+        
+        with open(output_path, 'w') as f:
+            # VTK header
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"{title}\n")
+            f.write("ASCII\n")
+            f.write("DATASET UNSTRUCTURED_GRID\n")
+            
+            # Generate cube vertices for each cell (8 vertices per cube)
+            total_points = len(positions) * 8
+            f.write(f"POINTS {total_points} float\n")
+            
+            if use_original_positions:
+                # Use original physical positions as-is (already in meters)
+                half_size = self.cell_size_m / 2.0  # Half cell size in meters
+
+                for pos in positions:
+                    # Use original physical coordinates directly (already in meters)
+                    x_center = pos[0]
+                    y_center = pos[1]
+                    z_center = pos[2] if len(pos) > 2 else 0.0
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    # Write vertices
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+            else:
+                # Standard behavior: convert logical to physical and center around (0,0,0)
+                half_size = self.cell_size_m / 2.0  # Half cell size in meters
+
+                # Center positions around (0,0,0) for consistency
+                if len(positions) > 0:
+                    # Calculate center of mass
+                    center_x = sum(pos[0] for pos in positions) / len(positions)
+                    center_y = sum(pos[1] for pos in positions) / len(positions)
+                    center_z = sum(pos[2] if len(pos) > 2 else 0 for pos in positions) / len(positions)
+                else:
+                    center_x = center_y = center_z = 0.0
+
+                for pos in positions:
+                    # Convert from biological grid coordinates to physical coordinates (meters)
+                    # Center around (0,0,0) by subtracting center of mass
+                    x_center = (pos[0] - center_x) * self.cell_size_m
+                    y_center = (pos[1] - center_y) * self.cell_size_m
+                    z_center = ((pos[2] if len(pos) > 2 else 0) - center_z) * self.cell_size_m
+
+                    # Generate 8 vertices of the cube around the center
+                    vertices = [
+                        [x_center - half_size, y_center - half_size, z_center - half_size],  # 0
+                        [x_center + half_size, y_center - half_size, z_center - half_size],  # 1
+                        [x_center + half_size, y_center + half_size, z_center - half_size],  # 2
+                        [x_center - half_size, y_center + half_size, z_center - half_size],  # 3
+                        [x_center - half_size, y_center - half_size, z_center + half_size],  # 4
+                        [x_center + half_size, y_center - half_size, z_center + half_size],  # 5
+                        [x_center + half_size, y_center + half_size, z_center + half_size],  # 6
+                        [x_center - half_size, y_center + half_size, z_center + half_size],  # 7
+                    ]
+
+                    # Write vertices
+                    for vertex in vertices:
+                        f.write(f"{vertex[0]:.6e} {vertex[1]:.6e} {vertex[2]:.6e}\n")
+            
+            # Cells (hexahedrons - one per cell)
+            f.write(f"\nCELLS {len(positions)} {len(positions) * 9}\n")
+            for i in range(len(positions)):
+                base_idx = i * 8
+                # VTK hexahedron connectivity (8 vertices per cube)
+                f.write(f"8 {base_idx} {base_idx+1} {base_idx+2} {base_idx+3} {base_idx+4} {base_idx+5} {base_idx+6} {base_idx+7}\n")
+            
+            # Cell types (VTK_HEXAHEDRON = 12)
+            f.write(f"\nCELL_TYPES {len(positions)}\n")
+            for i in range(len(positions)):
+                f.write("12\n")
+            
+            # Cell data (one value per cube)
+            f.write(f"\nCELL_DATA {len(positions)}\n")
+            
+            # Scalar data
+            f.write(f"SCALARS {scalar_name} int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            for scalar in scalars:
+                f.write(f"{int(scalar)}\n")
+        
+        print(f"[+] VTK cubic cells exported: {output_path}")
+        print(f"    Format: Unstructured Grid (.vtk)")
+        print(f"    Cell representation: 3D cubes (hexahedrons)")
+        print(f"    Data: {len(positions)} cubes with {self.cell_size_um} um edge length")
+        
+        return output_path
+    
+    def export_initial_conditions(self, positions: np.ndarray, output_prefix: str = "initial_cells"):
+        """
+        Export initial conditions with all scalars set to 0
+        
+        Args:
+            positions: Nx3 array of cell positions
+            output_prefix: Output file prefix
+        """
+        # Create output directory
+        output_dir = Path("tools/generated_h5")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # All cells start with scalar 0 (no ATP production)
+        scalars = np.zeros(len(positions), dtype=int)
+        
+        # Generate output filename
+        vtk_filename = output_dir / f"{output_prefix}_cells.vtk"
+        
+        return self.export_cubic_cells(
+            positions=positions,
+            scalars=scalars,
+            output_path=str(vtk_filename),
+            scalar_name="ATP_Type",
+            title="Initial Cubic Cells from MicroC CSV Generator"
+        )
+    
+    def export_simulation_state(self, cell_data: List[Tuple], output_dir: str,
+                               step: int, scalar_name: str = "ATP_Type",
+                               original_positions_data: List = None):
+        """
+        Export simulation state with ATP production scalars
+        
+        Args:
+            cell_data: List of (position, atp_type) tuples
+            output_dir: Output directory path
+            step: Simulation step number
+            scalar_name: Name of scalar field
+        """
+        if not cell_data:
+            print("[!] No cell data to export")
+            return None
+        
+        # Extract positions and ATP types
+        logical_positions = np.array([pos for pos, _ in cell_data])
+        atp_types = np.array([atp_type for _, atp_type in cell_data])
+
+        # Use original physical positions if available, otherwise convert logical to physical
+        if original_positions_data and any(pos is not None for pos in original_positions_data):
+            # Use original physical positions (already in micrometers)
+            physical_positions = []
+            for i, orig_data in enumerate(original_positions_data):
+                if orig_data is not None:
+                    orig_pos, _ = orig_data
+                    # Convert from micrometers to meters for VTK
+                    physical_positions.append([
+                        orig_pos[0] * 1e-6,  # um to m
+                        orig_pos[1] * 1e-6,
+                        orig_pos[2] * 1e-6
+                    ])
+                else:
+                    # Fallback to logical position conversion
+                    logical_pos = logical_positions[i]
+                    physical_positions.append([
+                        logical_pos[0] * self.cell_size_m,
+                        logical_pos[1] * self.cell_size_m,
+                        (logical_pos[2] if len(logical_pos) > 2 else 0) * self.cell_size_m
+                    ])
+            physical_positions = np.array(physical_positions)
+            print(f"[INFO] Using original physical positions for {len([p for p in original_positions_data if p is not None])} cells")
+        else:
+            # Convert logical positions to physical positions (standard behavior)
+            physical_positions = logical_positions
+            print(f"[INFO] Using logical positions (no original physical positions available)")
+
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Generate output filenames
+        vtk_filename = output_path / f"cells_step_{step:06d}.vtk"
+        logical_filename = output_path / f"cells_logical_step_{step:06d}.vtk"
+
+        # Export physical cubes using original or converted positions
+        use_original = original_positions_data and any(pos is not None for pos in original_positions_data)
+        physical_result = self.export_cubic_cells(
+            positions=physical_positions,
+            scalars=atp_types,
+            output_path=str(vtk_filename),
+            scalar_name=scalar_name,
+            title=f"MicroC Simulation Cells - Step {step}",
+            use_original_positions=use_original
+        )
+
+        # Export logical positions (always use logical coordinates)
+        logical_result = self.export_logical_positions(
+            positions=logical_positions,
+            scalars=atp_types,
+            output_path=str(logical_filename),
+            scalar_name=scalar_name,
+            title=f"MicroC Logical Positions - Step {step}"
+        )
+
+        return physical_result
+
+
+def get_atp_type_from_gene_states(gene_states: Dict[str, bool]) -> int:
+    """
+    Convert gene network states to ATP type scalar
+    
+    Args:
+        gene_states: Dictionary of gene name -> boolean state
+        
+    Returns:
+        ATP type: 0=none, 1=mitoATP, 2=glycoATP, 3=both
+    """
+    mito_atp = gene_states.get('mitoATP', False)
+    glyco_atp = gene_states.get('glycoATP', False)
+    
+    if mito_atp and glyco_atp:
+        return 3  # Both
+    elif mito_atp and not glyco_atp:
+        return 1  # Mito only
+    elif not mito_atp and glyco_atp:
+        return 2  # Glyco only
+    else:
+        return 0  # None
+
+
+def get_atp_type_from_phenotype(phenotype: str) -> int:
+    """
+    Convert phenotype to ATP type scalar (fallback method)
+    
+    Args:
+        phenotype: Cell phenotype string
+        
+    Returns:
+        ATP type: 0=none, 1=mitoATP, 2=glycoATP, 3=both
+    """
+    # Simple mapping based on phenotype
+    # This is a fallback - gene states are preferred
+    if phenotype == "Proliferation":
+        return 3  # Both ATP types for high energy demand
+    elif phenotype == "Growth_Arrest":
+        return 1  # Mito only for maintenance
+    elif phenotype == "Apoptosis":
+        return 0  # No ATP production
+    else:  # Quiescent
+        return 2  # Glyco only for basic metabolism
+
+
+# Example usage functions
+def export_csv_initial_conditions(positions: np.ndarray, cell_size_um: float,
+                                output_prefix: str) -> str:
+    """Export initial conditions for CSV generator"""
+    exporter = VTKCellExporter(cell_size_um)
+    return exporter.export_initial_conditions(positions, output_prefix)
+
+
+def export_microc_simulation_state(population, output_dir: str, step: int,
+                                  cell_size_um: float) -> Optional[str]:
+    """Export simulation state for MicroC using comprehensive domain export (same as generation)"""
+
+    if not population.state.cells:
+        print("[!] No cells to export")
+        return None
+
+    # Use the same comprehensive domain exporter as the original VTK generation
+    exporter = VTKDomainExporter(cell_size_um)
+
+    # Extract comprehensive cell data (same format as original VTK generation)
+    positions = []
+    gene_states = {}
+    phenotypes = []
+    metabolism = []
+    original_physical_positions = []
+
+    for i, (cell_id, cell) in enumerate(population.state.cells.items()):
+        # Use logical position for biological grid coordinates
+        positions.append(cell.state.position)
+
+        # Store original physical position if available
+        if hasattr(cell.state, 'original_physical_position') and cell.state.original_physical_position:
+            original_physical_positions.append(cell.state.original_physical_position)
+        else:
+            original_physical_positions.append(None)
+
+        # Extract gene states (same format as original)
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            gene_states[i] = cell.state.gene_states.copy()
+        else:
+            gene_states[i] = {}
+
+        # Extract phenotype
+        phenotypes.append(cell.state.phenotype)
+
+        # Extract metabolism from gene states (same logic as original generation)
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            mito_atp = cell.state.gene_states.get('mitoATP', False)
+            glyco_atp = cell.state.gene_states.get('glycoATP', False)
+
+            if mito_atp and glyco_atp:
+                metab = 3  # Mixed ATP
+            elif mito_atp:
+                metab = 2  # Mitochondrial ATP only
+            elif glyco_atp:
+                metab = 1  # Glycolytic ATP only
+            else:
+                metab = 0  # No ATP production
+        else:
+            metab = 0  # Default: no ATP production
+
+        metabolism.append(metab)
+
+    # Create metadata (same format as original generation)
+    from datetime import datetime
+    metadata = {
+        'description': f'MicroC simulation state at step {step}',
+        'simulated_time': step * 0.1,  # Assuming 0.1 time units per step
+        'suggested_cell_size_um': cell_size_um,
+        'biocell_grid_size_um': cell_size_um,
+        'domain_bounds_um': 'simulation_domain',
+        'generation_timestamp': datetime.now().isoformat(),
+        'simulation_step': step
+    }
+
+    # Create output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Export using the same comprehensive domain export as original generation
+    # Handle negative step numbers (e.g., -1 for initial state)
+    if step < 0:
+        vtk_filename = output_path / f"cells_step_{step:07d}.vtk"  # -0000001
+    else:
+        vtk_filename = output_path / f"cells_step_{step:06d}.vtk"   # 000000
+
+    # Filter out None values from original_physical_positions
+    filtered_original_positions = [pos for pos in original_physical_positions if pos is not None]
+    use_original_positions = len(filtered_original_positions) == len(positions)
+
+    result = exporter.export_complete_domain(
+        positions=np.array(positions),
+        gene_states=gene_states,
+        phenotypes=phenotypes,
+        metabolism=metabolism,
+        metadata=metadata,
+        output_path=str(vtk_filename),
+        original_physical_positions=filtered_original_positions if use_original_positions else None
+    )
+
+    print(f"[+] VTK cell state exported: {vtk_filename}")
+    return result
+
+
+def export_microc_substance_fields(simulator, output_dir: str, step: int) -> List[str]:
+    """Export substance concentration fields to VTK format for MicroC simulation"""
+    exporter = VTKSubstanceFieldExporter()
+    return exporter.export_substance_fields(simulator, output_dir, step)
+
+
+def export_microc_gene_states(population, output_dir: str, step: int) -> Optional[str]:
+    """Export gene network states to H5 format for MicroC simulation"""
+    import h5py
+    from datetime import datetime
+
+    if not population.state.cells:
+        print("[!] No cells to export gene states")
+        return None
+
+    # Create output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Generate output filename
+    h5_filename = output_path / f"gene_states_step_{step:06d}.h5"
+
+    print(f"[*] Exporting gene network states...")
+    print(f"    Cell count: {len(population.state.cells)}")
+    print(f"    Step: {step}")
+
+    with h5py.File(h5_filename, 'w') as f:
+        # Create main group
+        main_group = f.create_group('gene_states')
+
+        # Store gene states for each cell
+        for cell_id, cell in population.state.cells.items():
+            cell_group = main_group.create_group(cell_id)
+
+            # Get gene states from cell
+            if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+                gene_states = cell.state.gene_states
+            else:
+                # If no gene states, create empty dict
+                gene_states = {}
+
+            # Store each gene state
+            for gene_name, state in gene_states.items():
+                cell_group.create_dataset(gene_name, data=bool(state))
+
+        # Create metadata group
+        metadata_group = f.create_group('metadata')
+        metadata_group.attrs['timestamp'] = datetime.now().isoformat()
+        metadata_group.attrs['version'] = "MicroC-Simulation-2.0"
+        metadata_group.attrs['cell_count'] = len(population.state.cells)
+        metadata_group.attrs['step'] = step
+        metadata_group.attrs['simulation_step'] = step
+
+    print(f"[+] Gene network states exported: {h5_filename}")
+    return str(h5_filename)
+
+
+# ATP type legend for reference
+ATP_TYPE_LEGEND = {
+    0: "No ATP production",
+    1: "Mitochondrial ATP only", 
+    2: "Glycolytic ATP only",
+    3: "Both ATP types"
+}

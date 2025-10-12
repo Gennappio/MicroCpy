@@ -1,0 +1,56 @@
+=== SIMULATION STATUS LOG ===
+Started at: 2025-09-05 12:52:58
+==================================================
+
+Cell ID | Oxygen | Glucose | Lactate | TGFA | Oxygen_supply | Glucose_supply | MCT1_stimulus | EGFR_stimulus | Apoptosis | Proliferation | Necrosis | Growth_Arrest | mitoATP | glycoATP | Final Phenotype | Step
+------------------------------------------------------------------------------------------------------------------------------------------------------
+c0e7434d | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+d60eabf8 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | True | True | Growth_Arrest | 0
+1fa808ff | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+22f229da | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+be6e2454 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+76331b39 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+c9642b8d | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+f43a68e2 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | True | True | Growth_Arrest | 0
+05d32fd1 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+081c5c99 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+ce8958b1 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+0123c63b | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+7093dcad | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | False | True | Growth_Arrest | 0
+53c46648 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+7a144c4f | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+0d1b62b6 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+6dcc4ddc | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+dcd77878 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+990868a0 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+c9845e10 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | True | False | False | True | True | Proliferation | 0
+06279c69 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+f98229cb | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+2392b2b8 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+dfd08291 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | True | True | Growth_Arrest | 0
+e3bfc49f | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+5a7bd216 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+35bfd711 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+5641742d | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+b73672cf | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+f52176b2 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+b56ebf92 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+1139b45c | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+7fe36efe | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+629ec114 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | True | False | False | True | False | Proliferation | 0
+db699a92 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+68490a23 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | True | False | False | False | True | Proliferation | 0
+4ac4e086 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+58e89449 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+a7ee88c5 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | True | False | False | False | True | Proliferation | 0
+0d3b73b5 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+a709ffc8 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | True | False | False | False | True | Proliferation | 0
+217cc7a4 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | True | Growth_Arrest | 0
+e64b63b0 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+3b8f1c9d | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | True | False | False | True | True | True | Growth_Arrest | 0
+df4ba27b | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | True | True | Growth_Arrest | 0
+d67a2ffc | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+7379b2ba | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | True | True | Growth_Arrest | 0
+9bfdd848 | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | False | True | Growth_Arrest | 0
+c87f5aab | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | False | False | False | Growth_Arrest | 0
+f5ab552c | 0.07 | 5.0 | 1.0 | 0.0 | True | True | False | False | False | False | False | True | True | True | Growth_Arrest | 0
