@@ -20,6 +20,8 @@ import argparse
 from pathlib import Path
 import time
 import os
+from datetime import datetime
+import shutil
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -981,6 +983,27 @@ def main():
 
     # Load configuration (no CLI overrides)
     config, custom_functions_path = load_configuration(args.config_file)
+
+    # Create timestamped subfolder in results directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_output_dir = config.output_dir
+    original_plots_dir = config.plots_dir
+
+    # Create timestamped subfolder
+    timestamped_dir = original_output_dir / timestamp
+    config.output_dir = timestamped_dir
+    config.plots_dir = timestamped_dir / "plots"
+
+    # Create the timestamped directory
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    config.plots_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy YAML configuration file to the timestamped folder
+    config_file_path = Path(args.config_file)
+    config_copy_path = config.output_dir / config_file_path.name
+    shutil.copy2(config_file_path, config_copy_path)
+    print(f"[+] Configuration copied to: {config_copy_path}")
+    print(f"[+] Results will be saved to: {config.output_dir}")
 
     # Setup simulation
     mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(
