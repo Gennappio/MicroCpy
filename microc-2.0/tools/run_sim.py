@@ -1008,9 +1008,25 @@ def main():
     if hasattr(config, 'initial_state') and hasattr(config.initial_state, 'file_path') and config.initial_state.file_path:
         initial_state_path = Path(config.initial_state.file_path)
         if initial_state_path.exists():
-            initial_state_copy_path = config.output_dir / initial_state_path.name
-            shutil.copy2(initial_state_path, initial_state_copy_path)
-            print(f"[+] Initial state file copied to: {initial_state_copy_path}")
+            # Check if it's a VTK checkpoint folder or a single file
+            if initial_state_path.is_dir():
+                # It's a VTK checkpoint folder - copy the entire folder
+                initial_state_copy_path = config.output_dir / initial_state_path.name
+                shutil.copytree(initial_state_path, initial_state_copy_path, dirs_exist_ok=True)
+                print(f"[+] Initial state folder copied to: {initial_state_copy_path}")
+            else:
+                # It's a single file (CSV or VTK) - copy the file
+                initial_state_copy_path = config.output_dir / initial_state_path.name
+                shutil.copy2(initial_state_path, initial_state_copy_path)
+                print(f"[+] Initial state file copied to: {initial_state_copy_path}")
+
+                # If it's a VTK file, also copy the logical file if it exists
+                if initial_state_path.suffix == '.vtk':
+                    logical_file = initial_state_path.parent / initial_state_path.name.replace('.vtk', '_logical.vtk')
+                    if logical_file.exists():
+                        logical_copy_path = config.output_dir / logical_file.name
+                        shutil.copy2(logical_file, logical_copy_path)
+                        print(f"[+] Logical VTK file copied to: {logical_copy_path}")
         else:
             print(f"[!] Initial state file not found: {initial_state_path}")
 

@@ -741,14 +741,34 @@ class InitialStateManager:
                 (logical_pos[2] if len(logical_pos) > 2 else 0) * cell_size_um
             )
 
+            # Extract age and generation from metadata if available (checkpoint files)
+            cell_age = 0.0
+            cell_generation = 0
+
+            if 'ages' in metadata:
+                # Parse ages from comma-separated string
+                ages_str = metadata['ages']
+                if isinstance(ages_str, str) and ages_str:
+                    ages_list = [float(a) for a in ages_str.split(',')]
+                    if i < len(ages_list):
+                        cell_age = ages_list[i]
+
+            if 'generations' in metadata:
+                # Parse generations from comma-separated string
+                generations_str = metadata['generations']
+                if isinstance(generations_str, str) and generations_str:
+                    generations_list = [int(g) for g in generations_str.split(',')]
+                    if i < len(generations_list):
+                        cell_generation = generations_list[i]
+
             # Create cell with loaded data
             cell_init_data.append({
                 'id': cell_id,
                 'position': logical_pos,  # Logical position for simulation
                 'original_physical_position': original_physical_pos,  # Original physical position (um)
                 'phenotype': cell_phenotype,
-                'age': 0.0,  # Default age (could be added to VTK format later)
-                'division_count': 0,  # Default division count
+                'age': cell_age,  # Age from checkpoint or default 0.0
+                'division_count': cell_generation,  # Generation from checkpoint or default 0
                 'gene_states': complete_gene_states,  # Complete gene network initialization
                 'metabolic_state': {'metabolism': cell_metabolism},  # Store metabolism value
                 'tq_wait_time': 0.0  # Default wait time

@@ -1176,6 +1176,153 @@ def export_microc_substance_fields(simulator, output_dir: str, step: int) -> Lis
     return exporter.export_substance_fields(simulator, output_dir, step)
 
 
+def export_microc_vtk_checkpoint(population, simulator, output_dir: str, step: int,
+                                cell_size_um: float) -> Optional[str]:
+    """
+    Export unified VTK checkpoint with both cells and substances in organized folders
+
+    This is the 3D equivalent of export_microc_csv_checkpoint for 2D simulations.
+    Creates a checkpoint folder structure:
+        vtk_checkpoints/
+            checkpoint_step_000000/
+                cells.vtk              (cell data with all gene states, phenotypes, etc.)
+                cells_logical.vtk      (logical grid coordinates)
+                Oxygen_field.vtk       (substance concentration field)
+                Glucose_field.vtk
+                ...
+
+    Args:
+        population: Cell population object
+        simulator: Substance simulator object
+        output_dir: Output directory path
+        step: Simulation step number
+        cell_size_um: Cell size in micrometers
+
+    Returns:
+        Path to checkpoint folder
+    """
+    if not population.state.cells:
+        print("[!] No cells to export")
+        return None
+
+    # Create checkpoint folder
+    output_path = Path(output_dir)
+    checkpoint_folder = output_path / f"checkpoint_step_{step:06d}"
+    checkpoint_folder.mkdir(parents=True, exist_ok=True)
+
+    print(f"[VTK] Exporting 3D checkpoint to: {checkpoint_folder.name}")
+
+    # Export cells with complete domain information
+    cells_file = checkpoint_folder / "cells.vtk"
+    exporter = VTKDomainExporter(cell_size_um)
+
+    # Extract comprehensive cell data
+    positions = []
+    gene_states = {}
+    phenotypes = []
+    metabolism = []
+    original_physical_positions = []
+    ages = []
+    generations = []
+
+    for i, (cell_id, cell) in enumerate(population.state.cells.items()):
+        # Use logical position for biological grid coordinates
+        positions.append(cell.state.position)
+
+        # Store original physical position if available
+        if hasattr(cell.state, 'original_physical_position') and cell.state.original_physical_position:
+            original_physical_positions.append(cell.state.original_physical_position)
+        else:
+            original_physical_positions.append(None)
+
+        # Extract gene states
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            gene_states[i] = cell.state.gene_states.copy()
+        else:
+            gene_states[i] = {}
+
+        # Extract phenotype
+        phenotypes.append(cell.state.phenotype)
+
+        # Extract age
+        if hasattr(cell.state, 'age'):
+            ages.append(cell.state.age)
+        else:
+            ages.append(0.0)
+
+        # Extract generation (division_count)
+        if hasattr(cell.state, 'division_count'):
+            generations.append(cell.state.division_count)
+        else:
+            generations.append(0)
+
+        # Extract metabolism from gene states
+        if hasattr(cell.state, 'gene_states') and cell.state.gene_states:
+            mito_atp = cell.state.gene_states.get('mitoATP', False)
+            glyco_atp = cell.state.gene_states.get('glycoATP', False)
+
+            if mito_atp and glyco_atp:
+                metab = 3  # Mixed ATP
+            elif mito_atp:
+                metab = 2  # Mitochondrial ATP only
+            elif glyco_atp:
+                metab = 1  # Glycolytic ATP only
+            else:
+                metab = 0  # No ATP production
+        else:
+            metab = 0  # Default: no ATP production
+
+        metabolism.append(metab)
+
+    # Create metadata with checkpoint information
+    metadata = {
+        'description': f'MicroC 3D checkpoint at step {step}',
+        'simulated_time': step * 0.1,  # Assuming 0.1 time units per step
+        'suggested_cell_size_um': cell_size_um,
+        'biocell_grid_size_um': cell_size_um,
+        'domain_bounds_um': 'auto',
+        'checkpoint_step': step,
+        'cell_count': len(positions),
+        'ages': ','.join(map(str, ages)),  # Store ages as comma-separated string
+        'generations': ','.join(map(str, generations))  # Store generations as comma-separated string
+    }
+
+    # Export complete domain
+    filtered_original_positions = [pos for pos in original_physical_positions if pos is not None]
+    use_original_positions = len(filtered_original_positions) == len(positions)
+
+    exporter.export_complete_domain(
+        positions=np.array(positions),
+        gene_states=gene_states,
+        phenotypes=phenotypes,
+        metabolism=metabolism,
+        metadata=metadata,
+        output_path=str(cells_file),
+        original_physical_positions=filtered_original_positions if use_original_positions else None
+    )
+
+    # Export substance fields
+    if hasattr(simulator, 'fipy_variables') and simulator.fipy_variables:
+        substance_exporter = VTKSubstanceFieldExporter()
+
+        for substance_name, fipy_var in simulator.fipy_variables.items():
+            substance_file = checkpoint_folder / f"{substance_name}_field.vtk"
+
+            success = substance_exporter._export_single_substance_field(
+                substance_name=substance_name,
+                fipy_var=fipy_var,
+                mesh=simulator.fipy_mesh,
+                output_path=str(substance_file),
+                step=step
+            )
+
+            if success:
+                print(f"   [OK] {substance_name}: {substance_file.name}")
+
+    print(f"[+] VTK checkpoint exported: {checkpoint_folder.name}")
+    return str(checkpoint_folder)
+
+
 def export_microc_gene_states(population, output_dir: str, step: int) -> Optional[str]:
     """Export gene network states to H5 format for MicroC simulation"""
     import h5py

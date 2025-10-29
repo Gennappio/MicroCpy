@@ -88,9 +88,74 @@ class SimulationEngine:
                 gene_outputs = self.gene_network.step(1)
                 results.gene_network_states.append(gene_outputs)
 
+            # Export cell states and substance fields (CSV for 2D, VTK for 3D)
+            should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
+                                    step % self.config.output.save_cellstate_interval == 0)
+            if should_save_cellstate:
+                self._export_cell_states(step)
+
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
                 # Lightweight progress
                 print(f"[ENGINE] Step {step + 1}/{num_steps} ({(step + 1) / num_steps * 100:.1f}%)")
 
         return results
+
+    def _export_cell_states(self, step: int):
+        """Export cell states and substance fields based on domain dimensions."""
+        # Determine export format based on domain dimensions
+        if self.config.domain.dimensions == 2:
+            print(f"\n[CSV] Exporting 2D simulation checkpoint at step {step}...")
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
+                from csv_export import export_microc_csv_checkpoint
+
+                # Export unified checkpoint (cells + substances in one file)
+                csv_output_dir = self.config.output_dir / "csv_checkpoints"
+                csv_file = export_microc_csv_checkpoint(
+                    population=self.population,
+                    simulator=self.simulator,
+                    output_dir=str(csv_output_dir),
+                    step=step,
+                    cell_size_um=self.config.output.cell_size_um
+                )
+
+                if csv_file:
+                    print(f"[+] Checkpoint exported successfully")
+                else:
+                    print(f"[!] CSV checkpoint export failed")
+
+            except Exception as e:
+                print(f"[!] CSV export failed: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            # 3D VTK export
+            print(f"\n[VTK] Exporting 3D simulation checkpoint at step {step}...")
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
+                from vtk_export import export_microc_vtk_checkpoint
+
+                # Export unified checkpoint (cells + substances in organized folder)
+                vtk_output_dir = self.config.output_dir / "vtk_checkpoints"
+                checkpoint_folder = export_microc_vtk_checkpoint(
+                    population=self.population,
+                    simulator=self.simulator,
+                    output_dir=str(vtk_output_dir),
+                    step=step,
+                    cell_size_um=self.config.output.cell_size_um
+                )
+
+                if checkpoint_folder:
+                    print(f"[+] Checkpoint exported successfully")
+                else:
+                    print(f"[!] VTK checkpoint export failed")
+
+            except Exception as e:
+                print(f"[!] VTK export failed: {e}")
+                import traceback
+                traceback.print_exc()
 
