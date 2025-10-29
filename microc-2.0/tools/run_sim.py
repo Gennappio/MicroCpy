@@ -1003,6 +1003,17 @@ def main():
     config_copy_path = config.output_dir / config_file_path.name
     shutil.copy2(config_file_path, config_copy_path)
     print(f"[+] Configuration copied to: {config_copy_path}")
+
+    # Copy initial state file to the timestamped folder (if it exists)
+    if hasattr(config, 'initial_state') and hasattr(config.initial_state, 'file_path') and config.initial_state.file_path:
+        initial_state_path = Path(config.initial_state.file_path)
+        if initial_state_path.exists():
+            initial_state_copy_path = config.output_dir / initial_state_path.name
+            shutil.copy2(initial_state_path, initial_state_copy_path)
+            print(f"[+] Initial state file copied to: {initial_state_copy_path}")
+        else:
+            print(f"[!] Initial state file not found: {initial_state_path}")
+
     print(f"[+] Results will be saved to: {config.output_dir}")
 
     # Setup simulation
