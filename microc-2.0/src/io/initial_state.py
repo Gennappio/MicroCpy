@@ -254,6 +254,8 @@ class CSVCellLoader:
         self.cell_count = 0
         self.gene_states = {}
         self.phenotypes = []
+        self.ages = []  # Store cell ages from checkpoint files
+        self.generations = []  # Store cell generations from checkpoint files
         self.metadata = {}
 
         self._load_csv_file()
@@ -263,57 +265,18 @@ class CSVCellLoader:
         print(f"[CSV] Loading 2D cell positions from {self.file_path}")
 
         with open(self.file_path, 'r', encoding='utf-8') as f:
-            # Check if first line is a comment with metadata
-            first_line = f.readline().strip()
-            f.seek(0)  # Reset to beginning
+            # Read all lines to detect format
+            all_lines = f.readlines()
 
-            # Parse metadata from comment line if present
-            if first_line.startswith('#'):
-                self._parse_metadata_comment(first_line)
-                # Skip the comment line
-                next(f)
+        # Detect if this is a checkpoint file (unified format)
+        is_checkpoint = any('SECTION 1: CELLS' in line for line in all_lines[:20])
 
-            # Read CSV data
-            reader = csv.DictReader(f)
-
-            # Validate required columns
-            required_cols = ['x', 'y']
-            if not all(col in reader.fieldnames for col in required_cols):
-                raise ValueError(f"CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
-
-            # Optional columns
-            has_phenotype = 'phenotype' in reader.fieldnames
-            has_age = 'age' in reader.fieldnames
-
-            # Parse gene state columns (any column starting with 'gene_')
-            gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
-
-            for i, row in enumerate(reader):
-                try:
-                    # Parse logical coordinates (may be float, will be rounded)
-                    x_logical = float(row['x'])
-                    y_logical = float(row['y'])
-
-                    # Store as logical coordinates (same as VTK system)
-                    self.cell_positions.append((x_logical, y_logical))
-
-                    # Parse phenotype if available
-                    phenotype = row.get('phenotype', 'Quiescent').strip()
-                    self.phenotypes.append(phenotype)
-
-                    # Parse gene states if available
-                    cell_gene_states = {}
-                    for gene_col in gene_columns:
-                        gene_name = gene_col.replace('gene_', '')  # Remove 'gene_' prefix
-                        gene_value = row[gene_col].strip().lower()
-                        # Convert to boolean
-                        cell_gene_states[gene_name] = gene_value in ('true', '1', 'yes', 'on', 'active')
-
-                    self.gene_states[i] = cell_gene_states
-
-                except (ValueError, KeyError) as e:
-                    print(f"[WARNING] Skipping invalid row {i+1}: {e}")
-                    continue
+        if is_checkpoint:
+            print("[CSV] Detected checkpoint format (unified CSV with cells + substances)")
+            self._load_checkpoint_format(all_lines)
+        else:
+            print("[CSV] Detected initial state format (simple CSV)")
+            self._load_simple_format(all_lines)
 
         self.cell_count = len(self.cell_positions)
         print(f"[+] Loaded {self.cell_count} cells from CSV")
@@ -328,6 +291,137 @@ class CSVCellLoader:
             for cell_genes in self.gene_states.values():
                 gene_names.update(cell_genes.keys())
             print(f"[+] Gene states: {len(gene_names)} genes ({', '.join(sorted(gene_names))})")
+
+    def _load_simple_format(self, all_lines):
+        """Load simple initial state CSV format"""
+        # Parse metadata from first line if it's a comment
+        if all_lines and all_lines[0].strip().startswith('#'):
+            self._parse_metadata_comment(all_lines[0].strip())
+            all_lines = all_lines[1:]  # Skip metadata line
+
+        # Parse CSV data
+        reader = csv.DictReader(all_lines)
+
+        # Validate required columns
+        required_cols = ['x', 'y']
+        if not all(col in reader.fieldnames for col in required_cols):
+            raise ValueError(f"CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
+
+        # Optional columns
+        has_phenotype = 'phenotype' in reader.fieldnames
+        has_age = 'age' in reader.fieldnames
+
+        # Parse gene state columns (any column starting with 'gene_')
+        gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
+
+        for i, row in enumerate(reader):
+            try:
+                # Parse logical coordinates (may be float, will be rounded)
+                x_logical = float(row['x'])
+                y_logical = float(row['y'])
+
+                # Store as logical coordinates (same as VTK system)
+                self.cell_positions.append((x_logical, y_logical))
+
+                # Parse phenotype if available
+                phenotype = row.get('phenotype', 'Quiescent').strip()
+                self.phenotypes.append(phenotype)
+
+                # Parse gene states if available
+                cell_gene_states = {}
+                for gene_col in gene_columns:
+                    gene_name = gene_col.replace('gene_', '')  # Remove 'gene_' prefix
+                    gene_value = row[gene_col].strip().lower()
+                    # Convert to boolean
+                    cell_gene_states[gene_name] = gene_value in ('true', '1', 'yes', 'on', 'active')
+
+                self.gene_states[i] = cell_gene_states
+
+            except (ValueError, KeyError) as e:
+                print(f"[WARNING] Skipping invalid row {i+1}: {e}")
+                continue
+
+    def _load_checkpoint_format(self, all_lines):
+        """Load checkpoint CSV format (unified format with cells + substances)"""
+        # Find the CELLS section
+        cells_section_start = None
+        cells_section_end = None
+
+        for i, line in enumerate(all_lines):
+            if 'SECTION 1: CELLS' in line:
+                cells_section_start = i + 1  # Next line after section marker
+            elif 'SECTION 2: SUBSTANCES' in line:
+                cells_section_end = i - 1  # Line before section marker
+                break
+
+        if cells_section_start is None:
+            raise ValueError("Could not find CELLS section in checkpoint file")
+
+        # Extract cell data lines (skip comments)
+        cell_lines = []
+        for i in range(cells_section_start, cells_section_end + 1 if cells_section_end else len(all_lines)):
+            line = all_lines[i].strip()
+            if line and not line.startswith('#'):
+                cell_lines.append(line)
+
+        if not cell_lines:
+            print("[WARNING] No cell data found in checkpoint file")
+            return
+
+        # Parse cell data
+        reader = csv.DictReader(cell_lines)
+
+        # Validate required columns (checkpoint format uses 'cell_id' and has 'age', 'generation')
+        required_cols = ['x', 'y']
+        if not all(col in reader.fieldnames for col in required_cols):
+            raise ValueError(f"Checkpoint CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
+
+        # Check if checkpoint has age and generation columns
+        has_age = 'age' in reader.fieldnames
+        has_generation = 'generation' in reader.fieldnames
+
+        # Parse gene state columns (any column starting with 'gene_')
+        gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
+
+        for i, row in enumerate(reader):
+            try:
+                # Parse logical coordinates (may be float, will be rounded)
+                x_logical = float(row['x'])
+                y_logical = float(row['y'])
+
+                # Store as logical coordinates
+                self.cell_positions.append((x_logical, y_logical))
+
+                # Parse phenotype
+                phenotype = row.get('phenotype', 'Quiescent').strip()
+                self.phenotypes.append(phenotype)
+
+                # Parse age and generation if available
+                if has_age:
+                    age = float(row.get('age', 0.0))
+                    self.ages.append(age)
+                else:
+                    self.ages.append(0.0)
+
+                if has_generation:
+                    generation = int(row.get('generation', 0))
+                    self.generations.append(generation)
+                else:
+                    self.generations.append(0)
+
+                # Parse gene states
+                cell_gene_states = {}
+                for gene_col in gene_columns:
+                    gene_name = gene_col.replace('gene_', '')  # Remove 'gene_' prefix
+                    gene_value = row[gene_col].strip().lower()
+                    # Convert to boolean
+                    cell_gene_states[gene_name] = gene_value in ('true', '1', 'yes', 'on', 'active')
+
+                self.gene_states[i] = cell_gene_states
+
+            except (ValueError, KeyError) as e:
+                print(f"[WARNING] Skipping invalid row {i+1}: {e}")
+                continue
 
     def _parse_metadata_comment(self, comment_line: str):
         """Parse metadata from CSV comment line"""
@@ -371,6 +465,14 @@ class CSVCellLoader:
     def get_phenotypes(self) -> List[str]:
         """Get phenotypes for all cells"""
         return self.phenotypes
+
+    def get_ages(self) -> List[float]:
+        """Get ages for all cells (from checkpoint files)"""
+        return self.ages
+
+    def get_generations(self) -> List[int]:
+        """Get generations for all cells (from checkpoint files)"""
+        return self.generations
 
     def get_metadata(self) -> Dict[str, Any]:
         """Get metadata from CSV file"""
@@ -438,6 +540,8 @@ class InitialStateManager:
         cell_size_um = csv_loader.get_cell_size_um()
         gene_states_dict = csv_loader.get_gene_states()
         phenotypes = csv_loader.get_phenotypes()
+        ages = csv_loader.get_ages()  # Get ages from checkpoint files
+        generations = csv_loader.get_generations()  # Get generations from checkpoint files
 
         print(f"[INFO] CSV file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
 
@@ -473,6 +577,10 @@ class InitialStateManager:
             # Get gene states for this cell
             cell_gene_states = gene_states_dict.get(i, {})
 
+            # Get age and generation for this cell (from checkpoint files)
+            cell_age = ages[i] if i < len(ages) else 0.0
+            cell_generation = generations[i] if i < len(generations) else 0
+
             # Compute physical position from YAML cell size and logical indices
             original_physical_pos = (
                 logical_pos[0] * cell_size_um,
@@ -486,8 +594,8 @@ class InitialStateManager:
                 'position': logical_pos,  # Logical position for simulation
                 'original_physical_position': original_physical_pos,  # Physical position (um)
                 'phenotype': cell_phenotype,
-                'age': 0.0,  # Default age (could be added to CSV format later)
-                'division_count': 0,  # Default division count
+                'age': cell_age,  # Age from checkpoint or default 0.0
+                'division_count': cell_generation,  # Generation from checkpoint or default 0
                 'gene_states': cell_gene_states,  # Gene network initialization from CSV
                 'metabolic_state': {},  # Empty metabolic state
                 'tq_wait_time': 0.0  # Default wait time
