@@ -75,10 +75,8 @@ class OutputConfig:
 
 @dataclass
 class InitialStateConfig:
-    """Configuration for initial state generation and loading"""
-    mode: str = "generate"              # "generate", "load_h5", or "load_vtk"
-    file_path: Optional[str] = None     # Path to initial state file (H5 or VTK)
-    save_initial_state: bool = False    # Save initial state after generation
+    """Configuration for initial state loading (VTK-only)"""
+    file_path: Optional[str] = None     # Path to VTK initial state file
 
 @dataclass
 class SubstanceConfig:
@@ -219,9 +217,7 @@ class MicroCConfig:
         initial_state = InitialStateConfig()
         if 'initial_state' in data:
             initial_state = InitialStateConfig(
-                mode=data['initial_state'].get('mode', 'generate'),
-                file_path=data['initial_state'].get('file_path', None),
-                save_initial_state=data['initial_state'].get('save_initial_state', False)
+                file_path=data['initial_state'].get('file_path', None)
             )
         
         substances = {}
@@ -364,7 +360,7 @@ class MicroCConfig:
                 uptake_rate=sub_data['uptake_rate'],
                 initial_value=Concentration(sub_data['initial_value'], "mM"),
                 boundary_value=Concentration(sub_data['boundary_value'], "mM"),
-                boundary_type=sub_data['boundary_type']
+                boun9dary_type=sub_data['boundary_type']
             )
 
         # Associations and thresholds
@@ -423,9 +419,7 @@ class MicroCConfig:
         initial_state = InitialStateConfig()
         if 'initial_state' in data:
             initial_state = InitialStateConfig(
-                mode=data['initial_state'].get('mode', 'generate'),
-                file_path=data['initial_state'].get('file_path', None),
-                save_initial_state=data['initial_state'].get('save_initial_state', False)
+                file_path=data['initial_state'].get('file_path', None)
             )
 
         return cls(

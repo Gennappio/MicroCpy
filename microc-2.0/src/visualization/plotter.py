@@ -93,7 +93,7 @@ class SimulationPlotter:
         
         # Get concentration data
         concentration = np.array(simulator.concentration.value)
-        mesh = simulator.mesh_manager.mesh
+        mesh = simulator.mesh_manager.solver_mesh
         
         # Reshape for 2D plotting
         nx = simulator.mesh_manager.config.nx

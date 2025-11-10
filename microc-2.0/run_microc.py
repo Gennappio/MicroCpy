@@ -14,7 +14,7 @@ def run_tool(tool_path, args=None):
     cmd = [sys.executable, str(tool_path)]
     if args:
         cmd.extend(args)
-    
+
     print(f"[RUN] Running: {' '.join(cmd)}")
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -35,152 +35,148 @@ def main():
 Examples:
   # Run main simulation
   python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml
-  
-  # Analyze cell states from H5 file
-  python run_microc.py --analyze initial_state_3D_S.h5
-  
-  # Visualize cell states
-  python run_microc.py --visualize initial_state_3D_S.h5
-  
-  # Quick inspect H5 file
-  python run_microc.py --inspect initial_state_3D_S.h5
-  
-  # Run FiPy standalone simulation
-  python run_microc.py --fipy initial_state_3D_S.h5
 
-  # Generate custom H5 files
-  python run_microc.py --generate --cells 1000 --radius 50
+  # Generate CSV cell files for 2D simulations
+  python run_microc.py --generate-csv --pattern spheroid --count 50 --output cells.csv
+  python run_microc.py --generate-csv --pattern grid --grid_size 5x5 --output grid_cells.csv
 
-  # Run all visualization tools
-  python run_microc.py --all-viz initial_state_3D_S.h5
+  # Generate CSV with complete gene network from BND file
+  python run_microc.py --generate-csv --pattern spheroid --count 25 --genes tests/jayatilake_experiment/jaya_microc.bnd --output full_genes.csv
+
+  # Generate plots from CSV simulation results (decoupled plotting)
+  python run_microc.py --plot-csv --cells-dir results/csv_cells --plot-output plots --snapshots
+
+  # Generate comprehensive plots with substances and statistics
+  python run_microc.py --plot-csv --cells-dir results/csv_cells --substances-dir results/csv_substances --plot-output plots --snapshots --animation --statistics
         """
     )
-    
-    # Main simulation
-    parser.add_argument('--sim', metavar='CONFIG', 
-                       help='Run main MicroC simulation with config file')
-    
-    # Tools in tools/ folder
-    parser.add_argument('--analyze', metavar='H5_FILE',
-                       help='Run cell state analyzer')
-    parser.add_argument('--visualize', metavar='H5_FILE', 
-                       help='Run cell state visualizer')
-    parser.add_argument('--inspect', metavar='H5_FILE',
-                       help='Quick inspect H5 file')
-    parser.add_argument('--demo', action='store_true',
-                       help='Run visualization demo')
-    
-    # Benchmarks
-    parser.add_argument('--fipy', metavar='H5_FILE',
-                       help='Run FiPy H5 reader simulation')
-    
-    # H5 file generation
-    parser.add_argument('--generate', action='store_true',
-                       help='Generate custom H5 files')
-    parser.add_argument('--cells', type=int, default=1000,
-                       help='Number of cells (for --generate)')
-    parser.add_argument('--radius', type=float, default=50.0,
-                       help='Sphere radius in um (for --generate)')
-    parser.add_argument('--sparseness', type=float, default=0.3,
-                       help='Sparseness 0-1 (for --generate)')
-    parser.add_argument('--radial', type=float, default=0.5,
-                       help='Radial distribution 0-1 (for --generate)')
-    parser.add_argument('--biocell-size', type=float, default=5.0,
-                       help='Biological cell size in um (for --generate, default: 5.0)')
-    parser.add_argument('--gene-probs', default='gene_probs.txt',
-                       help='Gene probabilities file (for --generate)')
-    parser.add_argument('--output', default='generated_cells',
-                       help='Output prefix (for --generate)')
 
-    # Convenience flags
-    parser.add_argument('--all-viz', metavar='H5_FILE',
-                       help='Run all visualization tools on H5 file')
-    
+    # Main simulation
+    parser.add_argument('--sim', metavar='CONFIG',
+                       help='Run main MicroC simulation with config file')
+
+    # CSV generation for 2D simulations
+    parser.add_argument('--generate-csv', action='store_true',
+                       help='Generate CSV file with cell positions for 2D simulations')
+    parser.add_argument('--pattern', choices=['spheroid', 'grid', 'random'], default='spheroid',
+                       help='Cell placement pattern (default: spheroid)')
+    parser.add_argument('--count', type=int, default=25,
+                       help='Number of cells to generate (default: 25)')
+    parser.add_argument('--grid_size', default='5x5',
+                       help='Grid size for grid pattern (e.g., 5x5, default: 5x5)')
+    parser.add_argument('--output', default='generated_cells.csv',
+                       help='Output CSV file name (default: generated_cells.csv)')
+    parser.add_argument('--cell_size_um', type=float, default=20.0,
+                       help='Cell size in micrometers (default: 20.0)')
+    parser.add_argument('--domain_size', type=int, default=25,
+                       help='Domain size in grid units (default: 25)')
+    parser.add_argument('--domain_size_um', type=float, default=500.0,
+                       help='Domain size in micrometers (default: 500.0)')
+    parser.add_argument('--genes', metavar='BND_FILE',
+                       help='Path to .bnd file to read gene network nodes for complete gene state initialization')
+
+    # CSV plotting for post-simulation visualization
+    parser.add_argument('--plot-csv', action='store_true',
+                       help='Generate plots from CSV simulation results (decoupled plotting)')
+    parser.add_argument('--cells-dir', metavar='DIR',
+                       help='Directory containing CSV cell state files (required for --plot-csv)')
+    parser.add_argument('--substances-dir', metavar='DIR',
+                       help='Directory containing CSV substance field files (optional for --plot-csv)')
+    parser.add_argument('--plot-output', metavar='DIR', default='plots',
+                       help='Output directory for generated plots (default: plots)')
+    parser.add_argument('--snapshots', action='store_true',
+                       help='Generate snapshot plots for each time step')
+    parser.add_argument('--animation', action='store_true',
+                       help='Generate animation from time series data')
+    parser.add_argument('--statistics', action='store_true',
+                       help='Generate population statistics plots')
+
     args = parser.parse_args()
-    
+
     # Check if no arguments provided
     if not any(vars(args).values()):
         parser.print_help()
         return
-    
-    tools_dir = Path("tools")
-    benchmarks_dir = Path("benchmarks")
-    
+
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    tools_dir = script_dir / "tools"
+
     success_count = 0
     total_count = 0
-    
+
     # Main simulation
     if args.sim:
         total_count += 1
-        if run_tool(Path("run_sim.py") if Path("run_sim.py").exists() else tools_dir / "run_sim.py", [args.sim]):
-            success_count += 1
-    
-    # Cell state analyzer
-    if args.analyze:
-        total_count += 1
-        if run_tool(tools_dir / "cell_state_analyzer.py", [args.analyze]):
-            success_count += 1
-    
-    # Cell state visualizer
-    if args.visualize:
-        total_count += 1
-        if run_tool(tools_dir / "cell_state_visualizer.py", [args.visualize]):
-            success_count += 1
-    
-    # Quick inspect
-    if args.inspect:
-        total_count += 1
-        if run_tool(tools_dir / "quick_inspect.py", [args.inspect]):
-            success_count += 1
-    
-    # Visualization demo
-    if args.demo:
-        total_count += 1
-        if run_tool(tools_dir / "visualization_demo.py"):
-            success_count += 1
-    
-    # FiPy simulation
-    if args.fipy:
-        total_count += 1
-        if run_tool(benchmarks_dir / "standalone_steadystate_fipy_3D_h5_reader.py", [args.fipy]):
+        run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
+        if run_tool(run_sim_path, [args.sim]):
             success_count += 1
 
-    # H5 file generation
-    if args.generate:
+    # CSV file generation for 2D simulations
+    if args.generate_csv:
         total_count += 1
-        gen_args = [
-            '--cells', str(args.cells),
-            '--radius', str(args.radius),
-            '--sparseness', str(args.sparseness),
-            '--radial', str(args.radial),
-            '--cell-size', str(args.biocell_size),
-            '--gene-probs', args.gene_probs,
-            '--output', args.output
+        csv_args = [
+            '--output', args.output,
+            '--pattern', args.pattern,
+            '--cell_size_um', str(args.cell_size_um),
+            '--domain_size', str(args.domain_size),
+            '--domain_size_um', str(args.domain_size_um)
         ]
-        if run_tool(tools_dir / "h5_generator.py", gen_args):
+
+        if args.pattern == 'grid':
+            csv_args.extend(['--grid_size', args.grid_size])
+        else:
+            csv_args.extend(['--count', str(args.count)])
+
+        # Add genes file if specified
+        if args.genes:
+            csv_args.extend(['--genes', args.genes])
+
+        if run_tool(tools_dir / "csv_cell_generator.py", csv_args):
             success_count += 1
-    
-    # All visualization tools
-    if args.all_viz:
-        viz_tools = [
-            (tools_dir / "cell_state_analyzer.py", [args.all_viz]),
-            (tools_dir / "cell_state_visualizer.py", [args.all_viz]),
-            (tools_dir / "quick_inspect.py", [args.all_viz])
+
+    # CSV plotting for post-simulation visualization
+    if args.plot_csv:
+        total_count += 1
+
+        # Validate required arguments
+        if not args.cells_dir:
+            print("[!] Error: --cells-dir is required when using --plot-csv")
+            print("    Specify the directory containing CSV cell state files")
+            return
+
+        # Build plotting arguments
+        plot_args = [
+            '--cells-dir', args.cells_dir,
+            '--output', args.plot_output
         ]
-        
-        for tool_path, tool_args in viz_tools:
-            total_count += 1
-            if run_tool(tool_path, tool_args):
-                success_count += 1
-    
+
+        # Add optional arguments
+        if args.substances_dir:
+            plot_args.extend(['--substances-dir', args.substances_dir])
+
+        if args.snapshots:
+            plot_args.append('--snapshots')
+
+        if args.animation:
+            plot_args.append('--animation')
+
+        if args.statistics:
+            plot_args.append('--statistics')
+
+        # Default to snapshots if no plot type specified
+        if not any([args.snapshots, args.animation, args.statistics]):
+            plot_args.append('--snapshots')
+            print("[INFO] No plot type specified, defaulting to --snapshots")
+
+        if run_tool(tools_dir / "csv_plotter.py", plot_args):
+            success_count += 1
+
     # Summary
-    print(f"\n[CHART] Summary: {success_count}/{total_count} tools completed successfully")
-    
-    if success_count == total_count:
-        print("[SUCCESS] All tools completed successfully!")
+    if total_count > 0:
+        print(f"\n[DONE] Completed {success_count}/{total_count} tasks")
     else:
-        print(f"[WARN]  {total_count - success_count} tools failed")
-        sys.exit(1)
+        print("\n[INFO] No tasks were run")
 
 if __name__ == "__main__":
     main()

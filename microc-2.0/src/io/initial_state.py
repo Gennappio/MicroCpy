@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-Initial State Generator and Loader for MicroC 3D Simulations
+Initial State Loader for MicroC Simulations
 
-Handles saving and loading of:
-1. Cell positions (3D coordinates)
-2. Gene network activation states for each cell
+Handles loading of:
+1. Cell positions (2D/3D coordinates)
+2. Gene network activation states for each cell (when embedded)
 
-Uses HDF5 format for efficient storage of structured scientific data.
+Supported formats:
+- VTK: For 3D simulations and complex 2D setups with gene networks
+- CSV: For simple 2D simulations (human-readable format)
+
+HDF5 support has been removed.
 """
 
-import h5py  # Only for loading existing H5 files
+# HDF5 support removed
 import numpy as np
+import csv
 from pathlib import Path
 from typing import Dict, List, Tuple, Union, Optional, Any
 from dataclasses import dataclass
@@ -229,157 +234,386 @@ class VTKCellLoader:
         return len(self.cell_positions)
 
 
+class CSVCellLoader:
+    """Load 2D cell positions from CSV files (human-readable format)"""
+
+    def __init__(self, file_path: Union[str, Path], cell_size_um: float = 20.0):
+        """
+        Initialize CSV cell loader
+
+        Args:
+            file_path: Path to CSV file
+            cell_size_um: Cell size in micrometers (from YAML config)
+        """
+        self.file_path = Path(file_path)
+        if not self.file_path.exists():
+            raise FileNotFoundError(f"CSV file not found: {file_path}")
+
+        self.cell_positions = []
+        self.cell_size_um = cell_size_um
+        self.cell_count = 0
+        self.gene_states = {}
+        self.phenotypes = []
+        self.ages = []  # Store cell ages from checkpoint files
+        self.generations = []  # Store cell generations from checkpoint files
+        self.metadata = {}
+
+        self._load_csv_file()
+
+    def _load_csv_file(self):
+        """Parse CSV file to extract cell positions and optional metadata"""
+        print(f"[CSV] Loading 2D cell positions from {self.file_path}")
+
+        with open(self.file_path, 'r', encoding='utf-8') as f:
+            # Read all lines to detect format
+            all_lines = f.readlines()
+
+        # Detect if this is a checkpoint file (unified format)
+        is_checkpoint = any('SECTION 1: CELLS' in line for line in all_lines[:20])
+
+        if is_checkpoint:
+            print("[CSV] Detected checkpoint format (unified CSV with cells + substances)")
+            self._load_checkpoint_format(all_lines)
+        else:
+            print("[CSV] Detected initial state format (simple CSV)")
+            self._load_simple_format(all_lines)
+
+        self.cell_count = len(self.cell_positions)
+        print(f"[+] Loaded {self.cell_count} cells from CSV")
+        print(f"[+] Cell size: {self.cell_size_um:.2f} um (from YAML config)")
+
+        if self.phenotypes:
+            unique_phenotypes = set(self.phenotypes)
+            print(f"[+] Phenotypes: {len(unique_phenotypes)} types ({', '.join(unique_phenotypes)})")
+
+        if any(self.gene_states.values()):
+            gene_names = set()
+            for cell_genes in self.gene_states.values():
+                gene_names.update(cell_genes.keys())
+            print(f"[+] Gene states: {len(gene_names)} genes ({', '.join(sorted(gene_names))})")
+
+    def _load_simple_format(self, all_lines):
+        """Load simple initial state CSV format"""
+        # Parse metadata from first line if it's a comment
+        if all_lines and all_lines[0].strip().startswith('#'):
+            self._parse_metadata_comment(all_lines[0].strip())
+            all_lines = all_lines[1:]  # Skip metadata line
+
+        # Parse CSV data
+        reader = csv.DictReader(all_lines)
+
+        # Validate required columns
+        required_cols = ['x', 'y']
+        if not all(col in reader.fieldnames for col in required_cols):
+            raise ValueError(f"CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
+
+        # Optional columns
+        has_phenotype = 'phenotype' in reader.fieldnames
+        has_age = 'age' in reader.fieldnames
+
+        # Parse gene state columns (any column starting with 'gene_')
+        gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
+
+        for i, row in enumerate(reader):
+            try:
+                # Parse logical coordinates (may be float, will be rounded)
+                x_logical = float(row['x'])
+                y_logical = float(row['y'])
+
+                # Store as logical coordinates (same as VTK system)
+                self.cell_positions.append((x_logical, y_logical))
+
+                # Parse phenotype if available
+                phenotype = row.get('phenotype', 'Quiescent').strip()
+                self.phenotypes.append(phenotype)
+
+                # Parse gene states if available
+                cell_gene_states = {}
+                for gene_col in gene_columns:
+                    gene_name = gene_col.replace('gene_', '')  # Remove 'gene_' prefix
+                    gene_value = row[gene_col].strip().lower()
+                    # Convert to boolean
+                    cell_gene_states[gene_name] = gene_value in ('true', '1', 'yes', 'on', 'active')
+
+                self.gene_states[i] = cell_gene_states
+
+            except (ValueError, KeyError) as e:
+                print(f"[WARNING] Skipping invalid row {i+1}: {e}")
+                continue
+
+    def _load_checkpoint_format(self, all_lines):
+        """Load checkpoint CSV format (unified format with cells + substances)"""
+        # Find the CELLS section
+        cells_section_start = None
+        cells_section_end = None
+
+        for i, line in enumerate(all_lines):
+            if 'SECTION 1: CELLS' in line:
+                cells_section_start = i + 1  # Next line after section marker
+            elif 'SECTION 2: SUBSTANCES' in line:
+                cells_section_end = i - 1  # Line before section marker
+                break
+
+        if cells_section_start is None:
+            raise ValueError("Could not find CELLS section in checkpoint file")
+
+        # Extract cell data lines (skip comments)
+        cell_lines = []
+        for i in range(cells_section_start, cells_section_end + 1 if cells_section_end else len(all_lines)):
+            line = all_lines[i].strip()
+            if line and not line.startswith('#'):
+                cell_lines.append(line)
+
+        if not cell_lines:
+            print("[WARNING] No cell data found in checkpoint file")
+            return
+
+        # Parse cell data
+        reader = csv.DictReader(cell_lines)
+
+        # Validate required columns (checkpoint format uses 'cell_id' and has 'age', 'generation')
+        required_cols = ['x', 'y']
+        if not all(col in reader.fieldnames for col in required_cols):
+            raise ValueError(f"Checkpoint CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
+
+        # Check if checkpoint has age and generation columns
+        has_age = 'age' in reader.fieldnames
+        has_generation = 'generation' in reader.fieldnames
+
+        # Parse gene state columns (any column starting with 'gene_')
+        gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
+
+        for i, row in enumerate(reader):
+            try:
+                # Parse logical coordinates (may be float, will be rounded)
+                x_logical = float(row['x'])
+                y_logical = float(row['y'])
+
+                # Store as logical coordinates
+                self.cell_positions.append((x_logical, y_logical))
+
+                # Parse phenotype
+                phenotype = row.get('phenotype', 'Quiescent').strip()
+                self.phenotypes.append(phenotype)
+
+                # Parse age and generation if available
+                if has_age:
+                    age = float(row.get('age', 0.0))
+                    self.ages.append(age)
+                else:
+                    self.ages.append(0.0)
+
+                if has_generation:
+                    generation = int(row.get('generation', 0))
+                    self.generations.append(generation)
+                else:
+                    self.generations.append(0)
+
+                # Parse gene states
+                cell_gene_states = {}
+                for gene_col in gene_columns:
+                    gene_name = gene_col.replace('gene_', '')  # Remove 'gene_' prefix
+                    gene_value = row[gene_col].strip().lower()
+                    # Convert to boolean
+                    cell_gene_states[gene_name] = gene_value in ('true', '1', 'yes', 'on', 'active')
+
+                self.gene_states[i] = cell_gene_states
+
+            except (ValueError, KeyError) as e:
+                print(f"[WARNING] Skipping invalid row {i+1}: {e}")
+                continue
+
+    def _parse_metadata_comment(self, comment_line: str):
+        """Parse metadata from CSV comment line"""
+        # Example: # cell_size_um=20.0, domain_size_um=500.0, description="Spheroid initial state"
+        try:
+            # Remove '#' and split by commas
+            metadata_str = comment_line[1:].strip()
+            for item in metadata_str.split(','):
+                if '=' in item:
+                    key, value = item.split('=', 1)
+                    key = key.strip()
+                    value = value.strip().strip('"\'')  # Remove quotes
+
+                    # Try to convert to appropriate type
+                    try:
+                        if '.' in value:
+                            self.metadata[key] = float(value)
+                        else:
+                            self.metadata[key] = int(value)
+                    except ValueError:
+                        self.metadata[key] = value
+        except Exception as e:
+            print(f"[WARNING] Could not parse metadata comment: {e}")
+
+    def get_cell_positions(self) -> List[Tuple[float, float]]:
+        """Get cell positions in logical grid coordinates"""
+        return self.cell_positions
+
+    def get_cell_size_um(self) -> float:
+        """Get biological cell size in micrometers"""
+        return self.cell_size_um
+
+    def get_cell_count(self) -> int:
+        """Get number of cells"""
+        return len(self.cell_positions)
+
+    def get_gene_states(self) -> Dict[int, Dict[str, bool]]:
+        """Get gene states for all cells"""
+        return self.gene_states
+
+    def get_phenotypes(self) -> List[str]:
+        """Get phenotypes for all cells"""
+        return self.phenotypes
+
+    def get_ages(self) -> List[float]:
+        """Get ages for all cells (from checkpoint files)"""
+        return self.ages
+
+    def get_generations(self) -> List[int]:
+        """Get generations for all cells (from checkpoint files)"""
+        return self.generations
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """Get metadata from CSV file"""
+        return self.metadata
+
+
 class InitialStateManager:
     """
-    Manages loading of initial cell states for MicroC simulations.
-
-    NOTE: H5 file generation has been moved to external tools.
-    Use: python run_microc.py --generate --cells 1000 --radius 50
-
-    File format: HDF5 with the following structure:
-    /metadata/
-        - config_hash: str (hash of config for validation)
-        - timestamp: str (creation time)
-        - version: str (MicroC version)
-        - cell_count: int (number of cells)
-        - domain_info: dict (domain configuration)
-    /cells/
-        - ids: array of cell IDs
-        - positions: Nx3 array of (x,y,z) coordinates in meters
-        - phenotypes: array of phenotype strings
-        - ages: array of cell ages
-        - division_counts: array of division counts
-        - tq_wait_times: array of TQ wait times
-    /gene_states/
-        - gene_names: array of gene names
-        - states: NxM boolean array (N cells, M genes)
-    /metabolic_states/
-        - metabolite_names: array of metabolite names  
-        - values: NxK float array (N cells, K metabolites)
+    Manages loading of initial cell states for MicroC simulations (VTK-based).
     """
-    
+
     def __init__(self, config: MicroCConfig):
         self.config = config
         
-    def save_initial_state(self, cells: Dict[str, Any], file_path: Union[str, Path], 
+    def save_initial_state(self, cells: Dict[str, Any], file_path: Union[str, Path],
                           step: int = 0) -> None:
-        """
-        DEPRECATED: H5 file generation has been moved to external tools.
-
-        This method is no longer supported. Use the external H5 generator tool instead:
-        python run_microc.py --generate --cells 1000 --radius 50
-
-        Args:
-            cells: Dictionary of cell_id -> Cell objects
-            file_path: Path to save the HDF5 file
-            step: Simulation step (for periodic saves)
-        """
-        print("[WARNING]  H5 file generation has been removed from the core MicroC system.")
-        print("   Use the external H5 generator tool instead:")
-        print("   python run_microc.py --generate --cells 1000 --radius 50")
-        print(f"   Skipping H5 save to {file_path}")
-        return
+        """HDF5 save removed; VTK is the only supported format."""
+        raise NotImplementedError("Saving initial state is no longer supported here. Use VTK export utilities if needed.")
     
     def load_initial_state(self, file_path: Union[str, Path]) -> List[Dict[str, Any]]:
         """
-        Load initial cell states from HDF5 file.
-        
+        Auto-detect file format and load initial state.
+
+        Supports:
+        - .vtk files: For 3D simulations and complex 2D setups
+        - .csv files: For simple 2D simulations (human-readable)
+
         Returns:
-            List of cell initialization dictionaries compatible with CellPopulation.initialize_cells()
+            Tuple of (cell_init_data, cell_size_um)
         """
         file_path = Path(file_path)
-        
-        if not file_path.exists():
-            raise FileNotFoundError(f"Initial state file not found: {file_path}")
-        
-        print(f"[LOAD] Loading initial state from {file_path}")
-        
+
+        if file_path.suffix.lower() == '.csv':
+            return self.load_initial_state_from_csv(file_path)
+        elif file_path.suffix.lower() == '.vtk':
+            return self.load_initial_state_from_vtk(file_path)
+        else:
+            raise ValueError(f"Unsupported file format: {file_path.suffix}. Use .csv for 2D or .vtk for 2D/3D")
+
+    def load_initial_state_from_csv(self, file_path: Union[str, Path]) -> Tuple[List[Dict[str, Any]], float]:
+        """
+        Load initial cell state from CSV file (2D only, human-readable format).
+
+        CSV Format:
+        - Required columns: x, y (logical grid coordinates)
+        - Optional columns: phenotype, age, gene_<name> (for gene states)
+        - Optional metadata comment line: # cell_size_um=20.0, description="..."
+
+        Returns:
+            Tuple of (cell_init_data, cell_size_um)
+        """
+        if self.config.domain.dimensions != 2:
+            raise ValueError("CSV loading is only supported for 2D simulations. Use VTK for 3D.")
+
+        # Get cell size from YAML config
+        yaml_cell_height = getattr(self.config.domain, 'cell_height', 20.0)
+        if hasattr(yaml_cell_height, 'value'):
+            yaml_cell_size_um = float(yaml_cell_height.value)
+        else:
+            yaml_cell_size_um = float(yaml_cell_height)
+
+        # Load CSV file
+        csv_loader = CSVCellLoader(file_path, yaml_cell_size_um)
+        positions = csv_loader.get_cell_positions()
+        cell_size_um = csv_loader.get_cell_size_um()
+        gene_states_dict = csv_loader.get_gene_states()
+        phenotypes = csv_loader.get_phenotypes()
+        ages = csv_loader.get_ages()  # Get ages from checkpoint files
+        generations = csv_loader.get_generations()  # Get generations from checkpoint files
+
+        print(f"[INFO] CSV file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+
+        if not positions:
+            print("[!] No cells in CSV file")
+            return [], cell_size_um
+
+        # Create cell initialization data
         cell_init_data = []
-        
-        with h5py.File(file_path, 'r') as f:
-            # Validate metadata
-            if 'metadata' not in f:
-                raise ValueError("Invalid initial state file: missing metadata")
-            
-            meta = f['metadata']
-            cell_count = meta.attrs['cell_count']
-            timestamp = meta.attrs['timestamp']
-            version = meta.attrs.get('version', 'unknown')
-            step = meta.attrs.get('step', 0)
-            
-            print(f"[CHART] File info: {cell_count} cells, created {timestamp}, version {version}, step {step}")
-            
-            # Validate domain compatibility
-            if 'domain_info' in meta.attrs:
-                domain_info = json.loads(meta.attrs['domain_info'])
-                self._validate_domain_compatibility(domain_info)
-            
-            if cell_count == 0:
-                print("[WARNING]  No cells in file")
-                return []
-            
-            # Load cell data
-            cells_group = f['cells']
-            
-            ids = [s.decode('utf-8') for s in cells_group['ids'][:]]
-            positions = cells_group['positions'][:]
-            phenotypes = [s.decode('utf-8') for s in cells_group['phenotypes'][:]]
-            ages = cells_group['ages'][:]
-            division_counts = cells_group['division_counts'][:]
-            tq_wait_times = cells_group['tq_wait_times'][:]
-            
-            # Load gene states if available
-            gene_states_dict = {}
-            if 'gene_states' in f:
-                gene_group = f['gene_states']
-                gene_names = [s.decode('utf-8') for s in gene_group['gene_names'][:]]
-                gene_matrix = gene_group['states'][:]
-                
-                # Convert matrix back to per-cell dictionaries
-                for i in range(len(ids)):
-                    gene_states_dict[ids[i]] = {
-                        gene_names[j]: bool(gene_matrix[i, j]) 
-                        for j in range(len(gene_names))
-                    }
-                
-                print(f"[OK] Loaded gene states: {len(gene_names)} genes")
-            
-            # Load metabolic states if available
-            metabolic_states_dict = {}
-            if 'metabolic_states' in f:
-                metab_group = f['metabolic_states']
-                metabolite_names = [s.decode('utf-8') for s in metab_group['metabolite_names'][:]]
-                metab_matrix = metab_group['values'][:]
-                
-                # Convert matrix back to per-cell dictionaries
-                for i in range(len(ids)):
-                    metabolic_states_dict[ids[i]] = {
-                        metabolite_names[j]: float(metab_matrix[i, j])
-                        for j in range(len(metabolite_names))
-                    }
-                
-                print(f"[OK] Loaded metabolic states: {len(metabolite_names)} metabolites")
-            
-            # Create cell initialization data
-            for i in range(len(ids)):
-                # Convert 3D position back to 2D if needed for 2D simulations
-                pos = tuple(positions[i])
-                if self.config.domain.dimensions == 2:
-                    pos = (pos[0], pos[1])  # Drop z coordinate
-                
-                cell_init_data.append({
-                    'id': ids[i],
-                    'position': pos,
-                    'phenotype': phenotypes[i],
-                    'age': float(ages[i]),
-                    'division_count': int(division_counts[i]),
-                    'gene_states': gene_states_dict.get(ids[i], {}),
-                    'metabolic_state': metabolic_states_dict.get(ids[i], {}),
-                    'tq_wait_time': float(tq_wait_times[i])
-                })
-        
-        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from {file_path}")
-        return cell_init_data
+
+        # Calculate biological grid bounds for validation
+        bio_grid_x = int(self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers)
+        bio_grid_y = int(self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers)
+
+        for i, pos in enumerate(positions):
+            # Read logical coordinates and round to nearest integer grid index
+            x_log = int(round(pos[0]))
+            y_log = int(round(pos[1]))
+
+            # Clamp to valid biological grid bounds
+            x_log = max(0, min(bio_grid_x - 1, x_log))
+            y_log = max(0, min(bio_grid_y - 1, y_log))
+
+            # Create 2D position tuple
+            logical_pos = (x_log, y_log)
+
+            # Generate unique cell ID
+            cell_id = f"cell_{i:06d}"
+
+            # Get phenotype for this cell
+            cell_phenotype = phenotypes[i] if i < len(phenotypes) else 'Quiescent'
+
+            # Get gene states for this cell
+            cell_gene_states = gene_states_dict.get(i, {})
+
+            # Get age and generation for this cell (from checkpoint files)
+            cell_age = ages[i] if i < len(ages) else 0.0
+            cell_generation = generations[i] if i < len(generations) else 0
+
+            # Compute physical position from YAML cell size and logical indices
+            original_physical_pos = (
+                logical_pos[0] * cell_size_um,
+                logical_pos[1] * cell_size_um,
+                0.0  # Z coordinate is 0 for 2D
+            )
+
+            # Create cell with loaded data
+            cell_init_data.append({
+                'id': cell_id,
+                'position': logical_pos,  # Logical position for simulation
+                'original_physical_position': original_physical_pos,  # Physical position (um)
+                'phenotype': cell_phenotype,
+                'age': cell_age,  # Age from checkpoint or default 0.0
+                'division_count': cell_generation,  # Generation from checkpoint or default 0
+                'gene_states': cell_gene_states,  # Gene network initialization from CSV
+                'metabolic_state': {},  # Empty metabolic state
+                'tq_wait_time': 0.0  # Default wait time
+            })
+
+        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from CSV file")
+        print(f"[OK] Using biological cell size: {cell_size_um:.2f} um (from YAML config)")
+
+        if any(gene_states_dict.values()):
+            gene_names = set()
+            for cell_genes in gene_states_dict.values():
+                gene_names.update(cell_genes.keys())
+            print(f"[OK] Initialized gene networks: {len(gene_names)} nodes per cell")
+
+        unique_phenotypes = set(phenotypes) if phenotypes else {'Quiescent'}
+        print(f"[OK] Loaded phenotypes: {len(unique_phenotypes)} unique types")
+
+        return cell_init_data, cell_size_um
 
     def load_initial_state_from_vtk(self, file_path: Union[str, Path]) -> Tuple[List[Dict[str, Any]], float]:
         """
@@ -413,17 +647,14 @@ class InitialStateManager:
 
     def _load_enhanced_vtk_domain(self, file_path: Path) -> Tuple[List[Dict[str, Any]], float]:
         """Load enhanced VTK domain file with gene networks and phenotypes"""
-        # Import VTK domain loader
-        import sys
-        sys.path.append('tools')
-        from vtk_export import VTKDomainLoader
+        # Import VTK domain loader from library module
+        from .vtk_domain_loader import VTKDomainLoader
 
         # Load complete domain
         loader = VTKDomainLoader()
         domain_data = loader.load_complete_domain(str(file_path))
 
         positions = domain_data['positions']
-        original_physical_positions = domain_data.get('original_physical_positions', [])
         gene_states = domain_data['gene_states']
         phenotypes = domain_data['phenotypes']
         metabolism = domain_data.get('metabolism', [])
@@ -459,94 +690,28 @@ class InitialStateManager:
         # Create cell initialization data with loaded gene states and phenotypes
         cell_init_data = []
 
-        # Calculate logical grid bounds for validation
-        domain_size_um = self.config.domain.size_x.micrometers
-        cell_height_um = self.config.domain.cell_height.micrometers
-        # Use actual grid dimensions from config instead of calculated value
-        grid_max = self.config.domain.nx - 1  # e.g., 25-1 = 24 (max index)
+        # Calculate biological grid size (from domain config)
+        bio_grid_x = int(self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers)
+        bio_grid_y = int(self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers)
+        bio_grid_z = int(self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers) if self.config.domain.dimensions == 3 else 1
 
-        # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
-        # Need to map them to biological grid coordinates [0, biological_grid_size)
-        if len(positions) > 0:
-            # Calculate VTK coordinate bounds
-            x_coords = [pos[0] for pos in positions]
-            y_coords = [pos[1] for pos in positions]
-            z_coords = [(pos[2] if len(pos) > 2 else 0) for pos in positions]
-
-            x_min, x_max = min(x_coords), max(x_coords)
-            y_min, y_max = min(y_coords), max(y_coords)
-            z_min, z_max = min(z_coords), max(z_coords)
-
-            # Calculate VTK span and center
-            x_span = x_max - x_min
-            y_span = y_max - y_min
-            z_span = z_max - z_min
-            x_center = (x_min + x_max) / 2
-            y_center = (y_min + y_max) / 2
-            z_center = (z_min + z_max) / 2
-
-            # Calculate biological grid size (from domain config)
-            bio_grid_x = int(self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers)
-            bio_grid_y = int(self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers)
-            bio_grid_z = int(self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers) if self.config.domain.dimensions == 3 else 1
-
-            print(f"[INFO] VTK logical ranges: X({x_min:.1f}, {x_max:.1f}), Y({y_min:.1f}, {y_max:.1f}), Z({z_min:.1f}, {z_max:.1f})")
-            print(f"[INFO] VTK center: ({x_center:.1f}, {y_center:.1f}, {z_center:.1f})")
-            print(f"[INFO] VTK span: ({x_span:.1f}, {y_span:.1f}, {z_span:.1f})")
-            print(f"[INFO] Biological grid size: ({bio_grid_x}, {bio_grid_y}, {bio_grid_z})")
-            print(f"[INFO] Cell height: {cell_height_um} um")
-        else:
-            x_center = y_center = z_center = 0
-            x_span = y_span = z_span = 1
-            bio_grid_x = bio_grid_y = bio_grid_z = 1
-
+        # Positions coming from VTK are LOGICAL coordinates. Use them directly as grid indices.
         for i, pos in enumerate(positions):
-            # VTKDomainLoader returns positions in biological grid coordinates centered around (0,0,0)
-            # Map them to biological grid coordinates [0, bio_grid_size) while preserving relative positions
-
-            # Scale and shift VTK coordinates to fit in biological grid
-            # Map VTK range to biological grid range with some margin
-            margin = 0.1  # 10% margin to avoid edge effects
-            usable_bio_x = bio_grid_x * (1 - 2 * margin)
-            usable_bio_y = bio_grid_y * (1 - 2 * margin)
-            usable_bio_z = bio_grid_z * (1 - 2 * margin) if self.config.domain.dimensions == 3 else 1
-
-            # Scale VTK coordinates to fit in usable biological grid space
-            if x_span > 0:
-                x_scaled = (pos[0] - x_center) * (usable_bio_x / x_span)
-            else:
-                x_scaled = 0
-
-            if y_span > 0:
-                y_scaled = (pos[1] - y_center) * (usable_bio_y / y_span)
-            else:
-                y_scaled = 0
-
-            if z_span > 0 and self.config.domain.dimensions == 3:
-                z_scaled = ((pos[2] if len(pos) > 2 else 0) - z_center) * (usable_bio_z / z_span)
-            else:
-                z_scaled = 0
-
-            # Shift to center in biological grid
-            x_shifted = x_scaled + bio_grid_x / 2
-            y_shifted = y_scaled + bio_grid_y / 2
-            z_shifted = z_scaled + bio_grid_z / 2 if self.config.domain.dimensions == 3 else 0
-
-            # Convert to integer biological grid coordinates and validate bounds
-            x_bio = int(round(x_shifted))
-            y_bio = int(round(y_shifted))
-            z_bio = int(round(z_shifted)) if self.config.domain.dimensions == 3 else 0
+            # Read logical coordinates (may be float); round to nearest integer grid index
+            x_log = int(round(pos[0]))
+            y_log = int(round(pos[1]))
+            z_log = int(round(pos[2])) if (self.config.domain.dimensions == 3 and len(pos) > 2) else 0
 
             # Clamp to valid biological grid bounds
-            x_bio = max(0, min(bio_grid_x - 1, x_bio))
-            y_bio = max(0, min(bio_grid_y - 1, y_bio))
-            z_bio = max(0, min(bio_grid_z - 1, z_bio)) if self.config.domain.dimensions == 3 else 0
+            x_log = max(0, min(bio_grid_x - 1, x_log))
+            y_log = max(0, min(bio_grid_y - 1, y_log))
+            z_log = max(0, min(bio_grid_z - 1, z_log)) if self.config.domain.dimensions == 3 else 0
 
-            # Create position tuple
+            # Create position tuple in logical grid coordinates
             if self.config.domain.dimensions == 2:
-                logical_pos = (x_bio, y_bio)
+                logical_pos = (x_log, y_log)
             else:
-                logical_pos = (x_bio, y_bio, z_bio)
+                logical_pos = (x_log, y_log, z_log)
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -568,22 +733,33 @@ class InitialStateManager:
                 if gene_name not in complete_gene_states:
                     complete_gene_states[gene_name] = state
 
-            # Store original physical position for VTK export preservation
-            # Use original physical positions from VTK loader (in meters, convert to micrometers)
-            if i < len(original_physical_positions):
-                orig_pos_m = original_physical_positions[i]
-                original_physical_pos = (
-                    orig_pos_m[0] * 1e6,  # Convert m to um
-                    orig_pos_m[1] * 1e6,
-                    (orig_pos_m[2] if len(orig_pos_m) > 2 else 0) * 1e6
-                )
-            else:
-                # Fallback: reconstruct from biological grid coordinates using VTK cell size
-                original_physical_pos = (
-                    logical_pos[0] * vtk_cell_size_um,  # Convert biological grid to um using VTK cell size
-                    logical_pos[1] * vtk_cell_size_um,
-                    (logical_pos[2] if len(logical_pos) > 2 else 0) * vtk_cell_size_um
-                )
+            # Compute physical position strictly from YAML cell size and logical indices
+            # Logical (grid) coordinates come from VTK; YAML cell size defines the physical spacing
+            original_physical_pos = (
+                logical_pos[0] * cell_size_um,
+                logical_pos[1] * cell_size_um,
+                (logical_pos[2] if len(logical_pos) > 2 else 0) * cell_size_um
+            )
+
+            # Extract age and generation from metadata if available (checkpoint files)
+            cell_age = 0.0
+            cell_generation = 0
+
+            if 'ages' in metadata:
+                # Parse ages from comma-separated string
+                ages_str = metadata['ages']
+                if isinstance(ages_str, str) and ages_str:
+                    ages_list = [float(a) for a in ages_str.split(',')]
+                    if i < len(ages_list):
+                        cell_age = ages_list[i]
+
+            if 'generations' in metadata:
+                # Parse generations from comma-separated string
+                generations_str = metadata['generations']
+                if isinstance(generations_str, str) and generations_str:
+                    generations_list = [int(g) for g in generations_str.split(',')]
+                    if i < len(generations_list):
+                        cell_generation = generations_list[i]
 
             # Create cell with loaded data
             cell_init_data.append({
@@ -591,8 +767,8 @@ class InitialStateManager:
                 'position': logical_pos,  # Logical position for simulation
                 'original_physical_position': original_physical_pos,  # Original physical position (um)
                 'phenotype': cell_phenotype,
-                'age': 0.0,  # Default age (could be added to VTK format later)
-                'division_count': 0,  # Default division count
+                'age': cell_age,  # Age from checkpoint or default 0.0
+                'division_count': cell_generation,  # Generation from checkpoint or default 0
                 'gene_states': complete_gene_states,  # Complete gene network initialization
                 'metabolic_state': {'metabolism': cell_metabolism},  # Store metabolism value
                 'tq_wait_time': 0.0  # Default wait time
@@ -706,7 +882,7 @@ class InitialStateManager:
             # Store original physical position for VTK export preservation
             # Positions from VTKCellLoader are biological grid coordinates, convert to physical coordinates (um)
             original_physical_pos = (
-                positions[i][0] * cell_size_um,  # Convert biological grid to um
+                positions[i][0] * cell_size_um,  # Convert logical grid to physical um
                 positions[i][1] * cell_size_um,
                 (positions[i][2] if len(positions[i]) > 2 else 0) * cell_size_um
             )
@@ -759,16 +935,3 @@ class InitialStateManager:
         
         print("[OK] Domain compatibility validated")
 
-
-def generate_initial_state_filename(config: MicroCConfig, step: int = 0) -> str:
-    """Generate a standardized filename for initial state files"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    dimensions = f"{config.domain.dimensions}D"
-    grid = f"{config.domain.nx}x{config.domain.ny}"
-    if config.domain.dimensions == 3 and config.domain.nz:
-        grid += f"x{config.domain.nz}"
-    
-    if step == 0:
-        return f"initial_state_{dimensions}_{grid}_{timestamp}.h5"
-    else:
-        return f"cell_state_step{step:06d}_{dimensions}_{grid}_{timestamp}.h5"

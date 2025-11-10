@@ -349,18 +349,24 @@ class CellPopulation(ICellPopulation):
 
     def initialize_cells(self, cell_data: List[Dict[str, Any]]) -> int:
         """
-        Initialize population with a list of cell data.
+        Batch initialize cells with a single state update for efficiency.
 
         Args:
             cell_data: List of dictionaries containing cell initialization data.
-                      Each dict should have 'position' and 'phenotype' keys.
-                      Optional keys: 'id', 'age', 'division_count', 'gene_states',
-                                   'metabolic_state', 'tq_wait_time'
+                       Each dict should have 'position' and 'phenotype' keys.
+                       Optional keys: 'id', 'age', 'division_count', 'gene_states',
+                                      'metabolic_state', 'tq_wait_time',
+                                      'original_physical_position'
 
         Returns:
             Number of cells successfully added
         """
         cells_added = 0
+
+        # Prepare batched copies (immutable update pattern)
+        new_cells = self.state.cells.copy()
+        new_spatial_grid = self.state.spatial_grid.copy()
+        new_total_cells = self.state.total_cells
 
         for cell_info in cell_data:
             # Ensure position is a clean tuple of floats (not numpy array)
@@ -383,19 +389,19 @@ class CellPopulation(ICellPopulation):
                 print(f"[WARNING]  Invalid position {position}, skipping cell")
                 continue
 
-            # Check if position is occupied
-            if position in self.state.spatial_grid:
+            # Check if position is occupied (consider batch additions)
+            if position in new_spatial_grid:
                 print(f"[WARNING]  Position {position} occupied, skipping cell")
                 continue
 
-            # Check population limit
-            if self.state.total_cells >= self.default_params['max_population_size']:
+            # Check population limit (consider batch additions)
+            if new_total_cells >= self.default_params['max_population_size']:
                 print(f"[WARNING]  Population limit reached, stopping cell initialization")
                 break
 
             # Create new cell
             cell = Cell(position=position, phenotype=phenotype,
-                       cell_id=cell_id, custom_functions_module=self.custom_functions)
+                        cell_id=cell_id, custom_functions_module=self.custom_functions)
 
             # Initialize gene network for new cell
             self._initialize_cell_gene_network(cell)
@@ -421,29 +427,27 @@ class CellPopulation(ICellPopulation):
                     for gene_name, state in cell_info['gene_states'].items():
                         if gene_name in gene_network.nodes:
                             gene_network.nodes[gene_name].current_state = bool(state)
-
                 updates['gene_states'] = cell_info['gene_states'].copy()
 
             # Apply updates if any
             if updates:
                 cell.state = cell.state.with_updates(**updates)
 
-            # Update population state
-            new_cells = self.state.cells.copy()
+            # Stage additions in batch structures
             new_cells[cell.state.id] = cell
-
-            new_spatial_grid = self.state.spatial_grid.copy()
             new_spatial_grid[position] = cell.state.id
+            new_total_cells += 1
+            cells_added += 1
 
+        # Single state update at the end
+        if cells_added > 0:
             self.state = self.state.with_updates(
                 cells=new_cells,
                 spatial_grid=new_spatial_grid,
-                total_cells=self.state.total_cells + 1
+                total_cells=new_total_cells
             )
 
-            cells_added += 1
-
-        print(f"[OK] Initialized {cells_added}/{len(cell_data)} cells")
+        print(f"[OK] Initialized {cells_added}/{len(cell_data)} cells (batched)")
         return cells_added
 
     def attempt_division(self, parent_id: str) -> bool:
@@ -1153,16 +1157,80 @@ class CellPopulation(ICellPopulation):
         }
 
     def attempt_divisions(self) -> int:
-        """Attempt cell division for cells that are ready"""
+        """Attempt cell divisions in batch with a single state update."""
         divisions = 0
 
-        # Get cells that might divide
-        dividing_cells = [cell for cell in self.state.cells.values()
-                         if cell.should_divide(self.config)]
+        # Snapshot current state for batched updates
+        new_spatial_grid = self.state.spatial_grid.copy()
+        new_cells = self.state.cells.copy()
+        new_total = self.state.total_cells
+        new_generation_count = self.state.generation_count
+
+        # Collect cells that are eligible to divide at this step
+        dividing_cells = [cell for cell in self.state.cells.values() if cell.should_divide(self.config)]
 
         for cell in dividing_cells:
-            if self.attempt_division(cell.state.id):
-                divisions += 1
+            # Compute available neighbors against the batched grid state
+            if len(cell.state.position) == 2:
+                x, y = cell.state.position
+                neighbor_candidates = [
+                    (x-1, y), (x+1, y), (x, y-1), (x, y+1),  # Von Neumann
+                    (x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)  # Moore
+                ]
+            else:
+                x, y, z = cell.state.position
+                neighbor_candidates = []
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        for dz in [-1, 0, 1]:
+                            if dx == 0 and dy == 0 and dz == 0:
+                                continue
+                            neighbor_candidates.append((x+dx, y+dy, z+dz))
+
+            available_positions = [pos for pos in neighbor_candidates if self._is_valid_position(pos) and pos not in new_spatial_grid]
+
+            # Use custom selection logic (required)
+            if self.custom_functions and hasattr(self.custom_functions, 'select_division_direction'):
+                target_position = self.custom_functions.select_division_direction(
+                    parent_position=cell.state.position,
+                    available_positions=available_positions
+                )
+            else:
+                raise RuntimeError(
+                    f"[!] Custom function 'select_division_direction' is required but not found!\n"
+                    f"   Please ensure your custom functions module defines this function.\n"
+                    f"   Custom functions module: {self.custom_functions}"
+                )
+
+            if target_position is None:
+                continue  # No space available
+
+            # Check division success rate
+            if np.random.random() > self.default_params['division_success_rate']:
+                continue
+
+            # Create and initialize daughter cell
+            daughter_cell = cell.divide()
+            daughter_cell.move_to(target_position)
+            self._initialize_cell_gene_network(daughter_cell)
+
+            # Stage updates in batched structures
+            new_spatial_grid[target_position] = daughter_cell.state.id
+            new_cells[daughter_cell.state.id] = daughter_cell
+            new_cells[cell.state.id] = cell  # Parent may have updated internal state
+
+            divisions += 1
+            new_total += 1
+            new_generation_count += 1
+
+        # Commit single state update if any divisions occurred
+        if divisions > 0:
+            self.state = self.state.with_updates(
+                cells=new_cells,
+                spatial_grid=new_spatial_grid,
+                total_cells=new_total,
+                generation_count=new_generation_count
+            )
 
         return divisions
 

@@ -20,6 +20,8 @@ import argparse
 from pathlib import Path
 import time
 import os
+from datetime import datetime
+import shutil
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -33,7 +35,7 @@ from simulation.multi_substance_simulator import MultiSubstanceSimulator
 from simulation.orchestrator import TimescaleOrchestrator
 from biology.population import CellPopulation
 from biology.gene_network import BooleanNetwork
-from src.io.initial_state import InitialStateManager, generate_initial_state_filename
+from src.io.initial_state import InitialStateManager
 import importlib.util
 
 def load_custom_functions(custom_functions_path):
@@ -68,8 +70,6 @@ def parse_arguments():
 Examples:
   python run_sim.py config/complete_substances_config.yaml
   python run_sim.py my_custom_simulation.yaml
-  python run_sim.py config/simple_oxygen_glucose.yaml --steps 100
-  python run_sim.py config/drug_treatment.yaml --output results/drug_study
         """
     )
     
@@ -77,34 +77,6 @@ Examples:
         'config_file',
         type=str,
         help='Path to YAML configuration file'
-    )
-    
-    parser.add_argument(
-        '--steps',
-        type=int,
-        default=None,
-        help='Number of simulation steps (overrides config file)'
-    )
-    
-    parser.add_argument(
-        '--dt',
-        type=float,
-        default=None,
-        help='Time step size (overrides config file)'
-    )
-    
-    parser.add_argument(
-        '--output',
-        type=str,
-        default=None,
-        help='Output directory (overrides config file)'
-    )
-    
-    parser.add_argument(
-        '--custom-functions',
-        type=str,
-        default=None,
-        help='Path to custom_functions.py file (overrides config file)'
     )
     
     parser.add_argument(
@@ -253,8 +225,8 @@ def validate_configuration(config, config_path):
     print(f"[+] Configuration validation passed!")
     return True
 
-def load_configuration(config_file, args):
-    """Load and validate configuration"""
+def load_configuration(config_file):
+    """Load and validate configuration strictly from file (no CLI overrides)."""
     config_path = Path(config_file)
 
     if not config_path.exists():
@@ -289,30 +261,20 @@ def load_configuration(config_file, args):
     # Validate configuration
     if not validate_configuration(config, config_path):
         sys.exit(1)
-    
-    # Apply command line overrides
-    if args.output:
-        config.output_dir = Path(args.output)
-    
-    # Load custom functions if specified
+
+    # Load custom functions path from config only
     custom_functions_path = None
-    
-    # Priority: command line > config file > auto-detection
-    if args.custom_functions:
-        custom_functions_path = Path(args.custom_functions)
-    elif hasattr(config, 'custom_functions_path') and config.custom_functions_path:
+    if hasattr(config, 'custom_functions_path') and config.custom_functions_path:
         custom_functions_path = Path(config.custom_functions_path)
-    
-    if custom_functions_path:
         if custom_functions_path.exists():
             print(f"[+] Custom functions found: {custom_functions_path}")
         else:
             print(f"[!] Custom functions file not found: {custom_functions_path}")
-    
+
     return config, custom_functions_path
 
-def setup_simulation(config, args, custom_functions_path=None):
-    """Setup all simulation components"""
+def setup_simulation(config, custom_functions_path=None):
+    """Setup all simulation components (config-driven only)"""
     print(f"\n[SETUP] Setting up simulation components...")
     
     # Create mesh manager
@@ -329,7 +291,7 @@ def setup_simulation(config, args, custom_functions_path=None):
     gene_network = BooleanNetwork(config=config)
     print(f"   [+] Gene network: {len(gene_network.input_nodes)} inputs, {len(gene_network.output_nodes)} outputs")
 
-    # Load custom functions first
+    # Load custom functions first (from config only)
     custom_functions = load_custom_functions(custom_functions_path)
 
     # Initialize gene network with custom function if available
@@ -340,20 +302,20 @@ def setup_simulation(config, args, custom_functions_path=None):
     # Calculate biological grid based on cell_height
     domain_size_um = config.domain.size_x.micrometers
     cell_height_um = config.domain.cell_height.micrometers
-    bio_nx = int(domain_size_um / cell_height_um)
-    bio_ny = int(domain_size_um / cell_height_um)
+    biocell_nx = int(domain_size_um / cell_height_um)
+    biocell_ny = int(domain_size_um / cell_height_um)
 
     if config.domain.dimensions == 3:
-        bio_nz = int(domain_size_um / cell_height_um)
-        grid_size = (bio_nx, bio_ny, bio_nz)
+        biocell_nz = int(domain_size_um / cell_height_um)
+        biocell_grid_size = (biocell_nx, biocell_ny, biocell_nz)
     else:
-        grid_size = (bio_nx, bio_ny)
+        biocell_grid_size = (biocell_nx, biocell_ny)
 
-    print(f"   [*] Population grid: {grid_size} (biological cell grid)")
-    print(f"   [*] FiPy grid: {(config.domain.nx, config.domain.ny)} (for substance diffusion)")
+    print(f"   [*] Population biocell grid: {biocell_grid_size}")
+    print(f"   [*] FiPy solver grid: {(config.domain.nx, config.domain.ny)}")
 
     population = CellPopulation(
-        grid_size=grid_size,
+        grid_size=biocell_grid_size,
         gene_network=gene_network,
         custom_functions_module=custom_functions,
         config=config
@@ -363,167 +325,73 @@ def setup_simulation(config, args, custom_functions_path=None):
     initial_state_manager = InitialStateManager(config)
     detected_cell_size_um = None
 
-    print(f"[DEBUG] Initial state mode: {config.initial_state.mode}")
     print(f"[DEBUG] Initial state file_path: {config.initial_state.file_path}")
     print(f"[DEBUG] Domain dimensions: {config.domain.dimensions}")
 
-    if config.initial_state.mode == "load_h5" and config.initial_state.file_path:
-        # Load initial state from H5 file
-        print(f"[*] Loading initial state from H5: {config.initial_state.file_path}")
-        try:
-            cell_data = initial_state_manager.load_initial_state(config.initial_state.file_path)
-            cells_loaded = population.initialize_cells(cell_data)
-            print(f"   [+] Cells: {cells_loaded} (loaded from H5 file)")
-        except Exception as e:
-            print(f"[!] Failed to load H5 initial state: {e}")
-            print("   Falling back to generation mode...")
-            config.initial_state.mode = "generate"
+    if config.initial_state.file_path:
+        file_path = Path(config.initial_state.file_path)
+        file_suffix = file_path.suffix.lower()
 
-    elif config.initial_state.mode == "load_vtk" and config.initial_state.file_path:
-        # Load initial state from VTK file
-        print(f"[*] Loading initial state from VTK: {config.initial_state.file_path}")
-        print(f"[DEBUG] VTK loading triggered - mode: {config.initial_state.mode}, path: {config.initial_state.file_path}")
         try:
-            cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(config.initial_state.file_path)
-            print(f"[DEBUG] VTK loading successful, got {len(cell_data)} cells")
+            if file_suffix == ".vtk":
+                # Load initial state from VTK file
+                print(f"[*] Loading initial state from VTK: {config.initial_state.file_path}")
+                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(config.initial_state.file_path)
+                print(f"[DEBUG] VTK loading successful, got {len(cell_data)} cells")
+            elif file_suffix == ".csv":
+                # Load initial state from CSV file
+                print(f"[*] Loading initial state from CSV: {config.initial_state.file_path}")
+                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_csv(config.initial_state.file_path)
+                print(f"[DEBUG] CSV loading successful, got {len(cell_data)} cells")
+            else:
+                raise ValueError(f"Unsupported initial state file format: {file_suffix}. Supported formats: .vtk, .csv")
+
             if cell_data:
                 first_cell = cell_data[0]
                 print(f"[DEBUG] First cell: ID={first_cell.get('id', 'None')}, position={first_cell.get('position', 'None')}, phenotype={first_cell.get('phenotype', 'None')}")
                 print(f"[DEBUG] First cell gene states: {len(first_cell.get('gene_states', {}))} genes")
 
             cells_loaded = population.initialize_cells(cell_data)
-            print(f"   [+] Cells: {cells_loaded} (loaded from VTK file)")
+            print(f"   [+] Cells: {cells_loaded} (loaded from {file_suffix.upper()} file)")
             print(f"   [+] Detected cell size: {detected_cell_size_um:.2f} um")
 
             # Debug: Check first few cell positions
             if population.state.cells:
                 print(f"   [DEBUG] First 3 cell positions:")
-                for i, (cell_id, cell) in enumerate(list(population.state.cells.items())[:3]):
+                for i, (_cell_id, cell) in enumerate(list(population.state.cells.items())[:3]):
                     pos = cell.state.position
                     print(f"     Cell {i}: {pos} (dimensions: {len(pos)})")
 
             # Update domain configuration with detected cell size
             print(f"[*] Updating domain cell_height from {config.domain.cell_height.micrometers:.2f} um to {detected_cell_size_um:.2f} um")
             config.domain.cell_height = Length(detected_cell_size_um, "um")
+        except Exception as e:
+            print(f"[!] Failed to load initial state: {e}")
+            raise
 
             # Recalculate biological grid size based on detected cell size
             domain_size_um = config.domain.size_x.micrometers
-            bio_nx = int(domain_size_um / detected_cell_size_um)
-            bio_ny = int(domain_size_um / detected_cell_size_um)
+            biocell_nx = int(domain_size_um / detected_cell_size_um)
+            biocell_ny = int(domain_size_um / detected_cell_size_um)
 
             if config.domain.dimensions == 3:
-                bio_nz = int(domain_size_um / detected_cell_size_um)
-                grid_size = (bio_nx, bio_ny, bio_nz)
+                biocell_nz = int(domain_size_um / detected_cell_size_um)
+                biocell_grid_size = (biocell_nx, biocell_ny, biocell_nz)
             else:
-                grid_size = (bio_nx, bio_ny)
+                biocell_grid_size = (biocell_nx, biocell_ny)
 
-            print(f"[*] Updated biological grid size: {grid_size}")
+            print(f"[*] Updated biological cell grid size: {biocell_grid_size}")
 
             # Update population grid size
-            population.grid_size = grid_size
+            population.grid_size = biocell_grid_size
 
         except Exception as e:
             print(f"[!] Failed to load VTK initial state: {e}")
-            print("   Falling back to generation mode...")
-            config.initial_state.mode = "generate"
+            raise
 
-    elif config.initial_state.mode == "load" and config.initial_state.file_path:
-        # Backward compatibility: auto-detect file type
-        file_path = Path(config.initial_state.file_path)
-        if file_path.suffix.lower() == '.vtk':
-            print(f"[*] Auto-detected VTK file, switching to load_vtk mode")
-            config.initial_state.mode = "load_vtk"
-            # Recursively call the VTK loading logic
-            print(f"[*] Loading initial state from VTK: {config.initial_state.file_path}")
-            try:
-                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(config.initial_state.file_path)
-                cells_loaded = population.initialize_cells(cell_data)
-                print(f"   [+] Cells: {cells_loaded} (loaded from VTK file)")
-                print(f"   [+] Detected cell size: {detected_cell_size_um:.2f} um")
-
-                # Update domain configuration with detected cell size
-                print(f"[*] Updating domain cell_height from {config.domain.cell_height.micrometers:.2f} um to {detected_cell_size_um:.2f} um")
-                config.domain.cell_height = Length(detected_cell_size_um, "um")
-
-                # Recalculate biological grid size
-                domain_size_um = config.domain.size_x.micrometers
-                bio_nx = int(domain_size_um / detected_cell_size_um)
-                bio_ny = int(domain_size_um / detected_cell_size_um)
-
-                if config.domain.dimensions == 3:
-                    bio_nz = int(domain_size_um / detected_cell_size_um)
-                    grid_size = (bio_nx, bio_ny, bio_nz)
-                else:
-                    grid_size = (bio_nx, bio_ny)
-
-                print(f"[*] Updated biological grid size: {grid_size}")
-                population.grid_size = grid_size
-
-            except Exception as e:
-                print(f"[!] Failed to load VTK initial state: {e}")
-                print("   Falling back to generation mode...")
-                config.initial_state.mode = "generate"
-        else:
-            # Assume H5 file
-            print(f"[*] Auto-detected H5 file, switching to load_h5 mode")
-            config.initial_state.mode = "load_h5"
-            try:
-                cell_data = initial_state_manager.load_initial_state(config.initial_state.file_path)
-                cells_loaded = population.initialize_cells(cell_data)
-                print(f"   [+] Cells: {cells_loaded} (loaded from H5 file)")
-            except Exception as e:
-                print(f"[!] Failed to load H5 initial state: {e}")
-                print("   Falling back to generation mode...")
-                config.initial_state.mode = "generate"
-
-    if config.initial_state.mode == "generate":
-        # Generate initial state using existing logic
-        if custom_functions and hasattr(custom_functions, 'initialize_cell_placement'):
-            # Try custom placement function with domain configuration
-            # Get initial_cell_count from custom_parameters
-            initial_cell_count = config.custom_parameters['initial_cell_count']
-
-            simulation_params = {
-                'domain_size_um': config.domain.size_x.micrometers,  # Assume square domain
-                'cell_height_um': config.domain.cell_height.micrometers,
-                'initial_cell_count': initial_cell_count
-            }
-
-            # Pass correct grid size based on dimensions
-            if config.domain.dimensions == 3:
-                grid_size = (config.domain.nx, config.domain.ny, config.domain.nz)
-            else:
-                grid_size = (config.domain.nx, config.domain.ny)
-
-            placements = custom_functions.initialize_cell_placement(
-                grid_size=grid_size,
-                simulation_params=simulation_params,
-                config=config
-            )
-            for placement in placements:
-                population.add_cell(placement['position'], phenotype=placement['phenotype'])
-            print(f"   [+] Cells: {len(placements)} (custom placement)")
-        else:
-            # Default placement - center cluster
-            center_x, center_y = config.domain.nx // 2, config.domain.ny // 2
-            default_positions = [
-                (center_x, center_y),
-                (center_x-1, center_y), (center_x+1, center_y),
-                (center_x, center_y-1), (center_x, center_y+1)
-            ]
-            for pos in default_positions:
-                population.add_cell(pos, phenotype="Proliferation") #TODO check proliferation
-            print(f"   [+] Cells: {len(default_positions)} (default center placement)")
-
-        # Initialize cell ages to allow immediate proliferation
-        if custom_functions and hasattr(custom_functions, 'initialize_cell_ages'):
-            custom_functions.initialize_cell_ages(population, config)
-
-        # Note: H5 file generation has been moved to external tools
-        if config.initial_state.save_initial_state:
-            print("[!] H5 file generation has been moved to external tools.")
-            print("   Use: python run_microc.py --generate --cells 1000 --radius 50")
-            print("   Skipping initial state save.")
+    else:
+        print(f"[!] initial_state.file_path is required and must be a .vtk file")
+        raise ValueError("Missing or invalid initial_state.file_path for VTK load")
 
     return mesh_manager, simulator, gene_network, population, detected_cell_size_um
 
@@ -558,7 +426,7 @@ def print_concise_status(step, population):
     # Print one-line status
     print(f"[STATS] Step {step}: mitoATP={metabolic_counts['mitoATP']}, glycoATP={metabolic_counts['glycoATP']}, Both={metabolic_counts['Both']}, None={metabolic_counts['None']} (Total: {total_cells})")
 
-def print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time):
+def print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time, custom_functions=None):
     """Print detailed simulation status"""
     percentage = (step / num_steps) * 100
 
@@ -674,44 +542,59 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
         print(f"[DEBUG] Population grid size: {population.grid_size}")
         print(f"[DEBUG] Domain dimensions: {config.domain.dimensions}")
 
-    # Determine simulation parameters
-    dt = args.dt if args.dt else config.time.dt
+    # Determine simulation parameters strictly from config
+    dt = config.time.dt
     total_time = config.time.end_time
+    num_steps = int(total_time / dt)
 
-    if args.steps:
-        num_steps = args.steps
-        total_time = num_steps * dt
-    else:
-        num_steps = int(total_time / dt)
-
-    # Export initial VTK state before simulation starts (for verification)
+    # Export initial state before simulation starts (for verification)
     print(f"\n[INIT] Exporting initial cell state for verification...")
     try:
-        # Import VTK export functionality
+        # Import export functionality
         import sys
         sys.path.append('tools')
-        from vtk_export import export_microc_simulation_state
 
         # Get cell size from detected value or config
         cell_size_um = detected_cell_size_um if detected_cell_size_um else config.output.cell_size_um
 
-        # Export initial VTK file (step -1 to indicate pre-simulation)
-        vtk_output_dir = config.output_dir / "vtk_cells"
-        initial_vtk_file = export_microc_simulation_state(
-            population=population,
-            output_dir=str(vtk_output_dir),
-            step=-1,  # Use -1 to indicate initial state
-            cell_size_um=cell_size_um
-        )
+        # Export based on domain dimensions
+        if config.domain.dimensions == 2:
+            # 2D simulations use CSV export
+            from csv_export import export_microc_csv_cell_state
 
-        if initial_vtk_file:
-            print(f"[+] Initial VTK state exported: {vtk_output_dir / 'cells_step_-00001.vtk'}")
-            print(f"    Use this file to verify gene network loading before simulation")
+            csv_output_dir = config.output_dir / "csv_cells"
+            initial_csv_file = export_microc_csv_cell_state(
+                population=population,
+                output_dir=str(csv_output_dir),
+                step=-1,  # Use -1 to indicate initial state
+                cell_size_um=cell_size_um
+            )
+
+            if initial_csv_file:
+                print(f"[+] Initial CSV state exported: {Path(initial_csv_file).name}")
+                print(f"    Use this file to verify gene network loading before simulation")
+            else:
+                print(f"[!] Initial CSV export failed - no cell data")
         else:
-            print(f"[!] Initial VTK export failed - no cell data")
+            # 3D simulations use VTK export
+            from vtk_export import export_microc_simulation_state
+
+            vtk_output_dir = config.output_dir / "vtk_cells"
+            initial_vtk_file = export_microc_simulation_state(
+                population=population,
+                output_dir=str(vtk_output_dir),
+                step=-1,  # Use -1 to indicate initial state
+                cell_size_um=cell_size_um
+            )
+
+            if initial_vtk_file:
+                print(f"[+] Initial VTK state exported: {Path(initial_vtk_file).name}")
+                print(f"    Use this file to verify gene network loading before simulation")
+            else:
+                print(f"[!] Initial VTK export failed - no cell data")
 
     except Exception as e:
-        print(f"[!] Initial VTK export error: {e}")
+        print(f"[!] Initial state export error: {e}")
         print("   Continuing with simulation...")
 
     print(f"\n[RUN] Running simulation with multi-timescale orchestration...")
@@ -817,9 +700,8 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
         total_step_time = time.time() - step_start_time
         orchestrator.adapt_timing(total_step_time)
 
-        # Collect data based on saving interval
-        should_save_data = (args.save_data and (step % config.output.save_data_interval == 0)) or args.verbose
-        if should_save_data:
+        # Collect data based on saving interval from config only
+        if step % config.output.save_data_interval == 0:
             results['time'].append(current_time)
             results['substance_stats'].append(simulator.get_summary_statistics())
             results['cell_counts'].append(population.get_population_statistics())
@@ -831,65 +713,90 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
             gene_outputs = gene_network.step(1)
             results['gene_network_states'].append(gene_outputs)
 
-        # VTK cell state export (replaces old H5 cell state saving)
+        # Export cell states and substance fields (VTK for 3D, CSV for 2D)
         should_save_cellstate = (config.output.save_cellstate_interval > 0 and
                                 step % config.output.save_cellstate_interval == 0)
         if should_save_cellstate:
-            print(f"\n[VTK] Exporting cell states at step {step}...")
-            try:
-                # Import VTK export functionality
-                import sys
-                sys.path.append('tools')
-                from vtk_export import export_microc_simulation_state
+            # Get cell size from detected value or config
+            cell_size_um = detected_cell_size_um if detected_cell_size_um else config.output.cell_size_um
 
-                # Get cell size from detected value or config
-                cell_size_um = detected_cell_size_um if detected_cell_size_um else config.output.cell_size_um
+            # Import export functionality
+            import sys
+            sys.path.append('tools')
 
-                # Export VTK file
-                vtk_output_dir = config.output_dir / "vtk_cells"
-                vtk_file = export_microc_simulation_state(
-                    population=population,
-                    output_dir=str(vtk_output_dir),
-                    step=step,
-                    cell_size_um=cell_size_um
-                )
+            # Determine export format based on domain dimensions
+            if config.domain.dimensions == 2:
+                print(f"\n[CSV] Exporting 2D simulation results at step {step}...")
+                try:
+                    from csv_export import export_microc_csv_cell_state, export_microc_csv_substance_fields
 
-                if vtk_file:
-                    print(f"[+] VTK cell state exported: {vtk_file}")
-                else:
-                    print(f"[!] VTK export failed - no cell data")
+                    # Export CSV cell state
+                    csv_output_dir = config.output_dir / "csv_cells"
+                    csv_file = export_microc_csv_cell_state(
+                        population=population,
+                        output_dir=str(csv_output_dir),
+                        step=step,
+                        cell_size_um=cell_size_um
+                    )
 
-                # Export VTK substance concentration fields
-                from vtk_export import export_microc_substance_fields
-                substance_output_dir = config.output_dir / "vtk_substances"
-                substance_files = export_microc_substance_fields(
-                    simulator=simulator,
-                    output_dir=str(substance_output_dir),
-                    step=step
-                )
+                    if csv_file:
+                        print(f"[+] CSV cell state exported: {Path(csv_file).name}")
+                    else:
+                        print(f"[!] CSV cell export failed - no cell data")
 
-                if substance_files:
-                    print(f"[+] VTK substance fields exported: {len(substance_files)} files")
-                else:
-                    print(f"[!] VTK substance export failed - no substance data")
+                    # Export CSV substance concentration fields
+                    substance_output_dir = config.output_dir / "csv_substances"
+                    substance_files = export_microc_csv_substance_fields(
+                        simulator=simulator,
+                        output_dir=str(substance_output_dir),
+                        step=step
+                    )
 
-                # Export H5 gene network states
-                from vtk_export import export_microc_gene_states
-                h5_output_dir = config.output_dir / "h5_gene_states"
-                h5_file = export_microc_gene_states(
-                    population=population,
-                    output_dir=str(h5_output_dir),
-                    step=step
-                )
+                    if substance_files:
+                        print(f"[+] CSV substance fields exported: {len(substance_files)} files")
+                    else:
+                        print(f"[!] CSV substance export failed - no substance data")
 
-                if h5_file:
-                    print(f"[+] H5 gene states exported: {h5_file}")
-                else:
-                    print(f"[!] H5 gene export failed")
+                except Exception as e:
+                    print(f"[!] CSV export error: {e}")
+                    print("   Continuing simulation...")
 
-            except Exception as e:
-                print(f"[!] VTK export error: {e}")
-                print("   Continuing simulation...")
+            else:
+                # 3D simulations use VTK export
+                print(f"\n[VTK] Exporting 3D simulation results at step {step}...")
+                try:
+                    from vtk_export import export_microc_simulation_state, export_microc_substance_fields
+
+                    # Export VTK file
+                    vtk_output_dir = config.output_dir / "vtk_cells"
+                    vtk_file = export_microc_simulation_state(
+                        population=population,
+                        output_dir=str(vtk_output_dir),
+                        step=step,
+                        cell_size_um=cell_size_um
+                    )
+
+                    if vtk_file:
+                        print(f"[+] VTK cell state exported: {Path(vtk_file).name}")
+                    else:
+                        print(f"[!] VTK export failed - no cell data")
+
+                    # Export VTK substance concentration fields
+                    substance_output_dir = config.output_dir / "vtk_substances"
+                    substance_files = export_microc_substance_fields(
+                        simulator=simulator,
+                        output_dir=str(substance_output_dir),
+                        step=step
+                    )
+
+                    if substance_files:
+                        print(f"[+] VTK substance fields exported: {len(substance_files)} files")
+                    else:
+                        print(f"[!] VTK substance export failed - no substance data")
+
+                except Exception as e:
+                    print(f"[!] VTK export error: {e}")
+                    print("   Continuing simulation...")
 
         # Generate intermediate plots based on plot interval
         should_generate_plots = (not args.no_plots and
@@ -933,7 +840,7 @@ def run_simulation(config, simulator, gene_network, population, args, custom_fun
                                 step % config.output.status_print_interval == 0 and
                                 args.verbose)
         if should_print_detailed:
-            print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time)
+            print_detailed_status(step, num_steps, current_time, simulator, population, orchestrator, config, start_time, custom_functions)
             # Print ATP statistics at status intervals
             population.print_atp_statistics()
 
@@ -1067,22 +974,101 @@ def generate_plots(config, results, simulator, population, args):
     return generated_plots
 
 def main():
-    """Main simulation runner"""
+    """Main simulation runner (CLI + setup + persistence/plots)."""
     print("MicroC 2.0 - Generic Simulation Runner")
     print("=" * 50)
-    
+
     # Parse arguments
     args = parse_arguments()
-    
-    # Load configuration
-    config, custom_functions_path = load_configuration(args.config_file, args)
+
+    # Load configuration (no CLI overrides)
+    config, custom_functions_path = load_configuration(args.config_file)
+
+    # Create timestamped subfolder in results directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_output_dir = config.output_dir
+    original_plots_dir = config.plots_dir
+
+    # Create timestamped subfolder
+    timestamped_dir = original_output_dir / timestamp
+    config.output_dir = timestamped_dir
+    config.plots_dir = timestamped_dir / "plots"
+
+    # Create the timestamped directory
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    config.plots_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy YAML configuration file to the timestamped folder
+    config_file_path = Path(args.config_file)
+    config_copy_path = config.output_dir / config_file_path.name
+    shutil.copy2(config_file_path, config_copy_path)
+    print(f"[+] Configuration copied to: {config_copy_path}")
+
+    # Copy initial state file to the timestamped folder (if it exists)
+    if hasattr(config, 'initial_state') and hasattr(config.initial_state, 'file_path') and config.initial_state.file_path:
+        initial_state_path = Path(config.initial_state.file_path)
+        if initial_state_path.exists():
+            # Check if it's a VTK checkpoint folder or a single file
+            if initial_state_path.is_dir():
+                # It's a VTK checkpoint folder - copy the entire folder
+                initial_state_copy_path = config.output_dir / initial_state_path.name
+                shutil.copytree(initial_state_path, initial_state_copy_path, dirs_exist_ok=True)
+                print(f"[+] Initial state folder copied to: {initial_state_copy_path}")
+            else:
+                # It's a single file (CSV or VTK) - copy the file
+                initial_state_copy_path = config.output_dir / initial_state_path.name
+                shutil.copy2(initial_state_path, initial_state_copy_path)
+                print(f"[+] Initial state file copied to: {initial_state_copy_path}")
+
+                # If it's a VTK file, also copy the logical file if it exists
+                if initial_state_path.suffix == '.vtk':
+                    logical_file = initial_state_path.parent / initial_state_path.name.replace('.vtk', '_logical.vtk')
+                    if logical_file.exists():
+                        logical_copy_path = config.output_dir / logical_file.name
+                        shutil.copy2(logical_file, logical_copy_path)
+                        print(f"[+] Logical VTK file copied to: {logical_copy_path}")
+        else:
+            print(f"[!] Initial state file not found: {initial_state_path}")
+
+    print(f"[+] Results will be saved to: {config.output_dir}")
 
     # Setup simulation
-    mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(config, args, custom_functions_path)
+    mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(
+        config, custom_functions_path
+    )
 
-    # Run simulation (initial plots generated inside before first step)
-    results = run_simulation(config, simulator, gene_network, population, args, custom_functions_path, detected_cell_size_um)
-    
+    # Prefer the new SimulationEngine if available
+    try:
+        from src.simulation.engine import SimulationEngine
+        custom_functions = load_custom_functions(custom_functions_path)
+
+        # Determine steps and dt strictly from config
+        dt = config.time.dt
+        num_steps = int(config.time.end_time / dt)
+
+        engine = SimulationEngine(
+            config=config,
+            simulator=simulator,
+            population=population,
+            gene_network=gene_network,
+            custom_functions=custom_functions,
+        )
+        # Run via engine
+        engine_results = engine.run(num_steps=num_steps, dt=dt, verbose=args.verbose)
+
+        # Convert to legacy dict expected by save_results/generate_plots
+        results = {
+            'time': engine_results.time,
+            'substance_stats': engine_results.substance_stats,
+            'cell_counts': engine_results.cell_counts,
+            'gene_network_states': engine_results.gene_network_states,
+        }
+    except Exception as _:
+        # Fallback to legacy inline loop if engine import or execution fails
+        results = run_simulation(
+            config, simulator, gene_network, population, args, custom_functions_path, detected_cell_size_um
+        )
+
     # Save results
     save_results(results, config, args)
 
@@ -1092,18 +1078,14 @@ def main():
     else:
         generated_plots = []
 
-    # Generate final cell metabolic report if custom function is available
+    # Final report (custom)
     try:
         custom_functions = load_custom_functions(custom_functions_path)
         if custom_functions and hasattr(custom_functions, 'final_report'):
-            # Get final local environments for each cell using the state method
             final_local_environments = {}
             for cell in population.state.cells.values():
-                # Convert cell position to grid coordinates
                 grid_pos = cell.state.position
-                # Get local environment using the state method
                 local_env = simulator.state.get_local_environment(grid_pos)
-                # Convert to the format expected by the custom function
                 final_local_environments[cell.state.id] = {
                     'Oxygen': local_env['oxygen_concentration'],
                     'Glucose': local_env['glucose_concentration'],
@@ -1120,7 +1102,7 @@ def main():
                     'pH': local_env['ph_concentration'],
                     'MCT1D': local_env['mct1d_concentration'],
                     'MCT4D': local_env['mct4d_concentration'],
-                    'GLUT1D': local_env['glut1d_concentration']
+                    'GLUT1D': local_env['glut1d_concentration'],
                 }
             custom_functions.final_report(population, final_local_environments, config)
     except Exception as e:
@@ -1138,7 +1120,6 @@ def main():
     print(f"   * Plots directory: {config.plots_dir}")
 
     if args.save_data:
-        
         print(f"   * Data saved for analysis")
 
     if generated_plots:

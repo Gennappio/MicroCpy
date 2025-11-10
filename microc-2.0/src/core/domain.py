@@ -16,9 +16,10 @@ class MeshManager:
     def __init__(self, config: DomainConfig):
         self.config = config
         self._validate_config()
-        self.mesh = self._create_mesh()
-        self._validate_mesh()
-    
+        # Use explicit solver terminology for FiPy mesh
+        self.solver_mesh = self._create_solver_mesh()
+        self._validate_solver_mesh()
+
     def _validate_config(self):
         """Validate domain configuration - flexible grid spacing"""
         # Check grid spacing is reasonable (1-50 um)
@@ -56,8 +57,8 @@ class MeshManager:
                     f"Z spacing: {spacing_z:.1f} um"
                 )
     
-    def _create_mesh(self) -> Union[Grid2D, Grid3D]:
-        """Create FiPy mesh with correct units"""
+    def _create_solver_mesh(self) -> Union[Grid2D, Grid3D]:
+        """Create FiPy solver mesh with correct units"""
         # Calculate grid spacing in meters (FiPy's base unit)
         dx = self.config.size_x.meters / self.config.nx
         dy = self.config.size_y.meters / self.config.ny
@@ -69,7 +70,7 @@ class MeshManager:
             print(f"  Grid: {self.config.nx} x {self.config.ny} x {self.config.nz}")
             print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
 
-            mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=self.config.nx, ny=self.config.ny, nz=self.config.nz)
+            solver_mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=self.config.nx, ny=self.config.ny, nz=self.config.nz)
             print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
         else:
             print(f"Creating 2D mesh:")
@@ -77,64 +78,81 @@ class MeshManager:
             print(f"  Grid: {self.config.nx} x {self.config.ny}")
             print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} um")
 
-            mesh = Grid2D(dx=dx, dy=dy, nx=self.config.nx, ny=self.config.ny)
+            solver_mesh = Grid2D(dx=dx, dy=dy, nx=self.config.nx, ny=self.config.ny)
             print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
 
-        return mesh
+        return solver_mesh
 
-    def center_mesh_at_origin(self):
+    # Backward-compatible alias for solver mesh
+    @property
+    def mesh(self):
+        return getattr(self, 'solver_mesh', None)
+
+    @mesh.setter
+    def mesh(self, value):
+        self.solver_mesh = value
+
+    def center_solver_mesh_at_origin(self):
         """
-        Center the mesh at origin after FiPy variables are created.
+        Center the solver mesh at origin after FiPy variables are created.
         This should be called after all FiPy setup is complete.
         """
         if self.config.dimensions == 3:
             offset_x = -self.config.size_x.meters / 2
             offset_y = -self.config.size_y.meters / 2
             offset_z = -self.config.size_z.meters / 2
-            self.mesh = self.mesh + ((offset_x, offset_y, offset_z))
-            print(f"[MESH] Centered 3D domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+            self.solver_mesh = self.solver_mesh + ((offset_x, offset_y, offset_z))
+            print(f"[MESH] Centered 3D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
         else:
             offset_x = -self.config.size_x.meters / 2
             offset_y = -self.config.size_y.meters / 2
-            self.mesh = self.mesh + ((offset_x, offset_y))
-            print(f"[MESH] Centered 2D domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+            self.solver_mesh = self.solver_mesh + ((offset_x, offset_y))
+            print(f"[MESH] Centered 2D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
 
-    def _validate_mesh(self):
-        """Ensure mesh properties match configuration"""
+    # Backward-compatible name
+    def center_mesh_at_origin(self):
+        self.center_solver_mesh_at_origin()
+
+    def _validate_solver_mesh(self):
+        """Ensure solver mesh properties match configuration"""
         # Check mesh spacing matches config
         expected_dx = self.config.size_x.meters / self.config.nx
-        actual_dx = float(self.mesh.dx)
-        
+        actual_dx = float(self.solver_mesh.dx)
+
         if abs(actual_dx - expected_dx) > 1e-9:
             raise DomainError(f"Mesh dx mismatch: expected {expected_dx:.2e}, got {actual_dx:.2e}")
-        
+
         # Check grid size
         if self.config.dimensions == 3:
             expected_shape = (self.config.nx, self.config.ny, self.config.nz)
-            if self.mesh.shape != expected_shape:
-                raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.mesh.shape}")
+            if self.solver_mesh.shape != expected_shape:
+                raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.solver_mesh.shape}")
         else:
             expected_shape = (self.config.nx, self.config.ny)
-            if self.mesh.shape != expected_shape:
-                raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.mesh.shape}")
+            if self.solver_mesh.shape != expected_shape:
+                raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.solver_mesh.shape}")
 
         print(f"[OK] Mesh validation passed:")
-        print(f"  Shape: {self.mesh.shape}")
+        print(f"  Shape: {self.solver_mesh.shape}")
         if self.config.dimensions == 3:
-            print(f"  Spacing: {self.mesh.dx*1e6:.1f} x {self.mesh.dy*1e6:.1f} x {self.mesh.dz*1e6:.1f} um")
+            print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} x {self.solver_mesh.dz*1e6:.1f} um")
         else:
-            print(f"  Spacing: {self.mesh.dx*1e6:.1f} x {self.mesh.dy*1e6:.1f} um")
-        print(f"  Total cells: {self.mesh.numberOfCells}")
-    
+            print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} um")
+        print(f"  Total cells: {self.solver_mesh.numberOfCells}")
+
+    # Backward-compatible name
+    def _validate_mesh(self):
+        self._validate_solver_mesh()
+
     @property
     def cell_volume_m3(self) -> float:
         """Cell volume in m³ - handles both 2D and 3D"""
         if self.config.dimensions == 3:
             # For 3D, use FiPy's cellVolumes directly
-            volume_m3 = float(self.mesh.cellVolumes[0])
+            volume_m3 = float(self.solver_mesh.cellVolumes[0])
         else:
             # For 2D, area from FiPy cellVolumes (m²) × configurable height
-            area_m2 = float(self.mesh.cellVolumes[0])
+            area_m2 = float(self.solver_mesh.cellVolumes[0])
             height_m = self.config.cell_height.meters  # Configurable cell height
             volume_m3 = area_m2 * height_m
 
@@ -144,36 +162,36 @@ class MeshManager:
             raise DomainError(f"Volume calculation error: got {volume_m3:.2e} m³, expected {expected_volume_m3:.2e} m³")
 
         return volume_m3
-    
-    @property 
+
+    @property
     def cell_volume_um3(self) -> float:
         """Cell volume in um³ for easier reading"""
         return self.cell_volume_m3 * 1e18
-    
+
     def get_metadata(self) -> dict:
         """Return mesh metadata - single source of truth"""
         metadata = {
             'dimensions': self.config.dimensions,
             'nx': self.config.nx,
             'ny': self.config.ny,
-            'dx_um': float(self.mesh.dx * 1e6),
-            'dy_um': float(self.mesh.dy * 1e6),
+            'dx_um': float(self.solver_mesh.dx * 1e6),
+            'dy_um': float(self.solver_mesh.dy * 1e6),
             'domain_x_um': self.config.size_x.micrometers,
             'domain_y_um': self.config.size_y.micrometers,
             'cell_volume_um3': self.cell_volume_um3,
-            'total_cells': self.mesh.numberOfCells
+            'total_cells': self.solver_mesh.numberOfCells
         }
 
         # Add 3D-specific metadata if applicable
         if self.config.dimensions == 3:
             metadata.update({
                 'nz': self.config.nz,
-                'dz_um': float(self.mesh.dz * 1e6),
+                'dz_um': float(self.solver_mesh.dz * 1e6),
                 'domain_z_um': self.config.size_z.micrometers,
             })
 
         return metadata
-    
+
     def validate_against_expected(self, expected_spacing_um: float = None,
                                 expected_volume_um3: float = None):
         """Validate mesh against expected values (uses config if not specified)"""
@@ -192,7 +210,7 @@ class MeshManager:
         # Check volume
         if abs(metadata['cell_volume_um3'] - expected_volume_um3) > 100:
             raise DomainError(f"Volume validation failed: {metadata['cell_volume_um3']:.0f} um³ vs expected {expected_volume_um3} um³")
-        
+
         print(f"[OK] Mesh validation successful:")
         print(f"  Grid spacing: {metadata['dx_um']:.1f} um [OK]")
         print(f"  Cell volume: {metadata['cell_volume_um3']:.0f} um³ [OK]")

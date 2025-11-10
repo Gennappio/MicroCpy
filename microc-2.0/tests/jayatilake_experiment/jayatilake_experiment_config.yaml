@@ -47,11 +47,9 @@ output:
   status_print_interval: 1  # Print detailed status every 10 steps
   save_cellstate_interval: 1  # Save cell states every N steps (0 = disabled)
 
-# Initial state configuration
+# Initial state configuration (VTK-only)
 initial_state:
-  mode: "load_vtk"             # "generate" or "load"
-  file_path:  "tools/generated_h5/cells_200um_domain_domain.vtk"              # Path to initial state file (for load mode)
-  save_initial_state: true     # Save initial state after generation
+  file_path:  "tools/generated_h5/cells_200um_domain_domain.vtk"
 
 # Substances - from diffusion-parameters.txt
 substances:
@@ -467,4 +465,4 @@ custom_parameters:
 output_dir: "results/jayatilake_experiment"
 plots_dir: "results/jayatilake_experiment/plots"
 data_dir: "results/jayatilake_experiment/data"
-custom_functions_path: "jayatilake_experiment_custom_functions.py"
+custom_functions_path: "jayatilake_experiment_cell_functions.py"

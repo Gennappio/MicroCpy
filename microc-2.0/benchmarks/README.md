@@ -25,46 +25,9 @@ A standalone 3D FiPy implementation that exactly matches MicroC's approach.
 python standalone_steadystate_fipy_3D.py
 ```
 
-### 2. `standalone_steadystate_fipy_3D_h5_reader.py` - H5 State Simulator
+### 2. VTK-based State Simulation (deprecated HDF5 reader)
 
-A standalone simulator that reads cell states from MicroC H5 files and runs FiPy simulations.
-
-**Purpose:**
-- Simulate diffusion using saved cell states
-- Analyze temporal evolution of cell populations
-- Test different substance parameters
-- Validate cell state data integrity
-
-**Features:**
-- Load cell positions and states from H5 files
-- Extract gene network states and phenotypes
-- Phenotype-based reaction rates
-- Multiple substance simulation (Lactate, Oxygen, Glucose)
-- Visualization with cell position overlay
-- Temporal analysis capabilities
-
-**Usage:**
-```bash
-# Basic simulation
-python standalone_steadystate_fipy_3D_h5_reader.py initial_state_3D_S.h5
-
-# Specific substance
-python standalone_steadystate_fipy_3D_h5_reader.py cell_state.h5 --substance Oxygen
-
-# All substances with plots
-python standalone_steadystate_fipy_3D_h5_reader.py state.h5 --all-substances --save-plots
-```
-
-## Key Differences
-
-| Feature | standalone_steadystate_fipy_3D.py | standalone_steadystate_fipy_3D_h5_reader.py |
-|---------|-----------------------------------|---------------------------------------------|
-| **Data Source** | Generated (algorithmic placement) | H5 files (saved cell states) |
-| **Cell States** | Fixed initial conditions | Real simulation states |
-| **Phenotypes** | Single phenotype | Mixed phenotype populations |
-| **Gene Networks** | Not used | Full gene network states |
-| **Temporal Analysis** | Single time point | Multiple time points |
-| **Validation** | Reference implementation | State-based simulation |
+The previous H5-based FiPy simulator is deprecated. For state-based simulations or validations, use VTK domain exports and write small adapters to construct FiPy fields from VTK cell positions and phenotypes.
 
 ## Validation Workflow
 
@@ -78,24 +41,10 @@ python run_sim.py tests/jayatilake_experiment/jayatilake_experiment_config.yaml 
 ```
 
 ### 2. State-Based Validation
-```bash
-# Generate initial state
-python run_sim.py config.yaml --steps 1  # with save_initial_state: true
-
-# Simulate from saved state
-python standalone_steadystate_fipy_3D_h5_reader.py initial_state_3D_S.h5 --all-substances --save-plots
-
-# Compare results
-```
+- Export your state via VTK utilities and build a FiPy source field using those coordinates and phenotypes.
 
 ### 3. Temporal Evolution Analysis
-```bash
-# Generate multiple time points
-python run_sim.py config.yaml --steps 10  # with save_cellstate_interval: 2
-
-# Analyze evolution
-python standalone_steadystate_fipy_3D_h5_reader.py "results/*/cell_states/*.h5" --substance Lactate --save-plots
-```
+- Generate VTK snapshots periodically (custom exporters) and analyze with your plotting tools.
 
 ## Expected Results
 

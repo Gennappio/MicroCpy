@@ -7,6 +7,6 @@ Handles saving and loading of simulation data, including:
 - Simulation results
 """
 
-from .initial_state import InitialStateManager, generate_initial_state_filename
+from .initial_state import InitialStateManager
 
-__all__ = ['InitialStateManager', 'generate_initial_state_filename']
+__all__ = ['InitialStateManager']

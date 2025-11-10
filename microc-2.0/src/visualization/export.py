@@ -33,10 +33,10 @@ class PlotExporter:
     
     def export_concentration_data(self, simulator, filename: str = "concentration_data.csv") -> str:
         """Export concentration field data to CSV"""
-        
+
         concentration = np.array(simulator.concentration.value)
-        mesh = simulator.mesh_manager.mesh
-        
+        mesh = simulator.mesh_manager.solver_mesh
+
         # Create coordinate arrays
         nx = simulator.mesh_manager.config.nx
         ny = simulator.mesh_manager.config.ny
