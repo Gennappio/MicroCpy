@@ -43,7 +43,7 @@ output:
 
 # Initial state configuration - CSV format for 2D
 initial_state:
-  file_path: "tests/jayatilake_experiment/example_2d_cells.csv"  # Human-readable CSV format
+  file_path: "microc-2.0/tests/jayatilake_experiment/example_2d_cells.csv"  # Human-readable CSV format
 
 # Substances (simplified for 2D demo)
 substances:
@@ -108,7 +108,7 @@ thresholds:
   MCT1_stimulus:
     threshold: 2.0
   Proton_level:
-    threshold: 5e-5
+    threshold: 0.00008
 
 # Gene network configuration
 gene_network:
