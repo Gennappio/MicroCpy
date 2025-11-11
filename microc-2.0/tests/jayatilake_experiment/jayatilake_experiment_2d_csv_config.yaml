@@ -43,7 +43,7 @@ output:
 
 # Initial state configuration - CSV format for 2D
 initial_state:
-  file_path: "example_2d_cells.csv"  # Human-readable CSV format
+  file_path: "tests/jayatilake_experiment/example_2d_cells.csv"  # Human-readable CSV format
 
 # Substances (simplified for 2D demo)
 substances:
@@ -92,34 +92,92 @@ substances:
     boundary_type: "fixed"
     unit: "pH"
 
+# Substance-to-gene network associations
+associations:
+  Oxygen: "Oxygen_supply"
+  Glucose: "Glucose_supply"
+  Lactate: "MCT1_stimulus"
+  H: "Proton_level"
+
+# Gene activation thresholds
+thresholds:
+  Oxygen_supply:
+    threshold: 0.022
+  Glucose_supply:
+    threshold: 0.5
+  MCT1_stimulus:
+    threshold: 2.0
+  Proton_level:
+    threshold: 5e-5
+
 # Gene network configuration
 gene_network:
+  # Use the same .bnd file as the 3D version
+  bnd_file: "jaya_microc.bnd"
+  propagation_steps: 500
+  random_initialization: true
+  output_nodes: ["Proliferation", "Apoptosis", "Growth_Arrest", "Necrosis"]
+
   nodes:
-    - mitoATP
-    - glycoATP
-    - Proliferation
-    - Growth_Arrest
-    - Apoptosis
-    - Necrosis
+    # Input nodes
+    Oxygen_supply:
+      is_input: true
+      default_state: true
+    Glucose_supply:
+      is_input: true
+      default_state: true
+    MCT1_stimulus:
+      is_input: true
+      default_state: true
+    Proton_level:
+      is_input: true
+      default_state: false
 
-  # Simplified gene network rules for 2D demo
-  rules:
-    mitoATP: "Oxygen > 0.02 and Glucose > 1.0"
-    glycoATP: "Glucose > 0.5"
-    Proliferation: "mitoATP or glycoATP"
-    Growth_Arrest: "not (mitoATP or glycoATP)"
-    Apoptosis: "Oxygen < 0.01 and Glucose < 0.1"
-    Necrosis: "Oxygen < 0.005"
+# Environment configuration
+environment:
+  ph: 7.4
 
-# Cell behavior parameters
-cell_cycle_time: 24.0  # hours
-max_cell_age: 48.0     # hours
-atp_threshold: 0.5     # Normalized ATP threshold for division
-max_atp_rate: 1.0e-15  # Maximum ATP production rate
+# Custom parameters (for custom functions)
+custom_parameters:
+  # Cell behavior parameters
+  cell_cycle_time: 240           # Minimum time for cell division (240 iterations = 24 hours at dt=0.1)
+  max_cell_age: 500.0            # Maximum cell age in hours before death
+
+  # ATP parameters
+  max_atp: 30                    # Maximum ATP per glucose molecule
+  max_atp_rate: 1.0e-14          # Maximum ATP production rate (mol/s)
+  atp_threshold: 0.8             # ATP threshold for proliferation
+
+  # Metabolic parameters
+  glyco_oxygen_ratio: 0.1        # Oxygen consumption ratio for glycolysis vs OXPHOS
+  proton_coefficient: 0.01       # Proton production coefficient
+  glucose_factor: 2              # Glucose consumption factor
+
+  # Michaelis constants
+  KG: 0.5                        # Michaelis constant for glucose (mM)
+  KO2: 0.01                      # Michaelis constant for oxygen (mM)
+  KL: 1.0                        # Michaelis constant for lactate (mM)
+
+  # Vmax parameters
+  oxygen_vmax: 1.0e-16           # Maximum oxygen uptake rate
+  glucose_vmax: 3.0e-15          # Maximum glucose uptake rate
+
+  # Phenotype thresholds
+  necrosis_threshold_oxygen: 0.011    # Oxygen threshold for necrosis
+  necrosis_threshold_glucose: 0.23    # Glucose threshold for necrosis
+
+  # Migration parameters
+  base_migration_rate: 0.0       # Base migration probability
 
 # Custom functions module
-custom_functions_module: "jayatilake_experiment_cell_functions"  # Updated name
+custom_functions_module: "jayatilake_experiment_cell_functions"
 
 # Population parameters
 initial_cell_count: 13  # Matches the CSV file
 max_population_size: 1000
+
+# Output directories
+output_dir: "results"
+plots_dir: "results/plots"
+data_dir: "results/data"
+custom_functions_path: "jayatilake_experiment_cell_functions.py"
