@@ -31,16 +31,11 @@ const WorkflowCanvas = ({ stage }) => {
   const { stageNodes, stageEdges, setStageNodes, setStageEdges, updateFunctionParameters } =
     useWorkflowStore();
 
+  // Initialize with current stage's nodes and edges
   const [nodes, setNodes, onNodesChange] = useNodesState(stageNodes[stage] || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(stageEdges[stage] || []);
 
-  // Sync with store
-  React.useEffect(() => {
-    setNodes(stageNodes[stage] || []);
-    setEdges(stageEdges[stage] || []);
-  }, [stage, stageNodes, stageEdges, setNodes, setEdges]);
-
-  // Update store when nodes/edges change
+  // Update store when nodes/edges change (but not on initial load from store)
   React.useEffect(() => {
     setStageNodes(stage, nodes);
   }, [nodes, stage, setStageNodes]);
