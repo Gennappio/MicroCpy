@@ -7,11 +7,15 @@ import './WorkflowFunctionNode.css';
  * Custom node component for workflow functions
  */
 const WorkflowFunctionNode = ({ data, selected }) => {
-  const { label, functionName, enabled, description, onEdit, functionFile, parameters } = data;
+  const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName } = data;
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
   const fileName = filePath ? filePath.split('/').pop() : '';
+
+  // Determine display name and whether to show template indicator
+  const isTemplate = !customName;
+  const displayName = customName || label;
 
   return (
     <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}>
@@ -25,7 +29,10 @@ const WorkflowFunctionNode = ({ data, selected }) => {
             <Pause size={14} className="status-icon disabled" />
           )}
         </div>
-        <div className="node-title">{label}</div>
+        <div className="node-title">
+          {displayName}
+          {isTemplate && <span className="template-badge">(template)</span>}
+        </div>
         {onEdit && (
           <button
             className="node-edit-btn"

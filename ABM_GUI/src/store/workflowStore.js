@@ -88,6 +88,7 @@ const useWorkflowStore = create((set, get) => ({
           enabled: func.enabled !== false,
           description: func.description || '',
           functionFile: func.function_file || func.parameters?.function_file || '',
+          customName: func.custom_name || '',
         },
       }));
 
@@ -139,6 +140,7 @@ const useWorkflowStore = create((set, get) => ({
         enabled: node.data.enabled !== false,
         position: node.position,
         description: node.data.description || '',
+        custom_name: node.data.customName || '',
       }));
 
       // Execution order from edges (topological sort)
@@ -221,7 +223,7 @@ const useWorkflowStore = create((set, get) => ({
     })),
 
   // Update function parameters
-  updateFunctionParameters: (stage, nodeId, parameters) =>
+  updateFunctionParameters: (stage, nodeId, parameters, customName) =>
     set((state) => ({
       stageNodes: {
         ...state.stageNodes,
@@ -232,6 +234,7 @@ const useWorkflowStore = create((set, get) => ({
                 data: {
                   ...node.data,
                   parameters: { ...node.data.parameters, ...parameters },
+                  customName: customName || node.data.customName,
                 },
               }
             : node

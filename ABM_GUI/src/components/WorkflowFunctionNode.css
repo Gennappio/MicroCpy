@@ -43,6 +43,21 @@
   font-weight: 600;
   font-size: 13px;
   color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.template-badge {
+  font-size: 9px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  font-style: italic;
 }
 
 .node-edit-btn {
