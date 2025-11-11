@@ -76,14 +76,13 @@ const WorkflowCanvas = ({ stage }) => {
     (event) => {
       event.preventDefault();
 
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const functionData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
 
       if (!functionData) return;
 
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
       });
 
       const defaultParams = getDefaultParameters(functionData.name);
