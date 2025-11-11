@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader } from 'lucide-react';
-import { useWorkflowStore } from '../store/workflowStore';
+import useWorkflowStore from '../store/workflowStore';
 import './SimulationRunner.css';
 
 const API_BASE_URL = 'http://localhost:5000/api';
