@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Download, Upload, FileJson, Save } from 'lucide-react';
+import { Download, Upload, FileJson, Play } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
+import SimulationRunner from './components/SimulationRunner';
 import useWorkflowStore from './store/workflowStore';
 import './App.css';
 
@@ -13,7 +14,13 @@ const STAGES = [
   { id: 'finalization', label: 'Finalization', color: '#ef4444' },
 ];
 
+const VIEWS = [
+  { id: 'workflow', label: 'Workflow Designer' },
+  { id: 'run', label: 'Run Simulation', icon: Play },
+];
+
 function App() {
+  const [currentView, setCurrentView] = useState('workflow');
   const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow } =
     useWorkflowStore();
 
@@ -77,28 +84,54 @@ function App() {
         </div>
       </header>
 
-      {/* Stage Tabs */}
-      <div className="stage-tabs">
-        {STAGES.map((stage) => (
+      {/* View Tabs */}
+      <div className="view-tabs">
+        {VIEWS.map((view) => (
           <button
-            key={stage.id}
-            className={`stage-tab ${currentStage === stage.id ? 'active' : ''}`}
-            onClick={() => setCurrentStage(stage.id)}
-            style={{
-              '--stage-color': stage.color,
-            }}
+            key={view.id}
+            className={`view-tab ${currentView === view.id ? 'active' : ''}`}
+            onClick={() => setCurrentView(view.id)}
           >
-            <span className="stage-indicator" style={{ background: stage.color }} />
-            {stage.label}
+            {view.icon && <view.icon size={16} />}
+            {view.label}
           </button>
         ))}
       </div>
 
-      {/* Main Content */}
-      <div className="app-content">
-        <FunctionPalette currentStage={currentStage} />
-        <WorkflowCanvas key={currentStage} stage={currentStage} />
-      </div>
+      {/* Workflow Designer View */}
+      {currentView === 'workflow' && (
+        <>
+          {/* Stage Tabs */}
+          <div className="stage-tabs">
+            {STAGES.map((stage) => (
+              <button
+                key={stage.id}
+                className={`stage-tab ${currentStage === stage.id ? 'active' : ''}`}
+                onClick={() => setCurrentStage(stage.id)}
+                style={{
+                  '--stage-color': stage.color,
+                }}
+              >
+                <span className="stage-indicator" style={{ background: stage.color }} />
+                {stage.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Main Content */}
+          <div className="app-content">
+            <FunctionPalette currentStage={currentStage} />
+            <WorkflowCanvas key={currentStage} stage={currentStage} />
+          </div>
+        </>
+      )}
+
+      {/* Run Simulation View */}
+      {currentView === 'run' && (
+        <div className="app-content-full">
+          <SimulationRunner />
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="app-footer">
