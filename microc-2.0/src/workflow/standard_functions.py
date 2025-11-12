@@ -228,16 +228,103 @@ def diffusion_with_boundary_check(
 ) -> None:
     """
     Diffusion update with boundary condition checking.
-    
+
     Example showing how to monitor boundary conditions.
     """
     # Run diffusion
     helpers['run_diffusion']()
-    
+
     # Check boundary conditions
     if step % 50 == 0:  # Every 50 steps
         conc = simulator.get_substance_concentrations()
         for substance_name, conc_field in conc.items():
             mean_conc = conc_field.mean()
             print(f"[BOUNDARY] Step {step} - {substance_name} mean: {mean_conc:.6f}")
+
+
+# ============================================================================
+# FINALIZATION FUNCTIONS
+# ============================================================================
+
+def standard_data_collection(
+    population,
+    simulator,
+    config,
+    helpers: Dict[str, Any],
+    **kwargs
+) -> None:
+    """
+    Standard data collection for finalization stage.
+
+    Collects final statistics about the simulation:
+    - Cell population statistics
+    - Substance concentration statistics
+    - Final state summary
+
+    This should be called in the finalization stage of the workflow.
+    """
+    print("[STATS] Collecting final simulation data...")
+
+    # Get final population statistics
+    pop_stats = population.get_population_statistics()
+    print(f"[STATS] Final cell count: {pop_stats.get('total_cells', 0)}")
+
+    # Get final substance statistics
+    substance_stats = simulator.get_summary_statistics()
+    print(f"[STATS] Final substance statistics:")
+    for substance_name, stats in substance_stats.items():
+        print(f"  {substance_name}: mean={stats['mean']:.6f}, min={stats['min']:.6f}, max={stats['max']:.6f}")
+
+    # Phenotype distribution
+    if hasattr(population, 'cells'):
+        phenotype_counts = {}
+        for cell in population.cells.values():
+            phenotype = cell.phenotype if hasattr(cell, 'phenotype') else 'unknown'
+            phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
+
+        print(f"[STATS] Final phenotype distribution:")
+        for phenotype, count in sorted(phenotype_counts.items()):
+            print(f"  {phenotype}: {count} cells")
+
+
+def export_final_state(
+    population,
+    simulator,
+    config,
+    helpers: Dict[str, Any],
+    **kwargs
+) -> None:
+    """
+    Export final simulation state.
+
+    This can be used in the finalization stage to export the final state
+    of the simulation for analysis or visualization.
+    """
+    print("[EXPORT] Exporting final simulation state...")
+
+    # This would call the appropriate export functions
+    # For now, just a placeholder showing the pattern
+    # In the future, this could call helpers['export_final_state']()
+    pass
+
+
+def generate_summary_plots(
+    population,
+    simulator,
+    config,
+    helpers: Dict[str, Any],
+    **kwargs
+) -> None:
+    """
+    Generate summary plots in finalization stage.
+
+    This can be used to generate final plots and visualizations
+    after the simulation completes.
+    """
+    print("[PLOTS] Generating summary plots...")
+
+    # This would call plotting functions
+    # For now, just a placeholder showing the pattern
+    # In the future, this could call helpers['generate_plots']()
+    pass
 

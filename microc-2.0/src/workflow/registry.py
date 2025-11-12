@@ -480,5 +480,45 @@ def get_default_registry() -> FunctionRegistry:
         module_path="jayatilake_experiment_cell_functions"
     ))
 
+    # =========================================================================
+    # FINALIZATION STAGE FUNCTIONS
+    # =========================================================================
+
+    registry.register(FunctionMetadata(
+        name="standard_data_collection",
+        display_name="Standard Data Collection",
+        description="Collect final simulation statistics (cell counts, substance stats, phenotype distribution)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[],
+        inputs=["population", "simulator", "config", "helpers"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="export_final_state",
+        display_name="Export Final State",
+        description="Export final simulation state for analysis",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[],
+        inputs=["population", "simulator", "config", "helpers"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="generate_summary_plots",
+        display_name="Generate Summary Plots",
+        description="Generate final plots and visualizations",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[],
+        inputs=["population", "simulator", "config", "helpers"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
     return registry
 

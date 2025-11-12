@@ -104,13 +104,6 @@ class SimulationEngine:
                 results.substance_stats.append(self.simulator.get_summary_statistics())
                 results.cell_counts.append(self.population.get_population_statistics())
 
-                # Sample gene network state at center (backward compatible with existing tools)
-                center_pos = (self.config.domain.nx // 2, self.config.domain.ny // 2)
-                gene_inputs = self.simulator.get_gene_network_inputs_for_position(center_pos)
-                self.gene_network.set_input_states(gene_inputs)
-                gene_outputs = self.gene_network.step(1)
-                results.gene_network_states.append(gene_outputs)
-
             # Export cell states and substance fields (CSV for 2D, VTK for 3D)
             should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
                                     step % self.config.output.save_cellstate_interval == 0)
@@ -140,8 +133,6 @@ class SimulationEngine:
             self.workflow_executor.execute_initialization(context)
 
         for step in range(num_steps):
-            current_time = step * dt
-
             # Decide which processes to update
             updates = self.orchestrator.step(step)
 
@@ -172,24 +163,8 @@ class SimulationEngine:
                 if stage and stage.enabled:
                     self.workflow_executor.execute_intercellular(context)
 
-            # Collect data according to configured interval
-            if step % self.config.output.save_data_interval == 0:
-                results.time.append(current_time)
-                results.substance_stats.append(self.simulator.get_summary_statistics())
-                results.cell_counts.append(self.population.get_population_statistics())
-
-                # Sample gene network state at center (backward compatible with existing tools)
-                center_pos = (self.config.domain.nx // 2, self.config.domain.ny // 2)
-                gene_inputs = self.simulator.get_gene_network_inputs_for_position(center_pos)
-                self.gene_network.set_input_states(gene_inputs)
-                gene_outputs = self.gene_network.step(1)
-                results.gene_network_states.append(gene_outputs)
-
-            # Export cell states and substance fields (CSV for 2D, VTK for 3D)
-            should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
-                                    step % self.config.output.save_cellstate_interval == 0)
-            if should_save_cellstate:
-                self._export_cell_states(step)
+            # Data collection and export are handled by finalization stage in workflow mode
+            # Users can add custom data collection functions to the finalization stage
 
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
                 # Lightweight progress
