@@ -397,8 +397,9 @@ def setup_simulation(config, custom_functions_path=None):
             raise
 
     else:
-        print(f"[!] initial_state.file_path is required and must be a .vtk file")
-        raise ValueError("Missing or invalid initial_state.file_path for VTK load")
+        # No initial state file - cells will be initialized by workflow
+        print(f"[*] No initial state file specified - cells will be initialized by workflow")
+        print(f"   [+] Cells: 0 (will be created by workflow initialization stage)")
 
     return mesh_manager, simulator, gene_network, population, detected_cell_size_um
 
