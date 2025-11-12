@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "name": "Simple Logging Workflow",
+  "description": "Simple workflow that just prints function names and parameters",
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "execution_order": ["init_1"],
+      "functions": [
+        {
+          "id": "init_1",
+          "function_name": "init_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "param1": 42,
+            "param2": 3.14,
+            "param3": "hello"
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "execution_order": ["metabolism_1", "division_1"],
+      "functions": [
+        {
+          "id": "metabolism_1",
+          "function_name": "metabolism_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "rate": 2.5,
+            "threshold": 0.75,
+            "enabled": true
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "division_1",
+          "function_name": "division_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "min_size": 200,
+            "max_rate": 0.9
+          },
+          "position": {
+            "x": 100,
+            "y": 250
+          }
+        }
+      ]
+    },
+    "diffusion": {
+      "enabled": true,
+      "execution_order": ["diffusion_1"],
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "diffusion_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "coefficient": 0.25,
+            "decay": 0.05
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "execution_order": ["signaling_1"],
+      "functions": [
+        {
+          "id": "signaling_1",
+          "function_name": "signaling_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "range_value": 20.0,
+            "strength": 1.5
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "execution_order": ["export_1"],
+      "functions": [
+        {
+          "id": "export_1",
+          "function_name": "export_function",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "format_type": "json",
+            "compress": true
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    }
+  }
+}
+

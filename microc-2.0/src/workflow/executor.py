@@ -85,7 +85,6 @@ class WorkflowExecutor:
             # Get function from module
             if hasattr(module, function_name):
                 func = getattr(module, function_name)
-                print(f"[WORKFLOW] Loaded custom function '{function_name}' from {function_file}")
                 return func
             else:
                 print(f"[WORKFLOW] Warning: Function '{function_name}' not found in {function_file}")
@@ -154,16 +153,11 @@ class WorkflowExecutor:
             Updated context with results from executed functions
         """
         stage = self.workflow.get_stage(stage_name)
-        if not stage:
-            print(f"[WORKFLOW] Stage '{stage_name}' not found")
-            return context
-        if not stage.enabled:
-            print(f"[WORKFLOW] Stage '{stage_name}' is disabled")
+        if not stage or not stage.enabled:
             return context
 
         # Get enabled functions in execution order
         functions = stage.get_enabled_functions_in_order()
-        print(f"[WORKFLOW] Stage '{stage_name}' has {len(functions)} enabled functions")
 
         if not functions:
             return context
@@ -171,12 +165,10 @@ class WorkflowExecutor:
         # Execute each function in order
         for workflow_func in functions:
             try:
-                print(f"[WORKFLOW] Executing: {workflow_func.function_name}")
                 result = self._execute_function(workflow_func, context)
                 # Update context with results
                 if result is not None:
                     context.update(result)
-                print(f"[WORKFLOW] Completed: {workflow_func.function_name}")
             except Exception as e:
                 print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
                 import traceback
