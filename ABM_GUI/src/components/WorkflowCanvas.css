@@ -1,0 +1,10 @@
+.workflow-canvas {
+  flex: 1;
+  height: 100%;
+  background: #fafafa;
+}
+
+.react-flow {
+  background: #fafafa;
+}
+

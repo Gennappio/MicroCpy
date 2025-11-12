@@ -1,0 +1,63 @@
+{
+  "name": "Default MicroC Workflow",
+  "description": "Standard workflow using built-in orchestrator functions. This replicates the default hardcoded behavior.",
+  "version": "1.0",
+  "stages": {
+    "initialization": {
+      "enabled": false,
+      "description": "Initialization stage - runs once at simulation start",
+      "functions": []
+    },
+    "intracellular": {
+      "enabled": true,
+      "description": "Intracellular processes - metabolism, gene networks, phenotypes",
+      "functions": [
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "enabled": true,
+          "execution_order": 1,
+          "parameters": {
+            "function_file": "src.workflow.standard_functions"
+          }
+        }
+      ]
+    },
+    "diffusion": {
+      "enabled": true,
+      "description": "Diffusion processes - substance transport",
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "enabled": true,
+          "execution_order": 1,
+          "parameters": {
+            "function_file": "src.workflow.standard_functions"
+          }
+        }
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "description": "Intercellular processes - division, migration",
+      "functions": [
+        {
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "enabled": true,
+          "execution_order": 1,
+          "parameters": {
+            "function_file": "src.workflow.standard_functions"
+          }
+        }
+      ]
+    },
+    "finalization": {
+      "enabled": false,
+      "description": "Finalization stage - runs once at simulation end",
+      "functions": []
+    }
+  }
+}
+

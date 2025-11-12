@@ -36,6 +36,9 @@ Examples:
   # Run main simulation
   python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml
 
+  # Run simulation with custom workflow
+  python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml --workflow tests/jayatilake_experiment/jaya_workflow.json
+
   # Generate CSV cell files for 2D simulations
   python run_microc.py --generate-csv --pattern spheroid --count 50 --output cells.csv
   python run_microc.py --generate-csv --pattern grid --grid_size 5x5 --output grid_cells.csv
@@ -54,6 +57,8 @@ Examples:
     # Main simulation
     parser.add_argument('--sim', metavar='CONFIG',
                        help='Run main MicroC simulation with config file')
+    parser.add_argument('--workflow', metavar='WORKFLOW_JSON',
+                       help='Optional workflow JSON file to customize simulation behavior')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -109,7 +114,10 @@ Examples:
     if args.sim:
         total_count += 1
         run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
-        if run_tool(run_sim_path, [args.sim]):
+        sim_args = [args.sim]
+        if args.workflow:
+            sim_args.extend(['--workflow', args.workflow])
+        if run_tool(run_sim_path, sim_args):
             success_count += 1
 
     # CSV file generation for 2D simulations

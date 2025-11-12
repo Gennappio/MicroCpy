@@ -1,0 +1,6 @@
+=== SIMULATION STATUS LOG ===
+Started at: 2025-11-12 16:53:44
+==================================================
+
+Cell ID | Oxygen | Glucose | Lactate | TGFA | Oxygen_supply | Glucose_supply | MCT1_stimulus | EGFR_stimulus | Apoptosis | Proliferation | Necrosis | Growth_Arrest | mitoATP | glycoATP | Final Phenotype | Step
+------------------------------------------------------------------------------------------------------------------------------------------------------

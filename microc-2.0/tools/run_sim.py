@@ -96,7 +96,14 @@ Examples:
         action='store_true',
         help='Disable automatic plot generation'
     )
-    
+
+    parser.add_argument(
+        '--workflow',
+        type=str,
+        default=None,
+        help='Path to workflow JSON file for custom simulation behavior'
+    )
+
     return parser.parse_args()
 
 def validate_configuration(config, config_path):
@@ -1032,6 +1039,25 @@ def main():
 
     print(f"[+] Results will be saved to: {config.output_dir}")
 
+    # Load workflow if specified
+    workflow = None
+    if args.workflow:
+        try:
+            from src.workflow.loader import WorkflowLoader
+            workflow_path = Path(args.workflow)
+            workflow = WorkflowLoader.load(workflow_path)
+            print(f"[+] Loaded workflow: {workflow.name}")
+            print(f"    Description: {workflow.description}")
+
+            # Copy workflow file to timestamped folder
+            workflow_copy_path = config.output_dir / workflow_path.name
+            shutil.copy2(workflow_path, workflow_copy_path)
+            print(f"[+] Workflow copied to: {workflow_copy_path}")
+        except Exception as e:
+            print(f"[!] Failed to load workflow: {e}")
+            print(f"    Continuing with default hardcoded behavior")
+            workflow = None
+
     # Setup simulation
     mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(
         config, custom_functions_path
@@ -1052,6 +1078,7 @@ def main():
             population=population,
             gene_network=gene_network,
             custom_functions=custom_functions,
+            workflow=workflow,
         )
         # Run via engine
         engine_results = engine.run(num_steps=num_steps, dt=dt, verbose=args.verbose)

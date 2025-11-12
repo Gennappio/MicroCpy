@@ -1,0 +1,51 @@
+=== SIMULATION STATUS LOG ===
+Started at: 2025-11-12 14:52:06
+==================================================
+
+Cell ID | Oxygen | Glucose | Lactate | TGFA | Oxygen_supply | Glucose_supply | MCT1_stimulus | EGFR_stimulus | Apoptosis | Proliferation | Necrosis | Growth_Arrest | mitoATP | glycoATP | Final Phenotype | Step
+------------------------------------------------------------------------------------------------------------------------------------------------------
+cell_000 | 0.0 | 0.0 | 5879.298030132331 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 6104.7471359030405 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 6149.46573436829 | N/A | False | False | True | True | False | False | True | False | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5358.363353430309 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5583.812459201018 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5079.287383980329 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5759.296890530848 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 4857.500499763728 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5277.468028095585 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 0
+cell_000 | 0.0 | 0.0 | 5879.298030132331 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 6104.7471359030405 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 6149.46573436829 | N/A | False | False | True | True | False | False | True | False | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5358.363353430309 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5583.812459201018 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5079.287383980329 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5759.296890530848 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 4857.500499763728 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5277.468028095585 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 1
+cell_000 | 0.0 | 0.0 | 5879.298030132331 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 6104.7471359030405 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 6149.46573436829 | N/A | False | False | True | True | False | False | True | False | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5358.363353430309 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5583.812459201018 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5079.287383980329 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5759.296890530848 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 4857.500499763728 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5277.468028095585 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 2
+cell_000 | 0.0 | 0.0 | 5879.298030132331 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 6104.7471359030405 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 6149.46573436829 | N/A | False | False | True | True | False | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5358.363353430309 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5583.812459201018 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5079.287383980329 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5759.296890530848 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 4857.500499763728 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5277.468028095585 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 3
+cell_000 | 0.0 | 0.0 | 5879.298030132331 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 6104.7471359030405 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 6149.46573436829 | N/A | False | False | True | True | False | False | True | False | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 5358.363353430309 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 5583.812459201018 | N/A | False | False | True | True | True | False | True | True | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 5079.287383980329 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 5759.296890530848 | N/A | False | False | True | False | False | False | True | False | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 4857.500499763728 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 4
+cell_000 | 0.0 | 0.0 | 5277.468028095585 | N/A | False | False | True | False | True | False | True | True | False | False | Growth_Arrest | 4

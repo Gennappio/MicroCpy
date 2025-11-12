@@ -44,48 +44,58 @@ class WorkflowExecutor:
     def _get_function_implementation(self, function_name: str) -> Optional[Callable]:
         """
         Get the actual Python function implementation for a workflow function.
-        
+
         Args:
             function_name: Name of the function to get
-            
+
         Returns:
             Callable function or None if not found
         """
         # Check cache first
         if function_name in self.function_cache:
             return self.function_cache[function_name]
-        
-        # Try to get from custom functions module
+
+        # Try to get from custom functions module first
         if self.custom_functions_module and hasattr(self.custom_functions_module, function_name):
             func = getattr(self.custom_functions_module, function_name)
             self.function_cache[function_name] = func
             return func
-        
+
+        # Try to get from standard functions module
+        try:
+            from . import standard_functions
+            if hasattr(standard_functions, function_name):
+                func = getattr(standard_functions, function_name)
+                self.function_cache[function_name] = func
+                return func
+        except ImportError:
+            pass
+
         # Function not found
-        print(f"[WORKFLOW] Warning: Function '{function_name}' not found in custom functions module")
+        print(f"[WORKFLOW] Warning: Function '{function_name}' not found in custom or standard functions")
         return None
     
     def execute_stage(self, stage_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute a workflow stage.
-        
+
         Args:
             stage_name: Name of the stage to execute (e.g., "intracellular")
             context: Execution context containing data needed by functions
-            
+
         Returns:
             Updated context with results from executed functions
         """
         stage = self.workflow.get_stage(stage_name)
         if not stage or not stage.enabled:
             return context
-        
+
         # Get enabled functions in execution order
         functions = stage.get_enabled_functions_in_order()
-        
+
         if not functions:
             return context
-        
+
         # Execute each function in order
         for workflow_func in functions:
             try:
@@ -97,7 +107,7 @@ class WorkflowExecutor:
                 print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
                 import traceback
                 traceback.print_exc()
-        
+
         return context
     
     def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:

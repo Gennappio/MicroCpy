@@ -150,41 +150,27 @@ class SimulationEngine:
 
             # Intracellular stage (fast)
             if updates['intracellular']:
-                # Execute workflow intracellular stage (if defined)
-                # This allows custom pre/post processing around the standard intracellular update
-                if self.workflow.get_stage("intracellular") and self.workflow.get_stage("intracellular").enabled:
+                # Execute ONLY workflow intracellular stage
+                # User has full control over what happens
+                stage = self.workflow.get_stage("intracellular")
+                if stage and stage.enabled:
                     self.workflow_executor.execute_intracellular(context)
-
-                # Always run the standard intracellular update
-                # This calls the custom functions registered in Population
-                self.population.update_intracellular_processes(dt)
-
-                # Update gene networks and phenotypes after intracellular changes
-                substance_concentrations = self.simulator.get_substance_concentrations()
-                self.population.update_gene_networks(substance_concentrations)
-                self.population.update_phenotypes()
-                self.population.remove_dead_cells()
 
             # Diffusion stage (medium)
             if updates['diffusion']:
-                # Execute workflow diffusion stage (if defined)
-                if self.workflow.get_stage("diffusion") and self.workflow.get_stage("diffusion").enabled:
+                # Execute ONLY workflow diffusion stage
+                # User has full control over what happens
+                stage = self.workflow.get_stage("diffusion")
+                if stage and stage.enabled:
                     self.workflow_executor.execute_diffusion(context)
-
-                # Always run the diffusion solver
-                current_concentrations = self.simulator.get_substance_concentrations()
-                substance_reactions = self.population.get_substance_reactions(current_concentrations)
-                self.simulator.update(substance_reactions)
 
             # Intercellular stage (slow)
             if updates['intercellular']:
-                # Execute workflow intercellular stage (if defined)
-                if self.workflow.get_stage("intercellular") and self.workflow.get_stage("intercellular").enabled:
+                # Execute ONLY workflow intercellular stage
+                # User has full control over what happens
+                stage = self.workflow.get_stage("intercellular")
+                if stage and stage.enabled:
                     self.workflow_executor.execute_intercellular(context)
-
-                # Always run the standard intercellular update
-                # This calls the custom functions registered in Population
-                self.population.update_intercellular_processes()
 
             # Collect data according to configured interval
             if step % self.config.output.save_data_interval == 0:
@@ -220,18 +206,49 @@ class SimulationEngine:
     def _build_context(self, step: int, dt: float) -> Dict[str, Any]:
         """
         Build execution context for workflow functions.
-        Provides all the data that workflow functions might need.
+        Provides all the data and helper functions that workflow functions might need.
         """
         return {
+            # Simulation state
             'step': step,
             'dt': dt,
             'time': step * dt,
+
+            # Core objects (full access for maximum flexibility)
             'population': self.population,
             'simulator': self.simulator,
             'gene_network': self.gene_network,
             'config': self.config,
+
+            # Convenience data
             'substance_concentrations': self.simulator.get_substance_concentrations(),
+
+            # Helper functions for common operations
+            'helpers': {
+                # Intracellular helpers
+                'update_intracellular': lambda: self.population.update_intracellular_processes(dt),
+                'update_gene_networks': lambda: self.population.update_gene_networks(
+                    self.simulator.get_substance_concentrations()
+                ),
+                'update_phenotypes': lambda: self.population.update_phenotypes(),
+                'remove_dead_cells': lambda: self.population.remove_dead_cells(),
+
+                # Diffusion helpers
+                'run_diffusion': lambda: self._run_diffusion_step(),
+                'get_substance_reactions': lambda: self.population.get_substance_reactions(
+                    self.simulator.get_substance_concentrations()
+                ),
+
+                # Intercellular helpers
+                'update_intercellular': lambda: self.population.update_intercellular_processes(),
+            }
         }
+
+    def _run_diffusion_step(self):
+        """Helper to run a single diffusion step."""
+        current_concentrations = self.simulator.get_substance_concentrations()
+        substance_reactions = self.population.get_substance_reactions(current_concentrations)
+        self.simulator.update(substance_reactions)
 
     def _export_cell_states(self, step: int):
         """Export cell states and substance fields based on domain dimensions."""
