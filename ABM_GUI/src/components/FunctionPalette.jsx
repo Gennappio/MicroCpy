@@ -7,15 +7,17 @@ import './FunctionPalette.css';
 /**
  * Function Palette - Sidebar with draggable functions
  */
-const FunctionPalette = ({ currentStage, onCustomFunctionCreate }) => {
+const FunctionPalette = ({ currentStage }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customFunctions, setCustomFunctions] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
     [FunctionCategory.INTRACELLULAR]: true,
     [FunctionCategory.DIFFUSION]: true,
     [FunctionCategory.INTERCELLULAR]: true,
     [FunctionCategory.FINALIZATION]: true,
+    custom: true,
   });
 
   const toggleCategory = (category) => {
@@ -64,6 +66,46 @@ const FunctionPalette = ({ currentStage, onCustomFunctionCreate }) => {
       </div>
 
       <div className="palette-content">
+        {/* Custom Functions Category */}
+        {customFunctions.length > 0 && (
+          <div className="palette-category">
+            <div
+              className="category-header custom-category"
+              onClick={() => toggleCategory('custom')}
+            >
+              {expandedCategories.custom ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+              <span>Custom Functions</span>
+              <span className="category-count">{customFunctions.length}</span>
+            </div>
+
+            {expandedCategories.custom && (
+              <div className="category-functions">
+                {customFunctions.map((func) => (
+                  <div
+                    key={func.name}
+                    className="function-item custom-function-item"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, func)}
+                  >
+                    <div className="function-item-name">{func.displayName}</div>
+                    <div className="function-item-description">
+                      {func.description}
+                    </div>
+                    <div className="function-item-file">
+                      📄 {func.functionFile}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Standard Functions Category */}
         <div className="palette-category">
           <div
             className="category-header"
@@ -120,9 +162,16 @@ const FunctionPalette = ({ currentStage, onCustomFunctionCreate }) => {
 
       {showCustomModal && (
         <CustomFunctionModal
-          currentStage={currentStage}
           onSave={(customFunction) => {
-            onCustomFunctionCreate(customFunction);
+            // Add to custom functions list
+            setCustomFunctions([...customFunctions, {
+              name: customFunction.functionName,
+              displayName: customFunction.displayName,
+              description: customFunction.description,
+              functionFile: customFunction.functionFile,
+              isCustom: true,
+              parameters: [], // Will be customized on canvas
+            }]);
             setShowCustomModal(false);
           }}
           onClose={() => setShowCustomModal(false)}
