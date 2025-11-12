@@ -10,10 +10,16 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const functionMetadata = getFunction(node.data.functionName);
   const [parameters, setParameters] = useState(node.data.parameters || {});
   const [customName, setCustomName] = useState(node.data.customName || '');
+  const [functionName, setFunctionName] = useState(node.data.functionName || '');
+  const [functionFile, setFunctionFile] = useState(node.data.functionFile || '');
+  const [description, setDescription] = useState(node.data.description || '');
 
   useEffect(() => {
     setParameters(node.data.parameters || {});
     setCustomName(node.data.customName || '');
+    setFunctionName(node.data.functionName || '');
+    setFunctionFile(node.data.functionFile || '');
+    setDescription(node.data.description || '');
   }, [node]);
 
   const handleChange = (paramName, value) => {
@@ -24,7 +30,16 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   };
 
   const handleSave = () => {
-    onSave(parameters, customName);
+    if (isCustomFunction) {
+      // For custom functions, also save function name, file, and description
+      onSave(parameters, customName, {
+        functionName,
+        functionFile,
+        description,
+      });
+    } else {
+      onSave(parameters, customName);
+    }
   };
 
   const renderParameterInput = (param) => {
@@ -143,7 +158,58 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         )}
 
         <div className="editor-content">
-          {/* Custom Name Field */}
+          {/* Custom Function Configuration */}
+          {isCustomFunction && (
+            <>
+              <div className="parameter-field">
+                <label className="param-label">
+                  <Edit2 size={14} />
+                  Function Name
+                </label>
+                <div className="param-description">
+                  The name of the Python function to call
+                </div>
+                <input
+                  type="text"
+                  value={functionName}
+                  onChange={(e) => setFunctionName(e.target.value)}
+                  placeholder="my_custom_function"
+                  className="param-input"
+                />
+              </div>
+
+              <div className="parameter-field">
+                <label className="param-label">
+                  Function File
+                </label>
+                <div className="param-description">
+                  Path to the Python file containing this function
+                </div>
+                <input
+                  type="text"
+                  value={functionFile}
+                  onChange={(e) => setFunctionFile(e.target.value)}
+                  placeholder="path/to/my_functions.py"
+                  className="param-input"
+                />
+              </div>
+
+              <div className="parameter-field">
+                <label className="param-label">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What does this function do?"
+                  className="param-input"
+                  rows={2}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Custom Name Field for Standard Functions */}
           {!isCustomFunction && (
             <div className="parameter-field rename-field">
               <label className="param-label">

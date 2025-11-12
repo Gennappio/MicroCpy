@@ -120,12 +120,12 @@ const WorkflowCanvas = ({ stage }) => {
   }, []);
 
   const handleParameterSave = useCallback(
-    (parameters, customName) => {
+    (parameters, customName, customMetadata) => {
       if (selectedNode) {
         // Update both parameters and custom name
         updateFunctionParameters(stage, selectedNode.id, parameters, customName);
 
-        // Also update the node's label in the local state
+        // Also update the node's label and metadata in the local state
         setNodes((nds) =>
           nds.map((node) =>
             node.id === selectedNode.id
@@ -135,6 +135,13 @@ const WorkflowCanvas = ({ stage }) => {
                     ...node.data,
                     parameters,
                     customName,
+                    // For custom functions, also update function name, file, and description
+                    ...(customMetadata && {
+                      functionName: customMetadata.functionName,
+                      functionFile: customMetadata.functionFile,
+                      description: customMetadata.description,
+                      label: customMetadata.functionName,
+                    }),
                   },
                 }
               : node

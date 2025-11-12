@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { getFunctionsByCategory, FunctionCategory } from '../data/functionRegistry';
-import CustomFunctionModal from './CustomFunctionModal';
 import './FunctionPalette.css';
 
 /**
@@ -9,7 +8,6 @@ import './FunctionPalette.css';
  */
 const FunctionPalette = ({ currentStage }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCustomModal, setShowCustomModal] = useState(false);
   const [customFunctions, setCustomFunctions] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
@@ -25,6 +23,19 @@ const FunctionPalette = ({ currentStage }) => {
       ...prev,
       [category]: !prev[category],
     }));
+  };
+
+  const handleCreateCustomFunction = () => {
+    const timestamp = Date.now();
+    const newCustomFunction = {
+      name: `custom_function_${timestamp}`,
+      displayName: `Custom Function ${customFunctions.length + 1}`,
+      description: 'Custom workflow function',
+      functionFile: 'path/to/function.py',
+      isCustom: true,
+      parameters: [],
+    };
+    setCustomFunctions([...customFunctions, newCustomFunction]);
   };
 
   const onDragStart = (event, functionData) => {
@@ -150,33 +161,15 @@ const FunctionPalette = ({ currentStage }) => {
       <div className="palette-footer">
         <button
           className="btn-create-custom"
-          onClick={() => setShowCustomModal(true)}
+          onClick={handleCreateCustomFunction}
         >
           <Plus size={16} />
           Create Custom Function
         </button>
         <div className="palette-hint">
-          💡 Drag functions to the canvas
+          💡 Drag functions to the canvas and customize from node settings
         </div>
       </div>
-
-      {showCustomModal && (
-        <CustomFunctionModal
-          onSave={(customFunction) => {
-            // Add to custom functions list
-            setCustomFunctions([...customFunctions, {
-              name: customFunction.functionName,
-              displayName: customFunction.displayName,
-              description: customFunction.description,
-              functionFile: customFunction.functionFile,
-              isCustom: true,
-              parameters: [], // Will be customized on canvas
-            }]);
-            setShowCustomModal(false);
-          }}
-          onClose={() => setShowCustomModal(false)}
-        />
-      )}
     </div>
   );
 };
