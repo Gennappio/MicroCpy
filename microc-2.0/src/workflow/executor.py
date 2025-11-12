@@ -210,15 +210,18 @@ class WorkflowExecutor:
         # Add context data based on function inputs
         if metadata:
             for input_name in metadata.inputs:
-                if input_name in context:
+                # Special handling for 'context' - pass the whole context dict
+                if input_name == 'context':
+                    kwargs['context'] = context
+                elif input_name in context:
                     kwargs[input_name] = context[input_name]
 
-        # Always add context as first argument for custom functions
-        if function_file:
+        # For custom functions (with function_file), ensure context is first
+        if function_file and 'context' not in kwargs:
             kwargs = {'context': context, **kwargs}
 
-        # Always add config if available (for standard functions)
-        if self.config is not None and not function_file:
+        # Always add config if available (for standard functions that need it)
+        if self.config is not None and not function_file and 'config' not in kwargs:
             kwargs['config'] = self.config
 
         # Execute function

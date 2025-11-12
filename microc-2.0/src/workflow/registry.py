@@ -191,6 +191,46 @@ def get_default_registry() -> FunctionRegistry:
     # =========================================================================
 
     registry.register(FunctionMetadata(
+        name="load_cells_from_vtk",
+        display_name="Load Cells from VTK File",
+        description="Load initial cell state from a VTK file",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="file_path",
+                type=ParameterType.STRING,
+                description="Path to VTK file (relative to microc-2.0 root or absolute)",
+                default="tools/generated_h5/cells_200um_domain_domain.vtk",
+                required=True
+            )
+        ],
+        inputs=["context"],
+        outputs=["loaded_cells"],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="load_cells_from_csv",
+        display_name="Load Cells from CSV File",
+        description="Load initial cell state from a CSV file (2D only)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="file_path",
+                type=ParameterType.STRING,
+                description="Path to CSV file (relative to microc-2.0 root or absolute)",
+                default="initial_state.csv",
+                required=True
+            )
+        ],
+        inputs=["context"],
+        outputs=["loaded_cells"],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
         name="initialize_cell_placement",
         display_name="Initialize Cell Placement",
         description="Place cells in a spheroid configuration at simulation start",
