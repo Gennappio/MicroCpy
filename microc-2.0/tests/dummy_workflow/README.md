@@ -2,6 +2,18 @@
 
 This directory contains test workflows for validating the custom function system.
 
+## ⚠️ IMPORTANT: Workflows Must Match Configs
+
+**Workflows and configs must be compatible!**
+
+- `simple_workflow.json` + `dummy_config.yaml` ✓ (for testing)
+- `simple_workflow.json` + `jayatilake_experiment_config.yaml` ✗ (won't work!)
+- `jaya_workflow.json` + `jayatilake_experiment_config.yaml` ✓ (real simulation)
+
+The dummy logging functions (`dummy_logs.py`) are for **testing the workflow system only**. They don't perform actual simulation operations. For real simulations, use workflows with actual simulation functions.
+
+---
+
 ## Test Files
 
 ### Simple Logging Test (Recommended for Quick Validation)
@@ -190,7 +202,55 @@ context = executor.execute_stage('initialization', context)
 
 ---
 
-## Using with GUI
+## Running Workflows with Real Simulations
+
+### Option 1: Use Existing Jayatilake Workflow
+
+The jayatilake experiment already has a complete workflow:
+
+```bash
+cd microc-2.0
+python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml \
+                     --workflow tests/jayatilake_experiment/jaya_workflow.json
+```
+
+This workflow has real simulation functions that:
+- Initialize cell placement and ages
+- Calculate metabolism using Michaelis-Menten kinetics
+- Update ATP and metabolic state
+- Check for cell division based on ATP threshold
+- Update phenotype from gene network
+- Handle cell aging and death
+- Calculate migration and division direction
+
+### Option 2: Test Workflow System with Dummy Config
+
+To test that the workflow system is working (without running a full simulation):
+
+```bash
+cd microc-2.0/tests/dummy_workflow
+python test_with_real_config.py
+```
+
+This runs `simple_workflow.json` with `dummy_config.yaml` - the functions will just print their names and parameters to verify the workflow system is working.
+
+### Option 3: Load Workflow in GUI
+
+1. **Open the GUI** at http://localhost:3000/
+2. **Load an existing workflow:**
+   - For testing: Load `simple_workflow.json` (dummy logging functions)
+   - For real simulation: Load `jaya_workflow.json` (actual simulation functions)
+3. **Set the config path:**
+   - For testing: `tests/dummy_workflow/dummy_config.yaml`
+   - For real simulation: `tests/jayatilake_experiment/jayatilake_experiment_config.yaml`
+4. **Click "Run Simulation"**
+5. **Watch the logs** stream in real-time
+
+**⚠️ IMPORTANT:** Make sure the workflow and config match! Don't load `simple_workflow.json` and try to run it with `jayatilake_experiment_config.yaml` - it won't work because the dummy logging functions don't perform actual simulation operations.
+
+---
+
+## Creating Custom Workflows in GUI
 
 1. **Create your custom functions** in a Python file
 2. **Open the GUI** at http://localhost:3000/
@@ -203,7 +263,7 @@ context = executor.execute_stage('initialization', context)
    - Click **"+ Add Parameter"** to add parameters
    - Set parameter names and values
 6. **Save** and **Export Workflow** to JSON
-7. **Test** using a test script like above
+7. **Test** using a test script or run via GUI
 
 ---
 
