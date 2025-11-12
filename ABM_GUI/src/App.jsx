@@ -21,7 +21,7 @@ const VIEWS = [
 
 function App() {
   const [currentView, setCurrentView] = useState('workflow');
-  const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow } =
+  const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow, stageNodes, setStageNodes } =
     useWorkflowStore();
 
   const handleImportWorkflow = () => {
@@ -58,6 +58,30 @@ function App() {
     a.download = `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleCustomFunctionCreate = (customFunction) => {
+    // Create a new node for the custom function
+    const newId = `${customFunction.functionName}_${Date.now()}`;
+    const newNode = {
+      id: newId,
+      type: 'workflowFunction',
+      position: { x: 250, y: 100 + (stageNodes[currentStage]?.length || 0) * 100 },
+      data: {
+        label: customFunction.functionName,
+        functionName: customFunction.functionName,
+        parameters: customFunction.parameters,
+        enabled: true,
+        description: customFunction.description,
+        functionFile: customFunction.parameters.function_file || '',
+        isCustom: true,
+        onEdit: null, // Will be set by WorkflowCanvas
+      },
+    };
+
+    // Add node to current stage
+    const currentNodes = stageNodes[currentStage] || [];
+    setStageNodes(currentStage, [...currentNodes, newNode]);
   };
 
   return (
@@ -120,7 +144,10 @@ function App() {
 
           {/* Main Content */}
           <div className="app-content">
-            <FunctionPalette currentStage={currentStage} />
+            <FunctionPalette
+              currentStage={currentStage}
+              onCustomFunctionCreate={handleCustomFunctionCreate}
+            />
             <WorkflowCanvas key={currentStage} stage={currentStage} />
           </div>
         </>

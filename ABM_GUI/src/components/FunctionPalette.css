@@ -138,6 +138,30 @@
   padding: 12px 16px;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-create-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.btn-create-custom:hover {
+  background: #4338ca;
 }
 
 .palette-hint {

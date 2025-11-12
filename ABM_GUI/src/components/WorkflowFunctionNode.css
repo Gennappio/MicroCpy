@@ -18,6 +18,11 @@
   border-color: #9ca3af;
 }
 
+.workflow-function-node.custom {
+  border-color: #4f46e5;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+}
+
 .node-header {
   display: flex;
   align-items: center;
@@ -58,6 +63,17 @@
   border-radius: 3px;
   border: 1px solid #d1d5db;
   font-style: italic;
+}
+
+.custom-badge-small {
+  font-size: 9px;
+  font-weight: 600;
+  color: white;
+  background: #4f46e5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .node-edit-btn {

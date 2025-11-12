@@ -104,58 +104,84 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  if (!functionMetadata) {
+  // Handle custom functions (no metadata in registry)
+  const isCustomFunction = node.data.isCustom || !functionMetadata;
+
+  if (!functionMetadata && !isCustomFunction) {
     return null;
   }
+
+  const displayName = isCustomFunction
+    ? node.data.functionName
+    : functionMetadata.displayName;
+
+  const parametersList = isCustomFunction
+    ? Object.keys(parameters)
+        .filter(key => key !== 'function_file')
+        .map(key => ({
+          name: key,
+          type: typeof parameters[key] === 'number'
+            ? (Number.isInteger(parameters[key]) ? 'integer' : 'float')
+            : typeof parameters[key] === 'boolean' ? 'boolean' : 'string',
+          default: parameters[key],
+        }))
+    : functionMetadata.parameters;
 
   return (
     <div className="parameter-editor-overlay" onClick={onClose}>
       <div className="parameter-editor" onClick={(e) => e.stopPropagation()}>
         <div className="editor-header">
-          <h3>{functionMetadata.displayName}</h3>
+          <h3>{displayName}</h3>
+          {isCustomFunction && <span className="custom-badge">Custom Function</span>}
           <button className="close-btn" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="editor-description">{functionMetadata.description}</div>
+        {!isCustomFunction && (
+          <div className="editor-description">{functionMetadata.description}</div>
+        )}
 
         <div className="editor-content">
           {/* Custom Name Field */}
-          <div className="parameter-field rename-field">
-            <label className="param-label">
-              <Edit2 size={14} />
-              Component Name
-            </label>
-            <div className="param-description">
-              Give this component a custom name. Leave empty to use template name.
-            </div>
-            <input
-              type="text"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              placeholder={`${functionMetadata.displayName} (template)`}
-              className="param-input"
-            />
-            {!customName && (
-              <div className="param-hint">
-                Currently showing as: <strong>{functionMetadata.displayName}</strong> <em>(template)</em>
+          {!isCustomFunction && (
+            <div className="parameter-field rename-field">
+              <label className="param-label">
+                <Edit2 size={14} />
+                Component Name
+              </label>
+              <div className="param-description">
+                Give this component a custom name. Leave empty to use template name.
               </div>
-            )}
-          </div>
+              <input
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder={`${functionMetadata.displayName} (template)`}
+                className="param-input"
+              />
+              {!customName && (
+                <div className="param-hint">
+                  Currently showing as: <strong>{functionMetadata.displayName}</strong> <em>(template)</em>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="section-divider">Parameters</div>
 
-          {functionMetadata.parameters.length === 0 ? (
+          {parametersList.length === 0 ? (
             <div className="no-parameters">This function has no parameters</div>
           ) : (
-            functionMetadata.parameters.map((param) => (
+            parametersList.map((param) => (
               <div key={param.name} className="parameter-field">
                 <label className="param-label">
                   {param.name}
                   {param.required && <span className="required">*</span>}
                 </label>
-                <div className="param-description">{param.description}</div>
+                {param.description && (
+                  <div className="param-description">{param.description}</div>
+                )}
                 {renderParameterInput(param)}
                 {param.default !== undefined && (
                   <div className="param-default">Default: {param.default}</div>

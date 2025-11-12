@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { getFunctionsByCategory, FunctionCategory } from '../data/functionRegistry';
+import CustomFunctionModal from './CustomFunctionModal';
 import './FunctionPalette.css';
 
 /**
  * Function Palette - Sidebar with draggable functions
  */
-const FunctionPalette = ({ currentStage }) => {
+const FunctionPalette = ({ currentStage, onCustomFunctionCreate }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCustomModal, setShowCustomModal] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
     [FunctionCategory.INTRACELLULAR]: true,
@@ -104,10 +106,28 @@ const FunctionPalette = ({ currentStage }) => {
       </div>
 
       <div className="palette-footer">
+        <button
+          className="btn-create-custom"
+          onClick={() => setShowCustomModal(true)}
+        >
+          <Plus size={16} />
+          Create Custom Function
+        </button>
         <div className="palette-hint">
           💡 Drag functions to the canvas
         </div>
       </div>
+
+      {showCustomModal && (
+        <CustomFunctionModal
+          currentStage={currentStage}
+          onSave={(customFunction) => {
+            onCustomFunctionCreate(customFunction);
+            setShowCustomModal(false);
+          }}
+          onClose={() => setShowCustomModal(false)}
+        />
+      )}
     </div>
   );
 };
