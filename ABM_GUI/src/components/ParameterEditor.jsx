@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Edit2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Save, Edit2, Plus, Trash2 } from 'lucide-react';
 import { getFunction } from '../data/functionRegistry';
 import './ParameterEditor.css';
 
@@ -27,6 +27,36 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       ...prev,
       [paramName]: value,
     }));
+  };
+
+  const handleAddParameter = () => {
+    const newParamName = `param_${Object.keys(parameters).length + 1}`;
+    setParameters((prev) => ({
+      ...prev,
+      [newParamName]: '',
+    }));
+  };
+
+  const handleRemoveParameter = (paramName) => {
+    setParameters((prev) => {
+      const newParams = { ...prev };
+      delete newParams[paramName];
+      return newParams;
+    });
+  };
+
+  const handleRenameParameter = (oldName, newName) => {
+    if (oldName === newName) return;
+    if (newName in parameters) {
+      alert('Parameter name already exists');
+      return;
+    }
+    setParameters((prev) => {
+      const newParams = { ...prev };
+      newParams[newName] = newParams[oldName];
+      delete newParams[oldName];
+      return newParams;
+    });
   };
 
   const handleSave = () => {
@@ -234,22 +264,55 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-          <div className="section-divider">Parameters</div>
+          <div className="section-divider">
+            Parameters
+            {isCustomFunction && (
+              <button className="btn-add-param" onClick={handleAddParameter}>
+                <Plus size={14} />
+                Add Parameter
+              </button>
+            )}
+          </div>
 
           {parametersList.length === 0 ? (
-            <div className="no-parameters">This function has no parameters</div>
+            <div className="no-parameters">
+              {isCustomFunction
+                ? 'No parameters defined. Click "Add Parameter" to add one.'
+                : 'This function has no parameters'}
+            </div>
           ) : (
             parametersList.map((param) => (
               <div key={param.name} className="parameter-field">
-                <label className="param-label">
-                  {param.name}
-                  {param.required && <span className="required">*</span>}
-                </label>
-                {param.description && (
+                <div className="param-header">
+                  {isCustomFunction ? (
+                    <input
+                      type="text"
+                      value={param.name}
+                      onChange={(e) => handleRenameParameter(param.name, e.target.value)}
+                      className="param-name-input"
+                      placeholder="parameter_name"
+                    />
+                  ) : (
+                    <label className="param-label">
+                      {param.name}
+                      {param.required && <span className="required">*</span>}
+                    </label>
+                  )}
+                  {isCustomFunction && (
+                    <button
+                      className="btn-remove-param"
+                      onClick={() => handleRemoveParameter(param.name)}
+                      title="Remove parameter"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                {param.description && !isCustomFunction && (
                   <div className="param-description">{param.description}</div>
                 )}
                 {renderParameterInput(param)}
-                {param.default !== undefined && (
+                {param.default !== undefined && !isCustomFunction && (
                   <div className="param-default">Default: {param.default}</div>
                 )}
               </div>
