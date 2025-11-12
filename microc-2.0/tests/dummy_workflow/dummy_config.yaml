@@ -1,0 +1,41 @@
+# Dummy configuration for testing workflow system
+# Minimal setup to test custom function execution
+
+simulation:
+  name: "Dummy Workflow Test"
+  duration: 10  # 10 timesteps
+  dt: 1.0
+  output_dir: "results/dummy_test"
+  save_interval: 5
+
+domain:
+  dimensions: 3
+  size: [100, 100, 100]
+  mesh_resolution: [10, 10, 10]
+
+substances:
+  - name: "glucose"
+    diffusion_coefficient: 0.1
+    decay_rate: 0.01
+    initial_concentration: 1.0
+  
+  - name: "oxygen"
+    diffusion_coefficient: 0.2
+    decay_rate: 0.005
+    initial_concentration: 0.8
+
+cells:
+  initial_count: 0  # Will be created by workflow initialization function
+  
+phenotypes:
+  - name: "default"
+    color: [0, 255, 0]
+    
+gene_network:
+  enabled: false  # Not needed for dummy test
+
+output:
+  formats: ["csv"]
+  save_cell_states: true
+  save_substance_fields: true
+

@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "name": "Dummy Test Workflow",
+  "description": "Test workflow with custom dummy functions to validate GUI functionality",
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "execution_order": ["init_cells_1"],
+      "functions": [
+        {
+          "id": "init_cells_1",
+          "function_name": "initialize_dummy_cells",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "num_cells": 20,
+            "initial_energy": 150.0
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "execution_order": ["metabolism_1", "gene_reg_1", "division_1"],
+      "functions": [
+        {
+          "id": "metabolism_1",
+          "function_name": "update_cell_metabolism",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "glucose_rate": 2.0,
+            "oxygen_threshold": 0.6,
+            "enable_warburg": true
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "gene_reg_1",
+          "function_name": "custom_gene_regulation",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "gene_expression_rate": 0.7,
+            "protein_degradation": 0.15
+          },
+          "position": {
+            "x": 100,
+            "y": 250
+          }
+        },
+        {
+          "id": "division_1",
+          "function_name": "calculate_cell_division",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "division_threshold": 180.0,
+            "division_probability": 0.75
+          },
+          "position": {
+            "x": 100,
+            "y": 400
+          }
+        }
+      ]
+    },
+    "diffusion": {
+      "enabled": true,
+      "execution_order": ["nutrient_diff_1"],
+      "functions": [
+        {
+          "id": "nutrient_diff_1",
+          "function_name": "diffuse_nutrients",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "diffusion_coefficient": 0.15,
+            "decay_rate": 0.02
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "execution_order": ["signaling_1"],
+      "functions": [
+        {
+          "id": "signaling_1",
+          "function_name": "cell_cell_signaling",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "signal_range": 15.0,
+            "signal_strength": 1.2,
+            "enable_quorum": true
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "execution_order": ["export_1"],
+      "functions": [
+        {
+          "id": "export_1",
+          "function_name": "export_dummy_data",
+          "enabled": true,
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_functions.py",
+            "output_format": "csv",
+            "include_positions": true,
+            "include_energy": true
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ]
+    }
+  }
+}
+

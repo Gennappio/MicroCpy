@@ -6,6 +6,7 @@ to actual Python implementations and managing execution order.
 """
 
 import importlib
+import importlib.util
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
@@ -41,24 +42,90 @@ class WorkflowExecutor:
         if errors:
             raise ValueError(f"Invalid workflow: {errors}")
     
-    def _get_function_implementation(self, function_name: str) -> Optional[Callable]:
+    def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
+        """
+        Dynamically load a function from a Python file.
+
+        Args:
+            function_file: Path to Python file containing the function
+            function_name: Name of the function to load
+
+        Returns:
+            Callable function or None if not found
+        """
+        try:
+            # Convert relative path to absolute
+            file_path = Path(function_file)
+            if not file_path.is_absolute():
+                # Try multiple resolution strategies
+                # 1. Relative to current working directory
+                if not file_path.exists():
+                    # 2. Relative to microc-2.0 directory (go up from src/workflow)
+                    microc_root = Path(__file__).parent.parent.parent
+                    file_path = microc_root / function_file
+
+            if not file_path.exists():
+                print(f"[WORKFLOW] Warning: Function file not found: {function_file}")
+                print(f"[WORKFLOW]   Tried: {file_path}")
+                return None
+
+            # Create module name from file path
+            module_name = f"workflow_custom_{file_path.stem}_{id(function_file)}"
+
+            # Load module
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            if spec is None or spec.loader is None:
+                print(f"[WORKFLOW] Warning: Could not load module from {function_file}")
+                return None
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+
+            # Get function from module
+            if hasattr(module, function_name):
+                func = getattr(module, function_name)
+                print(f"[WORKFLOW] Loaded custom function '{function_name}' from {function_file}")
+                return func
+            else:
+                print(f"[WORKFLOW] Warning: Function '{function_name}' not found in {function_file}")
+                return None
+
+        except Exception as e:
+            print(f"[WORKFLOW] Error loading function from {function_file}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _get_function_implementation(self, function_name: str, function_file: Optional[str] = None) -> Optional[Callable]:
         """
         Get the actual Python function implementation for a workflow function.
 
         Args:
             function_name: Name of the function to get
+            function_file: Optional path to Python file containing the function
 
         Returns:
             Callable function or None if not found
         """
+        # Create cache key
+        cache_key = f"{function_file}::{function_name}" if function_file else function_name
+
         # Check cache first
-        if function_name in self.function_cache:
-            return self.function_cache[function_name]
+        if cache_key in self.function_cache:
+            return self.function_cache[cache_key]
+
+        # If function_file is specified, load from that file
+        if function_file:
+            func = self._load_function_from_file(function_file, function_name)
+            if func is not None:
+                self.function_cache[cache_key] = func
+                return func
 
         # Try to get from custom functions module first
         if self.custom_functions_module and hasattr(self.custom_functions_module, function_name):
             func = getattr(self.custom_functions_module, function_name)
-            self.function_cache[function_name] = func
+            self.function_cache[cache_key] = func
             return func
 
         # Try to get from standard functions module
@@ -66,7 +133,7 @@ class WorkflowExecutor:
             from . import standard_functions
             if hasattr(standard_functions, function_name):
                 func = getattr(standard_functions, function_name)
-                self.function_cache[function_name] = func
+                self.function_cache[cache_key] = func
                 return func
         except ImportError:
             pass
@@ -87,11 +154,16 @@ class WorkflowExecutor:
             Updated context with results from executed functions
         """
         stage = self.workflow.get_stage(stage_name)
-        if not stage or not stage.enabled:
+        if not stage:
+            print(f"[WORKFLOW] Stage '{stage_name}' not found")
+            return context
+        if not stage.enabled:
+            print(f"[WORKFLOW] Stage '{stage_name}' is disabled")
             return context
 
         # Get enabled functions in execution order
         functions = stage.get_enabled_functions_in_order()
+        print(f"[WORKFLOW] Stage '{stage_name}' has {len(functions)} enabled functions")
 
         if not functions:
             return context
@@ -99,10 +171,12 @@ class WorkflowExecutor:
         # Execute each function in order
         for workflow_func in functions:
             try:
+                print(f"[WORKFLOW] Executing: {workflow_func.function_name}")
                 result = self._execute_function(workflow_func, context)
                 # Update context with results
                 if result is not None:
                     context.update(result)
+                print(f"[WORKFLOW] Completed: {workflow_func.function_name}")
             except Exception as e:
                 print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
                 import traceback
@@ -113,22 +187,25 @@ class WorkflowExecutor:
     def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Execute a single workflow function.
-        
+
         Args:
             workflow_func: WorkflowFunction to execute
             context: Execution context
-            
+
         Returns:
             Dictionary with results or None
         """
+        # Extract function_file from parameters if present
+        function_file = workflow_func.parameters.get('function_file')
+
         # Get function implementation
-        func = self._get_function_implementation(workflow_func.function_name)
+        func = self._get_function_implementation(workflow_func.function_name, function_file)
         if func is None:
             return None
-        
+
         # Get function metadata from registry
         metadata = self.registry.get(workflow_func.function_name)
-        
+
         # Prepare function arguments
         kwargs = {}
 
@@ -144,10 +221,14 @@ class WorkflowExecutor:
                 if input_name in context:
                     kwargs[input_name] = context[input_name]
 
-        # Always add config if available
-        if self.config is not None:
+        # Always add context as first argument for custom functions
+        if function_file:
+            kwargs = {'context': context, **kwargs}
+
+        # Always add config if available (for standard functions)
+        if self.config is not None and not function_file:
             kwargs['config'] = self.config
-        
+
         # Execute function
         try:
             result = func(**kwargs)
@@ -155,6 +236,8 @@ class WorkflowExecutor:
         except TypeError as e:
             # Handle missing required arguments
             print(f"[WORKFLOW] Function '{workflow_func.function_name}' called with wrong arguments: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def execute_initialization(self, context: Dict[str, Any]) -> Dict[str, Any]:
