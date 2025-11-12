@@ -76,36 +76,41 @@ def stream_output(process, log_queue):
 def run_simulation_async(config_path, workflow_path):
     """Run MicroC simulation in background thread"""
     global simulation_process, is_running
-    
+
     try:
         microc_path = get_microc_path()
-        
+
         if not microc_path.exists():
             log_queue.put(f"[ERROR] MicroC not found at: {microc_path}\n")
             is_running = False
             return
-        
+
+        # Get microc-2.0 directory (working directory for simulation)
+        microc_dir = microc_path.parent
+
         # Build command
         cmd = [
             sys.executable,
             str(microc_path),
             "--sim", config_path
         ]
-        
+
         if workflow_path:
             cmd.extend(["--workflow", workflow_path])
-        
+
         log_queue.put(f"[START] Running: {' '.join(cmd)}\n")
+        log_queue.put(f"[INFO] Working directory: {microc_dir}\n")
         log_queue.put("[INFO] Starting MicroC simulation...\n")
-        
-        # Start subprocess
+
+        # Start subprocess with correct working directory
         simulation_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd=str(microc_dir)  # Set working directory to microc-2.0
         )
         
         # Stream output
