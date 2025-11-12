@@ -16,15 +16,19 @@ def run_tool(tool_path, args=None):
         cmd.extend(args)
 
     print(f"[RUN] Running: {' '.join(cmd)}")
+    print(f"[INFO] Streaming output from {tool_path.name}...")
+    print("-" * 80)
+    sys.stdout.flush()
+
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        # Stream output in real-time instead of capturing it
+        subprocess.run(cmd, check=True)
+        print("-" * 80)
         print(f"[+] {tool_path.name} completed successfully")
-        if result.stdout:
-            print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"[!] {tool_path.name} failed with error:")
-        print(e.stderr)
+        print("-" * 80)
+        print(f"[!] {tool_path.name} failed with exit code {e.returncode}")
         return False
 
 def main():
