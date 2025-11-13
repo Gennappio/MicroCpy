@@ -363,6 +363,11 @@ class CellPopulation(ICellPopulation):
         """
         cells_added = 0
 
+        # Track skipped cells for summary
+        skipped_invalid = 0
+        skipped_occupied = 0
+        skipped_limit = False
+
         # Prepare batched copies (immutable update pattern)
         new_cells = self.state.cells.copy()
         new_spatial_grid = self.state.spatial_grid.copy()
@@ -386,17 +391,17 @@ class CellPopulation(ICellPopulation):
 
             # Validate position
             if not self._is_valid_position(position):
-                print(f"[WARNING]  Invalid position {position}, skipping cell")
+                skipped_invalid += 1
                 continue
 
             # Check if position is occupied (consider batch additions)
             if position in new_spatial_grid:
-                print(f"[WARNING]  Position {position} occupied, skipping cell")
+                skipped_occupied += 1
                 continue
 
             # Check population limit (consider batch additions)
             if new_total_cells >= self.default_params['max_population_size']:
-                print(f"[WARNING]  Population limit reached, stopping cell initialization")
+                skipped_limit = True
                 break
 
             # Create new cell
@@ -447,7 +452,17 @@ class CellPopulation(ICellPopulation):
                 total_cells=new_total_cells
             )
 
+        # Print summary
         print(f"[OK] Initialized {cells_added}/{len(cell_data)} cells (batched)")
+
+        # Print warnings only if there were issues
+        if skipped_occupied > 0:
+            print(f"[WARNING] Skipped {skipped_occupied} cells with occupied positions")
+        if skipped_invalid > 0:
+            print(f"[WARNING] Skipped {skipped_invalid} cells with invalid positions")
+        if skipped_limit:
+            print(f"[WARNING] Population limit reached during initialization")
+
         return cells_added
 
     def attempt_division(self, parent_id: str) -> bool:
