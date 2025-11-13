@@ -332,10 +332,9 @@ def setup_simulation(config, custom_functions_path=None):
     initial_state_manager = InitialStateManager(config)
     detected_cell_size_um = None
 
-    print(f"[DEBUG] Initial state file_path: {config.initial_state.file_path}")
-    print(f"[DEBUG] Domain dimensions: {config.domain.dimensions}")
-
-    if config.initial_state.file_path:
+    # Only load initial state if NOT using workflows
+    # When using workflows, initialization should be handled by workflow functions
+    if config.initial_state.file_path and not hasattr(config, '_workflow_mode'):
         file_path = Path(config.initial_state.file_path)
         file_suffix = file_path.suffix.lower()
 
@@ -396,10 +395,15 @@ def setup_simulation(config, custom_functions_path=None):
             print(f"[!] Failed to load VTK initial state: {e}")
             raise
 
-    else:
-        # No initial state file - cells will be initialized by workflow
-        print(f"[*] No initial state file specified - cells will be initialized by workflow")
+    elif hasattr(config, '_workflow_mode') and config._workflow_mode:
+        # Workflow mode - cells will be initialized by workflow functions
+        print(f"[*] Workflow mode: cells will be initialized by workflow functions")
         print(f"   [+] Cells: 0 (will be created by workflow initialization stage)")
+    else:
+        # No initial state file and no workflow - error
+        if not config.initial_state.file_path:
+            print(f"[*] No initial state file specified - cells will be initialized by workflow")
+            print(f"   [+] Cells: 0 (will be created by workflow initialization stage)")
 
     return mesh_manager, simulator, gene_network, population, detected_cell_size_um
 
@@ -1054,6 +1058,9 @@ def main():
             workflow_copy_path = config.output_dir / workflow_path.name
             shutil.copy2(workflow_path, workflow_copy_path)
             print(f"[+] Workflow copied to: {workflow_copy_path}")
+
+            # Set workflow mode flag to skip hardcoded initialization
+            config._workflow_mode = True
         except Exception as e:
             print(f"[!] Failed to load workflow: {e}")
             print(f"    Continuing with default hardcoded behavior")
