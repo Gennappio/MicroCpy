@@ -171,6 +171,25 @@ class MicroCConfig:
                 raise FileNotFoundError(f"custom_functions_path not found at resolved path: {custom_functions_path}")
             data['custom_functions_path'] = str(custom_functions_path)
 
+        # Resolve output directories relative to microc-2.0 root (not current working directory)
+        # This ensures consistent output location regardless of where the script is run from
+        microc_root = Path(__file__).parent.parent.parent  # src/config/config.py -> microc-2.0
+
+        if 'output_dir' in data:
+            output_dir = Path(data['output_dir'])
+            if not output_dir.is_absolute():
+                data['output_dir'] = str(microc_root / output_dir)
+
+        if 'plots_dir' in data:
+            plots_dir = Path(data['plots_dir'])
+            if not plots_dir.is_absolute():
+                data['plots_dir'] = str(microc_root / plots_dir)
+
+        if 'data_dir' in data:
+            data_dir = Path(data['data_dir'])
+            if not data_dir.is_absolute():
+                data['data_dir'] = str(microc_root / data_dir)
+
         # Convert to proper types with validation
         domain_data = data['domain']
         domain = DomainConfig(
