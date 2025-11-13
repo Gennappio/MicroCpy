@@ -190,6 +190,12 @@ class MicroCConfig:
             if not data_dir.is_absolute():
                 data['data_dir'] = str(microc_root / data_dir)
 
+        # Resolve initial_state.file_path relative to microc-2.0 root
+        if 'initial_state' in data and 'file_path' in data['initial_state'] and data['initial_state']['file_path']:
+            file_path = Path(data['initial_state']['file_path'])
+            if not file_path.is_absolute():
+                data['initial_state']['file_path'] = str(microc_root / file_path)
+
         # Convert to proper types with validation
         domain_data = data['domain']
         domain = DomainConfig(

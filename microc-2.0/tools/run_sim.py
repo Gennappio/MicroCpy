@@ -350,13 +350,8 @@ def setup_simulation(config, custom_functions_path=None, verbose=True):
     # Only load initial state if NOT using workflows
     # When using workflows, initialization should be handled by workflow functions
     if config.initial_state.file_path and not hasattr(config, '_workflow_mode'):
+        # Path is already resolved in config loader (relative to microc-2.0 root)
         file_path = Path(config.initial_state.file_path)
-
-        # Resolve path relative to microc-2.0 root if not absolute
-        if not file_path.is_absolute():
-            microc_root = Path(__file__).parent.parent
-            file_path = microc_root / file_path
-
         file_suffix = file_path.suffix.lower()
 
         try:

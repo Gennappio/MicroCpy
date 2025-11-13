@@ -43,7 +43,7 @@ output:
 
 # Initial state configuration - CSV format for 2D
 initial_state:
-  file_path: "microc-2.0/tests/jayatilake_experiment/example_2d_cells.csv"  # Human-readable CSV format
+  file_path: "tests/jayatilake_experiment/example_2d_cells.csv"  # Human-readable CSV format (relative to microc-2.0 root)
 
 # Substances (simplified for 2D demo)
 substances:
