@@ -1156,24 +1156,38 @@ def run_default_mode(args):
                 for cell in population.state.cells.values():
                     grid_pos = cell.state.position
                     local_env = simulator.state.get_local_environment(grid_pos)
-                    final_local_environments[cell.state.id] = {
-                        'Oxygen': local_env['oxygen_concentration'],
-                        'Glucose': local_env['glucose_concentration'],
-                        'Lactate': local_env['lactate_concentration'],
-                        'H': local_env['h_concentration'],
-                        'FGF': local_env['fgf_concentration'],
-                        'EGF': local_env['egf_concentration'],
-                        'TGFA': local_env['tgfa_concentration'],
-                        'HGF': local_env['hgf_concentration'],
-                        'EGFRD': local_env['egfrd_concentration'],
-                        'FGFRD': local_env['fgfrd_concentration'],
-                        'GI': local_env['gi_concentration'],
-                        'cMETD': local_env['cmetd_concentration'],
-                        'pH': local_env['ph_concentration'],
-                        'MCT1D': local_env['mct1d_concentration'],
-                        'MCT4D': local_env['mct4d_concentration'],
-                        'GLUT1D': local_env['glut1d_concentration'],
+
+                    # Build environment dict dynamically based on available substances
+                    # This avoids KeyError when substances don't exist in the simulation
+                    cell_env = {}
+
+                    # Map substance names to their concentration keys in local_env
+                    substance_mapping = {
+                        'Oxygen': 'oxygen_concentration',
+                        'Glucose': 'glucose_concentration',
+                        'Lactate': 'lactate_concentration',
+                        'H': 'h_concentration',
+                        'FGF': 'fgf_concentration',
+                        'EGF': 'egf_concentration',
+                        'TGFA': 'tgfa_concentration',
+                        'HGF': 'hgf_concentration',
+                        'EGFRD': 'egfrd_concentration',
+                        'FGFRD': 'fgfrd_concentration',
+                        'GI': 'gi_concentration',
+                        'cMETD': 'cmetd_concentration',
+                        'pH': 'ph_concentration',
+                        'MCT1D': 'mct1d_concentration',
+                        'MCT4D': 'mct4d_concentration',
+                        'GLUT1D': 'glut1d_concentration',
                     }
+
+                    # Only include substances that exist in the local environment
+                    for substance_name, env_key in substance_mapping.items():
+                        if env_key in local_env:
+                            cell_env[substance_name] = local_env[env_key]
+
+                    final_local_environments[cell.state.id] = cell_env
+
                 custom_functions.final_report(population, final_local_environments, config)
         except Exception as e:
             print(f"[!] Could not generate final report: {e}")
