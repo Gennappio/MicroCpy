@@ -234,20 +234,29 @@ class SimulationEngine:
                 import sys
                 import os
                 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
-                from csv_export import export_microc_csv_checkpoint
+                from csv_export import export_microc_csv_cell_state, export_microc_csv_substance_fields
 
-                # Export unified checkpoint (cells + substances in one file)
-                csv_output_dir = self.config.output_dir / "csv_checkpoints"
-                csv_file = export_microc_csv_checkpoint(
+                # Export cells and substances separately
+                csv_cells_dir = self.config.output_dir / "csv_cells"
+                csv_substances_dir = self.config.output_dir / "csv_substances"
+
+                # Export cell states
+                cell_file = export_microc_csv_cell_state(
                     population=self.population,
-                    simulator=self.simulator,
-                    output_dir=str(csv_output_dir),
+                    output_dir=str(csv_cells_dir),
                     step=step,
-                    cell_size_um=self.config.output.cell_size_um
+                    cell_size_um=self.config.domain.cell_height.micrometers
                 )
 
-                if csv_file:
-                    print(f"[+] Checkpoint exported successfully")
+                # Export substance fields
+                substance_files = export_microc_csv_substance_fields(
+                    simulator=self.simulator,
+                    output_dir=str(csv_substances_dir),
+                    step=step
+                )
+
+                if cell_file and substance_files:
+                    print(f"[+] Checkpoint exported: {len(substance_files)} substances + cells")
                 else:
                     print(f"[!] CSV checkpoint export failed")
 
