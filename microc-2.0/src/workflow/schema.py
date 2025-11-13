@@ -23,7 +23,7 @@ class WorkflowStageType(Enum):
 class WorkflowFunction:
     """
     Represents a single function in a workflow.
-    
+
     Attributes:
         id: Unique identifier for this function instance
         function_name: Name of the function to execute (must be in registry)
@@ -31,6 +31,8 @@ class WorkflowFunction:
         enabled: Whether this function should be executed
         position: UI position for visual editor (x, y coordinates)
         description: Optional description of what this function does
+        function_file: Optional path to Python file containing custom function
+        custom_name: Optional custom name for this function instance
     """
     id: str
     function_name: str
@@ -38,18 +40,25 @@ class WorkflowFunction:
     enabled: bool = True
     position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
     description: str = ""
-    
+    function_file: Optional[str] = None
+    custom_name: str = ""
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "id": self.id,
             "function_name": self.function_name,
             "parameters": self.parameters,
             "enabled": self.enabled,
             "position": self.position,
-            "description": self.description
+            "description": self.description,
+            "custom_name": self.custom_name
         }
-    
+        # Only include function_file if it's set
+        if self.function_file:
+            result["function_file"] = self.function_file
+        return result
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowFunction":
         """Create from dictionary (JSON deserialization)."""
@@ -59,7 +68,9 @@ class WorkflowFunction:
             parameters=data.get("parameters", {}),
             enabled=data.get("enabled", True),
             position=data.get("position", {"x": 0, "y": 0}),
-            description=data.get("description", "")
+            description=data.get("description", ""),
+            function_file=data.get("function_file"),
+            custom_name=data.get("custom_name", "")
         )
 
 

@@ -1,0 +1,166 @@
+{
+  "version": "1.0",
+  "name": "Simple Logging Workflow",
+  "description": "Simple workflow that just prints function names and parameters",
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "init_1",
+          "function_name": "init_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "param1": 42,
+            "param2": 3.14,
+            "param3": "hello"
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": ""
+        }
+      ],
+      "execution_order": [
+        "init_1"
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "metabolism_1",
+          "function_name": "metabolism_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "rate": 2.5,
+            "threshold": 0.75,
+            "enabled": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": ""
+        },
+        {
+          "id": "division_1",
+          "function_name": "division_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "min_size": 200,
+            "max_rate": 0.9
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 250
+          },
+          "description": "",
+          "custom_name": ""
+        }
+      ],
+      "execution_order": [
+        "metabolism_1",
+        "division_1"
+      ]
+    },
+    "diffusion": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "diffusion_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "coefficient": 0.25,
+            "decay": 0.05
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": ""
+        }
+      ],
+      "execution_order": [
+        "diffusion_1"
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "signaling_1",
+          "function_name": "signaling_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "range_value": 20,
+            "strength": 1.5
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": ""
+        }
+      ],
+      "execution_order": [
+        "signaling_1"
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "export_1",
+          "function_name": "export_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {
+            "function_file": "tests/dummy_workflow/dummy_logs.py",
+            "format_type": "json",
+            "compress": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 13.790153712660072,
+            "y": 61.8057643030773
+          },
+          "description": "",
+          "custom_name": ""
+        },
+        {
+          "id": "custom_function_1763044478342_1763044482312",
+          "function_name": "ciao_function",
+          "function_file": "tests/dummy_workflow/dummy_logs.py",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 440.3471904445681,
+            "y": 76.60762595855022
+          },
+          "description": "Custom workflow function",
+          "custom_name": ""
+        }
+      ],
+      "execution_order": [
+        "export_1",
+        "custom_function_1763044478342_1763044482312"
+      ]
+    }
+  }
+}

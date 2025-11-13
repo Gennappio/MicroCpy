@@ -57,7 +57,7 @@ def export_function(context, format_type="csv", compress=False):
 
 def ciao_function(context, format_type="csv", compress=False):
     """CIAOOOOOO"""
-    print(f">>> export_function called")
-    print(f"    format_type = {format_type}")
-    print(f"    compress = {compress}")
+    print(f">>> CIAOOOOOOOOOOO")
+    print(f"    CIAOOOOOOOOOOO")
+    print(f"    CIAOOOOOOOOOOO")
     return True

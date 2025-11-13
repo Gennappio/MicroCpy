@@ -187,8 +187,8 @@ class WorkflowExecutor:
         Returns:
             Dictionary with results or None
         """
-        # Extract function_file from parameters if present
-        function_file = workflow_func.parameters.get('function_file')
+        # Get function_file from top-level attribute (preferred) or parameters (fallback)
+        function_file = workflow_func.function_file or workflow_func.parameters.get('function_file')
 
         # Get function implementation
         func = self._get_function_implementation(workflow_func.function_name, function_file)
