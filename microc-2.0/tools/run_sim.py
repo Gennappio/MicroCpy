@@ -1106,37 +1106,41 @@ def main():
     else:
         generated_plots = []
 
-    # Final report (custom)
-    try:
-        custom_functions = load_custom_functions(custom_functions_path)
-        if custom_functions and hasattr(custom_functions, 'final_report'):
-            final_local_environments = {}
-            for cell in population.state.cells.values():
-                grid_pos = cell.state.position
-                local_env = simulator.state.get_local_environment(grid_pos)
-                final_local_environments[cell.state.id] = {
-                    'Oxygen': local_env['oxygen_concentration'],
-                    'Glucose': local_env['glucose_concentration'],
-                    'Lactate': local_env['lactate_concentration'],
-                    'H': local_env['h_concentration'],
-                    'FGF': local_env['fgf_concentration'],
-                    'EGF': local_env['egf_concentration'],
-                    'TGFA': local_env['tgfa_concentration'],
-                    'HGF': local_env['hgf_concentration'],
-                    'EGFRD': local_env['egfrd_concentration'],
-                    'FGFRD': local_env['fgfrd_concentration'],
-                    'GI': local_env['gi_concentration'],
-                    'cMETD': local_env['cmetd_concentration'],
-                    'pH': local_env['ph_concentration'],
-                    'MCT1D': local_env['mct1d_concentration'],
-                    'MCT4D': local_env['mct4d_concentration'],
-                    'GLUT1D': local_env['glut1d_concentration'],
-                }
-            custom_functions.final_report(population, final_local_environments, config)
-    except Exception as e:
-        print(f"[!] Could not generate final report: {e}")
-        import traceback
-        traceback.print_exc()
+    # Final report (custom) - only for non-workflow simulations
+    # When using workflows, final reporting should be handled by the finalization stage
+    if workflow is None:
+        try:
+            custom_functions = load_custom_functions(custom_functions_path)
+            if custom_functions and hasattr(custom_functions, 'final_report'):
+                final_local_environments = {}
+                for cell in population.state.cells.values():
+                    grid_pos = cell.state.position
+                    local_env = simulator.state.get_local_environment(grid_pos)
+                    final_local_environments[cell.state.id] = {
+                        'Oxygen': local_env['oxygen_concentration'],
+                        'Glucose': local_env['glucose_concentration'],
+                        'Lactate': local_env['lactate_concentration'],
+                        'H': local_env['h_concentration'],
+                        'FGF': local_env['fgf_concentration'],
+                        'EGF': local_env['egf_concentration'],
+                        'TGFA': local_env['tgfa_concentration'],
+                        'HGF': local_env['hgf_concentration'],
+                        'EGFRD': local_env['egfrd_concentration'],
+                        'FGFRD': local_env['fgfrd_concentration'],
+                        'GI': local_env['gi_concentration'],
+                        'cMETD': local_env['cmetd_concentration'],
+                        'pH': local_env['ph_concentration'],
+                        'MCT1D': local_env['mct1d_concentration'],
+                        'MCT4D': local_env['mct4d_concentration'],
+                        'GLUT1D': local_env['glut1d_concentration'],
+                    }
+                custom_functions.final_report(population, final_local_environments, config)
+        except Exception as e:
+            print(f"[!] Could not generate final report: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print(f"[WORKFLOW] Skipping hardcoded final_report (use finalization stage instead)")
 
     print(f"\n" + "=" * 50)
     print("[+] SIMULATION COMPLETED SUCCESSFULLY!")

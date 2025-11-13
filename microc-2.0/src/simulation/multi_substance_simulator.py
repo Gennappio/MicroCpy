@@ -47,6 +47,12 @@ class SubstanceState:
         else:
             raise ValueError(f"Position must be 2D or 3D, got {len(position)}D")
 
+        # Convert to integers (positions might be floats)
+        x = int(x)
+        y = int(y)
+        if z is not None:
+            z = int(z)
+
         # Handle both 2D and 3D concentration arrays
         if len(self.concentrations.shape) == 3:
             # 3D case: use z if provided, otherwise take middle slice
@@ -54,7 +60,7 @@ class SubstanceState:
             if z is None:
                 z_idx = nz // 2
             else:
-                z_idx = min(max(0, int(z)), nz - 1)
+                z_idx = min(max(0, z), nz - 1)
 
             if 0 <= x < self.concentrations.shape[2] and 0 <= y < self.concentrations.shape[1]:
                 return float(self.concentrations[z_idx, y, x])
