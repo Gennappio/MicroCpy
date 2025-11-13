@@ -36,17 +36,28 @@ class SubstanceState:
     concentrations: np.ndarray  # 2D or 3D array of concentrations
     config: SubstanceConfig
     
-    def get_concentration_at(self, position: Tuple[int, int]) -> float:
-        """Get concentration at specific grid position"""
-        x, y = position
+    def get_concentration_at(self, position) -> float:
+        """Get concentration at specific grid position (2D or 3D)"""
+        # Handle both 2D and 3D positions
+        if len(position) == 3:
+            x, y, z = position
+        elif len(position) == 2:
+            x, y = position
+            z = None
+        else:
+            raise ValueError(f"Position must be 2D or 3D, got {len(position)}D")
 
         # Handle both 2D and 3D concentration arrays
         if len(self.concentrations.shape) == 3:
-            # 3D case: take middle slice in Z direction
+            # 3D case: use z if provided, otherwise take middle slice
             nz = self.concentrations.shape[0]
-            middle_z = nz // 2
+            if z is None:
+                z_idx = nz // 2
+            else:
+                z_idx = min(max(0, int(z)), nz - 1)
+
             if 0 <= x < self.concentrations.shape[2] and 0 <= y < self.concentrations.shape[1]:
-                return float(self.concentrations[middle_z, y, x])
+                return float(self.concentrations[z_idx, y, x])
         else:
             # 2D case: use as-is
             if 0 <= x < self.concentrations.shape[1] and 0 <= y < self.concentrations.shape[0]:
@@ -59,14 +70,14 @@ class MultiSubstanceState:
     substances: Dict[str, SubstanceState] = field(default_factory=dict)
     time: float = 0.0
     
-    def get_local_environment(self, position: Tuple[int, int]) -> Dict[str, float]:
-        """Get all substance concentrations at a position"""
+    def get_local_environment(self, position) -> Dict[str, float]:
+        """Get all substance concentrations at a position (2D or 3D)"""
         environment = {}
         for name, substance in self.substances.items():
             environment[f"{name.lower()}_concentration"] = substance.get_concentration_at(position)
         return environment
-    
-    def get_gene_network_inputs(self, position: Tuple[int, int], 
+
+    def get_gene_network_inputs(self, position,
                                associations: Dict[str, str], 
                                thresholds: Dict[str, ThresholdConfig]) -> Dict[str, float]:
         """Convert substance concentrations to gene network inputs using associations and thresholds"""

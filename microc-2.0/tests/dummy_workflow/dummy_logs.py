@@ -55,3 +55,9 @@ def export_function(context, format_type="csv", compress=False):
     print(f"    compress = {compress}")
     return True
 
+def ciao_function(context, format_type="csv", compress=False):
+    """CIAOOOOOO"""
+    print(f">>> export_function called")
+    print(f"    format_type = {format_type}")
+    print(f"    compress = {compress}")
+    return True
