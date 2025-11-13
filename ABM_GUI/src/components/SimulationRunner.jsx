@@ -12,7 +12,6 @@ const API_BASE_URL = 'http://localhost:5000/api';
 const SimulationRunner = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [configPath, setConfigPath] = useState('tests/jayatilake_experiment/jayatilake_experiment_config.yaml');
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   
@@ -123,38 +122,37 @@ const SimulationRunner = () => {
 
   const handleRun = async () => {
     if (isRunning) return;
-    
+
     setError(null);
     setLogs([]);
-    
+
     try {
       // Export current workflow
       const workflow = exportWorkflow();
-      
+
       addLog('info', '📋 Exporting workflow...');
-      addLog('info', `📁 Config: ${configPath}`);
-      
-      // Start simulation
+      addLog('info', '🚀 Starting workflow mode (config loaded by workflow functions)');
+
+      // Start simulation in workflow mode (no config_path)
       const response = await fetch(`${API_BASE_URL}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          config_path: configPath,
           workflow: workflow,
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to start simulation');
       }
-      
+
       const data = await response.json();
       setIsRunning(true);
-      addLog('info', `🚀 Simulation started`);
-      
+      addLog('info', `✓ Workflow execution started`);
+
     } catch (err) {
       setError(err.message);
       addLog('error', `❌ Failed to start: ${err.message}`);
@@ -205,25 +203,16 @@ const SimulationRunner = () => {
           {isConnected && <span className="connection-status connected">●</span>}
           {!isConnected && <span className="connection-status disconnected">●</span>}
         </div>
-        
+
         <div className="header-controls">
-          <input
-            type="text"
-            value={configPath}
-            onChange={(e) => setConfigPath(e.target.value)}
-            placeholder="Path to config YAML"
-            className="config-input"
-            disabled={isRunning}
-          />
-          
           {!isRunning ? (
             <button
               className="btn btn-run"
               onClick={handleRun}
-              disabled={!configPath || !isConnected}
+              disabled={!isConnected}
             >
               <Play size={16} />
-              Run Simulation
+              Run Workflow
             </button>
           ) : (
             <button className="btn btn-stop" onClick={handleStop}>

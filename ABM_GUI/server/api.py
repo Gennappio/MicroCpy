@@ -88,17 +88,26 @@ def run_simulation_async(config_path, workflow_path):
         # Get microc-2.0 directory (working directory for simulation)
         microc_dir = microc_path.parent
 
-        # Build command
+        # Build command - use either --workflow or --sim (mutually exclusive)
         cmd = [
             sys.executable,
-            str(microc_path),
-            "--sim", config_path
+            str(microc_path)
         ]
 
         if workflow_path:
+            # Workflow mode - complete user control
             cmd.extend(["--workflow", workflow_path])
+            log_queue.put(f"[START] Running workflow mode: {workflow_path}\n")
+        elif config_path:
+            # Default pipeline mode - hardcoded behavior
+            cmd.extend(["--sim", config_path])
+            log_queue.put(f"[START] Running default pipeline: {config_path}\n")
+        else:
+            log_queue.put(f"[ERROR] Either config_path or workflow_path must be provided\n")
+            is_running = False
+            return
 
-        log_queue.put(f"[START] Running: {' '.join(cmd)}\n")
+        log_queue.put(f"[INFO] Command: {' '.join(cmd)}\n")
         log_queue.put(f"[INFO] Working directory: {microc_dir}\n")
         log_queue.put("[INFO] Starting MicroC simulation...\n")
 
@@ -134,17 +143,18 @@ def get_status():
 def run_simulation():
     """Start a new simulation"""
     global simulation_thread, is_running
-    
+
     if is_running:
         return jsonify({'error': 'Simulation already running'}), 400
-    
+
     data = request.json
-    config_path = data.get('config_path')
-    workflow_data = data.get('workflow')
-    
-    if not config_path:
-        return jsonify({'error': 'config_path is required'}), 400
-    
+    config_path = data.get('config_path')  # Optional - only for --sim mode
+    workflow_data = data.get('workflow')   # Optional - only for --workflow mode
+
+    # Must have either config_path or workflow
+    if not config_path and not workflow_data:
+        return jsonify({'error': 'Either config_path or workflow is required'}), 400
+
     # Save workflow to temporary file if provided
     workflow_path = None
     if workflow_data:
@@ -154,11 +164,11 @@ def run_simulation():
                 json.dump(workflow_data, f, indent=2)
         except Exception as e:
             return jsonify({'error': f'Failed to save workflow: {e}'}), 500
-    
+
     # Clear log queue
     while not log_queue.empty():
         log_queue.get()
-    
+
     # Start simulation in background thread
     is_running = True
     simulation_thread = threading.Thread(
@@ -167,7 +177,7 @@ def run_simulation():
     )
     simulation_thread.daemon = True
     simulation_thread.start()
-    
+
     return jsonify({
         'status': 'started',
         'config': config_path,
