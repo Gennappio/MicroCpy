@@ -1097,13 +1097,22 @@ def main():
             config, simulator, gene_network, population, args, custom_functions_path, detected_cell_size_um
         )
 
-    # Save results
-    save_results(results, config, args)
-
-    # Generate final plots
-    if config.output.save_final_plots:
-        generated_plots = generate_plots(config, results, simulator, population, args)
+    # Save results - only for non-workflow simulations
+    # When using workflows, data saving should be handled by the finalization stage
+    if workflow is None:
+        save_results(results, config, args)
     else:
+        print(f"[WORKFLOW] Skipping hardcoded data saving (use finalization stage instead)")
+
+    # Generate final plots - only for non-workflow simulations
+    # When using workflows, plotting should be handled by the finalization stage
+    if workflow is None:
+        if config.output.save_final_plots:
+            generated_plots = generate_plots(config, results, simulator, population, args)
+        else:
+            generated_plots = []
+    else:
+        print(f"[WORKFLOW] Skipping hardcoded plotting (use finalization stage instead)")
         generated_plots = []
 
     # Final report (custom) - only for non-workflow simulations
