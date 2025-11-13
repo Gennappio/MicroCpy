@@ -14,177 +14,87 @@
       "enabled": true,
       "functions": [
         {
-          "id": "init_placement_1",
-          "function_name": "initialize_cell_placement",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Place cells in spheroid configuration",
+          "id": "load_config_1",
+          "function_name": "load_config_file",
+          "description": "Load YAML configuration file and initialize simulation infrastructure",
           "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "initial_cell_count": 50,
-            "placement_pattern": "spheroid"
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
           },
           "enabled": true,
-          "position": {"x": 100, "y": 100}
+          "position": {"x": 100, "y": 50}
         },
         {
-          "id": "init_ages_1",
-          "function_name": "initialize_cell_ages",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Set random initial cell ages",
+          "id": "load_vtk_1",
+          "function_name": "load_cells_from_vtk",
+          "description": "Load cells from VTK file (replicates default behavior)",
           "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "max_cell_age": 500.0,
-            "cell_cycle_time": 240.0
+            "file_path": "tools/generated_h5/cells_200um_domain_domain.vtk"
           },
           "enabled": true,
-          "position": {"x": 300, "y": 100}
+          "position": {"x": 100, "y": 150}
         }
       ],
-      "execution_order": ["init_placement_1", "init_ages_1"]
+      "execution_order": ["load_config_1", "load_vtk_1"]
     },
     
     "intracellular": {
       "enabled": true,
       "functions": [
         {
-          "id": "metabolism_1",
-          "function_name": "calculate_cell_metabolism",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Calculate metabolic rates using Michaelis-Menten kinetics",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "oxygen_vmax": 1.0e-16,
-            "glucose_vmax": 3.0e-15,
-            "KO2": 0.01,
-            "KG": 0.5,
-            "KL": 1.0
-          },
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update: calls custom metabolism, updates gene networks, phenotypes, and removes dead cells",
+          "parameters": {},
           "enabled": true,
           "position": {"x": 100, "y": 200}
-        },
-        {
-          "id": "metabolic_state_1",
-          "function_name": "update_cell_metabolic_state",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Update cell metabolic state with ATP and rates",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 300, "y": 200}
-        },
-        {
-          "id": "division_check_1",
-          "function_name": "should_divide",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Check if cell should divide based on ATP and age",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "atp_threshold": 0.8,
-            "cell_cycle_time": 240.0,
-            "max_atp": 30.0
-          },
-          "enabled": true,
-          "position": {"x": 500, "y": 200}
-        },
-        {
-          "id": "phenotype_1",
-          "function_name": "update_cell_phenotype",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Update phenotype based on gene network",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "necrosis_threshold_oxygen": 0.011,
-            "necrosis_threshold_glucose": 0.23
-          },
-          "enabled": true,
-          "position": {"x": 700, "y": 200}
-        },
-        {
-          "id": "aging_1",
-          "function_name": "age_cell",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Update cell age",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 900, "y": 200}
-        },
-        {
-          "id": "death_check_1",
-          "function_name": "check_cell_death",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Check if cell should die",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 1100, "y": 200}
         }
       ],
-      "execution_order": [
-        "metabolism_1",
-        "metabolic_state_1",
-        "division_check_1",
-        "phenotype_1",
-        "aging_1",
-        "death_check_1"
-      ]
+      "execution_order": ["intracellular_1"]
     },
     
     "diffusion": {
       "enabled": true,
-      "functions": [],
-      "execution_order": []
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update: runs diffusion solver with substance reactions from cells",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 250}
+        }
+      ],
+      "execution_order": ["diffusion_1"]
     },
-    
+
     "intercellular": {
       "enabled": true,
       "functions": [
         {
-          "id": "division_direction_1",
-          "function_name": "select_division_direction",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Select direction for cell division",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "description": "Standard intercellular update: calls custom division and migration functions",
+          "parameters": {},
           "enabled": true,
           "position": {"x": 100, "y": 300}
-        },
-        {
-          "id": "migration_1",
-          "function_name": "calculate_migration_probability",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Calculate cell migration probability",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "base_migration_rate": 0.0
-          },
-          "enabled": true,
-          "position": {"x": 300, "y": 300}
         }
       ],
-      "execution_order": ["division_direction_1", "migration_1"]
+      "execution_order": ["intercellular_1"]
     },
     
     "finalization": {
       "enabled": true,
       "functions": [
         {
-          "id": "final_report_1",
-          "function_name": "final_report",
-          "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-          "description": "Generate comprehensive final report",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
+          "id": "print_summary_1",
+          "function_name": "print_simulation_summary",
+          "description": "Print simulation summary statistics",
+          "parameters": {},
           "enabled": true,
           "position": {"x": 100, "y": 400}
         }
       ],
-      "execution_order": ["final_report_1"]
+      "execution_order": ["print_summary_1"]
     }
   }
 }

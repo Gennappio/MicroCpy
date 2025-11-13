@@ -13,6 +13,16 @@
       "enabled": true,
       "functions": [
         {
+          "id": "load_config_1",
+          "function_name": "load_config_file",
+          "description": "Load YAML configuration file and initialize simulation infrastructure",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
+          },
+          "enabled": true,
+          "position": {"x": 100, "y": 50}
+        },
+        {
           "id": "load_vtk_1",
           "function_name": "load_cells_from_vtk",
           "description": "Load cells from VTK file",
@@ -20,135 +30,70 @@
             "file_path": "tools/generated_h5/cells_200um_domain_domain.vtk"
           },
           "enabled": true,
-          "position": {"x": 100, "y": 100}
+          "position": {"x": 100, "y": 150}
         }
       ],
-      "execution_order": ["load_vtk_1"]
+      "execution_order": ["load_config_1", "load_vtk_1"]
     },
     
     "intracellular": {
       "enabled": true,
       "functions": [
         {
-          "id": "metabolism_1",
-          "function_name": "calculate_cell_metabolism",
-          "description": "Calculate ATP production from oxygen and glucose",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update: calls custom metabolism, updates gene networks, phenotypes, and removes dead cells",
+          "parameters": {},
           "enabled": true,
           "position": {"x": 100, "y": 200}
-        },
-        {
-          "id": "metabolic_state_1",
-          "function_name": "update_cell_metabolic_state",
-          "description": "Update metabolic state based on ATP production",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 300, "y": 200}
-        },
-        {
-          "id": "division_check_1",
-          "function_name": "should_divide",
-          "description": "Check if cells should divide based on ATP",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
-            "atp_division_threshold": 2.5
-          },
-          "enabled": true,
-          "position": {"x": 500, "y": 200}
-        },
-        {
-          "id": "phenotype_1",
-          "function_name": "update_cell_phenotype",
-          "description": "Update phenotype from gene network",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 700, "y": 200}
-        },
-        {
-          "id": "aging_1",
-          "function_name": "age_cell",
-          "description": "Increment cell age",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 100, "y": 350}
-        },
-        {
-          "id": "death_check_1",
-          "function_name": "check_cell_death",
-          "description": "Check for cell death conditions",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 300, "y": 350}
         }
       ],
-      "execution_order": [
-        "metabolism_1",
-        "metabolic_state_1",
-        "division_check_1",
-        "phenotype_1",
-        "aging_1",
-        "death_check_1"
-      ]
+      "execution_order": ["intracellular_1"]
     },
     
     "diffusion": {
       "enabled": true,
-      "functions": [],
-      "execution_order": []
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update: runs diffusion solver with substance reactions from cells",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 250}
+        }
+      ],
+      "execution_order": ["diffusion_1"]
     },
-    
+
     "intercellular": {
       "enabled": true,
       "functions": [
         {
-          "id": "division_direction_1",
-          "function_name": "select_division_direction",
-          "description": "Select direction for cell division",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "description": "Standard intercellular update: calls custom division and migration functions",
+          "parameters": {},
           "enabled": true,
-          "position": {"x": 100, "y": 500}
-        },
-        {
-          "id": "migration_1",
-          "function_name": "calculate_migration_probability",
-          "description": "Calculate probability of cell migration",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {"x": 300, "y": 500}
+          "position": {"x": 100, "y": 300}
         }
       ],
-      "execution_order": ["division_direction_1", "migration_1"]
+      "execution_order": ["intercellular_1"]
     },
     
     "finalization": {
       "enabled": true,
       "functions": [
         {
-          "id": "final_report_1",
-          "function_name": "final_report",
-          "description": "Generate final simulation report",
-          "parameters": {
-            "function_file": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
+          "id": "print_summary_1",
+          "function_name": "print_simulation_summary",
+          "description": "Print simulation summary statistics",
+          "parameters": {},
           "enabled": true,
-          "position": {"x": 100, "y": 650}
+          "position": {"x": 100, "y": 400}
         }
       ],
-      "execution_order": ["final_report_1"]
+      "execution_order": ["print_summary_1"]
     }
   }
 }
