@@ -551,10 +551,44 @@ def get_default_registry() -> FunctionRegistry:
     registry.register(FunctionMetadata(
         name="generate_summary_plots",
         display_name="Generate Summary Plots",
-        description="Generate final plots and visualizations",
+        description="Generate all automatic plots (substance heatmaps, etc.)",
         category=FunctionCategory.FINALIZATION,
         parameters=[],
-        inputs=["population", "simulator", "config", "helpers"],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="save_simulation_data",
+        display_name="Save Simulation Data",
+        description="Save simulation results to files (config, time series, substance stats)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="save_config",
+                type=ParameterType.BOOLEAN,
+                description="Save simulation configuration to JSON",
+                default=True,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_timeseries",
+                type=ParameterType.BOOLEAN,
+                description="Save time series data to NPY files",
+                default=True,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_substances",
+                type=ParameterType.BOOLEAN,
+                description="Save substance statistics to JSON",
+                default=True,
+                required=False
+            )
+        ],
+        inputs=["context"],
         outputs=[],
         cloneable=False,
         module_path="src.workflow.standard_functions"

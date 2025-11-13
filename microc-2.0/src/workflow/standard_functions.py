@@ -448,22 +448,130 @@ def export_final_state(
 
 
 def generate_summary_plots(
-    population,
-    simulator,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
-) -> None:
+) -> bool:
     """
     Generate summary plots in finalization stage.
 
-    This can be used to generate final plots and visualizations
-    after the simulation completes.
-    """
-    print("[PLOTS] Generating summary plots...")
+    This function generates all automatic plots (substance heatmaps, etc.)
+    that would normally be generated automatically in non-workflow mode.
 
-    # This would call plotting functions
-    # For now, just a placeholder showing the pattern
-    # In the future, this could call helpers['generate_plots']()
-    pass
+    Args:
+        context: Workflow context containing population, simulator, config, etc.
+        **kwargs: Additional parameters (ignored)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print("[WORKFLOW] Generating summary plots...")
+
+    try:
+        # Import AutoPlotter
+        from src.plotting.autoplotter import AutoPlotter
+
+        population = context['population']
+        simulator = context['simulator']
+        config = context['config']
+        results = context.get('results', {})
+
+        # Create plotter
+        plotter = AutoPlotter(config, config.plots_dir)
+
+        # Generate all plots
+        generated_plots = plotter.generate_all_plots(results, simulator, population)
+
+        print(f"[WORKFLOW] Generated {len(generated_plots)} plots")
+        return True
+
+    except ImportError:
+        print("[WORKFLOW] AutoPlotter not available, skipping plots")
+        return False
+    except Exception as e:
+        print(f"[WORKFLOW] Error generating plots: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def save_simulation_data(
+    context: Dict[str, Any],
+    save_config: bool = True,
+    save_timeseries: bool = True,
+    save_substances: bool = True,
+    **kwargs
+) -> bool:
+    """
+    Save simulation data to files in finalization stage.
+
+    This function saves simulation results (time series, substance data, config)
+    that would normally be saved automatically in non-workflow mode.
+
+    Args:
+        context: Workflow context containing results, config, etc.
+        save_config: Whether to save simulation configuration
+        save_timeseries: Whether to save time series data
+        save_substances: Whether to save substance statistics
+        **kwargs: Additional parameters (ignored)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print("[WORKFLOW] Saving simulation data...")
+
+    try:
+        import json
+        import numpy as np
+
+        config = context['config']
+        results = context.get('results', {})
+
+        output_dir = config.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save configuration
+        if save_config:
+            config_file = output_dir / "simulation_config.json"
+            with open(config_file, 'w') as f:
+                json.dump({
+                    'domain': {
+                        'nx': config.domain.nx,
+                        'ny': config.domain.ny,
+                        'size_x': config.domain.size_x.value,
+                        'size_y': config.domain.size_y.value
+                    },
+                    'substances': list(config.substances.keys()),
+                    'associations': config.associations,
+                    'num_steps': len(results.get('time', [])),
+                    'dt': results['time'][1] - results['time'][0] if len(results.get('time', [])) > 1 else 0
+                }, f, indent=2)
+            print(f"   [OK] Saved config to {config_file}")
+
+        # Save time series data
+        if save_timeseries and 'time' in results:
+            np.save(output_dir / "time.npy", results['time'])
+            print(f"   [OK] Saved time series data")
+
+        # Save substance statistics
+        if save_substances and 'substance_stats' in results:
+            substance_data = {}
+            for substance_name, stats in results['substance_stats'].items():
+                substance_data[substance_name] = {
+                    'mean': stats['mean'],
+                    'min': stats['min'],
+                    'max': stats['max']
+                }
+
+            with open(output_dir / "substance_stats.json", 'w') as f:
+                json.dump(substance_data, f, indent=2)
+            print(f"   [OK] Saved substance statistics")
+
+        print(f"[WORKFLOW] Data saved to {output_dir}")
+        return True
+
+    except Exception as e:
+        print(f"[WORKFLOW] Error saving data: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
