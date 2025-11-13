@@ -1036,7 +1036,7 @@ def run_default_mode(args):
     config.plots_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy YAML configuration file to the timestamped folder
-    config_file_path = Path(args.config_file)
+    config_file_path = Path(args.sim)
     config_copy_path = config.output_dir / config_file_path.name
     shutil.copy2(config_file_path, config_copy_path)
     print(f"[+] Configuration copied to: {config_copy_path}")
