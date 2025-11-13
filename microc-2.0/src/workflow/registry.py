@@ -594,5 +594,17 @@ def get_default_registry() -> FunctionRegistry:
         module_path="src.workflow.standard_functions"
     ))
 
+    registry.register(FunctionMetadata(
+        name="print_simulation_summary",
+        display_name="Print Simulation Summary",
+        description="Print final simulation summary (completion message, statistics)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
     return registry
 

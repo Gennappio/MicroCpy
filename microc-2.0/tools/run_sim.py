@@ -1101,8 +1101,6 @@ def main():
     # When using workflows, data saving should be handled by the finalization stage
     if workflow is None:
         save_results(results, config, args)
-    else:
-        print(f"[WORKFLOW] Skipping hardcoded data saving (use finalization stage instead)")
 
     # Generate final plots - only for non-workflow simulations
     # When using workflows, plotting should be handled by the finalization stage
@@ -1112,7 +1110,6 @@ def main():
         else:
             generated_plots = []
     else:
-        print(f"[WORKFLOW] Skipping hardcoded plotting (use finalization stage instead)")
         generated_plots = []
 
     # Final report (custom) - only for non-workflow simulations
@@ -1148,26 +1145,27 @@ def main():
             print(f"[!] Could not generate final report: {e}")
             import traceback
             traceback.print_exc()
-    else:
-        print(f"[WORKFLOW] Skipping hardcoded final_report (use finalization stage instead)")
 
-    print(f"\n" + "=" * 50)
-    print("[+] SIMULATION COMPLETED SUCCESSFULLY!")
-    print("=" * 50)
-    print(f"[STATS] Results summary:")
-    print(f"   * Substances simulated: {len(config.substances)}")
-    print(f"   * Simulation steps: {len(results['time'])}")
-    print(f"   * Output directory: {config.output_dir}")
-    print(f"   * Plots directory: {config.plots_dir}")
+    # Print final summary - only for non-workflow simulations
+    # When using workflows, summary should be handled by the finalization stage
+    if workflow is None:
+        print(f"\n" + "=" * 50)
+        print("[+] SIMULATION COMPLETED SUCCESSFULLY!")
+        print("=" * 50)
+        print(f"[STATS] Results summary:")
+        print(f"   * Substances simulated: {len(config.substances)}")
+        print(f"   * Simulation steps: {len(results['time'])}")
+        print(f"   * Output directory: {config.output_dir}")
+        print(f"   * Plots directory: {config.plots_dir}")
 
-    if args.save_data:
-        print(f"   * Data saved for analysis")
+        if args.save_data:
+            print(f"   * Data saved for analysis")
 
-    if generated_plots:
-        print(f"   * Plots generated: {len(generated_plots)}")
+        if generated_plots:
+            print(f"   * Plots generated: {len(generated_plots)}")
 
-    print(f"\n[RUN] To run again:")
-    print(f"   python run_sim.py {args.config_file}")
+        print(f"\n[RUN] To run again:")
+        print(f"   python run_sim.py {args.config_file}")
 
 if __name__ == "__main__":
     main()
