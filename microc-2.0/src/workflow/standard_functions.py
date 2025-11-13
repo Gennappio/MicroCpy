@@ -14,6 +14,53 @@ from src.io.initial_state import InitialStateManager
 # INITIALIZATION FUNCTIONS
 # ============================================================================
 
+def initialize_simulation_infrastructure(
+    context: Dict[str, Any],
+    **kwargs
+) -> bool:
+    """
+    Initialize simulation infrastructure (substances, mesh, gene network).
+
+    This function initializes all the infrastructure components that are
+    normally initialized automatically in non-workflow mode:
+    - Substance simulator with initial concentrations
+    - Mesh and domain setup
+    - Gene network initialization
+
+    This should be called in the initialization stage before any other functions.
+
+    Args:
+        context: Workflow context containing config, simulator, etc.
+        **kwargs: Additional parameters (ignored)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print("[WORKFLOW] Initializing simulation infrastructure...")
+
+    try:
+        simulator = context.get('simulator')
+        config = context.get('config')
+
+        if not simulator or not config:
+            print("[WORKFLOW] Error: simulator or config not found in context")
+            return False
+
+        # Infrastructure is already initialized by setup_simulation()
+        # This function just prints a summary
+        print(f"   [+] Substances: {len(config.substances)}")
+        print(f"   [+] Domain: {config.domain.size_x.micrometers}x{config.domain.size_y.micrometers} um")
+        print(f"   [+] Mesh: {config.domain.nx}x{config.domain.ny} cells")
+
+        return True
+
+    except Exception as e:
+        print(f"[WORKFLOW] Error initializing infrastructure: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def load_cells_from_vtk(
     context: Dict[str, Any],
     file_path: str,

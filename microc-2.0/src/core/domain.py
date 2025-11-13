@@ -12,9 +12,10 @@ class DomainError(Exception):
 
 class MeshManager:
     """Manages FiPy mesh with bulletproof unit handling"""
-    
-    def __init__(self, config: DomainConfig):
+
+    def __init__(self, config: DomainConfig, verbose: bool = True):
         self.config = config
+        self.verbose = verbose
         self._validate_config()
         # Use explicit solver terminology for FiPy mesh
         self.solver_mesh = self._create_solver_mesh()
@@ -65,21 +66,25 @@ class MeshManager:
 
         if self.config.dimensions == 3:
             dz = self.config.size_z.meters / self.config.nz
-            print(f"Creating 3D mesh:")
-            print(f"  Domain: {self.config.size_x} x {self.config.size_y} x {self.config.size_z}")
-            print(f"  Grid: {self.config.nx} x {self.config.ny} x {self.config.nz}")
-            print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
+            if self.verbose:
+                print(f"Creating 3D mesh:")
+                print(f"  Domain: {self.config.size_x} x {self.config.size_y} x {self.config.size_z}")
+                print(f"  Grid: {self.config.nx} x {self.config.ny} x {self.config.nz}")
+                print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} x {dz*1e6:.1f} um")
 
             solver_mesh = Grid3D(dx=dx, dy=dy, dz=dz, nx=self.config.nx, ny=self.config.ny, nz=self.config.nz)
-            print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
+            if self.verbose:
+                print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
         else:
-            print(f"Creating 2D mesh:")
-            print(f"  Domain: {self.config.size_x} x {self.config.size_y}")
-            print(f"  Grid: {self.config.nx} x {self.config.ny}")
-            print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} um")
+            if self.verbose:
+                print(f"Creating 2D mesh:")
+                print(f"  Domain: {self.config.size_x} x {self.config.size_y}")
+                print(f"  Grid: {self.config.nx} x {self.config.ny}")
+                print(f"  Spacing: {dx*1e6:.1f} x {dy*1e6:.1f} um")
 
             solver_mesh = Grid2D(dx=dx, dy=dy, nx=self.config.nx, ny=self.config.ny)
-            print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
+            if self.verbose:
+                print(f"  Initial domain bounds: 0 to {self.config.size_x.micrometers:.0f} um")
 
         return solver_mesh
 
@@ -102,12 +107,14 @@ class MeshManager:
             offset_y = -self.config.size_y.meters / 2
             offset_z = -self.config.size_z.meters / 2
             self.solver_mesh = self.solver_mesh + ((offset_x, offset_y, offset_z))
-            print(f"[MESH] Centered 3D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+            if self.verbose:
+                print(f"[MESH] Centered 3D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
         else:
             offset_x = -self.config.size_x.meters / 2
             offset_y = -self.config.size_y.meters / 2
             self.solver_mesh = self.solver_mesh + ((offset_x, offset_y))
-            print(f"[MESH] Centered 2D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
+            if self.verbose:
+                print(f"[MESH] Centered 2D solver domain: {offset_x*1e6:.0f} to {-offset_x*1e6:.0f} um")
 
     # Backward-compatible name
     def center_mesh_at_origin(self):
@@ -132,13 +139,14 @@ class MeshManager:
             if self.solver_mesh.shape != expected_shape:
                 raise DomainError(f"Mesh shape mismatch: expected {expected_shape}, got {self.solver_mesh.shape}")
 
-        print(f"[OK] Mesh validation passed:")
-        print(f"  Shape: {self.solver_mesh.shape}")
-        if self.config.dimensions == 3:
-            print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} x {self.solver_mesh.dz*1e6:.1f} um")
-        else:
-            print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} um")
-        print(f"  Total cells: {self.solver_mesh.numberOfCells}")
+        if self.verbose:
+            print(f"[OK] Mesh validation passed:")
+            print(f"  Shape: {self.solver_mesh.shape}")
+            if self.config.dimensions == 3:
+                print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} x {self.solver_mesh.dz*1e6:.1f} um")
+            else:
+                print(f"  Spacing: {self.solver_mesh.dx*1e6:.1f} x {self.solver_mesh.dy*1e6:.1f} um")
+            print(f"  Total cells: {self.solver_mesh.numberOfCells}")
 
     # Backward-compatible name
     def _validate_mesh(self):

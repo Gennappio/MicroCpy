@@ -280,23 +280,27 @@ def load_configuration(config_file):
 
     return config, custom_functions_path
 
-def setup_simulation(config, custom_functions_path=None):
+def setup_simulation(config, custom_functions_path=None, verbose=True):
     """Setup all simulation components (config-driven only)"""
-    print(f"\n[SETUP] Setting up simulation components...")
-    
+    if verbose:
+        print(f"\n[SETUP] Setting up simulation components...")
+
     # Create mesh manager
-    mesh_manager = MeshManager(config.domain)
-    print(f"   [+] Mesh: {config.domain.nx}x{config.domain.ny} cells")
-    print(f"   [+] Domain: {config.domain.size_x.value}x{config.domain.size_y.value} {config.domain.size_x.unit}")
-    
+    mesh_manager = MeshManager(config.domain, verbose=verbose)
+    if verbose:
+        print(f"   [+] Mesh: {config.domain.nx}x{config.domain.ny} cells")
+        print(f"   [+] Domain: {config.domain.size_x.value}x{config.domain.size_y.value} {config.domain.size_x.unit}")
+
     # Create multi-substance simulator
-    simulator = MultiSubstanceSimulator(config, mesh_manager)
-    print(f"   [+] Substances: {len(simulator.state.substances)}")
-    print(f"   [+] FiPy available: {simulator.fipy_mesh is not None}")
-    
+    simulator = MultiSubstanceSimulator(config, mesh_manager, verbose=verbose)
+    if verbose:
+        print(f"   [+] Substances: {len(simulator.state.substances)}")
+        print(f"   [+] FiPy available: {simulator.fipy_mesh is not None}")
+
     # Create gene network
     gene_network = BooleanNetwork(config=config)
-    print(f"   [+] Gene network: {len(gene_network.input_nodes)} inputs, {len(gene_network.output_nodes)} outputs")
+    if verbose:
+        print(f"   [+] Gene network: {len(gene_network.input_nodes)} inputs, {len(gene_network.output_nodes)} outputs")
 
     # Load custom functions first (from config only)
     custom_functions = load_custom_functions(custom_functions_path)
@@ -318,8 +322,9 @@ def setup_simulation(config, custom_functions_path=None):
     else:
         biocell_grid_size = (biocell_nx, biocell_ny)
 
-    print(f"   [*] Population biocell grid: {biocell_grid_size}")
-    print(f"   [*] FiPy solver grid: {(config.domain.nx, config.domain.ny)}")
+    if verbose:
+        print(f"   [*] Population biocell grid: {biocell_grid_size}")
+        print(f"   [*] FiPy solver grid: {(config.domain.nx, config.domain.ny)}")
 
     population = CellPopulation(
         grid_size=biocell_grid_size,
@@ -1066,9 +1071,10 @@ def main():
             print(f"    Continuing with default hardcoded behavior")
             workflow = None
 
-    # Setup simulation
+    # Setup simulation (suppress output if using workflow)
+    verbose_setup = workflow is None
     mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(
-        config, custom_functions_path
+        config, custom_functions_path, verbose=verbose_setup
     )
 
     # Prefer the new SimulationEngine if available

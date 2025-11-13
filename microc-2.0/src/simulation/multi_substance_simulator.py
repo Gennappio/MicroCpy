@@ -111,38 +111,40 @@ class MultiSubstanceState:
 
 class MultiSubstanceSimulator:
     """Simulates multiple substances with their interactions"""
-    
-    def __init__(self, config: MicroCConfig, mesh_manager: MeshManager):
+
+    def __init__(self, config: MicroCConfig, mesh_manager: MeshManager, verbose: bool = True):
         self.config = config
         self.mesh_manager = mesh_manager
-        
+        self.verbose = verbose
+
         # Initialize substance states
         self.state = MultiSubstanceState()
         self._initialize_substances()
-        
+
         # FiPy variables if available
         self.fipy_variables = {}
         self.fipy_mesh = None
         if FIPY_AVAILABLE:
             self._setup_fipy()
-    
+
     def _initialize_substances(self):
         """Initialize all substances from configuration"""
         nx, ny = self.config.domain.nx, self.config.domain.ny
-        
+
         for name, substance_config in self.config.substances.items():
             # Initialize concentration field
             initial_conc = substance_config.initial_value.value
             concentrations = np.full((ny, nx), initial_conc, dtype=float)
-            
+
             # Create substance state
             self.state.substances[name] = SubstanceState(
                 name=name,
                 concentrations=concentrations,
                 config=substance_config
             )
-            
-            print(f"[OK] Initialized {name}: {initial_conc} {substance_config.initial_value.unit}")
+
+            if self.verbose:
+                print(f"[OK] Initialized {name}: {initial_conc} {substance_config.initial_value.unit}")
     
     def _setup_fipy(self):
         """Setup FiPy variables for diffusion simulation"""
