@@ -191,6 +191,26 @@ def get_default_registry() -> FunctionRegistry:
     # =========================================================================
 
     registry.register(FunctionMetadata(
+        name="load_config_file",
+        display_name="Load Configuration File",
+        description="Load YAML configuration file and initialize simulation infrastructure",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="config_file",
+                type=ParameterType.STRING,
+                description="Path to YAML configuration file",
+                default="tests/jayatilake_experiment/jayatilake_experiment_config.yaml",
+                required=True
+            )
+        ],
+        inputs=["context"],
+        outputs=["config", "simulator", "population", "gene_network"],
+        cloneable=False,
+        module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
         name="load_cells_from_vtk",
         display_name="Load Cells from VTK File",
         description="Load initial cell state from a VTK file",

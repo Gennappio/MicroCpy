@@ -1,0 +1,51 @@
+{
+  "name": "Config Loading Workflow",
+  "description": "Test workflow that loads config file",
+  "version": "1.0",
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "execution_order": ["load_config"],
+      "functions": [
+        {
+          "id": "load_config",
+          "function_name": "load_config_file",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
+          },
+          "enabled": true,
+          "position": {"x": 100, "y": 100}
+        }
+      ]
+    },
+    "intracellular": {
+      "enabled": false,
+      "execution_order": [],
+      "functions": []
+    },
+    "diffusion": {
+      "enabled": false,
+      "execution_order": [],
+      "functions": []
+    },
+    "intercellular": {
+      "enabled": false,
+      "execution_order": [],
+      "functions": []
+    },
+    "finalization": {
+      "enabled": true,
+      "execution_order": ["print_summary"],
+      "functions": [
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 500}
+        }
+      ]
+    }
+  }
+}
+

@@ -37,11 +37,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Run main simulation
+  # Run default pipeline (hardcoded behavior)
   python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml
 
-  # Run simulation with custom workflow
-  python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml --workflow tests/jayatilake_experiment/jaya_workflow.json
+  # Run workflow (complete user control)
+  python run_microc.py --workflow tests/jayatilake_experiment/jaya_workflow.json
 
   # Generate CSV cell files for 2D simulations
   python run_microc.py --generate-csv --pattern spheroid --count 50 --output cells.csv
@@ -58,11 +58,12 @@ Examples:
         """
     )
 
-    # Main simulation
-    parser.add_argument('--sim', metavar='CONFIG',
-                       help='Run main MicroC simulation with config file')
-    parser.add_argument('--workflow', metavar='WORKFLOW_JSON',
-                       help='Optional workflow JSON file to customize simulation behavior')
+    # Main simulation - mutually exclusive modes
+    sim_group = parser.add_mutually_exclusive_group()
+    sim_group.add_argument('--sim', metavar='CONFIG',
+                       help='Run default pipeline with config file (hardcoded behavior)')
+    sim_group.add_argument('--workflow', metavar='WORKFLOW_JSON',
+                       help='Run workflow (complete user control, config loaded by workflow functions)')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -114,13 +115,19 @@ Examples:
     success_count = 0
     total_count = 0
 
-    # Main simulation
+    # Main simulation - two separate modes
     if args.sim:
+        # Default pipeline mode
         total_count += 1
         run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
-        sim_args = [args.sim]
-        if args.workflow:
-            sim_args.extend(['--workflow', args.workflow])
+        sim_args = ['--sim', args.sim]
+        if run_tool(run_sim_path, sim_args):
+            success_count += 1
+    elif args.workflow:
+        # Workflow mode (no config file, loaded by workflow functions)
+        total_count += 1
+        run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
+        sim_args = ['--workflow', args.workflow]
         if run_tool(run_sim_path, sim_args):
             success_count += 1
 

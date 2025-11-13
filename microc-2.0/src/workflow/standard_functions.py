@@ -14,6 +14,92 @@ from src.io.initial_state import InitialStateManager
 # INITIALIZATION FUNCTIONS
 # ============================================================================
 
+def load_config_file(
+    context: Dict[str, Any],
+    config_file: str,
+    **kwargs
+) -> bool:
+    """
+    Load configuration file in initialization stage.
+
+    This function loads a YAML configuration file and sets up the simulation
+    infrastructure (config, simulator, population, etc.).
+
+    Args:
+        context: Workflow context (will be populated with config, simulator, etc.)
+        config_file: Path to YAML configuration file
+        **kwargs: Additional parameters (ignored)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print(f"[WORKFLOW] Loading configuration file: {config_file}")
+
+    try:
+        import sys
+        from datetime import datetime
+        import shutil
+
+        # Add tools directory to path to import load_configuration
+        tools_dir = Path(__file__).parent.parent.parent / "tools"
+        if str(tools_dir) not in sys.path:
+            sys.path.insert(0, str(tools_dir))
+
+        from run_sim import load_configuration, setup_simulation
+
+        # Load configuration (suppress output)
+        config, custom_functions_path = load_configuration(config_file, verbose=False)
+
+        # Mark as workflow mode to skip automatic VTK loading
+        config._workflow_mode = True
+
+        print(f"[WORKFLOW] Configuration loaded successfully")
+
+        # Create timestamped subfolder
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_output_dir = config.output_dir
+        timestamped_dir = original_output_dir / timestamp
+        config.output_dir = timestamped_dir
+        config.plots_dir = timestamped_dir / "plots"
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        config.plots_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy config file to output directory
+        config_file_path = Path(config_file)
+        config_copy_path = config.output_dir / config_file_path.name
+        shutil.copy2(config_file_path, config_copy_path)
+        print(f"[WORKFLOW] Configuration copied to: {config_copy_path}")
+
+        # Setup simulation infrastructure (suppress output in workflow mode)
+        mesh_manager, simulator, gene_network, population, detected_cell_size_um = setup_simulation(
+            config, custom_functions_path, verbose=False
+        )
+
+        # Populate context
+        context['config'] = config
+        context['simulator'] = simulator
+        context['gene_network'] = gene_network
+        context['population'] = population
+        context['mesh_manager'] = mesh_manager
+        context['custom_functions_path'] = custom_functions_path
+        context['results'] = {
+            'time': [],
+            'cell_count': [],
+            'substance_stats': {}
+        }
+
+        print(f"[WORKFLOW] Simulation infrastructure initialized")
+        print(f"   [+] Output directory: {config.output_dir}")
+
+        return True
+
+    except Exception as e:
+        print(f"[WORKFLOW] Error loading config file: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def initialize_simulation_infrastructure(
     context: Dict[str, Any],
     **kwargs

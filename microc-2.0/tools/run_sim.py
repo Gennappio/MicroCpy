@@ -68,47 +68,53 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_sim.py config/complete_substances_config.yaml
-  python run_sim.py my_custom_simulation.yaml
+  # Default pipeline mode
+  python run_sim.py --sim config/complete_substances_config.yaml
+
+  # Workflow mode (config loaded by workflow functions)
+  python run_sim.py --workflow my_workflow.json
         """
     )
-    
-    parser.add_argument(
-        'config_file',
+
+    # Mutually exclusive modes
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument(
+        '--sim',
         type=str,
-        help='Path to YAML configuration file'
+        metavar='CONFIG',
+        help='Run default pipeline with YAML configuration file'
     )
-    
+    mode_group.add_argument(
+        '--workflow',
+        type=str,
+        metavar='WORKFLOW_JSON',
+        help='Run workflow (config loaded by workflow functions)'
+    )
+
     parser.add_argument(
         '--verbose',
         action='store_true',
         help='Enable verbose output'
     )
-    
+
     parser.add_argument(
         '--save-data',
         action='store_true',
-        help='Save simulation data to files'
+        help='Save simulation data to files (default pipeline only)'
     )
 
     parser.add_argument(
         '--no-plots',
         action='store_true',
-        help='Disable automatic plot generation'
-    )
-
-    parser.add_argument(
-        '--workflow',
-        type=str,
-        default=None,
-        help='Path to workflow JSON file for custom simulation behavior'
+        help='Disable automatic plot generation (default pipeline only)'
     )
 
     return parser.parse_args()
 
-def validate_configuration(config, config_path):
+def validate_configuration(config, config_path, verbose=True):
     """Comprehensive configuration validation"""
-    print(f"[*] Validating configuration...")
+    if verbose:
+        print(f"[*] Validating configuration...")
 
     missing_params = []
     warnings = []
@@ -224,15 +230,16 @@ def validate_configuration(config, config_path):
         print(f"   * Optional sections: gene_network, associations, thresholds, output")
         return False
 
-    if warnings:
+    if warnings and verbose:
         print(f"[!] Configuration warnings:")
         for warning in warnings:
             print(f"   * {warning}")
 
-    print(f"[+] Configuration validation passed!")
+    if verbose:
+        print(f"[+] Configuration validation passed!")
     return True
 
-def load_configuration(config_file):
+def load_configuration(config_file, verbose=True):
     """Load and validate configuration strictly from file (no CLI overrides)."""
     config_path = Path(config_file)
 
@@ -241,11 +248,13 @@ def load_configuration(config_file):
         print(f"   Current directory: {Path.cwd()}")
         sys.exit(1)
 
-    print(f"[FILE] Loading configuration: {config_path}")
+    if verbose:
+        print(f"[FILE] Loading configuration: {config_path}")
 
     try:
         config = MicroCConfig.load_from_yaml(config_path)
-        print(f"[+] Configuration loaded successfully!")
+        if verbose:
+            print(f"[+] Configuration loaded successfully!")
     except KeyError as e:
         print(f"[!] Failed to load configuration - Missing required parameter: {e}")
         print(f"   This parameter is required in your YAML configuration file.")
@@ -266,7 +275,7 @@ def load_configuration(config_file):
         sys.exit(1)
 
     # Validate configuration
-    if not validate_configuration(config, config_path):
+    if not validate_configuration(config, config_path, verbose=verbose):
         sys.exit(1)
 
     # Load custom functions path from config only
@@ -274,7 +283,8 @@ def load_configuration(config_file):
     if hasattr(config, 'custom_functions_path') and config.custom_functions_path:
         custom_functions_path = Path(config.custom_functions_path)
         if custom_functions_path.exists():
-            print(f"[+] Custom functions found: {custom_functions_path}")
+            if verbose:
+                print(f"[+] Custom functions found: {custom_functions_path}")
         else:
             print(f"[!] Custom functions file not found: {custom_functions_path}")
 
@@ -998,8 +1008,18 @@ def main():
     # Parse arguments
     args = parse_arguments()
 
+    # Check which mode we're in
+    if args.workflow:
+        # Workflow mode - run workflow-only (no config file)
+        run_workflow_mode(args)
+    else:
+        # Default pipeline mode - run with config file
+        run_default_mode(args)
+
+def run_default_mode(args):
+    """Run default pipeline with config file (hardcoded behavior)"""
     # Load configuration (no CLI overrides)
-    config, custom_functions_path = load_configuration(args.config_file)
+    config, custom_functions_path = load_configuration(args.sim)
 
     # Create timestamped subfolder in results directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1178,7 +1198,61 @@ def main():
             print(f"   * Plots generated: {len(generated_plots)}")
 
         print(f"\n[RUN] To run again:")
-        print(f"   python run_sim.py {args.config_file}")
+        print(f"   python run_sim.py --sim {args.sim}")
+
+def run_workflow_mode(args):
+    """Run workflow mode (config loaded by workflow functions)"""
+    from src.workflow.loader import WorkflowLoader
+    from src.workflow.executor import WorkflowExecutor
+
+    # Load workflow
+    workflow_path = Path(args.workflow)
+    if not workflow_path.exists():
+        print(f"[!] Workflow file not found: {workflow_path}")
+        sys.exit(1)
+
+    try:
+        workflow = WorkflowLoader.load(workflow_path)
+        print(f"[+] Loaded workflow: {workflow.name}")
+        print(f"    Description: {workflow.description}")
+    except Exception as e:
+        print(f"[!] Failed to load workflow: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+    # Initialize workflow executor with empty context
+    # The workflow functions will populate the context
+    try:
+        executor = WorkflowExecutor(workflow)
+        print(f"[WORKFLOW] Initialized workflow executor for: {workflow.name}")
+    except Exception as e:
+        print(f"[WORKFLOW] Failed to initialize workflow executor: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+    # Execute workflow stages
+    try:
+        print(f"[WORKFLOW] Running workflow: {workflow.name}")
+
+        # Start with empty context
+        context = {}
+
+        # Execute initialization stage
+        print(f"[WORKFLOW] Executing initialization stage...")
+        context = executor.execute_initialization(context)
+
+        # Execute finalization stage
+        print(f"[WORKFLOW] Executing finalization stage...")
+        context = executor.execute_finalization(context)
+
+        print(f"[WORKFLOW] Workflow completed successfully!")
+    except Exception as e:
+        print(f"[WORKFLOW] Workflow execution failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
