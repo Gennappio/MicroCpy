@@ -351,18 +351,24 @@ def setup_simulation(config, custom_functions_path=None, verbose=True):
     # When using workflows, initialization should be handled by workflow functions
     if config.initial_state.file_path and not hasattr(config, '_workflow_mode'):
         file_path = Path(config.initial_state.file_path)
+
+        # Resolve path relative to microc-2.0 root if not absolute
+        if not file_path.is_absolute():
+            microc_root = Path(__file__).parent.parent
+            file_path = microc_root / file_path
+
         file_suffix = file_path.suffix.lower()
 
         try:
             if file_suffix == ".vtk":
                 # Load initial state from VTK file
-                print(f"[*] Loading initial state from VTK: {config.initial_state.file_path}")
-                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(config.initial_state.file_path)
+                print(f"[*] Loading initial state from VTK: {file_path}")
+                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(str(file_path))
                 print(f"[DEBUG] VTK loading successful, got {len(cell_data)} cells")
             elif file_suffix == ".csv":
                 # Load initial state from CSV file
-                print(f"[*] Loading initial state from CSV: {config.initial_state.file_path}")
-                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_csv(config.initial_state.file_path)
+                print(f"[*] Loading initial state from CSV: {file_path}")
+                cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_csv(str(file_path))
                 print(f"[DEBUG] CSV loading successful, got {len(cell_data)} cells")
             else:
                 raise ValueError(f"Unsupported initial state file format: {file_suffix}. Supported formats: .vtk, .csv")
