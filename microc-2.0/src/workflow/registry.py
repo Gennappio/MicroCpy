@@ -568,21 +568,21 @@ def get_default_registry() -> FunctionRegistry:
         parameters=[
             ParameterDefinition(
                 name="save_config",
-                type=ParameterType.BOOLEAN,
+                type=ParameterType.BOOL,
                 description="Save simulation configuration to JSON",
                 default=True,
                 required=False
             ),
             ParameterDefinition(
                 name="save_timeseries",
-                type=ParameterType.BOOLEAN,
+                type=ParameterType.BOOL,
                 description="Save time series data to NPY files",
                 default=True,
                 required=False
             ),
             ParameterDefinition(
                 name="save_substances",
-                type=ParameterType.BOOLEAN,
+                type=ParameterType.BOOL,
                 description="Save substance statistics to JSON",
                 default=True,
                 required=False
