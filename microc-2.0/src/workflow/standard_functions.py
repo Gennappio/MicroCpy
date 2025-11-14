@@ -27,7 +27,7 @@ def load_config_file(
 
     Args:
         context: Workflow context (will be populated with config, simulator, etc.)
-        config_file: Path to YAML configuration file
+        config_file: Path to YAML configuration file (relative to microc-2.0 root or absolute)
         **kwargs: Additional parameters (ignored)
 
     Returns:
@@ -47,8 +47,14 @@ def load_config_file(
 
         from run_sim import load_configuration, setup_simulation
 
+        # Resolve config file path relative to microc-2.0 root if not absolute
+        config_path = Path(config_file)
+        if not config_path.is_absolute():
+            microc_root = Path(__file__).parent.parent.parent  # src/workflow/standard_functions.py -> microc-2.0
+            config_path = microc_root / config_path
+
         # Load configuration (suppress output)
-        config, custom_functions_path = load_configuration(config_file, verbose=False)
+        config, custom_functions_path = load_configuration(str(config_path), verbose=False)
 
         # Mark as workflow mode to skip automatic VTK loading
         config._workflow_mode = True
@@ -64,10 +70,9 @@ def load_config_file(
         config.output_dir.mkdir(parents=True, exist_ok=True)
         config.plots_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy config file to output directory
-        config_file_path = Path(config_file)
-        config_copy_path = config.output_dir / config_file_path.name
-        shutil.copy2(config_file_path, config_copy_path)
+        # Copy config file to output directory (use resolved path)
+        config_copy_path = config.output_dir / config_path.name
+        shutil.copy2(config_path, config_copy_path)
         print(f"[WORKFLOW] Configuration copied to: {config_copy_path}")
 
         # Setup simulation infrastructure (suppress output in workflow mode)
@@ -601,7 +606,12 @@ def generate_summary_plots(
 
     try:
         # Import AutoPlotter
-        from src.plotting.autoplotter import AutoPlotter
+        import sys
+        visualization_dir = Path(__file__).parent.parent / "visualization"
+        if str(visualization_dir) not in sys.path:
+            sys.path.insert(0, str(visualization_dir.parent))
+
+        from visualization.auto_plotter import AutoPlotter
 
         population = context['population']
         simulator = context['simulator']

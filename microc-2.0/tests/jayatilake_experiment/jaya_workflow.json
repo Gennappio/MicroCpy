@@ -86,6 +86,14 @@
       "enabled": true,
       "functions": [
         {
+          "id": "generate_plots_1",
+          "function_name": "generate_summary_plots",
+          "description": "Generate all summary plots (heatmaps, timeseries, etc.)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 350}
+        },
+        {
           "id": "print_summary_1",
           "function_name": "print_simulation_summary",
           "description": "Print simulation summary statistics",
@@ -94,7 +102,7 @@
           "position": {"x": 100, "y": 400}
         }
       ],
-      "execution_order": ["print_summary_1"]
+      "execution_order": ["generate_plots_1", "print_summary_1"]
     }
   }
 }
