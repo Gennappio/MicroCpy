@@ -273,13 +273,13 @@ class MultiSubstanceSimulator:
             var = self.fipy_variables[name]
             config = substance_state.config
 
-            # CRITICAL FIX: Create completely fresh variable for each solve
-            # This prevents any accumulated numerical errors or state corruption
+            # Get current configuration values
             initial_value = substance_state.config.initial_value.value
             boundary_value = substance_state.config.boundary_value.value
 
-            # Create brand new variable (don't reuse the old one)
-            var = CellVariable(name=f"{name}_fresh", mesh=self.fipy_mesh, value=initial_value)
+            # Use the existing FiPy variable (don't create a fresh one each time)
+            # This allows the solver to use the previous solution as initial guess
+            var = self.fipy_variables[name]
 
             # Apply boundary conditions to fresh variable
             if substance_state.config.boundary_type == "fixed":
@@ -296,34 +296,37 @@ class MultiSubstanceSimulator:
             # Create source/sink terms from cell reactions
             source_field = self._create_source_field_from_reactions(name, substance_reactions)
 
-            # DEBUG: Check if source field has any non-zero values
-            non_zero_count = np.count_nonzero(source_field)
-            if non_zero_count > 0:
-                print(f"[DEBUG] {name}: {non_zero_count} non-zero source terms, range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
-            else:
-                print(f"[!] {name}: NO source terms! All zeros.")
+            # DEBUG: Check if source field has any non-zero values (disabled by default)
+            # non_zero_count = np.count_nonzero(source_field)
+            # if non_zero_count > 0:
+            #     print(f"[DEBUG] {name}: {non_zero_count} non-zero source terms, range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+            # else:
+            #     print(f"[!] {name}: NO source terms! All zeros.")
 
-            # DEBUG: Enable detailed debugging for Oxygen
-            if name == 'Oxygen':
-                print(f"\n[DEBUG] DEBUGGING OXYGEN DIFFUSION SOLVER:")
-                print(f"   Substance: {name}")
-                print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
-
-                # Check source field before negation
-                non_zero_indices = np.where(source_field != 0)[0]
-                print(f"   Source field: {len(non_zero_indices)} non-zero terms")
-                if len(non_zero_indices) > 0:
-                    print(f"   Range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
-                    for i, idx in enumerate(non_zero_indices[:5]):
-                        print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
-                else:
-                    print(f"   [!] NO SOURCE TERMS FOUND! This explains uniform concentrations!")
-
-                # Check initial concentrations
-                initial_min = float(np.min(var.value))
-                initial_max = float(np.max(var.value))
-                initial_mean = float(np.mean(var.value))
-                print(f"   Initial concentrations: min={initial_min:.6f}, max={initial_max:.6f}, mean={initial_mean:.6f} mM")
+            # DEBUG: Enable detailed debugging for Oxygen (disabled by default)
+            # if name == 'Oxygen':
+            #     print(f"\n[DEBUG] DEBUGGING OXYGEN DIFFUSION SOLVER:")
+            #     print(f"   Substance: {name}")
+            #     print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
+            #     print(f"   Initial value: {initial_value:.6f} mM")
+            #     print(f"   Boundary value: {boundary_value:.6f} mM")
+            #     print(f"   Boundary type: {substance_state.config.boundary_type}")
+            #
+            #     # Check source field before negation
+            #     non_zero_indices = np.where(source_field != 0)[0]
+            #     print(f"   Source field: {len(non_zero_indices)} non-zero terms")
+            #     if len(non_zero_indices) > 0:
+            #         print(f"   Range: {np.min(source_field):.2e} to {np.max(source_field):.2e} mM/s")
+            #         for i, idx in enumerate(non_zero_indices[:5]):
+            #             print(f"     idx {idx}: {source_field[idx]:.2e} mM/s")
+            #     else:
+            #         print(f"   [!] NO SOURCE TERMS FOUND! This explains uniform concentrations!")
+            #
+            #     # Check initial concentrations
+            #     initial_min = float(np.min(var.value))
+            #     initial_max = float(np.max(var.value))
+            #     initial_mean = float(np.mean(var.value))
+            #     print(f"   Initial concentrations: min={initial_min:.6f}, max={initial_max:.6f}, mean={initial_mean:.6f} mM")
 
             # DEBUG: Comprehensive debugging for lactate diffusion issue
             # if name == 'Lactate':
@@ -379,8 +382,11 @@ class MultiSubstanceSimulator:
             #     print(f"[DEBUG] Value at center cell index {center_idx}: {source_field[center_idx]:.3e}")
             #     print(f"[DEBUG] Boundary value: {boundary_value}")
 
-            # Use the exact same equation as the standalone FiPy script
-            # Standalone: DiffusionTerm(D) == -source_var
+            # Diffusion-reaction equation: ∇·(D∇c) = S
+            # where S is the source term (negative for consumption, positive for production)
+            # CRITICAL FIX: FiPy uses OPPOSITE sign convention!
+            # In FiPy, the equation is: ∇·(D∇c) + S = 0
+            # So we need to NEGATE the source term!
             equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
             # Solve for steady state using the exact same approach as standalone script
@@ -388,26 +394,26 @@ class MultiSubstanceSimulator:
 
             try:
                 res = equation.solve(var=var, solver=solver)
-                # DEBUG: Show solver results for Oxygen
-                if name == 'Oxygen':
-                    if res is not None:
-                        print(f"   [OK] {name} solver finished. Final residual: {res:.2e}")
-                    else:
-                        print(f"   [OK] {name} solver finished.")
-
-                    # Check final concentrations
-                    final_min = float(np.min(var.value))
-                    final_max = float(np.max(var.value))
-                    final_mean = float(np.mean(var.value))
-                    final_range = final_max - final_min
-                    print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
-                    print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
-
-                    # Compare with expected behavior
-                    if final_range < 0.0001:
-                        print(f"   🎯 PROBLEM: Nearly uniform concentrations despite source terms!")
-                    else:
-                        print(f"   ✅ SUCCESS: Concentration gradients detected!")
+                # DEBUG: Show solver results for Oxygen (disabled by default)
+                # if name == 'Oxygen':
+                #     if res is not None:
+                #         print(f"   [OK] {name} solver finished. Final residual: {res:.2e}")
+                #     else:
+                #         print(f"   [OK] {name} solver finished.")
+                #
+                #     # Check final concentrations
+                #     final_min = float(np.min(var.value))
+                #     final_max = float(np.max(var.value))
+                #     final_mean = float(np.mean(var.value))
+                #     final_range = final_max - final_min
+                #     print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
+                #     print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
+                #
+                #     # Compare with expected behavior
+                #     if final_range < 0.0001:
+                #         print(f"   🎯 PROBLEM: Nearly uniform concentrations despite source terms!")
+                #     else:
+                #         print(f"   ✅ SUCCESS: Concentration gradients detected!")
             except Exception as e:
                 print(f"[ERROR] Error during {name} solve: {e}")
 
@@ -442,8 +448,11 @@ class MultiSubstanceSimulator:
                     (self.config.domain.ny, self.config.domain.nx), order='F'
                 )
 
-            # Ensure non-negative concentrations
-            substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
+            # CRITICAL: Update the FiPy variable so CSV export gets the correct values
+            # The CSV export reads from self.fipy_variables[name], not from substance_state.concentrations
+            # NOTE: We do NOT clamp to non-negative here - FiPy's solution is used as-is
+            # If negative values occur, it indicates a problem with the setup (timestep, BCs, etc.)
+            self.fipy_variables[name].setValue(substance_state.concentrations.flatten(order='F'))
     
     def _create_source_field_from_reactions(self, substance_name: str,
                                           substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> np.ndarray:
@@ -467,8 +476,9 @@ class MultiSubstanceSimulator:
             dz = self.config.domain.size_z.meters / self.config.domain.nz
             mesh_cell_volume = dx * dy * dz  # m³ (true 3D volume)
         else:
-            cell_height = self.config.domain.cell_height.meters  # Get configurable cell height
-            mesh_cell_volume = dx * dy * cell_height  # m³ (area × height)
+            # CRITICAL: For 2D, use AREA only (dx * dy), NOT volume!
+            # The twodimensional_adjustment_coefficient handles the thickness scaling
+            mesh_cell_volume = dx * dy  # m² (area only for 2D)
 
         # Optional debug output for cell height effect (uncomment for debugging)
         # print(f"[DEBUG] CELL HEIGHT DEBUG:")
@@ -535,15 +545,15 @@ class MultiSubstanceSimulator:
 
             source_field[fipy_idx] = final_rate
 
-            # DEBUG: Print reaction terms being passed to FiPy for key substances
-            if substance_name in ['Lactate', 'Oxygen', 'Glucose'] and reaction_rate != 0.0:
-                print(f"[DEBUG] FIPY SOURCE TERM {substance_name} at ({x},{y}):")
-                print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
-                print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
-                print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")
-                print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
-                print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
-                print(f"   fipy_idx: {fipy_idx}")
+            # DEBUG: Print reaction terms being passed to FiPy for key substances (disabled by default)
+            # if substance_name in ['Lactate', 'Oxygen', 'Glucose'] and reaction_rate != 0.0:
+            #     print(f"[DEBUG] FIPY SOURCE TERM {substance_name} at ({x},{y}):")
+            #     print(f"   reaction_rate: {reaction_rate:.2e} mol/s/cell")
+            #     print(f"   mesh_cell_volume: {mesh_cell_volume:.2e} m³")
+            #     print(f"   2D_adjustment_coeff: {self.config.diffusion.twodimensional_adjustment_coefficient}")
+            #     print(f"   volumetric_rate: {volumetric_rate:.2e} mol/(m³⋅s)")
+            #     print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
+            #     print(f"   fipy_idx: {fipy_idx}")
 
 
         return source_field

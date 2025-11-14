@@ -72,6 +72,9 @@ class SimulationEngine:
         for step in range(num_steps):
             current_time = step * dt
 
+            # Log step start for phenotype logger (so step counter is correct in logs)
+            self.population.phenotype_logger.log_step_start(step)
+
             # Decide which processes to update
             updates = self.orchestrator.step(step)
 
