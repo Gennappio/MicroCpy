@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { X, Save, Edit2, Plus, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload } from 'lucide-react';
 import { getFunction } from '../data/functionRegistry';
 import './ParameterEditor.css';
+const API_BASE_URL = 'http://localhost:5000';
+
 
 /**
  * Parameter Editor Modal - Edit function parameters
@@ -14,6 +16,100 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [functionFile, setFunctionFile] = useState(node.data.functionFile || '');
   const [description, setDescription] = useState(node.data.description || '');
 
+  const [showCode, setShowCode] = useState(false);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError] = useState('');
+  const [code, setCode] = useState('');
+  const [sourcePath, setSourcePath] = useState('');
+  const codeTextareaRef = useRef(null);
+
+  const loadCode = async () => {
+    setCodeLoading(true);
+    setCodeError('');
+    try {
+      const params = new URLSearchParams({ name: functionName });
+      const sourceHint = (functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '';
+      if (sourceHint) params.append('file', sourceHint);
+      const res = await fetch(`${API_BASE_URL}/api/function/source?${params.toString()}`);
+      const data = await res.json();
+      if (data && data.success) {
+        setCode(data.source || '');
+        setSourcePath(typeof data.file_path === 'string' ? data.file_path : sourceHint);
+      } else {
+        setCode('');
+        setCodeError(data?.error || 'Failed to load source code');
+      }
+    } catch (err) {
+      setCode('');
+      setCodeError(err.message || 'Failed to load source code');
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  const handleToggleCode = async () => {
+    if (!showCode) {
+      await loadCode();
+    }
+    setShowCode((v) => !v);
+  };
+
+  const handleCopyCode = () => {
+    if (code) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Code copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy code:', err);
+        alert('Failed to copy code to clipboard');
+      });
+    }
+  };
+
+  const handleUploadCode = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.py')) {
+      alert('Please upload a Python (.py) file');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('function_name', functionName);
+      if (resolvedSourcePath) {
+        formData.append('target_path', resolvedSourcePath);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/function/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`Successfully uploaded ${file.name}!\n${data.message}`);
+        // Update source path with the new file path
+        if (data.file_path) {
+          setSourcePath(data.file_path);
+        }
+        // Reload the code to show the uploaded version
+        await loadCode();
+      } else {
+        alert(`Upload failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert(`Upload failed: ${err.message}`);
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
   useEffect(() => {
     setParameters(node.data.parameters || {});
     setCustomName(node.data.customName || '');
@@ -21,6 +117,24 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setFunctionFile(node.data.functionFile || '');
     setDescription(node.data.description || '');
   }, [node]);
+
+  useEffect(() => {
+    // Reset code viewer when switching nodes
+    setShowCode(false);
+    setCode('');
+    setCodeError('');
+    setCodeLoading(false);
+  }, [node]);
+
+
+  // Ensure the code viewer scrolls to top whenever code is loaded/shown
+  useEffect(() => {
+    if (showCode && codeTextareaRef?.current) {
+      try {
+        codeTextareaRef.current.scrollTop = 0;
+      } catch (_) {}
+    }
+  }, [showCode, code]);
 
   const handleChange = (paramName, value) => {
     setParameters((prev) => ({
@@ -160,6 +274,9 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     ? node.data.functionName
     : functionMetadata.displayName;
 
+  const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
+  const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
+
   const parametersList = isCustomFunction
     ? Object.keys(parameters)
         .filter(key => key !== 'function_file')
@@ -178,66 +295,109 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isCustomFunction && <span className="custom-badge">Custom Function</span>}
+          <button className="btn btn-secondary" onClick={handleToggleCode}>
+            <Eye size={14} />
+            {showCode ? 'Hide Code' : 'View Code'}
+          </button>
           <button className="close-btn" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        {!isCustomFunction && (
+        {!isCustomFunction && functionMetadata && (
           <div className="editor-description">{functionMetadata.description}</div>
         )}
 
         <div className="editor-content">
-          {/* Custom Function Configuration */}
-          {isCustomFunction && (
-            <>
-              <div className="parameter-field">
-                <label className="param-label">
-                  <Edit2 size={14} />
-                  Function Name
-                </label>
-                <div className="param-description">
-                  The name of the Python function to call
-                </div>
-                <input
-                  type="text"
-                  value={functionName}
-                  onChange={(e) => setFunctionName(e.target.value)}
-                  placeholder="my_custom_function"
-                  className="param-input"
-                />
-              </div>
-
-              <div className="parameter-field">
-                <label className="param-label">
-                  Function File
-                </label>
-                <div className="param-description">
-                  Path to the Python file containing this function
-                </div>
-                <input
-                  type="text"
-                  value={functionFile}
-                  onChange={(e) => setFunctionFile(e.target.value)}
-                  placeholder="path/to/my_functions.py"
-                  className="param-input"
-                />
-              </div>
-
-              <div className="parameter-field">
-                <label className="param-label">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What does this function do?"
-                  className="param-input"
-                  rows={2}
-                />
-              </div>
-            </>
+          {showCode && (
+            <div className="code-container">
+              {codeLoading ? (
+                <div className="loading">Loading source code...</div>
+              ) : codeError ? (
+                <div className="code-error">Error: {codeError}</div>
+              ) : (
+                <>
+                  <div className="code-meta">
+                    <div>
+                      File: {resolvedSourcePath || '(from registry)'}
+                      {code && (
+                        <span> • Lines: {code.split('\n').length}</span>
+                      )}
+                    </div>
+                    <div className="code-actions">
+                      <button className="btn btn-secondary btn-sm" onClick={handleCopyCode} title="Copy to clipboard">
+                        <Copy size={14} />
+                        Copy
+                      </button>
+                      <label className="btn btn-secondary btn-sm" title="Upload custom function file">
+                        <Upload size={14} />
+                        Upload
+                        <input
+                          type="file"
+                          accept=".py"
+                          onChange={handleUploadCode}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <textarea ref={codeTextareaRef} className="code-textarea" readOnly value={displayCode} />
+                </>
+              )}
+            </div>
           )}
+
+              {/* Custom Function Configuration */}
+              {isCustomFunction && (
+                <>
+                  <div className="parameter-field">
+                    <label className="param-label">
+                      <Edit2 size={14} />
+                      Function Name
+                    </label>
+                    <div className="param-description">
+                      The name of the Python function to call
+                    </div>
+                    <input
+                      type="text"
+                      value={functionName}
+                      onChange={(e) => setFunctionName(e.target.value)}
+                      placeholder="my_custom_function"
+                      className="param-input"
+                    />
+                  </div>
+
+
+                  <div className="parameter-field">
+                    <label className="param-label">
+                      Function File
+                    </label>
+                    <div className="param-description">
+                      Path to the Python file containing this function
+                    </div>
+                    <input
+                      type="text"
+                      value={functionFile}
+                      onChange={(e) => setFunctionFile(e.target.value)}
+                      placeholder="path/to/my_functions.py"
+                      className="param-input"
+                    />
+                  </div>
+
+                  <div className="parameter-field">
+                    <label className="param-label">
+                      Description
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What does this function do?"
+                      className="param-input"
+                      rows={2}
+                    />
+                  </div>
+                </>
+              )}
 
           {/* Custom Name Field for Standard Functions */}
           {!isCustomFunction && (

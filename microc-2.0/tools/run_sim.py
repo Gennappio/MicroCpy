@@ -1219,6 +1219,7 @@ def run_workflow_mode(args):
     """Run workflow mode (config loaded by workflow functions)"""
     from src.workflow.loader import WorkflowLoader
     from src.workflow.executor import WorkflowExecutor
+    from src.simulation.engine import SimulationEngine
 
     # Load workflow
     workflow_path = Path(args.workflow)
@@ -1254,13 +1255,42 @@ def run_workflow_mode(args):
         # Start with empty context
         context = {}
 
-        # Execute initialization stage
+        # Execute initialization stage to load config and setup infrastructure
         print(f"[WORKFLOW] Executing initialization stage...")
         context = executor.execute_initialization(context)
 
-        # Execute finalization stage
-        print(f"[WORKFLOW] Executing finalization stage...")
-        context = executor.execute_finalization(context)
+        # Extract components from context (populated by initialization stage)
+        config = context.get('config')
+        simulator = context.get('simulator')
+        population = context.get('population')
+        gene_network = context.get('gene_network')
+        custom_functions_path = context.get('custom_functions_path')
+
+        if not all([config, simulator, population, gene_network]):
+            raise ValueError("Initialization stage did not populate required context (config, simulator, population, gene_network)")
+
+        # Load custom functions module
+        custom_functions = load_custom_functions(custom_functions_path) if custom_functions_path else None
+
+        # Determine steps and dt from config
+        dt = config.time.dt
+        num_steps = int(config.time.end_time / dt)
+
+        print(f"[WORKFLOW] Running simulation: {num_steps} steps, dt={dt}")
+
+        # Create engine with workflow (skip initialization stage since we already executed it)
+        engine = SimulationEngine(
+            config=config,
+            simulator=simulator,
+            population=population,
+            gene_network=gene_network,
+            custom_functions=custom_functions,
+            workflow=workflow,
+            skip_workflow_init=True,  # We already executed initialization above
+        )
+
+        # Run simulation via engine (this will execute intracellular, diffusion, intercellular, and finalization stages)
+        engine_results = engine.run(num_steps=num_steps, dt=dt, verbose=args.verbose)
 
         print(f"[WORKFLOW] Workflow completed successfully!")
     except Exception as e:

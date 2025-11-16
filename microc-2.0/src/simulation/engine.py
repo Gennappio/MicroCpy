@@ -29,7 +29,7 @@ class SimulationEngine:
     - Deterministic, testable orchestration
     """
 
-    def __init__(self, config, simulator, population, gene_network, custom_functions: Optional[object] = None, workflow=None):
+    def __init__(self, config, simulator, population, gene_network, custom_functions: Optional[object] = None, workflow=None, skip_workflow_init=False):
         self.config = config
         self.simulator = simulator
         self.population = population
@@ -38,6 +38,7 @@ class SimulationEngine:
         self.orchestrator = TimescaleOrchestrator(config.time, custom_functions)
         self.workflow = workflow
         self.workflow_executor = None
+        self.skip_workflow_init = skip_workflow_init  # Skip initialization stage if already executed externally
 
         # Initialize workflow executor if workflow is provided
         if workflow is not None:
@@ -129,8 +130,8 @@ class SimulationEngine:
 
         print(f"[WORKFLOW] Running simulation with workflow: {self.workflow.name}")
 
-        # Execute initialization stage once at the beginning
-        if self.workflow.get_stage("initialization"):
+        # Execute initialization stage once at the beginning (unless already done externally)
+        if not self.skip_workflow_init and self.workflow.get_stage("initialization"):
             print(f"[WORKFLOW] Executing initialization stage...")
             context = self._build_context(step=0, dt=dt)
             self.workflow_executor.execute_initialization(context)
@@ -166,8 +167,19 @@ class SimulationEngine:
                 if stage and stage.enabled:
                     self.workflow_executor.execute_intercellular(context)
 
-            # Data collection and export are handled by finalization stage in workflow mode
-            # Users can add custom data collection functions to the finalization stage
+            # Collect data for standard finalization functions (plots, summaries)
+            # This ensures that standard workflow functions like generate_summary_plots work
+            if step % self.config.output.save_data_interval == 0:
+                current_time = step * dt
+                results.time.append(current_time)
+                results.substance_stats.append(self.simulator.get_summary_statistics())
+                results.cell_counts.append(self.population.get_population_statistics())
+
+            # Export cell states and substance fields (CSV for 2D, VTK for 3D)
+            should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
+                                    step % self.config.output.save_cellstate_interval == 0)
+            if should_save_cellstate:
+                self._export_cell_states(step)
 
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
                 # Lightweight progress
@@ -177,6 +189,14 @@ class SimulationEngine:
         if self.workflow.get_stage("finalization"):
             print(f"[WORKFLOW] Executing finalization stage...")
             context = self._build_context(step=num_steps, dt=dt)
+            # Add results to context for finalization functions (convert to dict for compatibility)
+            context['results'] = {
+                'time': results.time,
+                'substance_stats': results.substance_stats,
+                'cell_counts': results.cell_counts,
+                'gene_network_states': results.gene_network_states,
+            }
+            context['num_steps'] = num_steps
             self.workflow_executor.execute_finalization(context)
 
         return results

@@ -16,17 +16,10 @@ export const functionRegistry = {
   // INITIALIZATION FUNCTIONS
   initialize_cell_placement: {
     name: 'initialize_cell_placement',
-    displayName: 'Initialize Cell Placement',
+    displayName: 'Initialize Cell Placement [Legacy]',
     description: 'Place cells in initial configuration (spheroid, grid, or random)',
     category: FunctionCategory.INITIALIZATION,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'initial_cell_count',
         type: 'integer',
@@ -45,21 +38,15 @@ export const functionRegistry = {
         options: ['spheroid', 'grid', 'random'],
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   initialize_cell_ages: {
     name: 'initialize_cell_ages',
-    displayName: 'Initialize Cell Ages',
+    displayName: 'Initialize Cell Ages [Legacy]',
     description: 'Set random initial ages for cells',
     category: FunctionCategory.INITIALIZATION,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'max_cell_age',
         type: 'float',
@@ -77,22 +64,16 @@ export const functionRegistry = {
         min: 0,
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
-  // INTRACELLULAR FUNCTIONS
+  // INTRACELLULAR FUNCTIONS (Legacy - use granular functions instead)
   calculate_cell_metabolism: {
     name: 'calculate_cell_metabolism',
-    displayName: 'Calculate Cell Metabolism',
-    description: 'Calculate metabolic rates using Michaelis-Menten kinetics',
+    displayName: 'Calculate Cell Metabolism (Legacy)',
+    description: '[DEPRECATED] Use "Update Metabolism" instead. Calculate metabolic rates using Michaelis-Menten kinetics',
     category: FunctionCategory.INTRACELLULAR,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'oxygen_vmax',
         type: 'float',
@@ -134,37 +115,61 @@ export const functionRegistry = {
         min: 0,
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   update_cell_metabolic_state: {
     name: 'update_cell_metabolic_state',
-    displayName: 'Update Cell Metabolic State',
-    description: 'Update cell metabolic state with ATP and rates',
+    displayName: 'Update Cell Metabolic State (Legacy)',
+    description: '[DEPRECATED] Use "Update Metabolism" instead. Update cell metabolic state with ATP and rates',
     category: FunctionCategory.INTRACELLULAR,
-    parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
-    ],
+    parameters: [],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
+  },
+
+  // GRANULAR INTRACELLULAR FUNCTIONS
+  update_metabolism: {
+    name: 'update_metabolism',
+    displayName: 'Update Metabolism',
+    description: 'Update intracellular metabolism (ATP, metabolites)',
+    category: FunctionCategory.INTRACELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intracellular/update_metabolism.py',
+  },
+
+  update_gene_networks: {
+    name: 'update_gene_networks',
+    displayName: 'Update Gene Networks',
+    description: 'Update gene network states and propagate signals',
+    category: FunctionCategory.INTRACELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intracellular/update_gene_networks.py',
+  },
+
+  update_phenotypes: {
+    name: 'update_phenotypes',
+    displayName: 'Update Phenotypes',
+    description: 'Update cell phenotypes based on gene expression',
+    category: FunctionCategory.INTRACELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intracellular/update_phenotypes.py',
+  },
+
+  remove_dead_cells: {
+    name: 'remove_dead_cells',
+    displayName: 'Remove Dead Cells',
+    description: 'Remove cells that have died from the population',
+    category: FunctionCategory.INTRACELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intracellular/remove_dead_cells.py',
   },
 
   should_divide: {
     name: 'should_divide',
-    displayName: 'Check Division (ATP-based)',
-    description: 'Determine if cell should divide based on ATP and age',
+    displayName: 'Check Division (ATP-based) [Legacy]',
+    description: '[DEPRECATED] Use "Update Cell Division" instead',
     category: FunctionCategory.INTRACELLULAR,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'atp_threshold',
         type: 'float',
@@ -191,21 +196,15 @@ export const functionRegistry = {
         min: 0,
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   update_cell_phenotype: {
     name: 'update_cell_phenotype',
-    displayName: 'Update Cell Phenotype',
-    description: 'Update phenotype based on gene network state',
+    displayName: 'Update Cell Phenotype [Legacy]',
+    description: '[DEPRECATED] Use "Update Phenotypes" instead',
     category: FunctionCategory.INTRACELLULAR,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'necrosis_threshold_oxygen',
         type: 'float',
@@ -223,70 +222,71 @@ export const functionRegistry = {
         min: 0,
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   age_cell: {
     name: 'age_cell',
-    displayName: 'Age Cell',
-    description: 'Increment cell age by time step',
+    displayName: 'Age Cell [Legacy]',
+    description: '[DEPRECATED] Aging is now part of "Update Metabolism"',
     category: FunctionCategory.INTRACELLULAR,
-    parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
-    ],
+    parameters: [],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   check_cell_death: {
     name: 'check_cell_death',
-    displayName: 'Check Cell Death',
-    description: 'Check if cell should die based on phenotype',
+    displayName: 'Check Cell Death [Legacy]',
+    description: '[DEPRECATED] Use "Remove Dead Cells" instead',
     category: FunctionCategory.INTRACELLULAR,
-    parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
-    ],
+    parameters: [],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
+  },
+
+  // DIFFUSION FUNCTIONS
+  run_diffusion_solver: {
+    name: 'run_diffusion_solver',
+    displayName: 'Run Diffusion Solver',
+    description: 'Run diffusion PDE solver (oxygen, glucose, lactate, H+, pH)',
+    category: FunctionCategory.DIFFUSION,
+    parameters: [],
+    source_file: 'src/workflow/functions/diffusion/run_diffusion_solver.py',
   },
 
   // INTERCELLULAR FUNCTIONS
+  update_cell_division: {
+    name: 'update_cell_division',
+    displayName: 'Update Cell Division',
+    description: 'ATP-based cell division (divide when ATP > threshold)',
+    category: FunctionCategory.INTERCELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intercellular/update_cell_division.py',
+  },
+
+  update_cell_migration: {
+    name: 'update_cell_migration',
+    displayName: 'Update Cell Migration',
+    description: 'Cell migration (placeholder for custom migration logic)',
+    category: FunctionCategory.INTERCELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intercellular/update_cell_migration.py',
+  },
+
   select_division_direction: {
     name: 'select_division_direction',
-    displayName: 'Select Division Direction',
-    description: 'Choose direction for cell division',
+    displayName: 'Select Division Direction [Legacy]',
+    description: '[DEPRECATED] Use "Update Cell Division" instead',
     category: FunctionCategory.INTERCELLULAR,
-    parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
-    ],
+    parameters: [],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   calculate_migration_probability: {
     name: 'calculate_migration_probability',
-    displayName: 'Calculate Migration Probability',
-    description: 'Calculate probability of cell migration',
+    displayName: 'Calculate Migration Probability [Legacy]',
+    description: '[DEPRECATED] Use "Update Cell Migration" instead',
     category: FunctionCategory.INTERCELLULAR,
     parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
       {
         name: 'base_migration_rate',
         type: 'float',
@@ -297,23 +297,17 @@ export const functionRegistry = {
         max: 1,
       },
     ],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 
   // FINALIZATION FUNCTIONS
   final_report: {
     name: 'final_report',
-    displayName: 'Final Report',
+    displayName: 'Final Report [Legacy]',
     description: 'Generate comprehensive final simulation report',
     category: FunctionCategory.FINALIZATION,
-    parameters: [
-      {
-        name: 'function_file',
-        type: 'string',
-        description: 'Path to Python file containing this function',
-        default: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
-        required: true,
-      },
-    ],
+    parameters: [],
+    source_file: 'tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py',
   },
 };
 

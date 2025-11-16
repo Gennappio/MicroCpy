@@ -1,12 +1,13 @@
 {
   "version": "1.0",
-  "name": "Jayatilake Metabolic Symbiosis Workflow",
-  "description": "Default workflow for Jayatilake experiment - metabolic symbiosis in cancer cells with ATP-based division and gene network phenotype determination",
+  "name": "Jayatilake Metabolic Symbiosis Workflow - 2D CSV",
+  "description": "Workflow for 2D Jayatilake experiment using CSV initial state - metabolic symbiosis in cancer cells with ATP-based division and gene network phenotype determination",
   "metadata": {
     "author": "MicroCpy Team",
-    "experiment": "Jayatilake Metabolic Symbiosis",
+    "experiment": "Jayatilake Metabolic Symbiosis - 2D CSV Version",
     "reference": "Jayatilake et al. 'A computational model of metabolic symbiosis in cancer'",
-    "created": "2025-01-10"
+    "created": "2025-11-14",
+    "notes": "Uses CSV file for 2D cell initialization instead of VTK"
   },
   
   "stages": {
@@ -18,23 +19,23 @@
           "function_name": "load_config_file",
           "description": "Load YAML configuration file and initialize simulation infrastructure",
           "parameters": {
-            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
           },
           "enabled": true,
           "position": {"x": 100, "y": 50}
         },
         {
-          "id": "load_vtk_1",
-          "function_name": "load_cells_from_vtk",
-          "description": "Load cells from VTK file (replicates default behavior)",
+          "id": "load_csv_1",
+          "function_name": "load_cells_from_csv",
+          "description": "Load cells from CSV file (2D initial state)",
           "parameters": {
-            "file_path": "tools/generated_h5/cells_200um_domain_domain.vtk"
+            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
           },
           "enabled": true,
           "position": {"x": 100, "y": 150}
         }
       ],
-      "execution_order": ["load_config_1", "load_vtk_1"]
+      "execution_order": ["load_config_1", "load_csv_1"]
     },
     
     "intracellular": {
@@ -75,7 +76,7 @@
       ],
       "execution_order": ["metabolism_1", "gene_networks_1", "phenotypes_1", "remove_dead_1"]
     },
-
+    
     "diffusion": {
       "enabled": true,
       "functions": [
@@ -105,7 +106,7 @@
       ],
       "execution_order": ["cell_division_1"]
     },
-
+    
     "finalization": {
       "enabled": true,
       "functions": [

@@ -3,11 +3,28 @@ Standard workflow functions for MicroC.
 
 These are high-level orchestrator functions that can be used in workflows.
 They receive the full simulation context and can call helper functions.
+
+NOTE: Granular functions (update_metabolism, update_gene_networks, etc.) are now
+in separate files under src/workflow/functions/ for easy GUI viewing/editing.
+They are re-imported here for backward compatibility.
 """
 
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.io.initial_state import InitialStateManager
+
+# Import granular functions from their individual files
+from src.workflow.functions.intracellular import (
+    update_metabolism,
+    update_gene_networks,
+    update_phenotypes,
+    remove_dead_cells,
+)
+from src.workflow.functions.diffusion import run_diffusion_solver
+from src.workflow.functions.intercellular import (
+    update_cell_division,
+    update_cell_migration,
+)
 
 
 # ============================================================================
@@ -285,6 +302,12 @@ def load_cells_from_csv(
 # INTRACELLULAR FUNCTIONS
 # ============================================================================
 
+# NOTE: Granular functions (update_metabolism, update_gene_networks, etc.) are now
+# imported from src/workflow/functions/intracellular/ at the top of this file.
+# They are in separate files for easy GUI viewing/editing.
+
+# --- Monolithic Intracellular Function (for backward compatibility) ---
+
 def standard_intracellular_update(
     population,
     simulator,
@@ -325,6 +348,16 @@ def standard_intracellular_update(
     helpers['remove_dead_cells']()
 
 
+# ============================================================================
+# DIFFUSION FUNCTIONS
+# ============================================================================
+
+# NOTE: Granular function (run_diffusion_solver) is now imported from
+# src/workflow/functions/diffusion/ at the top of this file.
+# It is in a separate file for easy GUI viewing/editing.
+
+# --- Monolithic Diffusion Function (for backward compatibility) ---
+
 def standard_diffusion_update(
     population,
     simulator,
@@ -335,10 +368,10 @@ def standard_diffusion_update(
 ) -> None:
     """
     Standard diffusion update workflow function.
-    
+
     This is the default behavior when no custom workflow is specified.
     Runs the diffusion solver with substance reactions from cells.
-    
+
     Args:
         population: Population object
         simulator: Diffusion simulator
@@ -350,6 +383,16 @@ def standard_diffusion_update(
     helpers['run_diffusion']()
 
 
+# ============================================================================
+# INTERCELLULAR FUNCTIONS
+# ============================================================================
+
+# NOTE: Granular functions (update_cell_division, update_cell_migration) are now
+# imported from src/workflow/functions/intercellular/ at the top of this file.
+# They are in separate files for easy GUI viewing/editing.
+
+# --- Monolithic Intercellular Function (for backward compatibility) ---
+
 def standard_intercellular_update(
     population,
     simulator,
@@ -360,10 +403,10 @@ def standard_intercellular_update(
 ) -> None:
     """
     Standard intercellular update workflow function.
-    
+
     This is the default behavior when no custom workflow is specified.
     Handles cell division, migration, and other intercellular processes.
-    
+
     Args:
         population: Population object
         simulator: Diffusion simulator
