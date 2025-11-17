@@ -35,13 +35,38 @@ const WorkflowCanvas = ({ stage }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(stageNodes[stage] || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(stageEdges[stage] || []);
 
-  // Update store when nodes/edges change (but not on initial load from store)
+  // Track if we're syncing from store to prevent infinite loops
+  const isSyncingFromStore = useRef(false);
+
+  // Sync local state with store when store changes (e.g., workflow loaded)
   React.useEffect(() => {
-    setStageNodes(stage, nodes);
+    isSyncingFromStore.current = true;
+    setNodes(stageNodes[stage] || []);
+    // Reset flag after a tick to allow local changes to propagate
+    setTimeout(() => {
+      isSyncingFromStore.current = false;
+    }, 0);
+  }, [stageNodes[stage], setNodes]);
+
+  React.useEffect(() => {
+    isSyncingFromStore.current = true;
+    setEdges(stageEdges[stage] || []);
+    setTimeout(() => {
+      isSyncingFromStore.current = false;
+    }, 0);
+  }, [stageEdges[stage], setEdges]);
+
+  // Update store when nodes/edges change locally (drag, connect, etc.)
+  React.useEffect(() => {
+    if (!isSyncingFromStore.current) {
+      setStageNodes(stage, nodes);
+    }
   }, [nodes, stage, setStageNodes]);
 
   React.useEffect(() => {
-    setStageEdges(stage, edges);
+    if (!isSyncingFromStore.current) {
+      setStageEdges(stage, edges);
+    }
   }, [edges, stage, setStageEdges]);
 
   const onConnect = useCallback(
