@@ -12,7 +12,7 @@ import threading
 import queue
 import time
 from pathlib import Path
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -594,6 +594,78 @@ def upload_function_file():
 
     except Exception as e:
         return jsonify({'error': f'Upload failed: {e}'}), 500
+
+
+@app.route('/api/results/list', methods=['GET'])
+def list_results():
+    """List all simulation result folders with their plots."""
+    try:
+        server_dir = Path(__file__).parent
+        results_dir = server_dir.parent.parent / "microc-2.0" / "results"
+
+        if not results_dir.exists():
+            return jsonify({'success': True, 'results': []})
+
+        results = []
+
+        # Iterate through all result folders
+        for result_folder in sorted(results_dir.iterdir(), reverse=True):
+            if not result_folder.is_dir():
+                continue
+
+            # Skip if it's a nested folder (like jayatilake_experiment)
+            # We'll handle those separately
+            plots_dir = result_folder / "plots"
+
+            if plots_dir.exists():
+                result_info = {
+                    'name': result_folder.name,
+                    'path': str(result_folder.relative_to(results_dir.parent)),
+                    'timestamp': result_folder.name,
+                    'plots': []
+                }
+
+                # Scan for plot categories
+                for category_dir in plots_dir.iterdir():
+                    if category_dir.is_dir():
+                        category_plots = []
+                        for plot_file in sorted(category_dir.glob('*.png')):
+                            category_plots.append({
+                                'name': plot_file.name,
+                                'path': str(plot_file.relative_to(results_dir.parent)),
+                                'category': category_dir.name
+                            })
+
+                        if category_plots:
+                            result_info['plots'].extend(category_plots)
+
+                if result_info['plots']:
+                    results.append(result_info)
+
+        return jsonify({'success': True, 'results': results})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/results/plot/<path:plot_path>', methods=['GET'])
+def get_plot(plot_path):
+    """Serve a plot image file."""
+    try:
+        server_dir = Path(__file__).parent
+        microc_dir = server_dir.parent.parent / "microc-2.0"
+        full_path = microc_dir / plot_path
+
+        if not full_path.exists():
+            return jsonify({'success': False, 'error': 'Plot not found'}), 404
+
+        if not full_path.suffix == '.png':
+            return jsonify({'success': False, 'error': 'Invalid file type'}), 400
+
+        return send_file(full_path, mimetype='image/png')
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':

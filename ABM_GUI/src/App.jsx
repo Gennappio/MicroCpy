@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Download, Upload, FileJson, Play } from 'lucide-react';
+import { Download, Upload, FileJson, Play, BarChart3 } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import SimulationRunner from './components/SimulationRunner';
+import ResultsExplorer from './components/ResultsExplorer';
 import useWorkflowStore from './store/workflowStore';
 import './App.css';
 
@@ -17,6 +18,7 @@ const STAGES = [
 const VIEWS = [
   { id: 'workflow', label: 'Workflow Designer' },
   { id: 'run', label: 'Run Simulation', icon: Play },
+  { id: 'results', label: 'Results', icon: BarChart3 },
 ];
 
 function App() {
@@ -132,6 +134,13 @@ function App() {
       {currentView === 'run' && (
         <div className="app-content-full">
           <SimulationRunner />
+        </div>
+      )}
+
+      {/* Results View */}
+      {currentView === 'results' && (
+        <div className="app-content-full">
+          <ResultsExplorer />
         </div>
       )}
 
