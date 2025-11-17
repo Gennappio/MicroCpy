@@ -227,9 +227,34 @@ def get_default_registry() -> FunctionRegistry:
     registry.register(FunctionMetadata(
         name="run_diffusion_solver",
         display_name="Run Diffusion Solver",
-        description="Run diffusion PDE solver (oxygen, glucose, lactate, H+, pH)",
+        description="Run diffusion PDE solver (oxygen, glucose, lactate, H+, pH). Connect individual substance parameter nodes (with name, diffusion_coeff, etc.) and solver parameter nodes.",
         category=FunctionCategory.DIFFUSION,
-        parameters=[],
+        parameters=[
+            ParameterDefinition(
+                name="max_iterations",
+                display_name="Max Iterations",
+                description="Maximum iterations for diffusion solver",
+                type="int",
+                default=1000,
+                required=False
+            ),
+            ParameterDefinition(
+                name="tolerance",
+                display_name="Tolerance",
+                description="Convergence tolerance for diffusion solver",
+                type="float",
+                default=1e-6,
+                required=False
+            ),
+            ParameterDefinition(
+                name="solver_type",
+                display_name="Solver Type",
+                description="Type of solver (steady_state or transient)",
+                type="str",
+                default="steady_state",
+                required=False
+            ),
+        ],
         inputs=["population", "simulator", "gene_network", "config", "helpers"],
         outputs=[],
         cloneable=False,
@@ -330,7 +355,8 @@ def get_default_registry() -> FunctionRegistry:
         inputs=["context"],
         outputs=["loaded_cells"],
         cloneable=False,
-        module_path="src.workflow.standard_functions"
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/load_cells_from_vtk.py"
     ))
 
     registry.register(FunctionMetadata(
@@ -350,7 +376,282 @@ def get_default_registry() -> FunctionRegistry:
         inputs=["context"],
         outputs=["loaded_cells"],
         cloneable=False,
-        module_path="src.workflow.standard_functions"
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/load_cells_from_csv.py"
+    ))
+
+    # =========================================================================
+    # NEW GRANULAR INITIALIZATION FUNCTIONS (NO YAML)
+    # =========================================================================
+
+    registry.register(FunctionMetadata(
+        name="setup_simulation",
+        display_name="Setup Simulation Parameters",
+        description="Initialize simulation parameters (name, duration, timestep, output directory)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="name",
+                type=ParameterType.STRING,
+                description="Simulation name",
+                default="MicroCpy Simulation",
+                required=True
+            ),
+            ParameterDefinition(
+                name="duration",
+                type=ParameterType.FLOAT,
+                description="Total simulation time",
+                default=10.0,
+                min_value=0.0,
+                required=True
+            ),
+            ParameterDefinition(
+                name="dt",
+                type=ParameterType.FLOAT,
+                description="Timestep size",
+                default=0.1,
+                min_value=0.001,
+                required=True
+            ),
+            ParameterDefinition(
+                name="output_dir",
+                type=ParameterType.STRING,
+                description="Base output directory",
+                default="results",
+                required=True
+            ),
+            ParameterDefinition(
+                name="save_interval",
+                type=ParameterType.INT,
+                description="Save data every N steps",
+                default=10,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="diffusion_step",
+                type=ParameterType.INT,
+                description="Run diffusion every N steps",
+                default=1,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="intracellular_step",
+                type=ParameterType.INT,
+                description="Run intracellular updates every N steps",
+                default=1,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="intercellular_step",
+                type=ParameterType.INT,
+                description="Run intercellular updates every N steps",
+                default=1,
+                min_value=1,
+                required=False
+            )
+        ],
+        inputs=["context"],
+        outputs=["simulation_params", "results"],
+        cloneable=False,
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/setup_simulation.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="setup_domain",
+        display_name="Setup Domain and Mesh",
+        description="Initialize spatial domain and mesh configuration",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="dimensions",
+                type=ParameterType.INT,
+                description="2 or 3 for 2D/3D simulation",
+                default=3,
+                options=[2, 3],
+                required=True
+            ),
+            ParameterDefinition(
+                name="size_x",
+                type=ParameterType.FLOAT,
+                description="Domain size in X direction (micrometers)",
+                default=400.0,
+                min_value=1.0,
+                required=True
+            ),
+            ParameterDefinition(
+                name="size_y",
+                type=ParameterType.FLOAT,
+                description="Domain size in Y direction (micrometers)",
+                default=400.0,
+                min_value=1.0,
+                required=True
+            ),
+            ParameterDefinition(
+                name="size_z",
+                type=ParameterType.FLOAT,
+                description="Domain size in Z direction (micrometers)",
+                default=400.0,
+                min_value=1.0,
+                required=False
+            ),
+            ParameterDefinition(
+                name="nx",
+                type=ParameterType.INT,
+                description="Number of mesh cells in X direction",
+                default=25,
+                min_value=1,
+                required=True
+            ),
+            ParameterDefinition(
+                name="ny",
+                type=ParameterType.INT,
+                description="Number of mesh cells in Y direction",
+                default=25,
+                min_value=1,
+                required=True
+            ),
+            ParameterDefinition(
+                name="nz",
+                type=ParameterType.INT,
+                description="Number of mesh cells in Z direction",
+                default=25,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="cell_height",
+                type=ParameterType.FLOAT,
+                description="Biological cell height/thickness (micrometers)",
+                default=5.0,
+                min_value=0.1,
+                required=False
+            )
+        ],
+        inputs=["context"],
+        outputs=["config", "mesh_manager"],
+        cloneable=False,
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/setup_domain.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="setup_substances",
+        display_name="Setup Substances and Diffusion",
+        description="Initialize substances and create diffusion simulator",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="substances",
+                type=ParameterType.LIST,
+                description="List of substance definitions (each with name, diffusion_coeff, production_rate, uptake_rate, initial_value, boundary_value, boundary_type, unit)",
+                default=[],
+                required=True
+            ),
+            ParameterDefinition(
+                name="associations",
+                type=ParameterType.DICT,
+                description="Dict mapping substance names to gene network inputs",
+                default={},
+                required=False
+            )
+        ],
+        inputs=["context"],
+        outputs=["config.substances", "simulator"],
+        cloneable=False,
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/setup_substances.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="setup_population",
+        display_name="Setup Cell Population",
+        description="Initialize cell population and gene network",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="enable_gene_network",
+                type=ParameterType.BOOL,
+                description="Whether to enable the gene network",
+                default=True,
+                required=False
+            ),
+            ParameterDefinition(
+                name="custom_functions_module",
+                type=ParameterType.STRING,
+                description="Path to custom functions module",
+                default="src/config/custom_functions.py",
+                required=False
+            )
+        ],
+        inputs=["context"],
+        outputs=["population", "gene_network"],
+        cloneable=False,
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/setup_population.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="setup_output",
+        display_name="Setup Output Configuration",
+        description="Configure output settings for plots and data saving",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="save_data_interval",
+                type=ParameterType.INT,
+                description="Save data every N steps",
+                default=10,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_plots_interval",
+                type=ParameterType.INT,
+                description="Generate plots every N steps",
+                default=10,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_final_plots",
+                type=ParameterType.BOOL,
+                description="Generate plots at the end",
+                default=True,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_initial_plots",
+                type=ParameterType.BOOL,
+                description="Generate plots at the beginning",
+                default=True,
+                required=False
+            ),
+            ParameterDefinition(
+                name="status_print_interval",
+                type=ParameterType.INT,
+                description="Print status every N steps",
+                default=10,
+                min_value=1,
+                required=False
+            ),
+            ParameterDefinition(
+                name="save_cellstate_interval",
+                type=ParameterType.INT,
+                description="Save cell states every N steps (0 = disabled)",
+                default=0,
+                min_value=0,
+                required=False
+            )
+        ],
+        inputs=["context"],
+        outputs=["config.output"],
+        cloneable=False,
+        module_path="src.workflow.functions.initialization",
+        source_file="src/workflow/functions/initialization/setup_output.py"
     ))
 
     registry.register(FunctionMetadata(

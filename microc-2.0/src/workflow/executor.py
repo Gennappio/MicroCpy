@@ -165,7 +165,7 @@ class WorkflowExecutor:
         # Execute each function in order
         for workflow_func in functions:
             try:
-                result = self._execute_function(workflow_func, context)
+                result = self._execute_function(workflow_func, context, stage)
                 # Update context with results
                 if result is not None:
                     context.update(result)
@@ -176,13 +176,14 @@ class WorkflowExecutor:
 
         return context
     
-    def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any], stage: 'WorkflowStage') -> Optional[Dict[str, Any]]:
         """
         Execute a single workflow function.
 
         Args:
             workflow_func: WorkflowFunction to execute
             context: Execution context
+            stage: WorkflowStage containing this function (for parameter merging)
 
         Returns:
             Dictionary with results or None
@@ -201,9 +202,12 @@ class WorkflowExecutor:
         # Prepare function arguments
         kwargs = {}
 
-        # Add custom parameters from workflow (excluding metadata fields)
+        # Merge parameters from parameter nodes and function's own parameters
+        merged_params = stage.merge_parameters_for_function(workflow_func)
+
+        # Add custom parameters from merged parameters (excluding metadata fields)
         metadata_fields = {'function_file', 'custom_name'}  # Fields that are metadata, not function parameters
-        for key, value in workflow_func.parameters.items():
+        for key, value in merged_params.items():
             if key not in metadata_fields:
                 kwargs[key] = value
 
@@ -244,7 +248,17 @@ class WorkflowExecutor:
         return self.execute_stage("intracellular", context)
     
     def execute_diffusion(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute diffusion stage."""
+        """Execute diffusion stage (legacy name)."""
+        # Try microenvironment first, fall back to diffusion for backward compatibility
+        if "microenvironment" in self.workflow.stages:
+            return self.execute_stage("microenvironment", context)
+        return self.execute_stage("diffusion", context)
+
+    def execute_microenvironment(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute microenvironment stage (preferred name for diffusion)."""
+        # Try microenvironment first, fall back to diffusion for backward compatibility
+        if "microenvironment" in self.workflow.stages:
+            return self.execute_stage("microenvironment", context)
         return self.execute_stage("diffusion", context)
     
     def execute_intercellular(self, context: Dict[str, Any]) -> Dict[str, Any]:

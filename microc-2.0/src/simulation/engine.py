@@ -151,11 +151,12 @@ class SimulationEngine:
                 if stage and stage.enabled:
                     self.workflow_executor.execute_intracellular(context)
 
-            # Diffusion stage (medium)
+            # Diffusion/Microenvironment stage (medium)
             if updates['diffusion']:
-                # Execute ONLY workflow diffusion stage
+                # Execute ONLY workflow diffusion/microenvironment stage
                 # User has full control over what happens
-                stage = self.workflow.get_stage("diffusion")
+                # Try microenvironment first (preferred name), fall back to diffusion (legacy)
+                stage = self.workflow.get_stage("microenvironment") or self.workflow.get_stage("diffusion")
                 if stage and stage.enabled:
                     self.workflow_executor.execute_diffusion(context)
 

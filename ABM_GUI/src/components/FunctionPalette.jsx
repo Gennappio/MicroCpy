@@ -12,7 +12,7 @@ const FunctionPalette = ({ currentStage }) => {
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
     [FunctionCategory.INTRACELLULAR]: true,
-    [FunctionCategory.DIFFUSION]: true,
+    [FunctionCategory.MICROENVIRONMENT]: true,
     [FunctionCategory.INTERCELLULAR]: true,
     [FunctionCategory.FINALIZATION]: true,
     custom: true,
@@ -66,7 +66,7 @@ const FunctionPalette = ({ currentStage }) => {
   const categoryLabels = {
     [FunctionCategory.INITIALIZATION]: 'Initialization',
     [FunctionCategory.INTRACELLULAR]: 'Intracellular',
-    [FunctionCategory.DIFFUSION]: 'Diffusion',
+    [FunctionCategory.MICROENVIRONMENT]: 'Microenvironment',
     [FunctionCategory.INTERCELLULAR]: 'Intercellular',
     [FunctionCategory.FINALIZATION]: 'Finalization',
   };

@@ -6,7 +6,8 @@
 export const FunctionCategory = {
   INITIALIZATION: 'initialization',
   INTRACELLULAR: 'intracellular',
-  DIFFUSION: 'diffusion',
+  DIFFUSION: 'microenvironment',  // Renamed from 'diffusion' to 'microenvironment'
+  MICROENVIRONMENT: 'microenvironment',  // Alias for clarity
   INTERCELLULAR: 'intercellular',
   FINALIZATION: 'finalization',
   UTILITY: 'utility',
