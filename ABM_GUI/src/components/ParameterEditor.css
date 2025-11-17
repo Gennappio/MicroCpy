@@ -390,9 +390,22 @@
   border-radius: 6px;
   padding: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   white-space: pre;
   overflow: auto;
+  tab-size: 4;
+}
+
+.code-textarea-editable {
+  border: 2px solid #4f46e5;
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.code-textarea-editable:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 

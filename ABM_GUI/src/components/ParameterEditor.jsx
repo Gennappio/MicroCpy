@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload } from 'lucide-react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check } from 'lucide-react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
 import './ParameterEditor.css';
 const API_BASE_URL = 'http://localhost:5000';
@@ -21,6 +23,9 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [codeError, setCodeError] = useState('');
   const [code, setCode] = useState('');
   const [sourcePath, setSourcePath] = useState('');
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [editedCode, setEditedCode] = useState('');
+  const [isSavingCode, setIsSavingCode] = useState(false);
   const codeTextareaRef = useRef(null);
 
   const loadCode = async () => {
@@ -108,6 +113,51 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 
     // Reset file input
     event.target.value = '';
+  };
+
+  const handleEditCode = () => {
+    setIsEditingCode(true);
+    setEditedCode(code);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingCode(false);
+    setEditedCode('');
+  };
+
+  const handleSaveCode = async () => {
+    if (!resolvedSourcePath) {
+      alert('Cannot save: No source file path available');
+      return;
+    }
+
+    setIsSavingCode(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/function/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_path: resolvedSourcePath,
+          source: editedCode,
+          function_name: functionName
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert('Code saved successfully!');
+        setCode(editedCode);
+        setIsEditingCode(false);
+      } else {
+        alert(`Save failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      alert(`Save failed: ${err.message}`);
+    } finally {
+      setIsSavingCode(false);
+    }
   };
 
   useEffect(() => {
@@ -321,27 +371,82 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                     <div>
                       File: {resolvedSourcePath || '(from registry)'}
                       {code && (
-                        <span> • Lines: {code.split('\n').length}</span>
+                        <span> • Lines: {(isEditingCode ? editedCode : code).split('\n').length}</span>
                       )}
                     </div>
                     <div className="code-actions">
-                      <button className="btn btn-secondary btn-sm" onClick={handleCopyCode} title="Copy to clipboard">
-                        <Copy size={14} />
-                        Copy
-                      </button>
-                      <label className="btn btn-secondary btn-sm" title="Upload custom function file">
-                        <Upload size={14} />
-                        Upload
-                        <input
-                          type="file"
-                          accept=".py"
-                          onChange={handleUploadCode}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
+                      {isEditingCode ? (
+                        <>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={handleSaveCode}
+                            disabled={isSavingCode}
+                            title="Save changes"
+                          >
+                            <Check size={14} />
+                            {isSavingCode ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={handleCancelEdit}
+                            title="Cancel editing"
+                          >
+                            <X size={14} />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={handleEditCode}
+                            title="Edit code"
+                          >
+                            <Edit2 size={14} />
+                            Edit
+                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={handleCopyCode} title="Copy to clipboard">
+                            <Copy size={14} />
+                            Copy
+                          </button>
+                          <label className="btn btn-secondary btn-sm" title="Upload custom function file">
+                            <Upload size={14} />
+                            Upload
+                            <input
+                              type="file"
+                              accept=".py"
+                              onChange={handleUploadCode}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <textarea ref={codeTextareaRef} className="code-textarea" readOnly value={displayCode} />
+                  {isEditingCode ? (
+                    <textarea
+                      className="code-textarea code-textarea-editable"
+                      value={editedCode}
+                      onChange={(e) => setEditedCode(e.target.value)}
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <SyntaxHighlighter
+                      language="python"
+                      style={vscDarkPlus}
+                      showLineNumbers={true}
+                      wrapLines={true}
+                      customStyle={{
+                        margin: 0,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        maxHeight: '500px',
+                        overflow: 'auto'
+                      }}
+                    >
+                      {displayCode}
+                    </SyntaxHighlighter>
+                  )}
                 </>
               )}
             </div>
