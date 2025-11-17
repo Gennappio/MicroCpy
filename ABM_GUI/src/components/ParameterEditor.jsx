@@ -8,12 +8,13 @@ const API_BASE_URL = 'http://localhost:5000';
 
 
 /**
- * Parameter Editor Modal - Edit function parameters
+ * Parameter Editor Modal - Edit function parameters or parameter node data
  */
 const ParameterEditor = ({ node, onSave, onClose }) => {
-  const functionMetadata = getFunction(node.data.functionName);
+  const isParameterNode = node.type === 'parameterNode';
+  const functionMetadata = !isParameterNode ? getFunction(node.data.functionName) : null;
   const [parameters, setParameters] = useState(node.data.parameters || {});
-  const [customName, setCustomName] = useState(node.data.customName || '');
+  const [customName, setCustomName] = useState(node.data.customName || node.data.label || '');
   const [functionName, setFunctionName] = useState(node.data.functionName || '');
   const [functionFile, setFunctionFile] = useState(node.data.functionFile || '');
   const [description, setDescription] = useState(node.data.description || '');
@@ -224,7 +225,10 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   };
 
   const handleSave = () => {
-    if (isCustomFunction) {
+    if (isParameterNode) {
+      // For parameter nodes, save label and parameters
+      onSave(parameters, customName);
+    } else if (isCustomFunction) {
       // For custom functions, also save function name, file, and description
       onSave(parameters, customName, {
         functionName,
@@ -316,13 +320,15 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   // Handle custom functions (no metadata in registry)
   const isCustomFunction = node.data.isCustom || !functionMetadata;
 
-  if (!functionMetadata && !isCustomFunction) {
+  if (!functionMetadata && !isCustomFunction && !isParameterNode) {
     return null;
   }
 
-  const displayName = isCustomFunction
-    ? node.data.functionName
-    : functionMetadata.displayName;
+  const displayName = isParameterNode
+    ? (customName || 'Parameter Node')
+    : (isCustomFunction
+      ? node.data.functionName
+      : functionMetadata.displayName);
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
@@ -344,22 +350,96 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       <div className="parameter-editor" onClick={(e) => e.stopPropagation()}>
         <div className="editor-header">
           <h3>{displayName}</h3>
+          {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
           {isCustomFunction && <span className="custom-badge">Custom Function</span>}
-          <button className="btn btn-secondary" onClick={handleToggleCode}>
-            <Eye size={14} />
-            {showCode ? 'Hide Code' : 'View Code'}
-          </button>
+          {!isParameterNode && (
+            <button className="btn btn-secondary" onClick={handleToggleCode}>
+              <Eye size={14} />
+              {showCode ? 'Hide Code' : 'View Code'}
+            </button>
+          )}
           <button className="close-btn" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        {!isCustomFunction && functionMetadata && (
+        {isParameterNode && (
+          <div className="editor-description">
+            Store parameters that can be connected to function nodes
+          </div>
+        )}
+
+        {!isCustomFunction && !isParameterNode && functionMetadata && (
           <div className="editor-description">{functionMetadata.description}</div>
         )}
 
         <div className="editor-content">
-          {showCode && (
+          {/* Parameter Node Editor - Simple key-value interface */}
+          {isParameterNode && (
+            <>
+              <div className="parameter-field rename-field">
+                <label className="param-label">
+                  <Edit2 size={14} />
+                  Parameter Node Name
+                </label>
+                <div className="param-description">
+                  Give this parameter storage a descriptive name (e.g., "Oxygen Parameters", "Diffusion Settings")
+                </div>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="New Parameters"
+                  className="param-input"
+                />
+              </div>
+
+              <div className="section-divider">
+                Parameters
+                <button className="btn-add-param" onClick={handleAddParameter}>
+                  <Plus size={14} />
+                  Add Parameter
+                </button>
+              </div>
+
+              {Object.keys(parameters).length === 0 ? (
+                <div className="no-parameters">
+                  No parameters defined. Click "Add Parameter" to add one.
+                </div>
+              ) : (
+                Object.keys(parameters).map((paramName) => (
+                  <div key={paramName} className="parameter-field">
+                    <div className="param-header">
+                      <input
+                        type="text"
+                        value={paramName}
+                        onChange={(e) => handleRenameParameter(paramName, e.target.value)}
+                        className="param-name-input"
+                        placeholder="parameter_name"
+                      />
+                      <button
+                        className="btn-remove-param"
+                        onClick={() => handleRemoveParameter(paramName)}
+                        title="Remove parameter"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={parameters[paramName]}
+                      onChange={(e) => handleChange(paramName, e.target.value)}
+                      className="param-input"
+                      placeholder="value"
+                    />
+                  </div>
+                ))
+              )}
+            </>
+          )}
+
+          {/* Function Node Editor - Full interface with code viewer */}
+          {!isParameterNode && showCode && (
             <div className="code-container">
               {codeLoading ? (
                 <div className="loading">Loading source code...</div>
@@ -453,7 +533,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
           )}
 
               {/* Custom Function Configuration */}
-              {isCustomFunction && (
+              {!isParameterNode && isCustomFunction && (
                 <>
                   <div className="parameter-field">
                     <label className="param-label">
@@ -505,7 +585,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
               )}
 
           {/* Custom Name Field for Standard Functions */}
-          {!isCustomFunction && (
+          {!isParameterNode && !isCustomFunction && (
             <div className="parameter-field rename-field">
               <label className="param-label">
                 <Edit2 size={14} />
@@ -529,59 +609,63 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-          <div className="section-divider">
-            Parameters
-            {isCustomFunction && (
-              <button className="btn-add-param" onClick={handleAddParameter}>
-                <Plus size={14} />
-                Add Parameter
-              </button>
-            )}
-          </div>
-
-          {parametersList.length === 0 ? (
-            <div className="no-parameters">
-              {isCustomFunction
-                ? 'No parameters defined. Click "Add Parameter" to add one.'
-                : 'This function has no parameters'}
-            </div>
-          ) : (
-            parametersList.map((param) => (
-              <div key={param.name} className="parameter-field">
-                <div className="param-header">
-                  {isCustomFunction ? (
-                    <input
-                      type="text"
-                      value={param.name}
-                      onChange={(e) => handleRenameParameter(param.name, e.target.value)}
-                      className="param-name-input"
-                      placeholder="parameter_name"
-                    />
-                  ) : (
-                    <label className="param-label">
-                      {param.name}
-                      {param.required && <span className="required">*</span>}
-                    </label>
-                  )}
-                  {isCustomFunction && (
-                    <button
-                      className="btn-remove-param"
-                      onClick={() => handleRemoveParameter(param.name)}
-                      title="Remove parameter"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-                {param.description && !isCustomFunction && (
-                  <div className="param-description">{param.description}</div>
-                )}
-                {renderParameterInput(param)}
-                {param.default !== undefined && !isCustomFunction && (
-                  <div className="param-default">Default: {param.default}</div>
+          {!isParameterNode && (
+            <>
+              <div className="section-divider">
+                Parameters
+                {isCustomFunction && (
+                  <button className="btn-add-param" onClick={handleAddParameter}>
+                    <Plus size={14} />
+                    Add Parameter
+                  </button>
                 )}
               </div>
-            ))
+
+              {parametersList.length === 0 ? (
+                <div className="no-parameters">
+                  {isCustomFunction
+                    ? 'No parameters defined. Click "Add Parameter" to add one.'
+                    : 'This function has no parameters'}
+                </div>
+              ) : (
+                parametersList.map((param) => (
+                  <div key={param.name} className="parameter-field">
+                    <div className="param-header">
+                      {isCustomFunction ? (
+                        <input
+                          type="text"
+                          value={param.name}
+                          onChange={(e) => handleRenameParameter(param.name, e.target.value)}
+                          className="param-name-input"
+                          placeholder="parameter_name"
+                        />
+                      ) : (
+                        <label className="param-label">
+                          {param.name}
+                          {param.required && <span className="required">*</span>}
+                        </label>
+                      )}
+                      {isCustomFunction && (
+                        <button
+                          className="btn-remove-param"
+                          onClick={() => handleRemoveParameter(param.name)}
+                          title="Remove parameter"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    {param.description && !isCustomFunction && (
+                      <div className="param-description">{param.description}</div>
+                    )}
+                    {renderParameterInput(param)}
+                    {param.default !== undefined && !isCustomFunction && (
+                      <div className="param-default">Default: {param.default}</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
 

@@ -10,6 +10,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import WorkflowFunctionNode from './WorkflowFunctionNode';
+import ParameterNode from './ParameterNode';
 import ParameterEditor from './ParameterEditor';
 import useWorkflowStore from '../store/workflowStore';
 import { getDefaultParameters } from '../data/functionRegistry';
@@ -17,6 +18,7 @@ import './WorkflowCanvas.css';
 
 const nodeTypes = {
   workflowFunction: WorkflowFunctionNode,
+  parameterNode: ParameterNode,
 };
 
 /**
@@ -70,13 +72,16 @@ const WorkflowCanvas = ({ stage }) => {
   }, [edges, stage, setStageEdges]);
 
   const onConnect = useCallback(
-    (params) =>
+    (params) => {
+      // Determine if this is a parameter connection or function connection
+      const isParameterConnection = params.sourceHandle === 'params' || params.targetHandle === 'params';
+
       setEdges((eds) =>
         addEdge(
           {
             ...params,
             type: 'smoothstep',
-            animated: true,
+            animated: !isParameterConnection, // Only animate function connections
             markerEnd: {
               type: 'arrowclosed',
               width: 20,
@@ -84,11 +89,13 @@ const WorkflowCanvas = ({ stage }) => {
             },
             style: {
               strokeWidth: 2,
+              stroke: isParameterConnection ? '#3b82f6' : undefined, // Blue for parameter connections
             },
           },
           eds
         )
-      ),
+      );
+    },
     [setEdges]
   );
 
@@ -101,36 +108,55 @@ const WorkflowCanvas = ({ stage }) => {
     (event) => {
       event.preventDefault();
 
-      const functionData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+      const droppedData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
 
-      if (!functionData) return;
+      if (!droppedData) return;
 
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      const defaultParams = getDefaultParameters(functionData.name);
-      const newId = `${functionData.name}_${Date.now()}`;
-      const newNode = {
-        id: newId,
-        type: 'workflowFunction',
-        position,
-        data: {
-          label: functionData.displayName,
-          functionName: functionData.name,
-          parameters: defaultParams,
-          enabled: true,
-          description: functionData.description,
-          functionFile: defaultParams.function_file || '',
-          onEdit: () => {
-            setSelectedNode(newNode);
-            setShowParameterEditor(true);
+      // Check if it's a parameter node
+      if (droppedData.type === 'parameterNode') {
+        const newId = `param_${Date.now()}`;
+        const newNode = {
+          id: newId,
+          type: 'parameterNode',
+          position,
+          data: {
+            label: droppedData.label || 'New Parameters',
+            parameters: droppedData.parameters || {},
+            onEdit: () => {
+              setSelectedNode(newNode);
+              setShowParameterEditor(true);
+            },
           },
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
+        };
+        setNodes((nds) => nds.concat(newNode));
+      } else {
+        // It's a function node
+        const defaultParams = getDefaultParameters(droppedData.name);
+        const newId = `${droppedData.name}_${Date.now()}`;
+        const newNode = {
+          id: newId,
+          type: 'workflowFunction',
+          position,
+          data: {
+            label: droppedData.displayName,
+            functionName: droppedData.name,
+            parameters: defaultParams,
+            enabled: true,
+            description: droppedData.description,
+            functionFile: defaultParams.function_file || '',
+            onEdit: () => {
+              setSelectedNode(newNode);
+              setShowParameterEditor(true);
+            },
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      }
     },
     [reactFlowInstance, setNodes]
   );
@@ -147,31 +173,49 @@ const WorkflowCanvas = ({ stage }) => {
   const handleParameterSave = useCallback(
     (parameters, customName, customMetadata) => {
       if (selectedNode) {
-        // Update both parameters and custom name
-        updateFunctionParameters(stage, selectedNode.id, parameters, customName);
+        // For parameter nodes, just update label and parameters
+        if (selectedNode.type === 'parameterNode') {
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      label: customName || node.data.label,
+                      parameters,
+                    },
+                  }
+                : node
+            )
+          );
+        } else {
+          // For function nodes, update parameters and custom name in store
+          updateFunctionParameters(stage, selectedNode.id, parameters, customName);
 
-        // Also update the node's label and metadata in the local state
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.id === selectedNode.id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    parameters,
-                    customName,
-                    // For custom functions, also update function name, file, and description
-                    ...(customMetadata && {
-                      functionName: customMetadata.functionName,
-                      functionFile: customMetadata.functionFile,
-                      description: customMetadata.description,
-                      label: customMetadata.functionName,
-                    }),
-                  },
-                }
-              : node
-          )
-        );
+          // Also update the node's label and metadata in the local state
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      parameters,
+                      customName,
+                      // For custom functions, also update function name, file, and description
+                      ...(customMetadata && {
+                        functionName: customMetadata.functionName,
+                        functionFile: customMetadata.functionFile,
+                        description: customMetadata.description,
+                        label: customMetadata.functionName,
+                      }),
+                    },
+                  }
+                : node
+            )
+          );
+        }
 
         setShowParameterEditor(false);
       }

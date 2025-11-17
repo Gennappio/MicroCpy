@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Plus, Database } from 'lucide-react';
 import { getFunctionsByCategory, FunctionCategory } from '../data/functionRegistry';
 import './FunctionPalette.css';
 
@@ -43,6 +43,16 @@ const FunctionPalette = ({ currentStage }) => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const onDragStartParameter = (event) => {
+    const parameterNodeData = {
+      type: 'parameterNode',
+      label: 'New Parameters',
+      parameters: {},
+    };
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(parameterNodeData));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
   // Get functions for current stage
   const stageFunctions = getFunctionsByCategory(currentStage);
 
@@ -77,6 +87,25 @@ const FunctionPalette = ({ currentStage }) => {
       </div>
 
       <div className="palette-content">
+        {/* Parameter Node Section */}
+        <div className="parameter-node-section">
+          <div className="parameter-node-header">
+            <Database size={16} />
+            <span>Parameter Nodes</span>
+          </div>
+          <div
+            className="parameter-node-draggable"
+            draggable
+            onDragStart={onDragStartParameter}
+          >
+            <Database size={14} />
+            <div className="parameter-node-info">
+              <div className="parameter-node-name">Parameters</div>
+              <div className="parameter-node-desc">Drag to add parameter storage</div>
+            </div>
+          </div>
+        </div>
+
         {/* Custom Functions Category */}
         {customFunctions.length > 0 && (
           <div className="palette-category">

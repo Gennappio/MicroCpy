@@ -19,7 +19,17 @@ const WorkflowFunctionNode = ({ data, selected }) => {
 
   return (
     <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}>
-      <Handle type="target" position={Position.Top} />
+      {/* Function flow handles (top and bottom) */}
+      <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
+
+      {/* Parameter input handle (left side, blue) */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="params"
+        className="parameter-handle-input"
+        style={{ top: '50%' }}
+      />
 
       <div className="node-header">
         <div className="node-status">
@@ -61,7 +71,7 @@ const WorkflowFunctionNode = ({ data, selected }) => {
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} id="func-out" className="function-handle" />
     </div>
   );
 };

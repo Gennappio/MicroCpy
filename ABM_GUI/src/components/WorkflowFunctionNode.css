@@ -130,3 +130,19 @@
   white-space: nowrap;
 }
 
+/* Handle styles */
+.function-handle {
+  background: #1a192b !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid white !important;
+}
+
+.parameter-handle-input {
+  background: #3b82f6 !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid white !important;
+  left: -6px !important;
+}
+
