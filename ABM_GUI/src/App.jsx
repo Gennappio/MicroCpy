@@ -9,6 +9,7 @@ import './App.css';
 
 const STAGES = [
   { id: 'initialization', label: 'Initialization', color: '#10b981' },
+  { id: 'macrostep', label: 'Macrostep', color: '#06b6d4' },
   { id: 'intracellular', label: 'Intracellular', color: '#3b82f6' },
   { id: 'microenvironment', label: 'Microenvironment', color: '#8b5cf6' },
   { id: 'intercellular', label: 'Intercellular', color: '#f59e0b' },

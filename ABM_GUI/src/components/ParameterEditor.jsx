@@ -18,6 +18,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [functionName, setFunctionName] = useState(node.data.functionName || '');
   const [functionFile, setFunctionFile] = useState(node.data.functionFile || '');
   const [description, setDescription] = useState(node.data.description || '');
+  const [stepCount, setStepCount] = useState(node.data.stepCount || 1);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -167,6 +168,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setFunctionName(node.data.functionName || '');
     setFunctionFile(node.data.functionFile || '');
     setDescription(node.data.description || '');
+    setStepCount(node.data.stepCount || 1);
   }, [node]);
 
   useEffect(() => {
@@ -229,14 +231,16 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
     } else if (isCustomFunction) {
-      // For custom functions, also save function name, file, and description
+      // For custom functions, also save function name, file, description, and step_count
       onSave(parameters, customName, {
         functionName,
         functionFile,
         description,
+        stepCount,
       });
     } else {
-      onSave(parameters, customName);
+      // For standard functions, save parameters, custom name, and step_count
+      onSave(parameters, customName, { stepCount });
     }
   };
 
@@ -606,6 +610,29 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                   Currently showing as: <strong>{functionMetadata.displayName}</strong> <em>(template)</em>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Step Count Field for All Function Nodes */}
+          {!isParameterNode && (
+            <div className="parameter-field">
+              <label className="param-label">
+                Step Count
+              </label>
+              <div className="param-description">
+                Number of times this function executes per macro-step (for macrostep stage)
+              </div>
+              <input
+                type="number"
+                value={stepCount}
+                onChange={(e) => setStepCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                min={1}
+                step={1}
+                className="param-input"
+              />
+              <div className="param-hint">
+                Default: 1. Increase for multi-scale simulations (e.g., fast processes run more often).
+              </div>
             </div>
           )}
 

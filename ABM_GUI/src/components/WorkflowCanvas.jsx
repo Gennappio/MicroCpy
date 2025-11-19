@@ -203,6 +203,10 @@ const WorkflowCanvas = ({ stage }) => {
                       ...node.data,
                       parameters,
                       customName,
+                      // Update step_count if provided
+                      ...(customMetadata?.stepCount !== undefined && {
+                        stepCount: customMetadata.stepCount,
+                      }),
                       // For custom functions, also update function name, file, and description
                       ...(customMetadata && {
                         functionName: customMetadata.functionName,

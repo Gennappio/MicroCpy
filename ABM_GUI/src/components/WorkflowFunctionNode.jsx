@@ -7,7 +7,7 @@ import './WorkflowFunctionNode.css';
  * Custom node component for workflow functions
  */
 const WorkflowFunctionNode = ({ data, selected }) => {
-  const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom } = data;
+  const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
@@ -68,6 +68,12 @@ const WorkflowFunctionNode = ({ data, selected }) => {
         <div className="node-file-path" title={filePath}>
           <FileCode size={12} />
           <span>{fileName}</span>
+        </div>
+      )}
+
+      {stepCount && stepCount > 1 && (
+        <div className="node-step-count" title="Number of times this function executes">
+          Steps: {stepCount}
         </div>
       )}
 

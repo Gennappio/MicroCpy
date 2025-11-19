@@ -16,6 +16,7 @@ const useWorkflowStore = create((set, get) => ({
     },
     stages: {
       initialization: { enabled: true, functions: [], execution_order: [] },
+      macrostep: { enabled: false, functions: [], execution_order: [] },
       intracellular: { enabled: true, functions: [], execution_order: [] },
       microenvironment: { enabled: true, functions: [], execution_order: [] },
       intercellular: { enabled: true, functions: [], execution_order: [] },
@@ -29,6 +30,7 @@ const useWorkflowStore = create((set, get) => ({
   // React Flow nodes and edges for each stage
   stageNodes: {
     initialization: [],
+    macrostep: [],
     intracellular: [],
     microenvironment: [],
     intercellular: [],
@@ -37,6 +39,7 @@ const useWorkflowStore = create((set, get) => ({
 
   stageEdges: {
     initialization: [],
+    macrostep: [],
     intracellular: [],
     microenvironment: [],
     intercellular: [],
@@ -59,6 +62,7 @@ const useWorkflowStore = create((set, get) => ({
     const { stages } = workflowJson;
     const newStageNodes = {
       initialization: [],
+      macrostep: [],
       intracellular: [],
       microenvironment: [],
       intercellular: [],
@@ -66,6 +70,7 @@ const useWorkflowStore = create((set, get) => ({
     };
     const newStageEdges = {
       initialization: [],
+      macrostep: [],
       intracellular: [],
       microenvironment: [],
       intercellular: [],
@@ -146,6 +151,7 @@ const useWorkflowStore = create((set, get) => ({
           description: func.description || '',
           functionFile: func.function_file || func.parameters?.function_file || '',
           customName: func.custom_name || '',
+          stepCount: func.step_count || 1, // NEW: Load step_count from JSON
           onEdit: () => {}, // Will be set by WorkflowCanvas
         },
       }));
@@ -240,6 +246,7 @@ const useWorkflowStore = create((set, get) => ({
           position: node.position,
           description: node.data.description || '',
           custom_name: node.data.customName || '',
+          step_count: node.data.stepCount || 1, // NEW: Save step_count to JSON
           parameter_nodes: parameterConnections, // NEW: IDs of connected parameter nodes
         };
       });
@@ -365,6 +372,7 @@ const useWorkflowStore = create((set, get) => ({
         },
         stages: {
           initialization: { enabled: true, functions: [], execution_order: [] },
+          macrostep: { enabled: false, functions: [], execution_order: [] },
           intracellular: { enabled: true, functions: [], execution_order: [] },
           microenvironment: { enabled: true, functions: [], execution_order: [] },
           intercellular: { enabled: true, functions: [], execution_order: [] },
@@ -373,6 +381,7 @@ const useWorkflowStore = create((set, get) => ({
       },
       stageNodes: {
         initialization: [],
+        macrostep: [],
         intracellular: [],
         microenvironment: [],
         intercellular: [],
@@ -380,8 +389,9 @@ const useWorkflowStore = create((set, get) => ({
       },
       stageEdges: {
         initialization: [],
+        macrostep: [],
         intracellular: [],
-        diffusion: [],
+        microenvironment: [],
         intercellular: [],
         finalization: [],
       },
