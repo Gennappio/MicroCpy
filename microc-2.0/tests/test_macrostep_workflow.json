@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "name": "Test Macrostep Workflow",
+  "description": "Demonstrates the new macrostep stage with configurable execution order and step counts",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "created": "2025-11-19",
+    "notes": "Uses macrostep stage to define custom execution order: intracellular(3x) -> microenvironment(5x) -> intercellular(1x)"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "load_config",
+          "function_name": "load_config_file",
+          "description": "Load configuration",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 0},
+          "step_count": 1
+        },
+        {
+          "id": "load_cells",
+          "function_name": "load_cells_from_csv",
+          "description": "Load cells from CSV",
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 50},
+          "step_count": 1
+        }
+      ],
+      "execution_order": ["load_config", "load_cells"]
+    },
+    "macrostep": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "intracellular_node",
+          "function_name": "standard_intracellular_update",
+          "description": "Intracellular update (3 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 100},
+          "step_count": 3
+        },
+        {
+          "id": "microenvironment_node",
+          "function_name": "standard_diffusion_update",
+          "description": "Microenvironment/Diffusion update (5 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 300, "y": 100},
+          "step_count": 5
+        },
+        {
+          "id": "intercellular_node",
+          "function_name": "standard_intercellular_update",
+          "description": "Intercellular update (1 step)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 500, "y": 100},
+          "step_count": 1
+        }
+      ],
+      "execution_order": ["intracellular_node", "microenvironment_node", "intercellular_node"]
+    },
+    "finalization": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "description": "Print summary",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 250},
+          "step_count": 1
+        }
+      ],
+      "execution_order": ["print_summary"]
+    }
+  }
+}
+

@@ -143,30 +143,40 @@ class SimulationEngine:
             # Build execution context for workflow functions
             context = self._build_context(step=step, dt=dt)
 
-            # Intracellular stage (fast)
-            if updates['intracellular']:
-                # Execute ONLY workflow intracellular stage
-                # User has full control over what happens
-                stage = self.workflow.get_stage("intracellular")
-                if stage and stage.enabled:
-                    self.workflow_executor.execute_intracellular(context)
+            # Check if macrostep stage exists (new flexible execution model)
+            macrostep_stage = self.workflow.get_stage("macrostep")
+            if macrostep_stage and macrostep_stage.enabled:
+                # Use macrostep stage - user has full control over execution order
+                # The macrostep stage contains nodes for intracellular, microenvironment, intercellular
+                # and custom functions, each with their own step_count
+                self.workflow_executor.execute_macrostep(context)
+            else:
+                # Legacy mode: use separate intracellular, microenvironment, intercellular stages
 
-            # Diffusion/Microenvironment stage (medium)
-            if updates['diffusion']:
-                # Execute ONLY workflow diffusion/microenvironment stage
-                # User has full control over what happens
-                # Try microenvironment first (preferred name), fall back to diffusion (legacy)
-                stage = self.workflow.get_stage("microenvironment") or self.workflow.get_stage("diffusion")
-                if stage and stage.enabled:
-                    self.workflow_executor.execute_diffusion(context)
+                # Intracellular stage (fast)
+                if updates['intracellular']:
+                    # Execute ONLY workflow intracellular stage
+                    # User has full control over what happens
+                    stage = self.workflow.get_stage("intracellular")
+                    if stage and stage.enabled:
+                        self.workflow_executor.execute_intracellular(context)
 
-            # Intercellular stage (slow)
-            if updates['intercellular']:
-                # Execute ONLY workflow intercellular stage
-                # User has full control over what happens
-                stage = self.workflow.get_stage("intercellular")
-                if stage and stage.enabled:
-                    self.workflow_executor.execute_intercellular(context)
+                # Diffusion/Microenvironment stage (medium)
+                if updates['diffusion']:
+                    # Execute ONLY workflow diffusion/microenvironment stage
+                    # User has full control over what happens
+                    # Try microenvironment first (preferred name), fall back to diffusion (legacy)
+                    stage = self.workflow.get_stage("microenvironment") or self.workflow.get_stage("diffusion")
+                    if stage and stage.enabled:
+                        self.workflow_executor.execute_diffusion(context)
+
+                # Intercellular stage (slow)
+                if updates['intercellular']:
+                    # Execute ONLY workflow intercellular stage
+                    # User has full control over what happens
+                    stage = self.workflow.get_stage("intercellular")
+                    if stage and stage.enabled:
+                        self.workflow_executor.execute_intercellular(context)
 
             # Collect data for standard finalization functions (plots, summaries)
             # This ensures that standard workflow functions like generate_summary_plots work

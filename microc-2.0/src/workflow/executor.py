@@ -173,15 +173,23 @@ class WorkflowExecutor:
         for step_iteration in range(num_steps):
             # Execute each function in order
             for workflow_func in functions:
-                try:
-                    result = self._execute_function(workflow_func, context, stage)
-                    # Update context with results
-                    if result is not None:
-                        context.update(result)
-                except Exception as e:
-                    print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
-                    import traceback
-                    traceback.print_exc()
+                # Check if this individual function has a step_count (for macrostep stage)
+                func_step_count = max(1, getattr(workflow_func, 'step_count', 1))
+
+                if func_step_count > 1:
+                    print(f"[WORKFLOW] Function '{workflow_func.function_name}' will execute {func_step_count} times")
+
+                # Execute this function 'func_step_count' times
+                for func_iteration in range(func_step_count):
+                    try:
+                        result = self._execute_function(workflow_func, context, stage)
+                        # Update context with results
+                        if result is not None:
+                            context.update(result)
+                    except Exception as e:
+                        print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
+                        import traceback
+                        traceback.print_exc()
 
         return context
     
@@ -251,7 +259,17 @@ class WorkflowExecutor:
     def execute_initialization(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute initialization stage."""
         return self.execute_stage("initialization", context)
-    
+
+    def execute_macrostep(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute macrostep stage.
+
+        The macrostep stage allows users to configure a custom execution order
+        of intracellular, microenvironment, intercellular, and custom functions.
+        Each function node in the macrostep canvas can have its own step_count.
+        """
+        return self.execute_stage("macrostep", context)
+
     def execute_intracellular(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute intracellular stage."""
         return self.execute_stage("intracellular", context)

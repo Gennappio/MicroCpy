@@ -13,6 +13,7 @@ from enum import Enum
 class WorkflowStageType(Enum):
     """Types of workflow stages in the simulation lifecycle."""
     INITIALIZATION = "initialization"
+    MACROSTEP = "macrostep"  # Configurable macro-step with custom execution order
     INTRACELLULAR = "intracellular"
     DIFFUSION = "diffusion"  # Legacy name
     MICROENVIRONMENT = "microenvironment"  # Preferred name for diffusion stage
@@ -71,6 +72,7 @@ class WorkflowFunction:
         function_file: Optional path to Python file containing custom function
         custom_name: Optional custom name for this function instance
         parameter_nodes: List of parameter node IDs connected to this function
+        step_count: Number of times to execute this function (for macrostep stage nodes)
     """
     id: str
     function_name: str
@@ -81,6 +83,7 @@ class WorkflowFunction:
     function_file: Optional[str] = None
     custom_name: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
+    step_count: int = 1
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -92,7 +95,8 @@ class WorkflowFunction:
             "position": self.position,
             "description": self.description,
             "custom_name": self.custom_name,
-            "parameter_nodes": self.parameter_nodes
+            "parameter_nodes": self.parameter_nodes,
+            "step_count": self.step_count
         }
         # Only include function_file if it's set
         if self.function_file:
@@ -111,7 +115,8 @@ class WorkflowFunction:
             description=data.get("description", ""),
             function_file=data.get("function_file"),
             custom_name=data.get("custom_name", ""),
-            parameter_nodes=data.get("parameter_nodes", [])
+            parameter_nodes=data.get("parameter_nodes", []),
+            step_count=data.get("step_count", 1)
         )
 
 
