@@ -40,7 +40,7 @@ def setup_simulation(
         True if successful
     """
     print(f"[WORKFLOW] Setting up simulation: {name}")
-    
+
     try:
         # Create timestamped output directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -49,8 +49,8 @@ def setup_simulation(
         timestamped_dir.mkdir(parents=True, exist_ok=True)
         plots_dir = timestamped_dir / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Store simulation parameters in context
+
+        # Store simulation parameters in context (for later use)
         context['simulation_params'] = {
             'name': name,
             'duration': duration,
@@ -62,20 +62,70 @@ def setup_simulation(
             'intracellular_step': intracellular_step,
             'intercellular_step': intercellular_step,
         }
-        
+
         # Initialize results tracking
         context['results'] = {
             'time': [],
             'cell_count': [],
             'substance_stats': {}
         }
-        
+
+        # Create a minimal config object that will be populated by other setup functions
+        # This is a placeholder that will be filled in by setup_domain, setup_substances, etc.
+        from src.config.config import TimeConfig, DiffusionConfig, OutputConfig, InitialStateConfig
+
+        class MinimalConfig:
+            """Minimal config object that can be built up by granular setup functions"""
+            def __init__(self):
+                self.output_dir = timestamped_dir
+                self.plots_dir = plots_dir
+                self.data_dir = timestamped_dir / "data"
+                self.custom_parameters = {}
+                self.debug_phenotype_detailed = False
+                self.log_simulation_status = False
+                self._workflow_mode = True  # Mark as workflow mode
+                # Set time config from parameters
+                self.time = TimeConfig(
+                    dt=dt,
+                    end_time=duration,
+                    diffusion_step=diffusion_step,
+                    intracellular_step=intracellular_step,
+                    intercellular_step=intercellular_step
+                )
+                # Set default diffusion config (can be overridden by parameters)
+                self.diffusion = DiffusionConfig(
+                    max_iterations=1000,
+                    tolerance=1e-6,
+                    solver_type="steady_state",
+                    twodimensional_adjustment_coefficient=1.0
+                )
+                # Set default output config
+                self.output = OutputConfig(
+                    save_data_interval=save_interval,
+                    save_plots_interval=save_interval,
+                    save_final_plots=True,
+                    save_initial_plots=True,
+                    status_print_interval=save_interval,
+                    save_cellstate_interval=save_interval
+                )
+                # Set default initial state config
+                self.initial_state = InitialStateConfig()
+                # These will be set by other setup functions:
+                self.domain = None
+                self.substances = {}
+                self.associations = {}
+                self.thresholds = {}
+                self.gene_network = None
+                self.custom_functions_path = None
+
+        context['config'] = MinimalConfig()
+
         print(f"   [+] Simulation name: {name}")
         print(f"   [+] Duration: {duration} time units")
         print(f"   [+] Timestep: {dt}")
         print(f"   [+] Output directory: {timestamped_dir}")
         print(f"   [+] Multi-timescale: diffusion={diffusion_step}, intracellular={intracellular_step}, intercellular={intercellular_step}")
-        
+
         return True
         
     except Exception as e:

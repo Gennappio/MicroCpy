@@ -232,30 +232,27 @@ def get_default_registry() -> FunctionRegistry:
         parameters=[
             ParameterDefinition(
                 name="max_iterations",
-                display_name="Max Iterations",
                 description="Maximum iterations for diffusion solver",
-                type="int",
+                type=ParameterType.INT,
                 default=1000,
                 required=False
             ),
             ParameterDefinition(
                 name="tolerance",
-                display_name="Tolerance",
                 description="Convergence tolerance for diffusion solver",
-                type="float",
+                type=ParameterType.FLOAT,
                 default=1e-6,
                 required=False
             ),
             ParameterDefinition(
                 name="solver_type",
-                display_name="Solver Type",
                 description="Type of solver (steady_state or transient)",
-                type="str",
+                type=ParameterType.STRING,
                 default="steady_state",
                 required=False
             ),
         ],
-        inputs=["population", "simulator", "gene_network", "config", "helpers"],
+        inputs=["population", "simulator", "gene_network", "config", "dt", "helpers"],
         outputs=[],
         cloneable=False,
         module_path="src.workflow.functions.diffusion.run_diffusion_solver",
@@ -970,6 +967,19 @@ def get_default_registry() -> FunctionRegistry:
         outputs=[],
         cloneable=False,
         module_path="src.workflow.standard_functions"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="generate_initial_plots",
+        display_name="Generate Initial State Plots",
+        description="Generate initial state plots (before simulation starts)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.finalization",
+        source_file="src/workflow/functions/finalization/generate_initial_plots.py"
     ))
 
     registry.register(FunctionMetadata(

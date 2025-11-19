@@ -34,50 +34,44 @@ def setup_substances(
         True if successful
     """
     print(f"[WORKFLOW] Setting up substances and diffusion simulator")
-    
+
     if substances is None:
         substances = []
-    
+
     if associations is None:
         associations = {}
     
     try:
-        from src.config.config import SubstanceConfig
-        from src.diffusion.multi_substance_simulator import MultiSubstanceSimulator
-        
+        import sys
+        from pathlib import Path
+
+        # Add microc-2.0 root to path if not already there
+        # __file__ is in src/workflow/functions/initialization/
+        # Need to go up 5 levels: initialization -> functions -> workflow -> src -> microc-2.0
+        microc_root = Path(__file__).parent.parent.parent.parent.parent
+        if str(microc_root) not in sys.path:
+            sys.path.insert(0, str(microc_root))
+
+        # Import helper to configure substances using existing simulator
+        from src.workflow.functions.diffusion.run_diffusion_solver import _configure_substances
+
         config = context.get('config')
-        mesh_manager = context.get('mesh_manager')
-        
-        if not config or not mesh_manager:
-            print("[ERROR] Config and mesh_manager must be set up before substances")
+        simulator = context.get('simulator')
+
+        if not config or not simulator:
+            print("[ERROR] Config and simulator must be set up before substances")
             return False
-        
-        # Initialize substances dict
-        config.substances = {}
-        
-        # Add each substance
-        for sub_def in substances:
-            name = sub_def['name']
-            sub_config = SubstanceConfig()
-            sub_config.diffusion_coeff = sub_def.get('diffusion_coeff', 1e-10)
-            sub_config.production_rate = sub_def.get('production_rate', 0.0)
-            sub_config.uptake_rate = sub_def.get('uptake_rate', 0.0)
-            sub_config.initial_value = sub_def.get('initial_value', 0.0)
-            sub_config.boundary_value = sub_def.get('boundary_value', 0.0)
-            sub_config.boundary_type = sub_def.get('boundary_type', 'fixed')
-            sub_config.unit = sub_def.get('unit', 'mM')
-            
-            config.substances[name] = sub_config
-            print(f"   [+] Added substance: {name} (D={sub_config.diffusion_coeff:.2e}, init={sub_config.initial_value})")
-        
-        # Set associations
-        config.associations = associations
-        
-        # Create diffusion simulator
-        simulator = MultiSubstanceSimulator(config, mesh_manager)
-        context['simulator'] = simulator
-        
-        print(f"   [+] Created diffusion simulator with {len(config.substances)} substances")
+
+        # Configure substances in the existing simulator
+        _configure_substances(config, simulator, substances)
+
+        # Merge any explicit associations passed separately
+        if associations:
+            if not hasattr(config, 'associations'):
+                config.associations = {}
+            config.associations.update(associations)
+
+        print(f"   [+] Configured {len(getattr(config, 'substances', {}))} substances in diffusion solver")
         
         return True
         

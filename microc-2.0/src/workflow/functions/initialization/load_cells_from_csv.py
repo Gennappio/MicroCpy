@@ -48,15 +48,16 @@ def load_cells_from_csv(
         return False
 
     try:
-        from src.initial_state.initial_state_manager import InitialStateManager
+        from src.io.initial_state import InitialStateManager
         
         # Create initial state manager
         initial_state_manager = InitialStateManager(config)
 
-        # Load cell data from CSV
-        cell_data = initial_state_manager.load_initial_state_from_csv(str(csv_path))
+        # Load cell data from CSV (returns tuple: cell_data, cell_size_um)
+        cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_csv(str(csv_path))
 
         print(f"[WORKFLOW] Loaded {len(cell_data)} cells from CSV")
+        print(f"[WORKFLOW] Detected cell size: {detected_cell_size_um:.2f} um")
 
         # Initialize cells in population
         cells_loaded = population.initialize_cells(cell_data)

@@ -44,7 +44,7 @@ def update_metabolism(
     # Update each cell's metabolic state
     updated_cells = {}
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         # Age the cell
         cell.age(dt)
 

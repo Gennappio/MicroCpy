@@ -46,7 +46,7 @@ def remove_dead_cells(
     living_cells = {}
     dead_count = 0
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         phenotype = cell.state.phenotype
 
         # Check if cell is dead

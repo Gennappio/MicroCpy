@@ -49,7 +49,7 @@ def update_phenotypes(
 
     updated_cells = {}
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         # Get cached gene states from gene network update
         gene_states = getattr(cell, '_cached_gene_states', cell.state.gene_states)
         local_env = getattr(cell, '_cached_local_env', {})

@@ -55,7 +55,7 @@ def update_cell_division(
     # Collect cells that should divide
     cells_to_divide = []
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         # Check division criteria
         if _should_divide(cell, atp_threshold, max_atp_rate, cell_cycle_time):
             cells_to_divide.append((cell_id, cell))
@@ -133,7 +133,7 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config):
         new_cells[new_cell_id] = daughter_cell
 
     # Update population with new and updated cells
-    all_cells = {**population.cells, **updated_cells, **new_cells}
+    all_cells = {**population.state.cells, **updated_cells, **new_cells}
     population.state = population.state.with_updates(cells=all_cells)
 
 
@@ -169,7 +169,7 @@ def _find_daughter_position(parent_position, cell_radius: float):
 
 def _generate_cell_id(population):
     """Generate a unique cell ID."""
-    existing_ids = set(population.cells.keys())
+    existing_ids = set(population.state.cells.keys())
     new_id = max(existing_ids) + 1 if existing_ids else 1
     return new_id
 

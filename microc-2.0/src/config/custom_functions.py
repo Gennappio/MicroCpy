@@ -93,6 +93,19 @@ def calculate_boundary_conditions(substance_name: str, position: Tuple[float, fl
     else:
         return 0.0
 
+# Timing functions (required by TimescaleOrchestrator)
+def should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """Determine if diffusion should be updated at this step"""
+    return current_step % interval == 0
+
+def should_update_intracellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """Determine if intracellular processes should be updated at this step"""
+    return current_step % interval == 0
+
+def should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
+    """Determine if intercellular processes should be updated at this step"""
+    return current_step % interval == 0
+
 # Note: You can define any of the 14 available hook functions here:
 # - calculate_cell_metabolism
 # - update_cell_phenotype
@@ -103,8 +116,8 @@ def calculate_boundary_conditions(substance_name: str, position: Tuple[float, fl
 # - initialize_cell_placement
 # - select_division_direction
 # - calculate_migration_probability
-# - should_update_diffusion
-# - should_update_intracellular
-# - should_update_intercellular
+# - should_update_diffusion (defined above)
+# - should_update_intracellular (defined above)
+# - should_update_intercellular (defined above)
 # - capture_custom_metrics
 # - handle_performance_alert

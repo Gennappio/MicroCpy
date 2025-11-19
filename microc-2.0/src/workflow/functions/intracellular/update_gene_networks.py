@@ -45,18 +45,25 @@ def update_gene_networks(
     # Get gene network configuration
     associations = config.associations if hasattr(config, 'associations') else {}
     thresholds = config.thresholds if hasattr(config, 'thresholds') else {}
-    propagation_steps = config.gene_network.propagation_steps if hasattr(config, 'gene_network') else 500
+    propagation_steps = 500
+    if hasattr(config, 'gene_network') and config.gene_network is not None:
+        propagation_steps = getattr(config.gene_network, 'propagation_steps', 500)
 
     updated_cells = {}
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         # Get local environment
         local_env = _get_local_environment(cell.state.position, substance_concentrations)
 
         # Get cell's gene network
-        cell_gene_network = cell.gene_network
+        cell_gene_network = cell.state.gene_network
 
-        # Set input gene states based on local environment
+        # Skip if this cell has no gene network attached
+        if cell_gene_network is None:
+            continue
+
+        # Build input states dict based on local environment
+        input_states: Dict[str, bool] = {}
         for substance_name, gene_name in associations.items():
             # Get local concentration
             local_conc = local_env.get(substance_name, 0.0)
@@ -67,7 +74,10 @@ def update_gene_networks(
 
             # Set gene state: True if concentration above threshold
             gene_state = local_conc > threshold_value
-            cell_gene_network.set_input(gene_name, gene_state)
+            input_states[gene_name] = gene_state
+
+        # Apply inputs to the cell's gene network
+        cell_gene_network.set_input_states(input_states)
 
         # Propagate Boolean network
         gene_states = cell_gene_network.step(propagation_steps)

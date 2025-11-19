@@ -41,16 +41,43 @@ import importlib.util
 def load_custom_functions(custom_functions_path):
     """Load custom functions from file path"""
     if custom_functions_path is None:
+        print(f"[DEBUG] load_custom_functions: path is None")
         return None
+
+    print(f"[DEBUG] load_custom_functions: attempting to load from: {custom_functions_path}")
+
+    # Check if file exists
+    from pathlib import Path
+    path = Path(custom_functions_path)
+    if not path.exists():
+        print(f"[ERROR] Custom functions file does not exist: {custom_functions_path}")
+        return None
+
+    print(f"[DEBUG] File exists, loading module...")
 
     try:
         spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_path)
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
+            print(f"[DEBUG] Module loaded successfully")
+
+            # Check for timing functions
+            timing_funcs = ['should_update_diffusion', 'should_update_intracellular', 'should_update_intercellular']
+            for func_name in timing_funcs:
+                if hasattr(module, func_name):
+                    print(f"[DEBUG]   ✓ Found: {func_name}")
+                else:
+                    print(f"[DEBUG]   ✗ Missing: {func_name}")
+
             return module
+        else:
+            print(f"[ERROR] Could not create module spec for: {custom_functions_path}")
+            return None
     except Exception as e:
-        print(f"Warning: Could not load custom functions: {e}")
+        print(f"[ERROR] Could not load custom functions: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 # Try to import AutoPlotter, but make it optional to avoid scipy hanging issues
@@ -1252,8 +1279,10 @@ def run_workflow_mode(args):
     try:
         print(f"[WORKFLOW] Running workflow: {workflow.name}")
 
-        # Start with empty context
-        context = {}
+        # Start with context containing workflow file path (for resolving relative paths)
+        context = {
+            'workflow_file': str(workflow_path.absolute())
+        }
 
         # Execute initialization stage to load config and setup infrastructure
         print(f"[WORKFLOW] Executing initialization stage...")
@@ -1270,7 +1299,20 @@ def run_workflow_mode(args):
             raise ValueError("Initialization stage did not populate required context (config, simulator, population, gene_network)")
 
         # Load custom functions module
+        print(f"[WORKFLOW] Custom functions path from context: {custom_functions_path}")
         custom_functions = load_custom_functions(custom_functions_path) if custom_functions_path else None
+
+        if custom_functions:
+            print(f"[WORKFLOW] Custom functions loaded successfully")
+            # Check for timing functions
+            timing_funcs = ['should_update_diffusion', 'should_update_intracellular', 'should_update_intercellular']
+            for func_name in timing_funcs:
+                if hasattr(custom_functions, func_name):
+                    print(f"   [+] Found timing function: {func_name}")
+                else:
+                    print(f"   [!] Missing timing function: {func_name}")
+        else:
+            print(f"[WORKFLOW] WARNING: Custom functions not loaded!")
 
         # Determine steps and dt from config
         dt = config.time.dt

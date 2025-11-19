@@ -38,35 +38,43 @@ def setup_domain(
         True if successful
     """
     print(f"[WORKFLOW] Setting up {dimensions}D domain and mesh")
-    
+
     try:
-        from src.config.config import Config, DomainConfig, Length
-        from src.diffusion.mesh_manager import MeshManager
-        
-        # Create minimal config object for domain
-        if 'config' not in context:
-            context['config'] = Config()
-        
-        config = context['config']
-        
+        from src.config.config import DomainConfig
+        from src.core.units import Length
+        from src.core.domain import MeshManager
+
+        # Get config from context (should be created by setup_simulation)
+        config = context.get('config')
+        if not config:
+            print("[ERROR] Config must be set up before domain (run setup_simulation first)")
+            return False
+
         # Setup domain configuration
-        config.domain = DomainConfig()
-        config.domain.dimensions = dimensions
-        config.domain.size_x = Length(size_x, "um")
-        config.domain.size_y = Length(size_y, "um")
-        config.domain.size_z = Length(size_z, "um") if dimensions == 3 else Length(0, "um")
-        config.domain.nx = nx
-        config.domain.ny = ny
-        config.domain.nz = nz if dimensions == 3 else 1
-        config.domain.cell_height = Length(cell_height, "um")
+        config.domain = DomainConfig(
+            dimensions=dimensions,
+            size_x=Length(size_x, "um"),
+            size_y=Length(size_y, "um"),
+            size_z=Length(size_z, "um") if dimensions == 3 else None,
+            nx=nx,
+            ny=ny,
+            nz=nz if dimensions == 3 else None,
+            cell_height=Length(cell_height, "um")
+        )
         
         # Create mesh manager
         mesh_manager = MeshManager(config.domain)
         context['mesh_manager'] = mesh_manager
-        
+
+        # Create multi-substance simulator
+        from src.simulation.multi_substance_simulator import MultiSubstanceSimulator
+        simulator = MultiSubstanceSimulator(config, mesh_manager, verbose=False)
+        context['simulator'] = simulator
+
         print(f"   [+] Domain: {size_x}x{size_y}" + (f"x{size_z}" if dimensions == 3 else "") + " um")
         print(f"   [+] Mesh: {nx}x{ny}" + (f"x{nz}" if dimensions == 3 else "") + " cells")
         print(f"   [+] Cell height: {cell_height} um")
+        print(f"   [+] Created simulator with {len(simulator.state.substances)} substances")
         
         return True
         

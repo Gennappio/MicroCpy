@@ -14,6 +14,15 @@ from pathlib import Path
 from src.io.initial_state import InitialStateManager
 
 # Import granular functions from their individual files
+from src.workflow.functions.initialization import (
+    setup_simulation,
+    setup_domain,
+    setup_substances,
+    setup_population,
+    setup_output,
+    load_cells_from_vtk,
+    load_cells_from_csv,
+)
 from src.workflow.functions.intracellular import (
     update_metabolism,
     update_gene_networks,
@@ -24,6 +33,9 @@ from src.workflow.functions.diffusion import run_diffusion_solver
 from src.workflow.functions.intercellular import (
     update_cell_division,
     update_cell_migration,
+)
+from src.workflow.functions.finalization import (
+    generate_initial_plots,
 )
 
 
@@ -169,133 +181,9 @@ def initialize_simulation_infrastructure(
         return False
 
 
-def load_cells_from_vtk(
-    context: Dict[str, Any],
-    file_path: str,
-    **kwargs
-) -> bool:
-    """
-    Load cells from a VTK file during workflow initialization.
-
-    This function loads cell data from a VTK file and initializes the population.
-    It should be used in the initialization stage of a workflow.
-
-    Args:
-        context: Workflow context containing population, config, etc.
-        file_path: Path to VTK file (relative to microc-2.0 root or absolute)
-        **kwargs: Additional parameters (ignored)
-
-    Returns:
-        True if successful, False otherwise
-    """
-    population = context['population']
-    config = context['config']
-
-    print(f"[WORKFLOW] Loading cells from VTK: {file_path}")
-
-    # Resolve file path
-    vtk_path = Path(file_path)
-    if not vtk_path.is_absolute():
-        # Try relative to microc-2.0 root
-        microc_root = Path(__file__).parent.parent.parent
-        vtk_path = microc_root / file_path
-
-    if not vtk_path.exists():
-        print(f"[ERROR] VTK file not found: {vtk_path}")
-        return False
-
-    try:
-        # Create initial state manager
-        initial_state_manager = InitialStateManager(config)
-
-        # Load cell data from VTK
-        cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_vtk(str(vtk_path))
-
-        print(f"[WORKFLOW] Loaded {len(cell_data)} cells from VTK")
-        print(f"[WORKFLOW] Detected cell size: {detected_cell_size_um:.2f} um")
-
-        # Initialize cells in population
-        cells_loaded = population.initialize_cells(cell_data)
-
-        print(f"[WORKFLOW] Successfully initialized {cells_loaded} cells")
-
-        # Update config with detected cell size if needed
-        if detected_cell_size_um:
-            try:
-                from src.config.config import Length
-                config.domain.cell_height = Length(detected_cell_size_um, "um")
-                print(f"[WORKFLOW] Updated cell_height to {detected_cell_size_um:.2f} um")
-            except ImportError:
-                # If Length import fails, just skip updating cell_height
-                print(f"[WORKFLOW] Note: Detected cell size {detected_cell_size_um:.2f} um (config not updated)")
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] Failed to load VTK file: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def load_cells_from_csv(
-    context: Dict[str, Any],
-    file_path: str,
-    **kwargs
-) -> bool:
-    """
-    Load cells from a CSV file during workflow initialization.
-
-    This function loads cell data from a CSV file and initializes the population.
-    It should be used in the initialization stage of a workflow.
-
-    Args:
-        context: Workflow context containing population, config, etc.
-        file_path: Path to CSV file (relative to microc-2.0 root or absolute)
-        **kwargs: Additional parameters (ignored)
-
-    Returns:
-        True if successful, False otherwise
-    """
-    population = context['population']
-    config = context['config']
-
-    print(f"[WORKFLOW] Loading cells from CSV: {file_path}")
-
-    # Resolve file path
-    csv_path = Path(file_path)
-    if not csv_path.is_absolute():
-        # Try relative to microc-2.0 root
-        microc_root = Path(__file__).parent.parent.parent
-        csv_path = microc_root / file_path
-
-    if not csv_path.exists():
-        print(f"[ERROR] CSV file not found: {csv_path}")
-        return False
-
-    try:
-        # Create initial state manager
-        initial_state_manager = InitialStateManager(config)
-
-        # Load cell data from CSV
-        cell_data, detected_cell_size_um = initial_state_manager.load_initial_state_from_csv(str(csv_path))
-
-        print(f"[WORKFLOW] Loaded {len(cell_data)} cells from CSV")
-        if detected_cell_size_um:
-            print(f"[WORKFLOW] Detected cell size: {detected_cell_size_um:.2f} um")
-
-        # Initialize cells in population
-        cells_loaded = population.initialize_cells(cell_data)
-
-        print(f"[WORKFLOW] Successfully initialized {cells_loaded} cells")
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] Failed to load CSV file: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+# NOTE: load_cells_from_vtk and load_cells_from_csv are now imported from
+# src/workflow/functions/initialization/ at the top of this file.
+# The old definitions have been removed to avoid conflicts.
 
 
 # ============================================================================

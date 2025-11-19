@@ -62,7 +62,7 @@ def update_cell_migration(
     # Update each cell's position
     updated_cells = {}
 
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         # Only migrate proliferating cells
         if cell.state.phenotype != 'Proliferation':
             updated_cells[cell_id] = cell
@@ -100,7 +100,7 @@ def update_cell_migration(
         )
 
         # Check for collisions and boundary constraints
-        new_position = _check_collisions(new_position, cell_id, population.cells, cell_radius)
+        new_position = _check_collisions(new_position, cell_id, population.state.cells, cell_radius)
         new_position = _apply_boundary_constraints(new_position, config)
 
         # Update cell position

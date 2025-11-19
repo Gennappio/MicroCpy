@@ -649,7 +649,12 @@ Simulation Summary:
         for substance in substance_names:
             if substance in self.config.substances:
                 # Use TRUE initial value from configuration (not current simulator state)
-                initial_value = self.config.substances[substance].initial_value.value
+                raw_value = self.config.substances[substance].initial_value.value
+                try:
+                    initial_value = float(raw_value)
+                except (TypeError, ValueError):
+                    print(f"[WARN] Non-numeric initial_value for {substance}: {raw_value!r}; using 0.0")
+                    initial_value = 0.0
                 substance_values.append(initial_value)
                 substance_labels.append(f"{substance}\n{initial_value:.4f} mM")
 
@@ -706,7 +711,12 @@ Substance Initial Values:
         # Use TRUE initial values from configuration
         for substance in list(self.config.substances.keys())[:3]:  # Show first 3
             if substance in self.config.substances:
-                initial_value = self.config.substances[substance].initial_value.value
+                raw_value = self.config.substances[substance].initial_value.value
+                try:
+                    initial_value = float(raw_value)
+                except (TypeError, ValueError):
+                    print(f"[WARN] Non-numeric initial_value for {substance}: {raw_value!r}; using 0.0")
+                    initial_value = 0.0
                 config_info += f"• {substance}: {initial_value:.4f} mM\n"
 
         ax4.text(0.1, 0.5, config_info, fontsize=11, verticalalignment='center',
@@ -747,8 +757,13 @@ Substance Initial Values:
         for substance_name, substance_config in self.config.substances.items():
             # Create TRUE initial concentration field (uniform)
             nx, ny = self.config.domain.nx, self.config.domain.ny
-            initial_value = substance_config.initial_value.value
-            initial_concentrations = np.full((ny, nx), initial_value)
+            raw_value = substance_config.initial_value.value
+            try:
+                initial_value = float(raw_value)
+            except (TypeError, ValueError):
+                print(f"[WARN] Non-numeric initial_value for {substance_name}: {raw_value!r}; using 0.0")
+                initial_value = 0.0
+            initial_concentrations = np.full((ny, nx), initial_value, dtype=float)
 
             # Create the heatmap
             plot_path = self.plot_substance_heatmap(

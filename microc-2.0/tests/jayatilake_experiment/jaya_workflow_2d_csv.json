@@ -9,7 +9,6 @@
     "created": "2025-11-14",
     "notes": "Uses CSV file for 2D cell initialization instead of VTK"
   },
-  
   "stages": {
     "initialization": {
       "enabled": true,
@@ -19,39 +18,48 @@
           "label": "Simulation Parameters",
           "parameters": {
             "name": "Jayatilake Experiment 2D CSV",
-            "duration": 0.1,
+            "duration": 0.5,
             "dt": 0.1,
-            "output_dir": "results/jayatilake_experiment_2d",
+            "output_dir": "results",
             "save_interval": 1,
             "diffusion_step": 1,
             "intracellular_step": 1,
             "intercellular_step": 1
           },
-          "position": {"x": -150, "y": 50}
+          "position": {
+            "x": -150,
+            "y": 50
+          }
         },
         {
           "id": "param_domain",
           "label": "Domain Parameters",
           "parameters": {
             "dimensions": 2,
-            "size_x": 400.0,
-            "size_y": 400.0,
+            "size_x": 500.0,
+            "size_y": 500.0,
             "size_z": 0.0,
             "nx": 25,
             "ny": 25,
             "nz": 1,
-            "cell_height": 5.0
+            "cell_height": 20.0
           },
-          "position": {"x": -150, "y": 150}
+          "position": {
+            "x": -150,
+            "y": 150
+          }
         },
         {
           "id": "param_population",
           "label": "Population Parameters",
           "parameters": {
             "enable_gene_network": true,
-            "custom_functions_module": "src/config/custom_functions.py"
+            "custom_functions_module": "jayatilake_experiment_cell_functions.py"
           },
-          "position": {"x": -150, "y": 250}
+          "position": {
+            "x": -150,
+            "y": 250
+          }
         },
         {
           "id": "param_output",
@@ -64,7 +72,10 @@
             "status_print_interval": 1,
             "save_cellstate_interval": 1
           },
-          "position": {"x": -150, "y": 350}
+          "position": {
+            "x": -150,
+            "y": 350
+          }
         },
         {
           "id": "param_csv",
@@ -72,181 +83,67 @@
           "parameters": {
             "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
           },
-          "position": {"x": -150, "y": 450}
-        }
-      ],
-      "functions": [
-        {
-          "id": "init_simulation",
-          "function_name": "setup_simulation",
-          "description": "Setup simulation parameters",
-          "parameters": {},
-          "parameter_nodes": ["param_simulation"],
-          "enabled": true,
-          "position": {"x": 300, "y": 50}
+          "position": {
+            "x": -150,
+            "y": 450
+          }
         },
-        {
-          "id": "init_domain",
-          "function_name": "setup_domain",
-          "description": "Setup domain and mesh",
-          "parameters": {},
-          "parameter_nodes": ["param_domain"],
-          "enabled": true,
-          "position": {"x": 300, "y": 150}
-        },
-        {
-          "id": "init_population",
-          "function_name": "setup_population",
-          "description": "Setup cell population",
-          "parameters": {},
-          "parameter_nodes": ["param_population"],
-          "enabled": true,
-          "position": {"x": 300, "y": 250}
-        },
-        {
-          "id": "init_output",
-          "function_name": "setup_output",
-          "description": "Setup output configuration",
-          "parameters": {},
-          "parameter_nodes": ["param_output"],
-          "enabled": true,
-          "position": {"x": 300, "y": 350}
-        },
-        {
-          "id": "init_csv",
-          "function_name": "load_cells_from_csv",
-          "description": "Load initial cell state from CSV file",
-          "parameters": {},
-          "parameter_nodes": ["param_csv"],
-          "enabled": true,
-          "position": {"x": 300, "y": 450}
-        }
-      ],
-      "execution_order": ["init_simulation", "init_domain", "init_population", "init_output", "init_csv"]
-    },
-    
-    "intracellular": {
-      "enabled": true,
-      "parameters": [
-        {
-          "id": "param_metabolism",
-          "label": "Metabolism Parameters",
-          "parameters": {
-            "oxygen_consumption_rate": 3.0e-18,
-            "glucose_consumption_rate": 3.0e-15,
-            "lactate_production_rate": 3.0e-15
-          },
-          "position": {"x": -150, "y": 200}
-        },
-        {
-          "id": "param_gene_networks",
-          "label": "Gene Network Parameters",
-          "parameters": {
-            "hypoxia_threshold": 0.02,
-            "glucose_threshold": 1.0
-          },
-          "position": {"x": -150, "y": 300}
-        },
-        {
-          "id": "param_death",
-          "label": "Cell Death Parameters",
-          "parameters": {
-            "atp_death_threshold": 0.1
-          },
-          "position": {"x": -150, "y": 450}
-        }
-      ],
-      "functions": [
-        {
-          "id": "metabolism_1",
-          "function_name": "update_metabolism",
-          "description": "Update intracellular metabolism (ATP, metabolites)",
-          "parameters": {},
-          "parameter_nodes": ["param_metabolism"],
-          "enabled": true,
-          "position": {"x": 300, "y": 200}
-        },
-        {
-          "id": "gene_networks_1",
-          "function_name": "update_gene_networks",
-          "description": "Update gene networks based on environment (hypoxia, glycolysis genes)",
-          "parameters": {},
-          "parameter_nodes": ["param_gene_networks"],
-          "enabled": true,
-          "position": {"x": 300, "y": 300}
-        },
-        {
-          "id": "phenotypes_1",
-          "function_name": "update_phenotypes",
-          "description": "Update cell phenotypes based on gene states (glycolytic vs oxidative)",
-          "parameters": {},
-          "parameter_nodes": [],
-          "enabled": true,
-          "position": {"x": 300, "y": 400}
-        },
-        {
-          "id": "remove_dead_1",
-          "function_name": "remove_dead_cells",
-          "description": "Remove cells with ATP below death threshold",
-          "parameters": {},
-          "parameter_nodes": ["param_death"],
-          "enabled": true,
-          "position": {"x": 300, "y": 500}
-        }
-      ],
-      "execution_order": ["metabolism_1", "gene_networks_1", "phenotypes_1", "remove_dead_1"]
-    },
-
-    "microenvironment": {
-      "enabled": true,
-      "parameters": [
         {
           "id": "param_fgf",
           "label": "FGF Parameters",
           "parameters": {
             "name": "FGF",
             "diffusion_coeff": 2.2e-10,
-            "production_rate": 0.0e-21,
-            "uptake_rate": 2.0e-18,
-            "initial_value": 0.0e-6,
-            "boundary_value": 0.0e-6,
+            "production_rate": 0.0,
+            "uptake_rate": 2e-18,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "FGFR_stimulus"
           },
-          "position": {"x": -600, "y": 100}
+          "position": {
+            "x": -600,
+            "y": 100
+          }
         },
         {
           "id": "param_oxygen",
           "label": "Oxygen Parameters",
           "parameters": {
             "name": "Oxygen",
-            "diffusion_coeff": 1.0e-9,
+            "diffusion_coeff": 1e-09,
             "production_rate": 0.0,
-            "uptake_rate": 3.0e-18,
+            "uptake_rate": 3e-18,
             "initial_value": 0.07,
             "boundary_value": 0.07,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "Oxygen_supply"
           },
-          "position": {"x": -600, "y": 200}
+          "position": {
+            "x": -600,
+            "y": 200
+          }
         },
         {
           "id": "param_glucose",
           "label": "Glucose Parameters",
           "parameters": {
             "name": "Glucose",
-            "diffusion_coeff": 6.70e-11,
+            "diffusion_coeff": 6.7e-11,
             "production_rate": 0.0,
-            "uptake_rate": 3.0e-15,
+            "uptake_rate": 3e-15,
             "initial_value": 5.0,
             "boundary_value": 5.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "Glucose_supply"
           },
-          "position": {"x": -600, "y": 300}
+          "position": {
+            "x": -600,
+            "y": 300
+          }
         },
         {
           "id": "param_lactate",
@@ -254,31 +151,37 @@
           "parameters": {
             "name": "Lactate",
             "diffusion_coeff": 1.8e-10,
-            "production_rate": 3.0e-15,
-            "uptake_rate": 0.0e-15,
+            "production_rate": 3e-15,
+            "uptake_rate": 0.0,
             "initial_value": 1.0,
             "boundary_value": 1.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "MCT1_stimulus"
           },
-          "position": {"x": -600, "y": 400}
+          "position": {
+            "x": -600,
+            "y": 400
+          }
         },
         {
           "id": "param_h",
           "label": "H+ (Proton) Parameters",
           "parameters": {
             "name": "H",
-            "diffusion_coeff": 1.0e-9,
-            "production_rate": 2.0e-20,
-            "uptake_rate": 3.0e-15,
-            "initial_value": 4.0e-5,
-            "boundary_value": 4.0e-5,
+            "diffusion_coeff": 1e-09,
+            "production_rate": 2e-20,
+            "uptake_rate": 3e-15,
+            "initial_value": 4e-05,
+            "boundary_value": 4e-05,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "Proton_level"
           },
-          "position": {"x": -600, "y": 500}
+          "position": {
+            "x": -600,
+            "y": 500
+          }
         },
         {
           "id": "param_egf",
@@ -287,14 +190,17 @@
             "name": "EGF",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 2.0e-18,
-            "initial_value": 5.0e-7,
-            "boundary_value": 5.0e-7,
+            "uptake_rate": 2e-18,
+            "initial_value": 5e-07,
+            "boundary_value": 5e-07,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "EGFR_stimulus"
           },
-          "position": {"x": -600, "y": 600}
+          "position": {
+            "x": -600,
+            "y": 600
+          }
         },
         {
           "id": "param_tgfa",
@@ -302,31 +208,37 @@
           "parameters": {
             "name": "TGFA",
             "diffusion_coeff": 5.18e-11,
-            "production_rate": 2.0e-17,
-            "uptake_rate": 2.0e-20,
+            "production_rate": 2e-17,
+            "uptake_rate": 2e-20,
             "initial_value": 0.0,
             "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "EGFR_stimulus"
           },
-          "position": {"x": -600, "y": 700}
+          "position": {
+            "x": -600,
+            "y": 700
+          }
         },
         {
           "id": "param_hgf",
           "label": "HGF Parameters",
           "parameters": {
             "name": "HGF",
-            "diffusion_coeff": 8.50e-11,
-            "production_rate": 0.0e-21,
-            "uptake_rate": 2.0e-18,
-            "initial_value": 2.0e-6,
-            "boundary_value": 2.0e-6,
+            "diffusion_coeff": 8.5e-11,
+            "production_rate": 0.0,
+            "uptake_rate": 2e-18,
+            "initial_value": 2e-06,
+            "boundary_value": 2e-06,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "cMET_stimulus"
           },
-          "position": {"x": -600, "y": 800}
+          "position": {
+            "x": -600,
+            "y": 800
+          }
         },
         {
           "id": "param_egfrd",
@@ -335,14 +247,17 @@
             "name": "EGFRD",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-3,
-            "boundary_value": 0.0e-3,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "EGFRI"
           },
-          "position": {"x": -350, "y": 100}
+          "position": {
+            "x": -350,
+            "y": 100
+          }
         },
         {
           "id": "param_fgfrd",
@@ -351,14 +266,17 @@
             "name": "FGFRD",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-3,
-            "boundary_value": 0.0e-3,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "FGFRI"
           },
-          "position": {"x": -350, "y": 200}
+          "position": {
+            "x": -350,
+            "y": 200
+          }
         },
         {
           "id": "param_gi",
@@ -366,15 +284,18 @@
           "parameters": {
             "name": "GI",
             "diffusion_coeff": 5.18e-11,
-            "production_rate": 0.0e-20,
-            "uptake_rate": 2.0e-17,
+            "production_rate": 0.0,
+            "uptake_rate": 2e-17,
             "initial_value": 0.0,
             "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "Growth_Inhibitor"
           },
-          "position": {"x": -350, "y": 300}
+          "position": {
+            "x": -350,
+            "y": 300
+          }
         },
         {
           "id": "param_cmetd",
@@ -383,21 +304,24 @@
             "name": "cMETD",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-3,
-            "boundary_value": 0.0e-3,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "mM",
             "gene_network_input": "cMETI"
           },
-          "position": {"x": -350, "y": 400}
+          "position": {
+            "x": -350,
+            "y": 400
+          }
         },
         {
           "id": "param_ph",
           "label": "pH Parameters",
           "parameters": {
             "name": "pH",
-            "diffusion_coeff": 1.0e-9,
+            "diffusion_coeff": 1e-09,
             "production_rate": 0.0,
             "uptake_rate": 0.0,
             "initial_value": 7.4,
@@ -406,7 +330,10 @@
             "unit": "pH",
             "gene_network_input": ""
           },
-          "position": {"x": -350, "y": 500}
+          "position": {
+            "x": -350,
+            "y": 500
+          }
         },
         {
           "id": "param_mct1d",
@@ -415,14 +342,17 @@
             "name": "MCT1D",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-6,
-            "boundary_value": 0.0e-6,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "MCT1I"
           },
-          "position": {"x": -350, "y": 600}
+          "position": {
+            "x": -350,
+            "y": 600
+          }
         },
         {
           "id": "param_mct4d",
@@ -431,14 +361,17 @@
             "name": "MCT4D",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-6,
-            "boundary_value": 0.0e-6,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "MCT4I"
           },
-          "position": {"x": -350, "y": 700}
+          "position": {
+            "x": -350,
+            "y": 700
+          }
         },
         {
           "id": "param_glut1d",
@@ -447,58 +380,157 @@
             "name": "GLUT1D",
             "diffusion_coeff": 2.2e-10,
             "production_rate": 0.0,
-            "uptake_rate": 4.0e-17,
-            "initial_value": 0.0e-6,
-            "boundary_value": 0.0e-6,
+            "uptake_rate": 4e-17,
+            "initial_value": 0.0,
+            "boundary_value": 0.0,
             "boundary_type": "fixed",
             "unit": "uM",
             "gene_network_input": "GLUT1I"
           },
-          "position": {"x": -350, "y": 800}
+          "position": {
+            "x": -350,
+            "y": 800
+          }
+        }
+      ],
+      "functions": [
+        {
+          "id": "load_config_2d",
+          "function_name": "load_config_file",
+          "description": "Load Jayatilake 2D CSV YAML configuration and initialize simulation infrastructure",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
+          },
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 50
+          }
         },
+        {
+          "id": "load_csv_2d",
+          "function_name": "load_cells_from_csv",
+          "description": "Load initial cell state from CSV (same as 2D YAML config)",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_csv"
+          ],
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 100
+          }
+        },
+        {
+          "id": "init_plots_2d",
+          "function_name": "generate_initial_plots",
+          "description": "Generate initial state plots (heatmaps, summary)",
+          "parameters": {},
+          "parameter_nodes": [],
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 150
+          }
+        }
+      ],
+      "execution_order": [
+        "load_config_2d",
+        "load_csv_2d",
+        "init_plots_2d"
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "parameters": [
+        {
+          "id": "param_metabolism",
+          "label": "Metabolism Parameters",
+          "parameters": {
+            "oxygen_consumption_rate": 3e-18,
+            "glucose_consumption_rate": 3e-15,
+            "lactate_production_rate": 3e-15
+          },
+          "position": {
+            "x": -150,
+            "y": 200
+          }
+        },
+        {
+          "id": "param_gene_networks",
+          "label": "Gene Network Parameters",
+          "parameters": {
+            "hypoxia_threshold": 0.02,
+            "glucose_threshold": 1.0
+          },
+          "position": {
+            "x": -150,
+            "y": 300
+          }
+        },
+        {
+          "id": "param_death",
+          "label": "Cell Death Parameters",
+          "parameters": {
+            "atp_death_threshold": 0.1
+          },
+          "position": {
+            "x": -150,
+            "y": 450
+          }
+        }
+      ],
+      "functions": [
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update: metabolism, gene networks, phenotypes, and death via engine helpers (matches YAML behavior)",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 250
+          }
+        }
+      ],
+      "execution_order": [
+        "intracellular_1"
+      ]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "parameters": [
         {
           "id": "param_diffusion",
           "label": "Diffusion Solver Parameters",
           "parameters": {
             "max_iterations": 1000,
-            "tolerance": 1e-6,
+            "tolerance": 1e-06,
             "solver_type": "steady_state"
           },
-          "position": {"x": -100, "y": 450}
+          "position": {
+            "x": -100,
+            "y": 450
+          }
         }
       ],
       "functions": [
         {
-          "id": "diffusion_solver_1",
-          "function_name": "run_diffusion_solver",
-          "description": "Run diffusion PDE solver for all substances",
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update: run diffusion solver with cell-based reactions (matches YAML engine)",
           "parameters": {},
-          "parameter_nodes": [
-            "param_fgf",
-            "param_oxygen",
-            "param_glucose",
-            "param_lactate",
-            "param_h",
-            "param_egf",
-            "param_tgfa",
-            "param_hgf",
-            "param_egfrd",
-            "param_fgfrd",
-            "param_gi",
-            "param_cmetd",
-            "param_ph",
-            "param_mct1d",
-            "param_mct4d",
-            "param_glut1d",
-            "param_diffusion"
-          ],
           "enabled": true,
-          "position": {"x": 300, "y": 450}
+          "position": {
+            "x": 300,
+            "y": 450
+          }
         }
       ],
-      "execution_order": ["diffusion_solver_1"]
+      "execution_order": [
+        "diffusion_1"
+      ]
     },
-
     "intercellular": {
       "enabled": true,
       "parameters": [
@@ -508,23 +540,29 @@
           "parameters": {
             "atp_division_threshold": 2.0
           },
-          "position": {"x": -150, "y": 700}
+          "position": {
+            "x": -150,
+            "y": 700
+          }
         }
       ],
       "functions": [
         {
-          "id": "cell_division_1",
-          "function_name": "update_cell_division",
-          "description": "ATP-based cell division (divide when ATP > threshold)",
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "description": "Standard intercellular update: division and interactions via engine helpers (matches YAML behavior)",
           "parameters": {},
-          "parameter_nodes": ["param_division"],
           "enabled": true,
-          "position": {"x": 300, "y": 700}
+          "position": {
+            "x": 300,
+            "y": 700
+          }
         }
       ],
-      "execution_order": ["cell_division_1"]
+      "execution_order": [
+        "intercellular_1"
+      ]
     },
-
     "finalization": {
       "enabled": true,
       "parameters": [
@@ -535,7 +573,10 @@
             "output_dir": "results",
             "dpi": 300
           },
-          "position": {"x": -150, "y": 800}
+          "position": {
+            "x": -150,
+            "y": 800
+          }
         }
       ],
       "functions": [
@@ -544,9 +585,14 @@
           "function_name": "generate_summary_plots",
           "description": "Generate all summary plots (heatmaps, timeseries, etc.)",
           "parameters": {},
-          "parameter_nodes": ["param_plots"],
+          "parameter_nodes": [
+            "param_plots"
+          ],
           "enabled": true,
-          "position": {"x": 300, "y": 800}
+          "position": {
+            "x": 300,
+            "y": 800
+          }
         },
         {
           "id": "print_summary_1",
@@ -555,11 +601,16 @@
           "parameters": {},
           "parameter_nodes": [],
           "enabled": true,
-          "position": {"x": 300, "y": 900}
+          "position": {
+            "x": 300,
+            "y": 900
+          }
         }
       ],
-      "execution_order": ["generate_plots_1", "print_summary_1"]
+      "execution_order": [
+        "generate_plots_1",
+        "print_summary_1"
+      ]
     }
   }
 }
-

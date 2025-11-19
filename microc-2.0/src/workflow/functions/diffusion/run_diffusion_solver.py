@@ -78,19 +78,41 @@ def run_diffusion_solver(
     substance_concentrations = simulator.get_substance_concentrations()
 
     # Collect reaction terms from all cells
-    reaction_terms = _collect_reaction_terms(population, substance_concentrations)
+    # Prefer the same implementation used by the non-workflow engine so that
+    # workflow and classic YAML runs produce identical diffusion inputs where possible.
+    position_reactions = None
 
-    # Apply reaction terms to simulator
-    for substance_name, reactions in reaction_terms.items():
-        if hasattr(simulator, 'set_reaction_term'):
-            simulator.set_reaction_term(substance_name, reactions)
+    # Only call CellPopulation.get_substance_reactions if the configuration
+    # has a valid environment attached. In MinimalConfig (pure-workflow runs),
+    # environment may be absent, and CellPopulation._get_local_environment
+    # would raise; in that case we gracefully fall back to the local
+    # implementation based on cell.metabolic_state.
+    can_use_population_reactions = (
+        hasattr(population, "get_substance_reactions")
+        and hasattr(config, "environment")
+        and getattr(config, "environment") is not None
+    )
 
-    # Solve diffusion PDE for one time step
-    if hasattr(simulator, 'step'):
-        simulator.step(dt)
-    else:
-        # Fallback: call the helper function
-        helpers['run_diffusion']()
+    if can_use_population_reactions:
+        try:
+            # population.get_substance_reactions already returns {position: {substance: rate}}
+            position_reactions = population.get_substance_reactions(substance_concentrations)
+        except Exception as e:
+            print(
+                "[WORKFLOW] Warning: get_substance_reactions failed in run_diffusion_solver, "
+                f"falling back to local reaction-term computation: {e}"
+            )
+
+    if position_reactions is None:
+        # Fallback to local implementation for non-CellPopulation objects
+        # or when get_substance_reactions is not available / failed
+        reaction_terms = _collect_reaction_terms(population, substance_concentrations)
+        # MultiSubstanceSimulator.update() expects a dict of {position: {substance: rate}}
+        # Convert from {substance: {position: rate}} to {position: {substance: rate}}
+        position_reactions = _convert_to_position_reactions(reaction_terms)
+
+    # Update diffusion with reactions (steady state solver)
+    simulator.update(position_reactions)
 
 
 def _collect_substance_definitions(kwargs):
@@ -172,16 +194,21 @@ def _configure_substances(config, simulator, substances):
         config.associations = {}
 
     # Add each substance
+    from src.core.units import Concentration
+
     for sub_def in substances:
         name = sub_def['name']
-        sub_config = SubstanceConfig()
-        sub_config.diffusion_coeff = sub_def.get('diffusion_coeff', 1e-10)
-        sub_config.production_rate = sub_def.get('production_rate', 0.0)
-        sub_config.uptake_rate = sub_def.get('uptake_rate', 0.0)
-        sub_config.initial_value = sub_def.get('initial_value', 0.0)
-        sub_config.boundary_value = sub_def.get('boundary_value', 0.0)
-        sub_config.boundary_type = sub_def.get('boundary_type', 'fixed')
-        sub_config.unit = sub_def.get('unit', 'mM')
+
+        # Create SubstanceConfig with all required parameters
+        sub_config = SubstanceConfig(
+            name=name,
+            diffusion_coeff=sub_def.get('diffusion_coeff', 1e-10),
+            production_rate=sub_def.get('production_rate', 0.0),
+            uptake_rate=sub_def.get('uptake_rate', 0.0),
+            initial_value=Concentration(sub_def.get('initial_value', 0.0), sub_def.get('unit', 'mM')),
+            boundary_value=Concentration(sub_def.get('boundary_value', 0.0), sub_def.get('unit', 'mM')),
+            boundary_type=sub_def.get('boundary_type', 'fixed')
+        )
 
         config.substances[name] = sub_config
 
@@ -197,6 +224,29 @@ def _configure_substances(config, simulator, substances):
         simulator.initialize_substances(config.substances)
 
     print(f"   [+] Configured {len(config.substances)} substances in diffusion solver")
+
+
+def _convert_to_position_reactions(reaction_terms):
+    """
+    Convert reaction terms from {substance: {position: rate}} to {position: {substance: rate}}.
+
+    The MultiSubstanceSimulator.update() expects reactions organized by position.
+
+    Args:
+        reaction_terms: Dict of {substance_name: {position: rate}}
+
+    Returns:
+        Dict of {position: {substance_name: rate}}
+    """
+    position_reactions = {}
+
+    for substance_name, position_rates in reaction_terms.items():
+        for position, rate in position_rates.items():
+            if position not in position_reactions:
+                position_reactions[position] = {}
+            position_reactions[position][substance_name] = rate
+
+    return position_reactions
 
 
 def _collect_reaction_terms(population, substance_concentrations):
@@ -221,7 +271,7 @@ def _collect_reaction_terms(population, substance_concentrations):
         reaction_terms[substance_name] = {}
 
     # Collect reactions from each cell
-    for cell_id, cell in population.cells.items():
+    for cell_id, cell in population.state.cells.items():
         position = cell.state.position
 
         # Get cell's metabolic state (calculated in update_metabolism)

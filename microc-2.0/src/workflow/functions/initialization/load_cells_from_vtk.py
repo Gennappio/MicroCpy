@@ -48,8 +48,8 @@ def load_cells_from_vtk(
         return False
 
     try:
-        from src.initial_state.initial_state_manager import InitialStateManager
-        from src.config.config import Length
+        from src.io.initial_state import InitialStateManager
+        from src.core.units import Length
         
         # Create initial state manager
         initial_state_manager = InitialStateManager(config)

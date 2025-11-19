@@ -608,13 +608,16 @@ def list_results():
 
         results = []
 
-        # Iterate through all result folders
+        # Iterate through all result folders (sorted by timestamp, newest first)
         for result_folder in sorted(results_dir.iterdir(), reverse=True):
             if not result_folder.is_dir():
                 continue
 
-            # Skip if it's a nested folder (like jayatilake_experiment)
-            # We'll handle those separately
+            # Skip hidden folders and non-timestamped folders
+            if result_folder.name.startswith('.'):
+                continue
+
+            # Check if this folder has a plots/ subdirectory
             plots_dir = result_folder / "plots"
 
             if plots_dir.exists():
@@ -625,9 +628,12 @@ def list_results():
                     'plots': []
                 }
 
-                # Scan for plot categories
+                # Scan for plots (both in subdirectories and directly in plots/)
+                # First check for category subdirectories
+                has_categories = False
                 for category_dir in plots_dir.iterdir():
                     if category_dir.is_dir():
+                        has_categories = True
                         category_plots = []
                         for plot_file in sorted(category_dir.glob('*.png')):
                             category_plots.append({
@@ -638,6 +644,15 @@ def list_results():
 
                         if category_plots:
                             result_info['plots'].extend(category_plots)
+
+                # If no category subdirectories, check for plots directly in plots/
+                if not has_categories:
+                    for plot_file in sorted(plots_dir.glob('*.png')):
+                        result_info['plots'].append({
+                            'name': plot_file.name,
+                            'path': str(plot_file.relative_to(results_dir.parent)),
+                            'category': 'plots'
+                        })
 
                 if result_info['plots']:
                     results.append(result_info)
