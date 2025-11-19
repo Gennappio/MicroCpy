@@ -440,9 +440,8 @@
         "init_plots_2d"
       ]
     },
-    "intracellular": {
+    "macrostep": {
       "enabled": true,
-      "steps": 1,
       "parameters": [
         {
           "id": "param_metabolism",
@@ -479,29 +478,7 @@
             "x": -150,
             "y": 450
           }
-        }
-      ],
-      "functions": [
-        {
-          "id": "intracellular_1",
-          "function_name": "standard_intracellular_update",
-          "description": "Standard intracellular update: metabolism, gene networks, phenotypes, and death via engine helpers (matches YAML behavior)",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 300,
-            "y": 250
-          }
-        }
-      ],
-      "execution_order": [
-        "intracellular_1"
-      ]
-    },
-    "microenvironment": {
-      "enabled": true,
-      "steps": 1,
-      "parameters": [
+        },
         {
           "id": "param_diffusion",
           "label": "Diffusion Solver Parameters",
@@ -512,31 +489,9 @@
           },
           "position": {
             "x": -100,
-            "y": 450
+            "y": 550
           }
-        }
-      ],
-      "functions": [
-        {
-          "id": "diffusion_1",
-          "function_name": "standard_diffusion_update",
-          "description": "Standard diffusion update: run diffusion solver with cell-based reactions (matches YAML engine)",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 300,
-            "y": 450
-          }
-        }
-      ],
-      "execution_order": [
-        "diffusion_1"
-      ]
-    },
-    "intercellular": {
-      "enabled": true,
-      "steps": 1,
-      "parameters": [
+        },
         {
           "id": "param_division",
           "label": "Cell Division Parameters",
@@ -551,11 +506,36 @@
       ],
       "functions": [
         {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update: metabolism, gene networks, phenotypes, and death via engine helpers (matches YAML behavior)",
+          "parameters": {},
+          "enabled": true,
+          "step_count": 1,
+          "position": {
+            "x": 300,
+            "y": 250
+          }
+        },
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update: run diffusion solver with cell-based reactions (matches YAML engine)",
+          "parameters": {},
+          "enabled": true,
+          "step_count": 1,
+          "position": {
+            "x": 300,
+            "y": 450
+          }
+        },
+        {
           "id": "intercellular_1",
           "function_name": "standard_intercellular_update",
           "description": "Standard intercellular update: division and interactions via engine helpers (matches YAML behavior)",
           "parameters": {},
           "enabled": true,
+          "step_count": 1,
           "position": {
             "x": 300,
             "y": 700
@@ -563,6 +543,8 @@
         }
       ],
       "execution_order": [
+        "intracellular_1",
+        "diffusion_1",
         "intercellular_1"
       ]
     },
