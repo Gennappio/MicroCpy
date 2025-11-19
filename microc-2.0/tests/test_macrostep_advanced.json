@@ -1,0 +1,129 @@
+{
+  "version": "1.0",
+  "name": "Advanced Macrostep Workflow",
+  "description": "Demonstrates complex macrostep with reordered execution and custom step counts",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "created": "2025-11-19",
+    "notes": "Shows: Microenvironment first, then alternating Intracellular/Microenvironment, then Intercellular"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "load_config",
+          "function_name": "load_config_file",
+          "description": "Load configuration",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 0},
+          "step_count": 1
+        },
+        {
+          "id": "load_cells",
+          "function_name": "load_cells_from_csv",
+          "description": "Load cells from CSV",
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 50},
+          "step_count": 1
+        }
+      ],
+      "execution_order": ["load_config", "load_cells"]
+    },
+    "macrostep": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "microenv_initial",
+          "function_name": "standard_diffusion_update",
+          "description": "Initial microenvironment equilibration (10 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100, "y": 50},
+          "step_count": 10
+        },
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Intracellular update (2 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 300, "y": 100},
+          "step_count": 2
+        },
+        {
+          "id": "microenv_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Microenvironment update (3 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 500, "y": 100},
+          "step_count": 3
+        },
+        {
+          "id": "intracellular_2",
+          "function_name": "standard_intracellular_update",
+          "description": "Intracellular update again (2 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 300, "y": 200},
+          "step_count": 2
+        },
+        {
+          "id": "microenv_2",
+          "function_name": "standard_diffusion_update",
+          "description": "Microenvironment update again (3 steps)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 500, "y": 200},
+          "step_count": 3
+        },
+        {
+          "id": "intercellular_final",
+          "function_name": "standard_intercellular_update",
+          "description": "Final intercellular interactions (1 step)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 700, "y": 150},
+          "step_count": 1
+        }
+      ],
+      "execution_order": [
+        "microenv_initial",
+        "intracellular_1",
+        "microenv_1",
+        "intracellular_2",
+        "microenv_2",
+        "intercellular_final"
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "description": "Print summary",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 250},
+          "step_count": 1
+        }
+      ],
+      "execution_order": ["print_summary"]
+    }
+  }
+}
+
