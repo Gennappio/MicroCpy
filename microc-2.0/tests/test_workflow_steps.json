@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "name": "Test Workflow Steps",
+  "description": "Simple workflow to test the steps parameter for each stage",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "created": "2025-11-19",
+    "notes": "Tests intracellular=3, microenvironment=5, intercellular=1"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "load_config",
+          "function_name": "load_config_file",
+          "description": "Load configuration",
+          "parameters": {
+            "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 0}
+        },
+        {
+          "id": "load_cells",
+          "function_name": "load_cells_from_csv",
+          "description": "Load cells from CSV",
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 50}
+        }
+      ],
+      "execution_order": ["load_config", "load_cells"]
+    },
+    "intracellular": {
+      "enabled": true,
+      "steps": 3,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update (will run 3 times per macro-step)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 100}
+        }
+      ],
+      "execution_order": ["intracellular_1"]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "steps": 5,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update (will run 5 times per macro-step)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 150}
+        }
+      ],
+      "execution_order": ["diffusion_1"]
+    },
+    "intercellular": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "description": "Standard intercellular update (will run 1 time per macro-step)",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 200}
+        }
+      ],
+      "execution_order": ["intercellular_1"]
+    },
+    "finalization": {
+      "enabled": true,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "description": "Print summary",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 0, "y": 250}
+        }
+      ],
+      "execution_order": ["print_summary"]
+    }
+  }
+}
+

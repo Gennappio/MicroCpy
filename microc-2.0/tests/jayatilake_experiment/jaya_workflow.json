@@ -517,6 +517,7 @@
     },
     "intracellular": {
       "enabled": true,
+      "steps": 1,
       "parameters": [
         {
           "id": "param_metabolism",
@@ -622,6 +623,7 @@
     },
     "microenvironment": {
       "enabled": true,
+      "steps": 1,
       "parameters": [
         {
           "id": "param_diffusion",
@@ -675,6 +677,7 @@
     },
     "intercellular": {
       "enabled": true,
+      "steps": 1,
       "parameters": [
         {
           "id": "param_division",

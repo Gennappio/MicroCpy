@@ -162,17 +162,26 @@ class WorkflowExecutor:
         if not functions:
             return context
 
-        # Execute each function in order
-        for workflow_func in functions:
-            try:
-                result = self._execute_function(workflow_func, context, stage)
-                # Update context with results
-                if result is not None:
-                    context.update(result)
-            except Exception as e:
-                print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
-                import traceback
-                traceback.print_exc()
+        # Get number of steps for this stage (default: 1)
+        num_steps = max(1, stage.steps)  # Ensure at least 1 step
+
+        # Log if stage will execute multiple times
+        if num_steps > 1:
+            print(f"[WORKFLOW] Stage '{stage_name}' will execute {num_steps} times")
+
+        # Execute the stage 'num_steps' times
+        for step_iteration in range(num_steps):
+            # Execute each function in order
+            for workflow_func in functions:
+                try:
+                    result = self._execute_function(workflow_func, context, stage)
+                    # Update context with results
+                    if result is not None:
+                        context.update(result)
+                except Exception as e:
+                    print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
+                    import traceback
+                    traceback.print_exc()
 
         return context
     

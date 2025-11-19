@@ -125,11 +125,18 @@ class WorkflowStage:
         parameters: List of parameter nodes in this stage
         execution_order: Ordered list of function IDs defining execution sequence
         enabled: Whether this stage should be executed
+        steps: Number of times to execute this stage per macro-step (default: 1)
+               For example, if intracellular.steps=3, microenvironment.steps=5, intercellular.steps=1,
+               then at each macro-step:
+               - intracellular functions run 3 times
+               - microenvironment functions run 5 times
+               - intercellular functions run 1 time
     """
     functions: List[WorkflowFunction] = field(default_factory=list)
     parameters: List[ParameterNode] = field(default_factory=list)
     execution_order: List[str] = field(default_factory=list)
     enabled: bool = True
+    steps: int = 1
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -137,7 +144,8 @@ class WorkflowStage:
             "functions": [f.to_dict() for f in self.functions],
             "parameters": [p.to_dict() for p in self.parameters],
             "execution_order": self.execution_order,
-            "enabled": self.enabled
+            "enabled": self.enabled,
+            "steps": self.steps
         }
 
     @classmethod
@@ -149,7 +157,8 @@ class WorkflowStage:
             functions=functions,
             parameters=parameters,
             execution_order=data.get("execution_order", []),
-            enabled=data.get("enabled", True)
+            enabled=data.get("enabled", True),
+            steps=data.get("steps", 1)
         )
 
     def get_function_by_id(self, function_id: str) -> Optional[WorkflowFunction]:
