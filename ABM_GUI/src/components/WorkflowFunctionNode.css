@@ -144,6 +144,58 @@
   border: 1px solid #10b981;
 }
 
+/* Parameter and output sections */
+.node-parameters {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parameter-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-left: 8px;
+  min-height: 20px;
+}
+
+.parameter-label {
+  font-size: 10px;
+  color: #3b82f6;
+  font-weight: 500;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #bfdbfe;
+}
+
+.node-outputs {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.output-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  padding-right: 8px;
+  min-height: 20px;
+}
+
+.output-label {
+  font-size: 10px;
+  color: #10b981;
+  font-weight: 500;
+  background: #d1fae5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #6ee7b7;
+}
+
 /* Handle styles */
 .function-handle {
   background: #1a192b !important;
@@ -154,9 +206,17 @@
 
 .parameter-handle-input {
   background: #3b82f6 !important;
-  width: 12px !important;
-  height: 12px !important;
+  width: 10px !important;
+  height: 10px !important;
   border: 2px solid white !important;
   left: -6px !important;
+}
+
+.parameter-handle-output {
+  background: #10b981 !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid white !important;
+  right: -6px !important;
 }
 

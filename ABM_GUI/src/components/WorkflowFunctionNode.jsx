@@ -1,6 +1,7 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
+import { getFunction } from '../data/functionRegistry';
 import './WorkflowFunctionNode.css';
 
 /**
@@ -8,6 +9,9 @@ import './WorkflowFunctionNode.css';
  */
 const WorkflowFunctionNode = ({ data, selected }) => {
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
+
+  // Get function metadata to know inputs/outputs
+  const functionMetadata = getFunction(functionName) || { inputs: [], outputs: [], parameters: [] };
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
@@ -17,19 +21,34 @@ const WorkflowFunctionNode = ({ data, selected }) => {
   const isTemplate = !customName && !isCustom;
   const displayName = customName || label;
 
+  // Get parameter definitions from metadata
+  const parameterDefs = functionMetadata.parameters || [];
+  const inputs = functionMetadata.inputs || [];
+  const outputs = functionMetadata.outputs || [];
+
   return (
     <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}>
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
 
-      {/* Parameter input handle (left side, blue) */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="params"
-        className="parameter-handle-input"
-        style={{ top: '50%' }}
-      />
+      {/* Parameter labels and handles section */}
+      {parameterDefs.length > 0 && (
+        <div className="node-parameters">
+          {parameterDefs.map((param) => (
+            <div key={`param-${param.name}`} className="parameter-row">
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`param-${param.name}`}
+                className="parameter-handle-input"
+                style={{ top: 'auto', left: '-6px' }}
+                title={param.description || param.name}
+              />
+              <span className="parameter-label">{param.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="node-header">
         <div className="node-status">
@@ -74,6 +93,25 @@ const WorkflowFunctionNode = ({ data, selected }) => {
       {stepCount && stepCount > 1 && (
         <div className="node-step-count" title="Number of times this function executes">
           Steps: {stepCount}
+        </div>
+      )}
+
+      {/* Output handles section */}
+      {outputs.length > 0 && (
+        <div className="node-outputs">
+          {outputs.map((output) => (
+            <div key={`output-${output}`} className="output-row">
+              <span className="output-label">{output}</span>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`output-${output}`}
+                className="parameter-handle-output"
+                style={{ top: 'auto', right: '-6px' }}
+                title={`Output: ${output}`}
+              />
+            </div>
+          ))}
         </div>
       )}
 
