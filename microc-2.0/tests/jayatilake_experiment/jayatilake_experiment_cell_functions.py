@@ -223,6 +223,13 @@ class MetabolicState:
     proton_production: float
 
 
+@register_function(
+    display_name="Initialize Cell Placement (Jayatilake)",
+    description="Initialize cells in spheroid configuration for metabolic symbiosis experiment",
+    category="INITIALIZATION",
+    outputs=["placements"],
+    cloneable=True
+)
 def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, int]], simulation_params: Dict[str, Any], config: Any = None) -> List[Dict[str, Any]]:
     """
     Initialize cells in a spheroid configuration for metabolic symbiosis experiment.
@@ -371,6 +378,13 @@ def initialize_cell_placement(grid_size: Union[Tuple[int, int], Tuple[int, int, 
     return placements
 
 
+@register_function(
+    display_name="Initialize Cell Ages",
+    description="Set initial cell ages randomly distributed from 0 to max_cell_age",
+    category="INITIALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def initialize_cell_ages(population, config: Any = None):
     """
     Set initial cell ages randomly distributed from 0 to max_cell_age.
@@ -458,6 +472,13 @@ def reset_metabolism_counters():
         print("🔄 Reset metabolism counters for new simulation")
 
 
+@register_function(
+    display_name="Custom Initialize Cell Ages",
+    description="Hook-compatible version of initialize_cell_ages with metabolism counter reset",
+    category="INITIALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def custom_initialize_cell_ages(population, config: Any = None):
     """
     Hook-compatible version of initialize_cell_ages.
@@ -468,6 +489,13 @@ def custom_initialize_cell_ages(population, config: Any = None):
     return initialize_cell_ages(population, config)
 
 
+@register_function(
+    display_name="Calculate Cell Metabolism (Jayatilake)",
+    description="Calculate substance consumption/production rates using NetLogo-style Michaelis-Menten kinetics",
+    category="INTRACELLULAR",
+    outputs=["reactions"],
+    cloneable=True
+)
 def calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: Dict[str, Any], config: Any = None) -> Dict[str, float]:
     """
     Calculate substance consumption/production rates using NetLogo-style Michaelis-Menten kinetics.
@@ -776,6 +804,13 @@ def get_required_metabolic_rate(reactions: Dict[str, float], rate_name: str) -> 
     return value
 
 
+@register_function(
+    display_name="Update Cell Metabolic State",
+    description="Update cell's metabolic state with calculated ATP rate and other metabolic values",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_cell_metabolic_state(cell, local_environment: Dict[str, float], config: Any = None):
     """
     Update cell's metabolic state with calculated ATP rate and other metabolic values.
@@ -883,6 +918,13 @@ def log_division_decision(cell_id: str, decision: bool, reason: str, cell_age: f
         print(f"⚠️ Failed to log division decision: {e}")
 
 
+@register_function(
+    display_name="Should Divide (Jayatilake)",
+    description="Determine if cell should attempt division based on gene network state and cell conditions",
+    category="INTERCELLULAR",
+    outputs=["should_divide"],
+    cloneable=True
+)
 def should_divide(cell, config: Any) -> bool:
     """
     Determine if cell should attempt division based on gene network state and cell conditions.
@@ -1046,6 +1088,13 @@ def get_cell_color(cell, gene_states: Dict[str, bool], config: Any) -> str:
     return f"{interior_color}|{border_color}"
 
 
+@register_function(
+    display_name="Final Report (Jayatilake)",
+    description="Print comprehensive final report of all cells with their metabolic rates and states",
+    category="FINALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def final_report(population, local_environments, config: Any = None) -> None:
     """
     Print comprehensive final report of all cells with their metabolic rates and states.
@@ -1200,6 +1249,13 @@ def final_report(population, local_environments, config: Any = None) -> None:
 # AGING AND TIMING FUNCTIONS
 # =============================================================================
 
+@register_function(
+    display_name="Age Cell",
+    description="Custom aging function to update cell age",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def age_cell(cell, dt: float):
     """
     Custom aging function to debug aging process.
@@ -1219,6 +1275,13 @@ def age_cell(cell, dt: float):
 # TIMING ORCHESTRATION FUNCTIONS
 # =============================================================================
 
+@register_function(
+    display_name="Should Update Intracellular (Jayatilake)",
+    description="Determine if intracellular processes should be updated this step",
+    category="INTRACELLULAR",
+    outputs=["should_update"],
+    cloneable=True
+)
 def should_update_intracellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if intracellular processes should be updated this step.
@@ -1231,6 +1294,13 @@ def should_update_intracellular(current_step: int, last_update: int, interval: i
     # Update every step for realistic gene network behavior
     return True
 
+@register_function(
+    display_name="Should Update Diffusion (Jayatilake)",
+    description="Determine if diffusion should be updated this step",
+    category="DIFFUSION",
+    outputs=["should_update"],
+    cloneable=True
+)
 def should_update_diffusion(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if diffusion should be updated this step.
@@ -1247,6 +1317,13 @@ def should_update_diffusion(current_step: int, last_update: int, interval: int, 
         print(f"[DIFFUSION] UPDATE: step={current_step}, last={last_update}, interval={interval}")
     return should_update
 
+@register_function(
+    display_name="Should Update Intercellular (Jayatilake)",
+    description="Determine if intercellular processes should be updated this step",
+    category="INTERCELLULAR",
+    outputs=["should_update"],
+    cloneable=True
+)
 def should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
     """
     Determine if intercellular processes should be updated this step.
@@ -1263,6 +1340,13 @@ def should_update_intercellular(current_step: int, last_update: int, interval: i
 
 
 
+@register_function(
+    display_name="Update Cell Phenotype (Jayatilake)",
+    description="Determine cell phenotype based on gene network states for Jayatilake experiment",
+    category="INTRACELLULAR",
+    outputs=["phenotype"],
+    cloneable=True
+)
 def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[str, float], gene_states: Dict[str, bool], current_phenotype: str = None, config: Any = None) -> str:
     """
     Determine cell phenotype based on gene network states for Jayatilake experiment.
@@ -1331,6 +1415,13 @@ def update_cell_phenotype(cell_state: Dict[str, Any], local_environment: Dict[st
     return phenotype
 
 
+@register_function(
+    display_name="Select Division Direction (Jayatilake)",
+    description="Select direction for cell division (random selection from available positions)",
+    category="INTERCELLULAR",
+    outputs=["division_direction"],
+    cloneable=True
+)
 def select_division_direction(parent_position: Tuple[int, int], available_positions: List[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
     """
     Select direction for cell division.
@@ -1344,6 +1435,13 @@ def select_division_direction(parent_position: Tuple[int, int], available_positi
     return random.choice(available_positions)
 
 
+@register_function(
+    display_name="Calculate Migration Probability (Jayatilake)",
+    description="Calculate migration probability for a cell (no migration in Jayatilake experiment)",
+    category="INTERCELLULAR",
+    outputs=["migration_probability"],
+    cloneable=True
+)
 def calculate_migration_probability(cell_state: Dict[str, Any], local_environment: Dict[str, float], target_position: Optional[Tuple[int, int]] = None) -> float:
     """
     Calculate migration probability for a cell.
@@ -1353,6 +1451,13 @@ def calculate_migration_probability(cell_state: Dict[str, Any], local_environmen
     return 0.0
 
 
+@register_function(
+    display_name="Check Cell Death (Jayatilake)",
+    description="Determine if a cell should die based on its state and environment",
+    category="INTRACELLULAR",
+    outputs=["should_die"],
+    cloneable=True
+)
 def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, float]) -> bool:
     """
     Determine if a cell should die based on its state and environment.
