@@ -31,25 +31,6 @@ const WorkflowFunctionNode = ({ data, selected }) => {
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
 
-      {/* Parameter labels and handles section */}
-      {parameterDefs.length > 0 && (
-        <div className="node-parameters">
-          {parameterDefs.map((param) => (
-            <div key={`param-${param.name}`} className="parameter-row">
-              <Handle
-                type="target"
-                position={Position.Left}
-                id={`param-${param.name}`}
-                className="parameter-handle-input"
-                style={{ top: 'auto', left: '-6px' }}
-                title={param.description || param.name}
-              />
-              <span className="parameter-label">{param.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="node-header">
         <div className="node-status">
           {enabled ? (
@@ -79,6 +60,25 @@ const WorkflowFunctionNode = ({ data, selected }) => {
 
       {description && (
         <div className="node-description">{description}</div>
+      )}
+
+      {/* Parameter labels and handles section */}
+      {parameterDefs.length > 0 && (
+        <div className="node-parameters">
+          {parameterDefs.map((param) => (
+            <div key={`param-${param.name}`} className="parameter-row">
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`param-${param.name}`}
+                className="parameter-handle-input"
+                style={{ top: 'auto', left: '-6px' }}
+                title={param.description || param.name}
+              />
+              <span className="parameter-label">{param.name}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="node-function-name">{functionName}</div>
