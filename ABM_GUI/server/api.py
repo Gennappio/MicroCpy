@@ -261,6 +261,88 @@ def health_check():
     })
 
 
+@app.route('/api/registry', methods=['GET'])
+def get_registry():
+    """
+    Get the full function registry from the Python backend.
+
+    Returns:
+        {
+            'success': true,
+            'functions': {
+                'function_name': {
+                    'name': 'function_name',
+                    'display_name': 'Display Name',
+                    'description': 'Description',
+                    'category': 'INTRACELLULAR',
+                    'parameters': [...],
+                    'inputs': [...],
+                    'outputs': [...],
+                    'cloneable': true/false,
+                    'module_path': '...',
+                    'source_file': '...'
+                },
+                ...
+            },
+            'count': 62
+        }
+    """
+    try:
+        # Get microc-2.0 directory
+        microc_dir = get_microc_path().parent
+
+        # Add to Python path
+        sys.path.insert(0, str(microc_dir))
+
+        # Import registry
+        from src.workflow.registry import get_default_registry
+
+        # Get the registry
+        registry = get_default_registry()
+
+        # Convert to JSON-serializable format
+        functions_dict = {}
+        for name, metadata in registry.functions.items():
+            functions_dict[name] = {
+                'name': metadata.name,
+                'display_name': metadata.display_name,
+                'description': metadata.description,
+                'category': metadata.category.value,  # Convert enum to string
+                'parameters': [
+                    {
+                        'name': p.name,
+                        'type': p.type.value,  # Convert enum to string
+                        'description': p.description,
+                        'default': p.default,
+                        'required': p.required,
+                        'min_value': p.min_value,
+                        'max_value': p.max_value,
+                        'options': p.options
+                    }
+                    for p in metadata.parameters
+                ],
+                'inputs': metadata.inputs,
+                'outputs': metadata.outputs,
+                'cloneable': metadata.cloneable,
+                'module_path': metadata.module_path,
+                'source_file': metadata.source_file
+            }
+
+        return jsonify({
+            'success': True,
+            'functions': functions_dict,
+            'count': len(functions_dict)
+        })
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': f'Failed to load registry: {e}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+
 @app.route('/api/function/source', methods=['GET'])
 def get_function_source():
     """
@@ -690,8 +772,8 @@ if __name__ == '__main__':
     print(f"MicroC path: {get_microc_path()}")
     print(f"MicroC exists: {get_microc_path().exists()}")
     print("=" * 60)
-    print("Starting server on http://localhost:5000")
+    print("Starting server on http://localhost:5001")
     print("=" * 60)
 
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)
 

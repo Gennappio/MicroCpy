@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download, Upload, FileJson, Play, BarChart3 } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import SimulationRunner from './components/SimulationRunner';
 import ResultsExplorer from './components/ResultsExplorer';
 import useWorkflowStore from './store/workflowStore';
+import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
 
 const STAGES = [
@@ -26,6 +27,15 @@ function App() {
   const [currentView, setCurrentView] = useState('workflow');
   const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow } =
     useWorkflowStore();
+
+  // Preload function registry on app mount
+  useEffect(() => {
+    fetchRegistry().then(() => {
+      console.log('[APP] Function registry loaded');
+    }).catch((error) => {
+      console.error('[APP] Failed to load function registry:', error);
+    });
+  }, []);
 
   const handleImportWorkflow = () => {
     const input = document.createElement('input');

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, Plus, Database } from 'lucide-react';
-import { getFunctionsByCategory, FunctionCategory } from '../data/functionRegistry';
+import { getFunctionsByCategory, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
 import './FunctionPalette.css';
 
 /**
@@ -9,6 +9,8 @@ import './FunctionPalette.css';
 const FunctionPalette = ({ currentStage }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customFunctions, setCustomFunctions] = useState([]);
+  const [stageFunctions, setStageFunctions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
     [FunctionCategory.INTRACELLULAR]: true,
@@ -17,6 +19,25 @@ const FunctionPalette = ({ currentStage }) => {
     [FunctionCategory.FINALIZATION]: true,
     custom: true,
   });
+
+  // Load registry on mount and when stage changes
+  useEffect(() => {
+    const loadFunctions = async () => {
+      setIsLoading(true);
+      try {
+        await fetchRegistry();
+        const functions = getFunctionsByCategory(currentStage);
+        setStageFunctions(functions);
+      } catch (error) {
+        console.error('[PALETTE] Error loading functions:', error);
+        setStageFunctions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFunctions();
+  }, [currentStage]);
 
   const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
@@ -52,9 +73,6 @@ const FunctionPalette = ({ currentStage }) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(parameterNodeData));
     event.dataTransfer.effectAllowed = 'move';
   };
-
-  // Get functions for current stage
-  const stageFunctions = getFunctionsByCategory(currentStage);
 
   // Filter functions by search term
   const filteredFunctions = stageFunctions.filter(
@@ -162,7 +180,9 @@ const FunctionPalette = ({ currentStage }) => {
 
           {expandedCategories[currentStage] && (
             <div className="category-functions">
-              {filteredFunctions.length === 0 ? (
+              {isLoading ? (
+                <div className="no-functions">Loading functions...</div>
+              ) : filteredFunctions.length === 0 ? (
                 <div className="no-functions">No functions available</div>
               ) : (
                 filteredFunctions.map((func) => (
@@ -177,7 +197,7 @@ const FunctionPalette = ({ currentStage }) => {
                       {func.description}
                     </div>
                     <div className="function-item-params">
-                      {func.parameters.length} parameter{func.parameters.length !== 1 ? 's' : ''}
+                      {(func.parameters || []).length} parameter{(func.parameters || []).length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 ))

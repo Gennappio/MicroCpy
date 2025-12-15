@@ -1,19 +1,93 @@
 /**
  * Function Registry - Catalog of available workflow functions
- * Matches the Python registry in src/workflow/registry.py
+ * Now dynamically loaded from the Python backend registry
  */
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export const FunctionCategory = {
   INITIALIZATION: 'initialization',
   INTRACELLULAR: 'intracellular',
-  DIFFUSION: 'microenvironment',  // Renamed from 'diffusion' to 'microenvironment'
-  MICROENVIRONMENT: 'microenvironment',  // Alias for clarity
+  DIFFUSION: 'diffusion',
+  MICROENVIRONMENT: 'diffusion',  // Map to diffusion category
   INTERCELLULAR: 'intercellular',
   FINALIZATION: 'finalization',
   UTILITY: 'utility',
 };
 
-export const functionRegistry = {
+// Global registry cache
+let registryCache = null;
+let registryPromise = null;
+
+/**
+ * Fetch the function registry from the backend
+ */
+export async function fetchRegistry() {
+  // If we already have a promise in flight, return it
+  if (registryPromise) {
+    return registryPromise;
+  }
+
+  // If we have a cached registry, return it
+  if (registryCache) {
+    return registryCache;
+  }
+
+  // Start fetching
+  registryPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/registry`);
+      const data = await response.json();
+
+      if (data.success) {
+        // Convert backend format to frontend format
+        const registry = {};
+        for (const [name, func] of Object.entries(data.functions)) {
+          registry[name] = {
+            name: func.name,
+            displayName: func.display_name,
+            description: func.description,
+            category: func.category,
+            parameters: func.parameters || [],
+            inputs: func.inputs || [],
+            outputs: func.outputs || [],
+            cloneable: func.cloneable,
+            source_file: func.source_file,
+            module_path: func.module_path,
+          };
+        }
+
+        registryCache = registry;
+        console.log(`[REGISTRY] Loaded ${Object.keys(registry).length} functions from backend`);
+        return registry;
+      } else {
+        console.error('[REGISTRY] Failed to load registry:', data.error);
+        return getFallbackRegistry();
+      }
+    } catch (error) {
+      console.error('[REGISTRY] Error fetching registry:', error);
+      return getFallbackRegistry();
+    } finally {
+      registryPromise = null;
+    }
+  })();
+
+  return registryPromise;
+}
+
+/**
+ * Get the registry synchronously (returns cached version or empty object)
+ */
+export function getRegistrySync() {
+  return registryCache || {};
+}
+
+/**
+ * Fallback registry with minimal functions (used if backend is unavailable)
+ */
+function getFallbackRegistry() {
+  console.warn('[REGISTRY] Using fallback registry');
+  return {
   // INTRACELLULAR FUNCTIONS
   update_metabolism: {
     name: 'update_metabolism',
@@ -375,42 +449,73 @@ export const functionRegistry = {
   },
 
 
-};
+  };
+}
+
+// Legacy export for backward compatibility (will be empty until registry is loaded)
+export const functionRegistry = getRegistrySync();
 
 /**
- * Get functions by category
+ * Get functions by category (async version)
+ */
+export async function getFunctionsByCategoryAsync(category) {
+  const registry = await fetchRegistry();
+  return Object.values(registry).filter((func) => func.category === category);
+}
+
+/**
+ * Get functions by category (sync version - uses cached registry)
  */
 export const getFunctionsByCategory = (category) => {
-  return Object.values(functionRegistry).filter((func) => func.category === category);
+  const registry = getRegistrySync();
+  return Object.values(registry).filter((func) => func.category === category);
 };
 
 /**
- * Get function metadata
+ * Get function metadata (async version)
+ */
+export async function getFunctionAsync(functionName) {
+  const registry = await fetchRegistry();
+  return registry[functionName];
+}
+
+/**
+ * Get function metadata (sync version - uses cached registry)
  */
 export const getFunction = (functionName) => {
-  return functionRegistry[functionName];
+  const registry = getRegistrySync();
+  return registry[functionName];
 };
 
 /**
- * Get all functions
+ * Get all functions (async version)
+ */
+export async function getAllFunctionsAsync() {
+  const registry = await fetchRegistry();
+  return Object.values(registry);
+}
+
+/**
+ * Get all functions (sync version - uses cached registry)
  */
 export const getAllFunctions = () => {
-  return Object.values(functionRegistry);
+  const registry = getRegistrySync();
+  return Object.values(registry);
 };
 
 /**
  * Get default parameters for a function
  */
 export const getDefaultParameters = (functionName) => {
-  const func = functionRegistry[functionName];
+  const registry = getRegistrySync();
+  const func = registry[functionName];
   if (!func) return {};
 
   const defaults = {};
-  func.parameters.forEach((param) => {
+  (func.parameters || []).forEach((param) => {
     if (param.default !== undefined) {
       defaults[param.name] = param.default;
     }
   });
   return defaults;
 };
-
