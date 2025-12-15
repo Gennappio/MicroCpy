@@ -7,8 +7,16 @@ This function initializes the basic simulation parameters like name, duration, t
 from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Setup Simulation",
+    description="Initialize simulation parameters (name, duration, timestep)",
+    category="INITIALIZATION",
+    outputs=["config"],
+    cloneable=False
+)
 def setup_simulation(
     context: Dict[str, Any],
     name: str = "MicroCpy Simulation",

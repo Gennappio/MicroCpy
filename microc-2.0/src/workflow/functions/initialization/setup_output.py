@@ -5,8 +5,16 @@ This function configures output settings for plots, data saving, etc.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Setup Output",
+    description="Configure output settings (plots, data saving)",
+    category="INITIALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def setup_output(
     context: Dict[str, Any],
     save_data_interval: int = 10,

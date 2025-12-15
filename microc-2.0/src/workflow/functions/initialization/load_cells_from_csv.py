@@ -6,8 +6,25 @@ This function loads initial cell state from a CSV file (for 2D simulations).
 
 from typing import Dict, Any
 from pathlib import Path
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Load Cells from CSV File",
+    description="Load initial cell state from a CSV file (2D only)",
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "file_path",
+            "type": "STRING",
+            "description": "Path to CSV file (relative to microc-2.0 root or absolute)",
+            "default": "initial_state.csv",
+            "required": True
+        }
+    ],
+    outputs=["loaded_cells"],
+    cloneable=False
+)
 def load_cells_from_csv(
     context: Dict[str, Any],
     file_path: str,

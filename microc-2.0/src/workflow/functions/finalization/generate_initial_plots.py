@@ -4,8 +4,16 @@ Generate initial state plots workflow function.
 
 from typing import Dict, Any
 from pathlib import Path
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Generate Initial Plots",
+    description="Generate initial state plots before simulation",
+    category="FINALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def generate_initial_plots(
     context: Dict[str, Any],
     **kwargs

@@ -1,0 +1,113 @@
+{
+  "version": "1.0",
+  "name": "Jayatilake Debug Dummy Workflow - 2D CSV",
+  "description": "Dummy workflow for debugging: each stage (except macrostep) has three debug functions that print their name and stage and read a message from a connected parameter node.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Jayatilake Debug Dummy",
+    "reference": "Debug-only workflow",
+    "created": "2025-11-19",
+    "notes": "Macrostep is kept identical to the main Jayatilake 2D CSV workflow. Debug functions are added in other stages."
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "parameters": [
+        {"id": "param_debug_init_1", "label": "Debug Init 1", "parameters": {"message": "[DEBUG] initialization: debug_initialization_1"}, "position": {"x": -150, "y": 50}},
+        {"id": "param_debug_init_2", "label": "Debug Init 2", "parameters": {"message": "[DEBUG] initialization: debug_initialization_2"}, "position": {"x": -150, "y": 150}},
+        {"id": "param_debug_init_3", "label": "Debug Init 3", "parameters": {"message": "[DEBUG] initialization: debug_initialization_3"}, "position": {"x": -150, "y": 250}}
+      ],
+      "functions": [
+        {
+          "id": "load_config_2d",
+          "function_name": "load_config_file",
+          "description": "Load Jayatilake 2D CSV YAML configuration and initialize simulation infrastructure (same as main workflow)",
+          "parameters": {"config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"},
+          "parameter_nodes": [],
+          "enabled": true,
+          "position": {"x": 300, "y": 50}
+        },
+        {"id": "debug_init_1", "function_name": "debug_initialization_1", "parameters": {}, "parameter_nodes": ["param_debug_init_1"], "enabled": true, "position": {"x": 300, "y": 120}},
+        {"id": "debug_init_2", "function_name": "debug_initialization_2", "parameters": {}, "parameter_nodes": ["param_debug_init_2"], "enabled": true, "position": {"x": 300, "y": 190}},
+        {"id": "debug_init_3", "function_name": "debug_initialization_3", "parameters": {}, "parameter_nodes": ["param_debug_init_3"], "enabled": true, "position": {"x": 300, "y": 260}}
+      ],
+      "execution_order": ["load_config_2d", "debug_init_1", "debug_init_2", "debug_init_3"]
+    },
+
+    "macrostep": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {"id": "intracellular_node", "function_name": "standard_intracellular_update", "description": "Intracellular update (macrostep node controlling intracellular canvas)", "parameters": {}, "enabled": true, "position": {"x": 100, "y": 250}, "step_count": 1},
+        {"id": "microenvironment_node", "function_name": "standard_diffusion_update", "description": "Microenvironment/diffusion update (macrostep node controlling microenvironment canvas)", "parameters": {}, "enabled": true, "position": {"x": 350, "y": 250}, "step_count": 1},
+        {"id": "intercellular_node", "function_name": "standard_intercellular_update", "description": "Intercellular update (macrostep node controlling intercellular canvas)", "parameters": {}, "enabled": true, "position": {"x": 600, "y": 250}, "step_count": 1}
+      ],
+      "execution_order": ["intracellular_node", "microenvironment_node", "intercellular_node"]
+    },
+
+    "intracellular": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [
+        {"id": "param_debug_intra_1", "label": "Debug Intracellular 1", "parameters": {"message": "[DEBUG] intracellular: debug_intracellular_1"}, "position": {"x": -150, "y": 100}},
+        {"id": "param_debug_intra_2", "label": "Debug Intracellular 2", "parameters": {"message": "[DEBUG] intracellular: debug_intracellular_2"}, "position": {"x": -150, "y": 200}},
+        {"id": "param_debug_intra_3", "label": "Debug Intracellular 3", "parameters": {"message": "[DEBUG] intracellular: debug_intracellular_3"}, "position": {"x": -150, "y": 300}}
+      ],
+      "functions": [
+        {"id": "debug_intra_1", "function_name": "debug_intracellular_1", "parameters": {}, "parameter_nodes": ["param_debug_intra_1"], "enabled": true, "position": {"x": 300, "y": 120}},
+        {"id": "debug_intra_2", "function_name": "debug_intracellular_2", "parameters": {}, "parameter_nodes": ["param_debug_intra_2"], "enabled": true, "position": {"x": 300, "y": 190}},
+        {"id": "debug_intra_3", "function_name": "debug_intracellular_3", "parameters": {}, "parameter_nodes": ["param_debug_intra_3"], "enabled": true, "position": {"x": 300, "y": 260}}
+      ],
+      "execution_order": ["debug_intra_1", "debug_intra_2", "debug_intra_3"]
+    },
+
+    "microenvironment": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [
+        {"id": "param_debug_micro_1", "label": "Debug Microenvironment 1", "parameters": {"message": "[DEBUG] microenvironment: debug_microenvironment_1"}, "position": {"x": -150, "y": 100}},
+        {"id": "param_debug_micro_2", "label": "Debug Microenvironment 2", "parameters": {"message": "[DEBUG] microenvironment: debug_microenvironment_2"}, "position": {"x": -150, "y": 200}},
+        {"id": "param_debug_micro_3", "label": "Debug Microenvironment 3", "parameters": {"message": "[DEBUG] microenvironment: debug_microenvironment_3"}, "position": {"x": -150, "y": 300}}
+      ],
+      "functions": [
+        {"id": "debug_micro_1", "function_name": "debug_microenvironment_1", "parameters": {}, "parameter_nodes": ["param_debug_micro_1"], "enabled": true, "position": {"x": 300, "y": 120}},
+        {"id": "debug_micro_2", "function_name": "debug_microenvironment_2", "parameters": {}, "parameter_nodes": ["param_debug_micro_2"], "enabled": true, "position": {"x": 300, "y": 190}},
+        {"id": "debug_micro_3", "function_name": "debug_microenvironment_3", "parameters": {}, "parameter_nodes": ["param_debug_micro_3"], "enabled": true, "position": {"x": 300, "y": 260}}
+      ],
+      "execution_order": ["debug_micro_1", "debug_micro_2", "debug_micro_3"]
+    },
+
+    "intercellular": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [
+        {"id": "param_debug_inter_1", "label": "Debug Intercellular 1", "parameters": {"message": "[DEBUG] intercellular: debug_intercellular_1"}, "position": {"x": -150, "y": 100}},
+        {"id": "param_debug_inter_2", "label": "Debug Intercellular 2", "parameters": {"message": "[DEBUG] intercellular: debug_intercellular_2"}, "position": {"x": -150, "y": 200}},
+        {"id": "param_debug_inter_3", "label": "Debug Intercellular 3", "parameters": {"message": "[DEBUG] intercellular: debug_intercellular_3"}, "position": {"x": -150, "y": 300}}
+      ],
+      "functions": [
+        {"id": "debug_inter_1", "function_name": "debug_intercellular_1", "parameters": {}, "parameter_nodes": ["param_debug_inter_1"], "enabled": true, "position": {"x": 300, "y": 120}},
+        {"id": "debug_inter_2", "function_name": "debug_intercellular_2", "parameters": {}, "parameter_nodes": ["param_debug_inter_2"], "enabled": true, "position": {"x": 300, "y": 190}},
+        {"id": "debug_inter_3", "function_name": "debug_intercellular_3", "parameters": {}, "parameter_nodes": ["param_debug_inter_3"], "enabled": true, "position": {"x": 300, "y": 260}}
+      ],
+      "execution_order": ["debug_inter_1", "debug_inter_2", "debug_inter_3"]
+    },
+
+    "finalization": {
+      "enabled": true,
+      "parameters": [
+        {"id": "param_debug_final_1", "label": "Debug Finalization 1", "parameters": {"message": "[DEBUG] finalization: debug_finalization_1"}, "position": {"x": -150, "y": 100}},
+        {"id": "param_debug_final_2", "label": "Debug Finalization 2", "parameters": {"message": "[DEBUG] finalization: debug_finalization_2"}, "position": {"x": -150, "y": 200}},
+        {"id": "param_debug_final_3", "label": "Debug Finalization 3", "parameters": {"message": "[DEBUG] finalization: debug_finalization_3"}, "position": {"x": -150, "y": 300}}
+      ],
+      "functions": [
+        {"id": "debug_final_1", "function_name": "debug_finalization_1", "parameters": {}, "parameter_nodes": ["param_debug_final_1"], "enabled": true, "position": {"x": 300, "y": 120}},
+        {"id": "debug_final_2", "function_name": "debug_finalization_2", "parameters": {}, "parameter_nodes": ["param_debug_final_2"], "enabled": true, "position": {"x": 300, "y": 190}},
+        {"id": "debug_final_3", "function_name": "debug_finalization_3", "parameters": {}, "parameter_nodes": ["param_debug_final_3"], "enabled": true, "position": {"x": 300, "y": 260}}
+      ],
+      "execution_order": ["debug_final_1", "debug_final_2", "debug_final_3"]
+    }
+  }
+}
+

@@ -3,6 +3,9 @@ import math
 from typing import Dict, List, Tuple, Any, Optional, Union
 from dataclasses import dataclass
 
+# Import decorator for function registration
+from src.workflow.decorators import register_function
+
 
 def get_required_concentration(local_environment: Dict[str, float], substance_name: str,
                              alternative_name: str = None, context: str = "") -> float:
@@ -1363,4 +1366,156 @@ def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, fl
     #
     # # Cell dies if it has death phenotypes
     # return phenotype in ['Apoptosis', 'Necrosis']
+
+
+# =============================================================================
+# DECORATOR-BASED FUNCTION REGISTRATION EXAMPLES
+# =============================================================================
+# These are example functions demonstrating the new decorator-based registration
+# system. They can coexist with the manual registrations above.
+
+@register_function(
+    display_name="Advanced Metabolism (Decorated)",
+    description="Example decorated metabolism function with pH sensitivity and temperature effects",
+    category="INTRACELLULAR",
+    parameters=[
+        {
+            "name": "ph_sensitivity",
+            "type": "FLOAT",
+            "description": "Sensitivity to pH changes (0-1)",
+            "default": 0.1,
+            "min_value": 0.0,
+            "max_value": 1.0
+        },
+        {
+            "name": "temperature_effect",
+            "type": "FLOAT",
+            "description": "Temperature effect multiplier",
+            "default": 1.0,
+            "min_value": 0.1,
+            "max_value": 2.0
+        },
+        {
+            "name": "enable_lactate_feedback",
+            "type": "BOOL",
+            "description": "Enable lactate feedback inhibition",
+            "default": True
+        }
+    ],
+    outputs=["metabolic_rates"],
+    cloneable=True
+)
+def advanced_metabolism_decorated(context: Dict[str, Any], ph_sensitivity: float = 0.1,
+                                  temperature_effect: float = 1.0,
+                                  enable_lactate_feedback: bool = True, **kwargs) -> Dict[str, float]:
+    """
+    Example decorated metabolism function with advanced features.
+
+    This demonstrates the decorator-based registration system where:
+    - Function name is auto-extracted
+    - Module path is auto-detected
+    - Source file path is auto-detected
+    - Parameters are defined in the decorator
+    - The function can be called normally
+    """
+    print(f"[DECORATED] Advanced metabolism called with pH sensitivity={ph_sensitivity}, "
+          f"temp effect={temperature_effect}, lactate feedback={enable_lactate_feedback}")
+
+    # Example implementation
+    return {
+        "oxygen_consumption": -1.0e-16 * temperature_effect,
+        "glucose_consumption": -3.0e-15 * temperature_effect,
+        "lactate_production": 2.0e-15 * (1.0 if not enable_lactate_feedback else 0.5)
+    }
+
+
+@register_function(
+    display_name="Custom Division Check (Decorated)",
+    description="Example decorated division check with configurable ATP threshold",
+    category="INTRACELLULAR",
+    parameters=[
+        {
+            "name": "atp_threshold",
+            "type": "FLOAT",
+            "description": "ATP threshold for division (normalized 0-1)",
+            "default": 0.8,
+            "min_value": 0.0,
+            "max_value": 1.0
+        },
+        {
+            "name": "min_cell_age",
+            "type": "FLOAT",
+            "description": "Minimum cell age for division (hours)",
+            "default": 24.0,
+            "min_value": 0.0
+        }
+    ],
+    outputs=["can_divide"],
+    cloneable=True
+)
+def custom_division_check_decorated(context: Dict[str, Any], atp_threshold: float = 0.8,
+                                    min_cell_age: float = 24.0, **kwargs) -> bool:
+    """
+    Example decorated division check function.
+
+    Demonstrates parameter type inference and auto-detection.
+    """
+    print(f"[DECORATED] Division check called with ATP threshold={atp_threshold}, "
+          f"min age={min_cell_age}")
+
+    # Example implementation
+    cell_state = context.get('cell_state', {})
+    atp_rate = cell_state.get('metabolic_state', {}).get('atp_rate', 0.0)
+    cell_age = cell_state.get('age', 0.0)
+
+    can_divide = (atp_rate > atp_threshold) and (cell_age > min_cell_age)
+    return can_divide
+
+
+@register_function(
+    display_name="Initialize Custom Cells (Decorated)",
+    description="Example decorated initialization function with placement options",
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "num_cells",
+            "type": "INT",
+            "description": "Number of cells to initialize",
+            "default": 50,
+            "min_value": 1,
+            "max_value": 10000
+        },
+        {
+            "name": "placement_pattern",
+            "type": "STRING",
+            "description": "Cell placement pattern",
+            "default": "spheroid",
+            "options": ["spheroid", "grid", "random", "cluster"]
+        },
+        {
+            "name": "initial_atp",
+            "type": "FLOAT",
+            "description": "Initial ATP level for all cells",
+            "default": 0.5,
+            "min_value": 0.0,
+            "max_value": 1.0
+        }
+    ],
+    outputs=["population"],
+    cloneable=True
+)
+def initialize_custom_cells_decorated(context: Dict[str, Any], num_cells: int = 50,
+                                      placement_pattern: str = "spheroid",
+                                      initial_atp: float = 0.5, **kwargs) -> None:
+    """
+    Example decorated initialization function.
+
+    Demonstrates different parameter types (INT, STRING, FLOAT) and options.
+    """
+    print(f"[DECORATED] Initializing {num_cells} cells with pattern={placement_pattern}, "
+          f"initial ATP={initial_atp}")
+
+    # Example implementation
+    # In a real implementation, this would create cells and add them to the population
+    pass
 

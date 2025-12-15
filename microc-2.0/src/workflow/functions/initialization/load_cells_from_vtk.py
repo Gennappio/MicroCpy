@@ -6,8 +6,25 @@ This function loads initial cell state from a VTK file.
 
 from typing import Dict, Any
 from pathlib import Path
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Load Cells from VTK File",
+    description="Load initial cell state from a VTK file",
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "file_path",
+            "type": "STRING",
+            "description": "Path to VTK file (relative to microc-2.0 root or absolute)",
+            "default": "tools/generated_h5/cells_200um_domain_domain.vtk",
+            "required": True
+        }
+    ],
+    outputs=["loaded_cells"],
+    cloneable=False
+)
 def load_cells_from_vtk(
     context: Dict[str, Any],
     file_path: str,

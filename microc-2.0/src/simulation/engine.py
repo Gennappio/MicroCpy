@@ -108,11 +108,9 @@ class SimulationEngine:
                 results.substance_stats.append(self.simulator.get_summary_statistics())
                 results.cell_counts.append(self.population.get_population_statistics())
 
-            # Export cell states and substance fields (CSV for 2D, VTK for 3D)
-            should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
-                                    step % self.config.output.save_cellstate_interval == 0)
-            if should_save_cellstate:
-                self._export_cell_states(step)
+            # NOTE: Export of cell states and substance fields (CSV/VTK) is now handled
+            # by workflow functions, not hardcoded here. This allows full user control
+            # over when and how exports happen via the workflow definition.
 
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
                 # Lightweight progress
@@ -186,11 +184,9 @@ class SimulationEngine:
                 results.substance_stats.append(self.simulator.get_summary_statistics())
                 results.cell_counts.append(self.population.get_population_statistics())
 
-            # Export cell states and substance fields (CSV for 2D, VTK for 3D)
-            should_save_cellstate = (self.config.output.save_cellstate_interval > 0 and
-                                    step % self.config.output.save_cellstate_interval == 0)
-            if should_save_cellstate:
-                self._export_cell_states(step)
+            # NOTE: Export of cell states and substance fields (CSV/VTK) is now handled
+            # by workflow functions, not hardcoded here. This allows full user control
+            # over when and how exports happen via the workflow definition.
 
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
                 # Lightweight progress
@@ -258,72 +254,4 @@ class SimulationEngine:
         current_concentrations = self.simulator.get_substance_concentrations()
         substance_reactions = self.population.get_substance_reactions(current_concentrations)
         self.simulator.update(substance_reactions)
-
-    def _export_cell_states(self, step: int):
-        """Export cell states and substance fields based on domain dimensions."""
-        # Determine export format based on domain dimensions
-        if self.config.domain.dimensions == 2:
-            print(f"\n[CSV] Exporting 2D simulation checkpoint at step {step}...")
-            try:
-                import sys
-                import os
-                sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
-                from csv_export import export_microc_csv_cell_state, export_microc_csv_substance_fields
-
-                # Export cells and substances separately
-                csv_cells_dir = self.config.output_dir / "csv_cells"
-                csv_substances_dir = self.config.output_dir / "csv_substances"
-
-                # Export cell states
-                cell_file = export_microc_csv_cell_state(
-                    population=self.population,
-                    output_dir=str(csv_cells_dir),
-                    step=step,
-                    cell_size_um=self.config.domain.cell_height.micrometers
-                )
-
-                # Export substance fields
-                substance_files = export_microc_csv_substance_fields(
-                    simulator=self.simulator,
-                    output_dir=str(csv_substances_dir),
-                    step=step
-                )
-
-                if cell_file and substance_files:
-                    print(f"[+] Checkpoint exported: {len(substance_files)} substances + cells")
-                else:
-                    print(f"[!] CSV checkpoint export failed")
-
-            except Exception as e:
-                print(f"[!] CSV export failed: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            # 3D VTK export
-            print(f"\n[VTK] Exporting 3D simulation checkpoint at step {step}...")
-            try:
-                import sys
-                import os
-                sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
-                from vtk_export import export_microc_vtk_checkpoint
-
-                # Export unified checkpoint (cells + substances in organized folder)
-                vtk_output_dir = self.config.output_dir / "vtk_checkpoints"
-                checkpoint_folder = export_microc_vtk_checkpoint(
-                    population=self.population,
-                    simulator=self.simulator,
-                    output_dir=str(vtk_output_dir),
-                    step=step,
-                    cell_size_um=self.config.output.cell_size_um
-                )
-
-                if checkpoint_folder:
-                    print(f"[+] Checkpoint exported successfully")
-                else:
-                    print(f"[!] VTK checkpoint export failed")
-
-            except Exception as e:
-                print(f"[!] VTK export failed: {e}")
-                import traceback
-                traceback.print_exc()
 

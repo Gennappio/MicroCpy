@@ -174,7 +174,7 @@ class WorkflowExecutor:
             # Execute each function in order
             for workflow_func in functions:
                 # Check if this individual function has a step_count (for macrostep stage)
-                func_step_count = max(1, getattr(workflow_func, 'step_count', 1))
+                func_step_count = max(1, getattr(workflow_func, 'step_count', 1)) # TODO: why ? if zero the loop will not run anyway
 
                 if func_step_count > 1:
                     print(f"[WORKFLOW] Function '{workflow_func.function_name}' will execute {func_step_count} times")

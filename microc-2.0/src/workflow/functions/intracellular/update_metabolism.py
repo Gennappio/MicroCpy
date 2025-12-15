@@ -8,8 +8,16 @@ Users can customize this function to implement their own metabolic models.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Update Metabolism",
+    description="Update intracellular metabolism (ATP, metabolites)",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_metabolism(
     population,
     simulator,

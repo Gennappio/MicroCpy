@@ -5,8 +5,16 @@ This function initializes the spatial domain and mesh for the simulation.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Setup Domain",
+    description="Initialize spatial domain and mesh",
+    category="INITIALIZATION",
+    outputs=["domain", "mesh"],
+    cloneable=False
+)
 def setup_domain(
     context: Dict[str, Any],
     dimensions: int = 3,

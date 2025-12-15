@@ -55,7 +55,7 @@ class FunctionMetadata:
     cloneable: bool = False  # Can this function be cloned/customized?
     module_path: str = ""  # Where to find this function
     source_file: str = ""  # Path to source file (for GUI code viewer)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -86,26 +86,26 @@ class FunctionMetadata:
 
 class FunctionRegistry:
     """Registry of all available workflow functions."""
-    
+
     def __init__(self):
         self.functions: Dict[str, FunctionMetadata] = {}
-    
+
     def register(self, metadata: FunctionMetadata):
         """Register a function with its metadata."""
         self.functions[metadata.name] = metadata
-    
+
     def get(self, function_name: str) -> Optional[FunctionMetadata]:
         """Get metadata for a function by name."""
         return self.functions.get(function_name)
-    
+
     def get_by_category(self, category: FunctionCategory) -> List[FunctionMetadata]:
         """Get all functions in a category."""
         return [f for f in self.functions.values() if f.category == category]
-    
+
     def list_all(self) -> List[FunctionMetadata]:
         """Get all registered functions."""
         return list(self.functions.values())
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert registry to dictionary for JSON export."""
         return {
@@ -119,11 +119,15 @@ class FunctionRegistry:
 def get_default_registry() -> FunctionRegistry:
     """
     Create and populate the default function registry with Jayatilake experiment functions.
-    
+
     This registry catalogs all functions from jayatilake_experiment_cell_functions.py
+
+    NOTE: This function now merges both manual registrations (defined below) and
+    decorator-based registrations (from functions using @register_function decorator).
+    Decorator-based registrations take precedence over manual ones if there's a conflict.
     """
     registry = FunctionRegistry()
-    
+
     # =========================================================================
     # STANDARD WORKFLOW ORCHESTRATOR FUNCTIONS
     # =========================================================================
@@ -678,7 +682,7 @@ def get_default_registry() -> FunctionRegistry:
         cloneable=True,
         module_path="jayatilake_experiment_cell_functions"
     ))
-    
+
     registry.register(FunctionMetadata(
         name="initialize_cell_ages",
         display_name="Initialize Cell Ages",
@@ -705,11 +709,11 @@ def get_default_registry() -> FunctionRegistry:
         cloneable=False,
         module_path="jayatilake_experiment_cell_functions"
     ))
-    
+
     # =========================================================================
     # INTRACELLULAR STAGE FUNCTIONS
     # =========================================================================
-    
+
     registry.register(FunctionMetadata(
         name="calculate_cell_metabolism",
         display_name="Calculate Cell Metabolism",
@@ -752,7 +756,7 @@ def get_default_registry() -> FunctionRegistry:
         cloneable=True,
         module_path="jayatilake_experiment_cell_functions"
     ))
-    
+
     registry.register(FunctionMetadata(
         name="update_cell_metabolic_state",
         display_name="Update Cell Metabolic State",
@@ -764,7 +768,7 @@ def get_default_registry() -> FunctionRegistry:
         cloneable=False,
         module_path="jayatilake_experiment_cell_functions"
     ))
-    
+
     registry.register(FunctionMetadata(
         name="should_divide",
         display_name="Check Division (ATP-based)",
@@ -1039,6 +1043,407 @@ def get_default_registry() -> FunctionRegistry:
         cloneable=False,
         module_path="src.workflow.standard_functions"
     ))
+
+    # =====================================================================
+    # DEBUG WORKFLOW FUNCTIONS (PRINT-ONLY)
+    # =====================================================================
+
+    # Initialization debug functions
+    registry.register(FunctionMetadata(
+        name="debug_initialization_1",
+        display_name="Debug Initialization 1",
+        description="Debug function for initialization stage (prints its name and stage)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] initialization: debug_initialization_1"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_initialization_2",
+        display_name="Debug Initialization 2",
+        description="Debug function for initialization stage (prints its name and stage)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] initialization: debug_initialization_2"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_initialization_3",
+        display_name="Debug Initialization 3",
+        description="Debug function for initialization stage (prints its name and stage)",
+        category=FunctionCategory.INITIALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] initialization: debug_initialization_3"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    # Intracellular debug functions
+    registry.register(FunctionMetadata(
+        name="debug_intracellular_1",
+        display_name="Debug Intracellular 1",
+        description="Debug function for intracellular stage (prints its name and stage)",
+        category=FunctionCategory.INTRACELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intracellular: debug_intracellular_1"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_intracellular_2",
+        display_name="Debug Intracellular 2",
+        description="Debug function for intracellular stage (prints its name and stage)",
+        category=FunctionCategory.INTRACELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intracellular: debug_intracellular_2"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_intracellular_3",
+        display_name="Debug Intracellular 3",
+        description="Debug function for intracellular stage (prints its name and stage)",
+        category=FunctionCategory.INTRACELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intracellular: debug_intracellular_3"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    # Microenvironment (diffusion) debug functions
+    registry.register(FunctionMetadata(
+        name="debug_microenvironment_1",
+        display_name="Debug Microenvironment 1",
+        description="Debug function for microenvironment stage (prints its name and stage)",
+        category=FunctionCategory.DIFFUSION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] microenvironment: debug_microenvironment_1"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_microenvironment_2",
+        display_name="Debug Microenvironment 2",
+        description="Debug function for microenvironment stage (prints its name and stage)",
+        category=FunctionCategory.DIFFUSION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] microenvironment: debug_microenvironment_2"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_microenvironment_3",
+        display_name="Debug Microenvironment 3",
+        description="Debug function for microenvironment stage (prints its name and stage)",
+        category=FunctionCategory.DIFFUSION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] microenvironment: debug_microenvironment_3"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    # Intercellular debug functions
+    registry.register(FunctionMetadata(
+        name="debug_intercellular_1",
+        display_name="Debug Intercellular 1",
+        description="Debug function for intercellular stage (prints its name and stage)",
+        category=FunctionCategory.INTERCELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intercellular: debug_intercellular_1"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_intercellular_2",
+        display_name="Debug Intercellular 2",
+        description="Debug function for intercellular stage (prints its name and stage)",
+        category=FunctionCategory.INTERCELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intercellular: debug_intercellular_2"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_intercellular_3",
+        display_name="Debug Intercellular 3",
+        description="Debug function for intercellular stage (prints its name and stage)",
+        category=FunctionCategory.INTERCELLULAR,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] intercellular: debug_intercellular_3"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    # Finalization debug functions
+    registry.register(FunctionMetadata(
+        name="debug_finalization_1",
+        display_name="Debug Finalization 1",
+        description="Debug function for finalization stage (prints its name and stage)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] finalization: debug_finalization_1"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_finalization_2",
+        display_name="Debug Finalization 2",
+        description="Debug function for finalization stage (prints its name and stage)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] finalization: debug_finalization_2"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="debug_finalization_3",
+        display_name="Debug Finalization 3",
+        description="Debug function for finalization stage (prints its name and stage)",
+        category=FunctionCategory.FINALIZATION,
+        parameters=[
+            ParameterDefinition(
+                name="message",
+                type=ParameterType.STRING,
+                description="Debug message to print (typically from a connected parameter node)",
+                default="[DEBUG] finalization: debug_finalization_3"
+            )
+        ],
+        inputs=["context"],
+        outputs=[],
+        cloneable=False,
+        module_path="src.workflow.functions.debug.debug_dummy_functions",
+        source_file="src/workflow/functions/debug/debug_dummy_functions.py"
+    ))
+
+    # =====================================================================
+    # OUTPUT/EXPORT FUNCTIONS (CSV, VTK)
+    # =====================================================================
+
+    # CSV export functions (for 2D simulations)
+    registry.register(FunctionMetadata(
+        name="export_csv_checkpoint",
+        display_name="Export CSV Checkpoint",
+        description="Export 2D simulation checkpoint (cells + substances) to CSV format",
+        category=FunctionCategory.UTILITY,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True,
+        module_path="src.workflow.functions.output.export_csv",
+        source_file="src/workflow/functions/output/export_csv.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="export_csv_checkpoint_conditional",
+        display_name="Export CSV Checkpoint (Conditional)",
+        description="Export CSV checkpoint only if current step matches config.output.save_cellstate_interval",
+        category=FunctionCategory.UTILITY,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True,
+        module_path="src.workflow.functions.output.export_csv",
+        source_file="src/workflow/functions/output/export_csv.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="export_csv_cells",
+        display_name="Export CSV Cells",
+        description="Export only cell states to CSV format",
+        category=FunctionCategory.UTILITY,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True,
+        module_path="src.workflow.functions.output.export_csv",
+        source_file="src/workflow/functions/output/export_csv.py"
+    ))
+
+    registry.register(FunctionMetadata(
+        name="export_csv_substances",
+        display_name="Export CSV Substances",
+        description="Export only substance fields to CSV format",
+        category=FunctionCategory.UTILITY,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True,
+        module_path="src.workflow.functions.output.export_csv",
+        source_file="src/workflow/functions/output/export_csv.py"
+    ))
+
+    # VTK export functions (for 3D simulations)
+    registry.register(FunctionMetadata(
+        name="export_vtk_checkpoint",
+        display_name="Export VTK Checkpoint",
+        description="Export 3D simulation checkpoint (cells + substances) to VTK format",
+        category=FunctionCategory.UTILITY,
+        parameters=[],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True,
+        module_path="src.workflow.functions.output.export_vtk",
+        source_file="src/workflow/functions/output/export_vtk.py"
+    ))
+
+    # =========================================================================
+    # MERGE WITH DECORATOR-BASED REGISTRATIONS
+    # =========================================================================
+    # Import decorator registry and merge it with manual registrations
+    # Decorator-based registrations take precedence over manual ones
+    try:
+        from src.workflow.decorators import get_decorator_registry, merge_registries
+        decorator_registry = get_decorator_registry()
+
+        # Merge registries (decorator registrations override manual ones)
+        registry = merge_registries(registry, decorator_registry)
+
+        # Log decorator-based registrations
+        decorator_count = len(decorator_registry.functions)
+        if decorator_count > 0:
+            print(f"[REGISTRY] Merged {decorator_count} decorator-based function(s)")
+            for name in decorator_registry.functions.keys():
+                print(f"  - {name}")
+    except ImportError as e:
+        print(f"[REGISTRY] Warning: Could not import decorator registry: {e}")
 
     return registry
 

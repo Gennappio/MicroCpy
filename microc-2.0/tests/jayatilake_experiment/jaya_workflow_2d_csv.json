@@ -401,6 +401,28 @@
           "parameters": {
             "config_file": "tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml"
           },
+          "parameter_nodes": [
+            "param_simulation",
+            "param_domain",
+            "param_population",
+            "param_output",
+            "param_fgf",
+            "param_oxygen",
+            "param_glucose",
+            "param_lactate",
+            "param_h",
+            "param_egf",
+            "param_tgfa",
+            "param_hgf",
+            "param_egfrd",
+            "param_fgfrd",
+            "param_gi",
+            "param_cmetd",
+            "param_ph",
+            "param_mct1d",
+            "param_mct4d",
+            "param_glut1d"
+          ],
           "enabled": true,
           "position": {
             "x": 300,
@@ -442,6 +464,69 @@
     },
     "macrostep": {
       "enabled": true,
+      "steps": 1,
+      "parameters": [],
+      "functions": [
+        {
+          "id": "intracellular_node",
+          "function_name": "standard_intracellular_update",
+          "description": "Intracellular update (macrostep node controlling intracellular canvas)",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 250
+          },
+          "step_count": 1
+        },
+        {
+          "id": "microenvironment_node",
+          "function_name": "standard_diffusion_update",
+          "description": "Microenvironment/diffusion update (macrostep node controlling microenvironment canvas)",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 350,
+            "y": 250
+          },
+          "step_count": 1
+        },
+        {
+          "id": "intercellular_node",
+          "function_name": "standard_intercellular_update",
+          "description": "Intercellular update (macrostep node controlling intercellular canvas)",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 600,
+            "y": 250
+          },
+          "step_count": 1
+        },
+        {
+          "id": "csv_export_node",
+          "function_name": "export_csv_checkpoint_conditional",
+          "description": "Export CSV checkpoint based on config.output.save_cellstate_interval",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 850,
+            "y": 250
+          },
+          "step_count": 1
+        }
+      ],
+      "execution_order": [
+        "intracellular_node",
+        "microenvironment_node",
+        "intercellular_node",
+        "csv_export_node"
+      ]
+    },
+
+    "intracellular": {
+      "enabled": true,
+      "steps": 1,
       "parameters": [
         {
           "id": "param_metabolism",
@@ -478,7 +563,34 @@
             "x": -150,
             "y": 450
           }
-        },
+        }
+      ],
+      "functions": [
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "description": "Standard intracellular update: metabolism, gene networks, phenotypes, and death via engine helpers (matches YAML behavior)",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_metabolism",
+            "param_gene_networks",
+            "param_death"
+          ],
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 250
+          }
+        }
+      ],
+      "execution_order": [
+        "intracellular_1"
+      ]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [
         {
           "id": "param_diffusion",
           "label": "Diffusion Solver Parameters",
@@ -489,9 +601,34 @@
           },
           "position": {
             "x": -100,
-            "y": 550
+            "y": 450
           }
-        },
+        }
+      ],
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "description": "Standard diffusion update: run diffusion solver with cell-based reactions (matches YAML engine)",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_diffusion"
+          ],
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 450
+          }
+        }
+      ],
+      "execution_order": [
+        "diffusion_1"
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "steps": 1,
+      "parameters": [
         {
           "id": "param_division",
           "label": "Cell Division Parameters",
@@ -506,36 +643,14 @@
       ],
       "functions": [
         {
-          "id": "intracellular_1",
-          "function_name": "standard_intracellular_update",
-          "description": "Standard intracellular update: metabolism, gene networks, phenotypes, and death via engine helpers (matches YAML behavior)",
-          "parameters": {},
-          "enabled": true,
-          "step_count": 1,
-          "position": {
-            "x": 300,
-            "y": 250
-          }
-        },
-        {
-          "id": "diffusion_1",
-          "function_name": "standard_diffusion_update",
-          "description": "Standard diffusion update: run diffusion solver with cell-based reactions (matches YAML engine)",
-          "parameters": {},
-          "enabled": true,
-          "step_count": 1,
-          "position": {
-            "x": 300,
-            "y": 450
-          }
-        },
-        {
           "id": "intercellular_1",
           "function_name": "standard_intercellular_update",
           "description": "Standard intercellular update: division and interactions via engine helpers (matches YAML behavior)",
           "parameters": {},
+          "parameter_nodes": [
+            "param_division"
+          ],
           "enabled": true,
-          "step_count": 1,
           "position": {
             "x": 300,
             "y": 700
@@ -543,8 +658,6 @@
         }
       ],
       "execution_order": [
-        "intracellular_1",
-        "diffusion_1",
         "intercellular_1"
       ]
     },

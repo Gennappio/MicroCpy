@@ -146,7 +146,8 @@ const useWorkflowStore = create((set, get) => ({
         data: {
           label: func.function_name,
           functionName: func.function_name,
-          parameters: {}, // Clear parameters since they're now in parameter nodes
+          // Preserve function-level parameters (e.g., config_file) so they survive export
+          parameters: func.parameters || {},
           enabled: func.enabled !== false,
           description: func.description || '',
           functionFile: func.function_file || func.parameters?.function_file || '',

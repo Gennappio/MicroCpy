@@ -8,8 +8,16 @@ Users can customize this to implement different phenotype determination logic.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Update Phenotypes",
+    description="Update cell phenotypes based on gene network states",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_phenotypes(
     population,
     simulator,

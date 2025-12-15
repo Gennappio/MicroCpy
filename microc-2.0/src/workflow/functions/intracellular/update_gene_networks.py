@@ -9,8 +9,16 @@ Users can customize this to implement different gene regulatory models.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Update Gene Networks",
+    description="Update gene network states and propagate signals",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_gene_networks(
     population,
     simulator,

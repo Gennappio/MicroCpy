@@ -8,8 +8,16 @@ Users can customize this to implement different cell death criteria.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Remove Dead Cells",
+    description="Remove cells with ATP below death threshold",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def remove_dead_cells(
     population,
     simulator,

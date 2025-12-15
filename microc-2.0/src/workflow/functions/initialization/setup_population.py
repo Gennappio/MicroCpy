@@ -5,8 +5,30 @@ This function initializes the cell population and gene network infrastructure.
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Setup Cell Population",
+    description="Initialize cell population and gene network",
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "enable_gene_network",
+            "type": "BOOL",
+            "description": "Whether to enable the gene network",
+            "default": True
+        },
+        {
+            "name": "custom_functions_module",
+            "type": "STRING",
+            "description": "Path to custom functions module",
+            "default": "src/config/custom_functions.py"
+        }
+    ],
+    outputs=["population", "gene_network"],
+    cloneable=False
+)
 def setup_population(
     context: Dict[str, Any],
     enable_gene_network: bool = True,

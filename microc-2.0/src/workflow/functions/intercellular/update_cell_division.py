@@ -11,8 +11,16 @@ Users can customize this to implement different division criteria.
 
 from typing import Dict, Any
 import random
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Update Cell Division",
+    description="Handle cell division based on ATP and cell cycle",
+    category="INTERCELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_cell_division(
     population,
     simulator,

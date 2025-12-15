@@ -5,8 +5,16 @@ This function initializes substances and creates the diffusion simulator.
 """
 
 from typing import Dict, Any, List
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Setup Substances",
+    description="Initialize substances and diffusion simulator",
+    category="INITIALIZATION",
+    outputs=["simulator"],
+    cloneable=False
+)
 def setup_substances(
     context: Dict[str, Any],
     substances: List[Dict[str, Any]] = None,

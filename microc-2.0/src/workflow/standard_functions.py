@@ -9,9 +9,9 @@ in separate files under src/workflow/functions/ for easy GUI viewing/editing.
 They are re-imported here for backward compatibility.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
-from src.io.initial_state import InitialStateManager
+from src.workflow.decorators import register_function
 
 # Import granular functions from their individual files
 from src.workflow.functions.initialization import (
@@ -38,11 +38,54 @@ from src.workflow.functions.finalization import (
     generate_initial_plots,
 )
 
+from src.workflow.functions.debug.debug_dummy_functions import (
+    debug_initialization_1,
+    debug_initialization_2,
+    debug_initialization_3,
+    debug_intracellular_1,
+    debug_intracellular_2,
+    debug_intracellular_3,
+    debug_microenvironment_1,
+    debug_microenvironment_2,
+    debug_microenvironment_3,
+    debug_intercellular_1,
+    debug_intercellular_2,
+    debug_intercellular_3,
+    debug_finalization_1,
+    debug_finalization_2,
+    debug_finalization_3,
+)
+from src.workflow.functions.output.export_csv import (
+    export_csv_checkpoint,
+    export_csv_checkpoint_conditional,
+    export_csv_cells,
+    export_csv_substances,
+)
+from src.workflow.functions.output.export_vtk import (
+    export_vtk_checkpoint,
+)
+
 
 # ============================================================================
 # INITIALIZATION FUNCTIONS
 # ============================================================================
 
+@register_function(
+    display_name="Load Config File",
+    description="Load YAML configuration file and setup simulation infrastructure",
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "config_file",
+            "type": "STRING",
+            "description": "Path to YAML configuration file",
+            "default": "config/default_config.yaml",
+            "required": True
+        }
+    ],
+    outputs=["config", "simulator", "population", "gene_network"],
+    cloneable=False
+)
 def load_config_file(
     context: Dict[str, Any],
     config_file: str,
@@ -196,6 +239,13 @@ def initialize_simulation_infrastructure(
 
 # --- Monolithic Intracellular Function (for backward compatibility) ---
 
+@register_function(
+    display_name="Standard Intracellular Update",
+    description="Standard intracellular update (metabolism, gene networks, phenotypes, death)",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def standard_intracellular_update(
     population,
     simulator,
@@ -207,14 +257,14 @@ def standard_intracellular_update(
 ) -> None:
     """
     Standard intracellular update workflow function.
-    
+
     This is the default behavior when no custom workflow is specified.
     Calls all the standard intracellular operations in order:
     1. Update intracellular processes (metabolism, gene networks)
     2. Update gene networks based on environment
     3. Update phenotypes based on gene states
     4. Remove dead cells
-    
+
     Args:
         population: Population object
         simulator: Diffusion simulator
@@ -225,13 +275,13 @@ def standard_intracellular_update(
     """
     # Run intracellular processes (calls custom metabolism functions)
     helpers['update_intracellular']()
-    
+
     # Update gene networks based on current environment
     helpers['update_gene_networks']()
-    
+
     # Update phenotypes based on gene states
     helpers['update_phenotypes']()
-    
+
     # Remove dead cells
     helpers['remove_dead_cells']()
 
@@ -246,6 +296,13 @@ def standard_intracellular_update(
 
 # --- Monolithic Diffusion Function (for backward compatibility) ---
 
+@register_function(
+    display_name="Standard Diffusion Update",
+    description="Standard diffusion update (run diffusion solver)",
+    category="DIFFUSION",
+    outputs=[],
+    cloneable=False
+)
 def standard_diffusion_update(
     population,
     simulator,
@@ -281,6 +338,13 @@ def standard_diffusion_update(
 
 # --- Monolithic Intercellular Function (for backward compatibility) ---
 
+@register_function(
+    display_name="Standard Intercellular Update",
+    description="Standard intercellular update (cell division, migration)",
+    category="INTERCELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def standard_intercellular_update(
     population,
     simulator,
@@ -318,23 +382,23 @@ def custom_intracellular_with_logging(
 ) -> None:
     """
     Example custom intracellular function with logging.
-    
+
     Shows how to add custom behavior around standard operations.
     """
     print(f"[CUSTOM] Starting intracellular update at step {step}")
-    
+
     # Get cell count before
     cell_count_before = len(population.cells)
-    
+
     # Run standard intracellular update
     helpers['update_intracellular']()
     helpers['update_gene_networks']()
     helpers['update_phenotypes']()
     helpers['remove_dead_cells']()
-    
+
     # Get cell count after
     cell_count_after = len(population.cells)
-    
+
     if cell_count_after < cell_count_before:
         print(f"[CUSTOM] {cell_count_before - cell_count_after} cells died")
 
@@ -350,18 +414,18 @@ def custom_diffusion_with_validation(
 ) -> None:
     """
     Example custom diffusion function with validation.
-    
+
     Shows how to add validation around diffusion.
     """
     # Get concentrations before
     conc_before = simulator.get_substance_concentrations()
-    
+
     # Run diffusion
     helpers['run_diffusion']()
-    
+
     # Get concentrations after
     conc_after = simulator.get_substance_concentrations()
-    
+
     # Validate (example: check for negative concentrations)
     for substance_name, conc_field in conc_after.items():
         min_conc = conc_field.min()
@@ -369,13 +433,20 @@ def custom_diffusion_with_validation(
             print(f"[WARNING] Negative concentration detected for {substance_name}: {min_conc}")
 
 
+@register_function(
+    display_name="Minimal Intracellular",
+    description="Minimal intracellular update (metabolism only, no phenotype changes)",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def minimal_intracellular(
     helpers: Dict[str, Any],
     **kwargs
 ) -> None:
     """
     Minimal intracellular update - only metabolism, no phenotype changes.
-    
+
     Example of a custom workflow that skips certain operations.
     """
     # Only run metabolism, skip phenotype updates
@@ -385,13 +456,20 @@ def minimal_intracellular(
     helpers['remove_dead_cells']()
 
 
+@register_function(
+    display_name="No Death Intracellular",
+    description="Intracellular update without cell death",
+    category="INTRACELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def no_death_intracellular(
     helpers: Dict[str, Any],
     **kwargs
 ) -> None:
     """
     Intracellular update without cell death.
-    
+
     Example of a custom workflow that prevents cell death.
     """
     helpers['update_intracellular']()
@@ -409,7 +487,7 @@ def intracellular_with_analysis(
 ) -> None:
     """
     Intracellular update with real-time analysis.
-    
+
     Example showing how to add custom analysis during simulation.
     """
     # Run standard updates
@@ -417,14 +495,14 @@ def intracellular_with_analysis(
     helpers['update_gene_networks']()
     helpers['update_phenotypes']()
     helpers['remove_dead_cells']()
-    
+
     # Custom analysis
     if step % 10 == 0:  # Every 10 steps
         phenotype_counts = {}
         for cell in population.cells.values():
             phenotype = cell.phenotype
             phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
-        
+
         print(f"[ANALYSIS] Step {step} phenotype distribution: {phenotype_counts}")
 
 
@@ -454,6 +532,13 @@ def diffusion_with_boundary_check(
 # FINALIZATION FUNCTIONS
 # ============================================================================
 
+@register_function(
+    display_name="Standard Data Collection",
+    description="Collect final simulation statistics (population, substances, phenotypes)",
+    category="FINALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def standard_data_collection(
     population,
     simulator,
@@ -516,6 +601,13 @@ def export_final_state(
     pass
 
 
+@register_function(
+    display_name="Generate Summary Plots",
+    description="Generate summary plots (substance heatmaps, cell distributions)",
+    category="FINALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def generate_summary_plots(
     context: Dict[str, Any],
     **kwargs
@@ -650,6 +742,13 @@ def save_simulation_data(
         return False
 
 
+@register_function(
+    display_name="Print Simulation Summary",
+    description="Print simulation summary (results, statistics, output paths)",
+    category="FINALIZATION",
+    outputs=[],
+    cloneable=False
+)
 def print_simulation_summary(
     context: Dict[str, Any],
     **kwargs
@@ -692,4 +791,28 @@ def print_simulation_summary(
         import traceback
         traceback.print_exc()
         return False
+
+
+# =============================================================================
+# IMPORT DECORATOR-BASED FUNCTIONS
+# =============================================================================
+# Import modules that contain decorated functions to trigger decorator execution
+# This ensures decorator-based registrations are added to the registry
+try:
+    # Import jayatilake experiment functions to register decorated functions
+    import sys
+    import os
+
+    # Add tests directory to path if not already there
+    tests_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'tests', 'jayatilake_experiment')
+    tests_dir = os.path.abspath(tests_dir)
+    if os.path.exists(tests_dir) and tests_dir not in sys.path:
+        sys.path.insert(0, tests_dir)
+
+    # Import the module to trigger decorator execution
+    import jayatilake_experiment_cell_functions
+
+    print("[WORKFLOW] Imported decorated functions from jayatilake_experiment_cell_functions")
+except ImportError as e:
+    print(f"[WORKFLOW] Warning: Could not import decorated functions: {e}")
 

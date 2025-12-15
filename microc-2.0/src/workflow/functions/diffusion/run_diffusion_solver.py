@@ -16,8 +16,39 @@ Users can customize this to implement different diffusion solvers or boundary co
 """
 
 from typing import Dict, Any
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Run Diffusion Solver",
+    description="Solve diffusion PDE with cell reactions",
+    category="DIFFUSION",
+    parameters=[
+        {
+            "name": "max_iterations",
+            "type": "INT",
+            "description": "Maximum solver iterations",
+            "default": 1000,
+            "min_value": 1
+        },
+        {
+            "name": "tolerance",
+            "type": "FLOAT",
+            "description": "Convergence tolerance",
+            "default": 1e-6,
+            "min_value": 0.0
+        },
+        {
+            "name": "solver_type",
+            "type": "STRING",
+            "description": "Solver type",
+            "default": "steady_state",
+            "options": ["steady_state", "transient"]
+        }
+    ],
+    outputs=[],
+    cloneable=False
+)
 def run_diffusion_solver(
     population,
     simulator,

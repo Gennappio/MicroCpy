@@ -12,8 +12,16 @@ Users can customize this to implement different migration strategies.
 from typing import Dict, Any
 import random
 import math
+from src.workflow.decorators import register_function
 
 
+@register_function(
+    display_name="Update Cell Migration",
+    description="Handle cell migration with chemotaxis and random walk",
+    category="INTERCELLULAR",
+    outputs=[],
+    cloneable=False
+)
 def update_cell_migration(
     population,
     simulator,
