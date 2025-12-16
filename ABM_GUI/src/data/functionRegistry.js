@@ -460,7 +460,17 @@ export const functionRegistry = getRegistrySync();
  */
 export async function getFunctionsByCategoryAsync(category) {
   const registry = await fetchRegistry();
-  return Object.values(registry).filter((func) => func.category === category);
+
+  // Map GUI stage names to backend category names
+  let backendCategory = category;
+  if (category === 'microenvironment') {
+    backendCategory = 'diffusion';
+  } else if (category === 'macrostep') {
+    // Macrostep should show utility functions (orchestrators)
+    backendCategory = 'utility';
+  }
+
+  return Object.values(registry).filter((func) => func.category === backendCategory);
 }
 
 /**
@@ -468,7 +478,17 @@ export async function getFunctionsByCategoryAsync(category) {
  */
 export const getFunctionsByCategory = (category) => {
   const registry = getRegistrySync();
-  return Object.values(registry).filter((func) => func.category === category);
+
+  // Map GUI stage names to backend category names
+  let backendCategory = category;
+  if (category === 'microenvironment') {
+    backendCategory = 'diffusion';
+  } else if (category === 'macrostep') {
+    // Macrostep should show utility functions (orchestrators)
+    backendCategory = 'utility';
+  }
+
+  return Object.values(registry).filter((func) => func.category === backendCategory);
 };
 
 /**

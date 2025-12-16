@@ -25,8 +25,11 @@ const FunctionPalette = ({ currentStage }) => {
     const loadFunctions = async () => {
       setIsLoading(true);
       try {
-        await fetchRegistry();
+        console.log('[PALETTE] Loading functions for stage:', currentStage);
+        const registry = await fetchRegistry();
+        console.log('[PALETTE] Registry loaded, total functions:', Object.keys(registry).length);
         const functions = getFunctionsByCategory(currentStage);
+        console.log('[PALETTE] Functions for stage', currentStage, ':', functions.length);
         setStageFunctions(functions);
       } catch (error) {
         console.error('[PALETTE] Error loading functions:', error);
