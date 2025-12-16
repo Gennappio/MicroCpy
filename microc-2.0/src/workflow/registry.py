@@ -126,6 +126,7 @@ def get_default_registry() -> FunctionRegistry:
     # Import all modules with decorated functions to trigger registration
     import src.workflow.standard_functions
     import tests.jayatilake_experiment.jayatilake_experiment_cell_functions
+    import src.workflow.functions.macrostep  # Macrostep stage runner functions
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
