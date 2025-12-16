@@ -1284,19 +1284,34 @@ def run_workflow_mode(args):
             'workflow_file': str(workflow_path.absolute())
         }
 
-        # Execute initialization stage to load config and setup infrastructure
-        print(f"[WORKFLOW] Executing initialization stage...")
-        context = executor.execute_initialization(context)
+        # Check if initialization stage has functions
+        init_stage = workflow.get_stage("initialization")
+        has_init_functions = init_stage and init_stage.enabled and len(init_stage.get_enabled_functions_in_order()) > 0
 
-        # Extract components from context (populated by initialization stage)
-        config = context.get('config')
-        simulator = context.get('simulator')
-        population = context.get('population')
-        gene_network = context.get('gene_network')
-        custom_functions_path = context.get('custom_functions_path')
+        if has_init_functions:
+            # Execute initialization stage to load config and setup infrastructure
+            print(f"[WORKFLOW] Executing initialization stage...")
+            context = executor.execute_initialization(context)
 
-        if not all([config, simulator, population, gene_network]):
-            raise ValueError("Initialization stage did not populate required context (config, simulator, population, gene_network)")
+            # Extract components from context (populated by initialization stage)
+            config = context.get('config')
+            simulator = context.get('simulator')
+            population = context.get('population')
+            gene_network = context.get('gene_network')
+            custom_functions_path = context.get('custom_functions_path')
+
+            if not all([config, simulator, population, gene_network]):
+                raise ValueError("Initialization stage did not populate required context (config, simulator, population, gene_network)")
+        else:
+            # No initialization functions - workflow needs a config file
+            print(f"[WORKFLOW] No initialization functions found")
+            print(f"[WORKFLOW] ERROR: Workflow mode requires either:")
+            print(f"   1. Initialization functions that set up config/simulator/population/gene_network")
+            print(f"   2. OR use default mode with both --sim and --workflow arguments")
+            print(f"")
+            print(f"To run this workflow with a config file, use:")
+            print(f"   python run_sim.py --sim <config.yaml> --workflow {workflow_path}")
+            sys.exit(1)
 
         # Load custom functions module
         print(f"[WORKFLOW] Custom functions path from context: {custom_functions_path}")

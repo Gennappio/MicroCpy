@@ -58,6 +58,7 @@ def _log_debug(stage: str, function_name: str, context: Optional[Dict[str, Any]]
     description="Debug function for initialization stage (prints message)",
     category="INITIALIZATION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -70,6 +71,7 @@ def debug_initialization_1(context: Optional[Dict[str, Any]] = None, message: st
     description="Debug function for initialization stage (prints message)",
     category="INITIALIZATION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -99,6 +101,7 @@ def debug_initialization_3(context: Optional[Dict[str, Any]] = None, message: st
     description="Debug function for intracellular stage (prints message)",
     category="INTRACELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -111,6 +114,7 @@ def debug_intracellular_1(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for intracellular stage (prints message)",
     category="INTRACELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -123,6 +127,7 @@ def debug_intracellular_2(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for intracellular stage (prints message)",
     category="INTRACELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -140,6 +145,7 @@ def debug_intracellular_3(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for microenvironment stage (prints message)",
     category="DIFFUSION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -152,6 +158,7 @@ def debug_microenvironment_1(context: Optional[Dict[str, Any]] = None, message: 
     description="Debug function for microenvironment stage (prints message)",
     category="DIFFUSION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -164,6 +171,7 @@ def debug_microenvironment_2(context: Optional[Dict[str, Any]] = None, message: 
     description="Debug function for microenvironment stage (prints message)",
     category="DIFFUSION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -181,6 +189,7 @@ def debug_microenvironment_3(context: Optional[Dict[str, Any]] = None, message: 
     description="Debug function for intercellular stage (prints message)",
     category="INTERCELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -193,6 +202,7 @@ def debug_intercellular_1(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for intercellular stage (prints message)",
     category="INTERCELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -205,6 +215,7 @@ def debug_intercellular_2(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for intercellular stage (prints message)",
     category="INTERCELLULAR",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -222,6 +233,7 @@ def debug_intercellular_3(context: Optional[Dict[str, Any]] = None, message: str
     description="Debug function for finalization stage (prints message)",
     category="FINALIZATION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -234,6 +246,7 @@ def debug_finalization_1(context: Optional[Dict[str, Any]] = None, message: str 
     description="Debug function for finalization stage (prints message)",
     category="FINALIZATION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
@@ -246,6 +259,7 @@ def debug_finalization_2(context: Optional[Dict[str, Any]] = None, message: str 
     description="Debug function for finalization stage (prints message)",
     category="FINALIZATION",
     parameters=[{"name": "message", "type": "STRING", "description": "Debug message", "default": ""}],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )
