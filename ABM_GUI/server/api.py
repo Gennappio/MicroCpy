@@ -88,16 +88,20 @@ def run_simulation_async(config_path, workflow_path):
         # Get microc-2.0 directory (working directory for simulation)
         microc_dir = microc_path.parent
 
-        # Build command - use either --workflow or --sim (mutually exclusive)
+        # Build command - can use both --sim and --workflow together
         cmd = [
             sys.executable,
             str(microc_path)
         ]
 
-        if workflow_path:
-            # Workflow mode - complete user control
+        if workflow_path and config_path:
+            # Workflow mode with config file - workflow controls execution, config provides setup
+            cmd.extend(["--sim", config_path, "--workflow", workflow_path])
+            log_queue.put(f"[START] Running workflow with config: {config_path} + {workflow_path}\n")
+        elif workflow_path:
+            # Workflow-only mode - workflow must provide initialization
             cmd.extend(["--workflow", workflow_path])
-            log_queue.put(f"[START] Running workflow mode: {workflow_path}\n")
+            log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
         elif config_path:
             # Default pipeline mode - hardcoded behavior
             cmd.extend(["--sim", config_path])

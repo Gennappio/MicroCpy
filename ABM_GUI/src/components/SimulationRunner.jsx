@@ -14,7 +14,8 @@ const SimulationRunner = () => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  
+  const [configPath, setConfigPath] = useState('tests/jayatilake_experiment/jayatilake_experiment_config.yaml');
+
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
@@ -131,17 +132,27 @@ const SimulationRunner = () => {
       const workflow = exportWorkflow();
 
       addLog('info', '📋 Exporting workflow...');
-      addLog('info', '🚀 Starting workflow mode (config loaded by workflow functions)');
 
-      // Start simulation in workflow mode (no config_path)
+      // Prepare request body
+      const requestBody = {
+        workflow: workflow,
+      };
+
+      // Add config path if provided
+      if (configPath && configPath.trim()) {
+        requestBody.config_path = configPath.trim();
+        addLog('info', `🚀 Starting workflow with config: ${configPath}`);
+      } else {
+        addLog('info', '🚀 Starting workflow-only mode (config loaded by workflow functions)');
+      }
+
+      // Start simulation
       const response = await fetch(`${API_BASE_URL}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          workflow: workflow,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -221,6 +232,25 @@ const SimulationRunner = () => {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Config Path Input */}
+      <div className="config-input-section">
+        <label htmlFor="config-path">
+          Config File (optional - leave empty if workflow provides initialization):
+        </label>
+        <input
+          id="config-path"
+          type="text"
+          value={configPath}
+          onChange={(e) => setConfigPath(e.target.value)}
+          placeholder="tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
+          disabled={isRunning}
+          className="config-path-input"
+        />
+        <small className="config-hint">
+          Path relative to microc-2.0 directory. Leave empty if your workflow has initialization functions.
+        </small>
       </div>
 
       {error && (
