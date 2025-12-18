@@ -19,7 +19,7 @@
           "enabled": true,
           "parameters": {
             "name": "Jayatilake 2D CSV",
-            "duration": 0.5,
+            "total_steps": 5,
             "dt": 0.1,
             "output_dir": "results",
             "save_interval": 1,
@@ -259,9 +259,9 @@
     },
     "macrostep": {
       "enabled": true,
-	      "steps": 1,
-	      "parameters": [],
-	      "description": "Macrostep orchestrating intracellular, microenvironment, intercellular and CSV export each simulation step.",
+      "steps": 5,
+      "parameters": [],
+      "description": "Macrostep orchestrating intracellular, microenvironment, intercellular and CSV export each simulation step.",
       "functions": [
         {
           "id": "intracellular_step_node",

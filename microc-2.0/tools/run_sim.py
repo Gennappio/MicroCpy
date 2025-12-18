@@ -1366,12 +1366,15 @@ def run_workflow_mode(args):
             context_steps_per_macro = context.get("steps_per_macrostep")
             context_total_steps = context.get("total_steps")
 
-            # Derive total_steps from macrosteps × steps_per_macrostep if needed
-            if context_total_steps is None and context_macrosteps is not None and context_steps_per_macro is not None:
-                try:
-                    context_total_steps = int(context_macrosteps) * int(context_steps_per_macro)
-                except (TypeError, ValueError):
-                    context_total_steps = None
+            # PRIORITY: macrostep stage's steps field overrides everything
+            # This allows the user to control simulation length from the macrostep stage in the GUI
+            macrostep_stage = workflow.get_stage("macrostep")
+            if macrostep_stage and macrostep_stage.enabled and hasattr(macrostep_stage, 'steps') and macrostep_stage.steps is not None:
+                macrostep_steps = macrostep_stage.steps
+                if macrostep_steps > 0:
+                    # macrostep.steps controls the total number of engine steps
+                    context_total_steps = macrostep_steps
+                    print(f"[WORKFLOW] Using macrostep.steps from workflow: {macrostep_steps}")
 
             # Choose dt: prefer workflow-provided value, fall back to config
             if context_dt is not None:

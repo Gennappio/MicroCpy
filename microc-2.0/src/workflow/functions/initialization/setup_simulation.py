@@ -12,11 +12,11 @@ from src.workflow.decorators import register_function
 
 @register_function(
     display_name="Setup Simulation",
-    description="Initialize simulation parameters (name, duration, timestep)",
+    description="Initialize simulation parameters (name, timestep, total steps)",
     category="INITIALIZATION",
     parameters=[
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "MicroCpy Simulation"},
-        {"name": "duration", "type": "FLOAT", "description": "Total simulation time", "default": 10.0},
+        {"name": "total_steps", "type": "INT", "description": "Total number of simulation steps", "default": 100},
         {"name": "dt", "type": "FLOAT", "description": "Timestep size", "default": 0.1},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
         {"name": "save_interval", "type": "INT", "description": "How often to save data", "default": 10},
@@ -30,7 +30,7 @@ from src.workflow.decorators import register_function
 def setup_simulation(
     context: Dict[str, Any],
     name: str = "MicroCpy Simulation",
-    duration: float = 10.0,
+    total_steps: int = 100,
     dt: float = 0.1,
     output_dir: str = "results",
     save_interval: int = 10,
@@ -41,11 +41,11 @@ def setup_simulation(
 ) -> bool:
     """
     Setup simulation parameters.
-    
+
     Args:
         context: Workflow context
         name: Simulation name
-        duration: Total simulation time
+        total_steps: Total number of simulation steps
         dt: Timestep size
         output_dir: Base output directory
         save_interval: How often to save data
@@ -53,11 +53,14 @@ def setup_simulation(
         intracellular_step: How often to run intracellular updates (every N steps)
         intercellular_step: How often to run intercellular updates (every N steps)
         **kwargs: Additional parameters
-        
+
     Returns:
         True if successful
     """
     print(f"[WORKFLOW] Setting up simulation: {name}")
+
+    # Compute duration from total_steps and dt
+    duration = float(total_steps) * float(dt)
 
     try:
         # Create timestamped output directory
@@ -68,9 +71,14 @@ def setup_simulation(
         plots_dir = timestamped_dir / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
 
+        # Set total_steps in context so the engine uses it
+        context['total_steps'] = int(total_steps)
+        context['dt'] = float(dt)
+
         # Store simulation parameters in context (for later use)
         context['simulation_params'] = {
             'name': name,
+            'total_steps': int(total_steps),
             'duration': duration,
             'dt': dt,
             'output_dir': timestamped_dir,
@@ -139,8 +147,9 @@ def setup_simulation(
         context['config'] = MinimalConfig()
 
         print(f"   [+] Simulation name: {name}")
-        print(f"   [+] Duration: {duration} time units")
+        print(f"   [+] Total steps: {total_steps}")
         print(f"   [+] Timestep: {dt}")
+        print(f"   [+] Duration: {duration} time units")
         print(f"   [+] Output directory: {timestamped_dir}")
         print(f"   [+] Multi-timescale: diffusion={diffusion_step}, intracellular={intracellular_step}, intercellular={intercellular_step}")
 

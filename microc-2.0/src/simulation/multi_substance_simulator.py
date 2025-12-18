@@ -127,6 +127,41 @@ class MultiSubstanceSimulator:
         if FIPY_AVAILABLE:
             self._setup_fipy()
 
+    def initialize_substances(self, substances: Dict[str, SubstanceConfig]):
+        """(Re)initialize substances from a provided config dict.
+
+        This is used by the workflow initialization functions, which
+        build ``config.substances`` *after* the simulator has been
+        constructed. The classic YAML pipeline already has substances
+        populated before creating the simulator, so it only relies on
+        ``__init__`` and ``_initialize_substances``.
+
+        Workflow path:
+        - ``setup_domain`` creates the simulator with an empty
+          ``config.substances``.
+        - ``add_substance`` / ``setup_substances`` populate
+          ``config.substances`` and then call this method via
+          ``simulator.initialize_substances``.
+
+        By exposing this public method we ensure that the internal
+        ``MultiSubstanceState`` and FiPy variables are brought in sync
+        with the workflow-defined substances, enabling diffusion,
+        environment queries, and final heatmap plotting.
+        """
+
+        # Replace the config's substance dictionary
+        self.config.substances = substances
+
+        # Reset simulation state for substances and (re)initialize
+        # concentration fields from the updated config
+        self.state = MultiSubstanceState()
+        self._initialize_substances()
+
+        # Rebuild FiPy variables for the new set of substances
+        self.fipy_variables = {}
+        if FIPY_AVAILABLE:
+            self._setup_fipy()
+
     def _initialize_substances(self):
         """Initialize all substances from configuration"""
         nx, ny = self.config.domain.nx, self.config.domain.ny

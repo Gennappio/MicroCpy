@@ -284,13 +284,54 @@ class WorkflowExecutor:
 
     def execute_macrostep(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute macrostep stage.
+        Execute macrostep stage ONCE per engine step.
 
         The macrostep stage allows users to configure a custom execution order
         of intracellular, microenvironment, intercellular, and custom functions.
         Each function node in the macrostep canvas can have its own step_count.
+
+        NOTE: Unlike other stages, macrostep.steps controls the ENGINE loop count,
+        not the internal repetition. The macrostep executes once per engine step.
         """
-        return self.execute_stage("macrostep", context)
+        stage = self.workflow.get_stage("macrostep")
+        if not stage or not stage.enabled:
+            return context
+
+        # Get enabled functions in execution order
+        functions = stage.get_enabled_functions_in_order()
+        if not functions:
+            return context
+
+        # Execute each function in order (NO internal repetition - macrostep.steps controls engine loop)
+        for workflow_func in functions:
+            # Determine this function's step count
+            merged_params = stage.merge_parameters_for_function(workflow_func)
+            param_step_count = merged_params.get("step_count")
+            func_step_count = None
+            if param_step_count is not None:
+                try:
+                    func_step_count = int(param_step_count)
+                except (TypeError, ValueError):
+                    func_step_count = None
+
+            if func_step_count is None or func_step_count <= 0:
+                func_step_count = getattr(workflow_func, "step_count", 1)
+
+            func_step_count = max(1, int(func_step_count))
+
+            # Execute function 'func_step_count' times
+            for _ in range(func_step_count):
+                try:
+                    result = self._execute_function(workflow_func, context, stage)
+                    # Update context with results (don't replace it)
+                    if result is not None:
+                        context.update(result)
+                except Exception as e:
+                    print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
+                    import traceback
+                    traceback.print_exc()
+
+        return context
 
     def execute_intracellular(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute intracellular stage."""
