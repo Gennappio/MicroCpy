@@ -14,9 +14,10 @@ const ParameterNode = ({ data, selected }) => {
 
   return (
     <div className={`parameter-node ${selected ? 'selected' : ''}`}>
-      <Handle 
-        type="source" 
-        position={Position.Right} 
+      {/* Parameter output handle on RIGHT side - connects to function node's LEFT input */}
+      <Handle
+        type="source"
+        position={Position.Right}
         id="params"
         className="parameter-handle"
       />

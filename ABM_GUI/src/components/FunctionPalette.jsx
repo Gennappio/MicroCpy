@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, Plus, Database } from 'lucide-react';
-import { getFunctionsByCategory, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
+import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
 import './FunctionPalette.css';
 
 /**
@@ -28,7 +28,7 @@ const FunctionPalette = ({ currentStage }) => {
         console.log('[PALETTE] Loading functions for stage:', currentStage);
         const registry = await fetchRegistry();
         console.log('[PALETTE] Registry loaded, total functions:', Object.keys(registry).length);
-        const functions = getFunctionsByCategory(currentStage);
+        const functions = await getFunctionsByCategoryAsync(currentStage);
         console.log('[PALETTE] Functions for stage', currentStage, ':', functions.length);
         setStageFunctions(functions);
       } catch (error) {

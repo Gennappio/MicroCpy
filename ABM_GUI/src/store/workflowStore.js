@@ -15,13 +15,13 @@ const useWorkflowStore = create((set, get) => ({
       created: new Date().toISOString().split('T')[0],
     },
     stages: {
-      initialization: { enabled: true, functions: [], execution_order: [] },
-      macrostep: { enabled: false, functions: [], execution_order: [] },
-      intracellular: { enabled: true, functions: [], execution_order: [] },
-      microenvironment: { enabled: true, functions: [], execution_order: [] },
-      intercellular: { enabled: true, functions: [], execution_order: [] },
-      finalization: { enabled: true, functions: [], execution_order: [] },
-    },
+	      initialization: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	      macrostep: { enabled: false, steps: 1, functions: [], execution_order: [] },
+	      intracellular: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	      microenvironment: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	      intercellular: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	      finalization: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	    },
   },
 
   // Current active stage
@@ -77,6 +77,13 @@ const useWorkflowStore = create((set, get) => ({
       finalization: [],
     };
 
+    // Layout constants for tidy positioning
+    const FUNC_NODE_X = 350;           // X position for function nodes
+    const PARAM_NODE_X = 50;           // X position for parameter nodes (to the left)
+    const START_Y = 50;                // Starting Y position
+    const FUNC_NODE_SPACING = 120;     // Vertical spacing between function nodes
+    const PARAM_NODE_OFFSET_Y = 10;    // Y offset for param node relative to function
+
     // Convert workflow functions and parameter nodes to React Flow nodes for ALL stages
     Object.keys(newStageNodes).forEach((stageName) => {
       // Handle backward compatibility: "diffusion" -> "microenvironment"
@@ -90,11 +97,27 @@ const useWorkflowStore = create((set, get) => ({
       const allEdges = [];
       const createdParamNodeIds = new Set(); // Track created parameter nodes
 
+      // Build execution order index map for positioning
+      const executionOrder = stage.execution_order || [];
+      const orderIndexMap = {};
+      executionOrder.forEach((funcId, idx) => {
+        orderIndexMap[funcId] = idx;
+      });
+
+      // For functions not in execution_order, assign indices after the ordered ones
+      let nextUnorderedIdx = executionOrder.length;
+      stage.functions.forEach((func) => {
+        if (!(func.id in orderIndexMap)) {
+          orderIndexMap[func.id] = nextUnorderedIdx++;
+        }
+      });
+
       // Create parameter nodes from the parameters array (if exists)
-      const explicitParamNodes = (stage.parameters || []).map((param) => ({
+      // Position them based on linked function positions
+      const explicitParamNodes = (stage.parameters || []).map((param, idx) => ({
         id: param.id,
         type: 'parameterNode',
-        position: param.position || { x: 50, y: 100 + Math.random() * 200 },
+        position: param.position || { x: PARAM_NODE_X, y: START_Y + idx * FUNC_NODE_SPACING },
         data: {
           label: param.label || 'Parameters',
           parameters: param.parameters || {},
@@ -106,19 +129,23 @@ const useWorkflowStore = create((set, get) => ({
 
       // Auto-create parameter nodes for functions that have parameters but no parameter_nodes connections
       const autoCreatedParamNodes = [];
-      stage.functions.forEach((func, index) => {
+      stage.functions.forEach((func) => {
         const hasParameters = func.parameters && Object.keys(func.parameters).length > 0;
         const hasParamNodeConnections = func.parameter_nodes && func.parameter_nodes.length > 0;
 
         // If function has parameters but no parameter node connections, create a parameter node
         if (hasParameters && !hasParamNodeConnections) {
           const paramNodeId = `param_auto_${func.id}`;
+          const funcOrderIdx = orderIndexMap[func.id] || 0;
+          const funcY = START_Y + funcOrderIdx * FUNC_NODE_SPACING;
+
           const paramNode = {
             id: paramNodeId,
             type: 'parameterNode',
             position: {
-              x: (func.position?.x || 300) - 250, // Position to the left of the function
-              y: func.position?.y || (100 + index * 150)
+              // Parameter nodes positioned to the LEFT of function nodes
+              x: PARAM_NODE_X,
+              y: funcY + PARAM_NODE_OFFSET_Y
             },
             data: {
               label: `${func.custom_name || func.function_name} Parameters`,
@@ -138,24 +165,29 @@ const useWorkflowStore = create((set, get) => ({
       });
       allNodes.push(...autoCreatedParamNodes);
 
-      // Create function nodes
-      const functionNodes = stage.functions.map((func) => ({
-        id: func.id,
-        type: 'workflowFunction',
-        position: func.position || { x: 300 + Math.random() * 200, y: 100 + Math.random() * 200 },
-        data: {
-          label: func.function_name,
-          functionName: func.function_name,
-          // Preserve function-level parameters (e.g., config_file) so they survive export
-          parameters: func.parameters || {},
-          enabled: func.enabled !== false,
-          description: func.description || '',
-          functionFile: func.function_file || func.parameters?.function_file || '',
-          customName: func.custom_name || '',
-          stepCount: func.step_count || 1, // NEW: Load step_count from JSON
-          onEdit: () => {}, // Will be set by WorkflowCanvas
-        },
-      }));
+      // Create function nodes - use execution order for Y positioning
+      const functionNodes = stage.functions.map((func) => {
+        const orderIdx = orderIndexMap[func.id] || 0;
+        const defaultY = START_Y + orderIdx * FUNC_NODE_SPACING;
+
+        return {
+          id: func.id,
+          type: 'workflowFunction',
+          position: func.position || { x: FUNC_NODE_X, y: defaultY },
+          data: {
+            label: func.function_name,
+            functionName: func.function_name,
+            // Preserve function-level parameters (e.g., config_file) so they survive export
+            parameters: func.parameters || {},
+            enabled: func.enabled !== false,
+            description: func.description || '',
+            functionFile: func.function_file || func.parameters?.function_file || '',
+            customName: func.custom_name || '',
+            stepCount: func.step_count || 1, // NEW: Load step_count from JSON
+            onEdit: () => {}, // Will be set by WorkflowCanvas
+          },
+        };
+      });
       allNodes.push(...functionNodes);
 
       // Create parameter connection edges
@@ -209,12 +241,49 @@ const useWorkflowStore = create((set, get) => ({
       newStageEdges[stageName] = allEdges;
     });
 
-    set({
-      workflow: workflowJson,
-      stageNodes: newStageNodes,
-      stageEdges: newStageEdges,
-    });
+	    set((state) => ({
+	      workflow: {
+	        ...state.workflow,
+	        ...workflowJson,
+	        stages: {
+	          ...state.workflow.stages,
+	          ...Object.keys(newStageNodes).reduce((acc, stageName) => {
+	            const srcStages = workflowJson.stages || {};
+	            const srcStage = srcStages[stageName] || {};
+	            acc[stageName] = {
+	              ...state.workflow.stages[stageName],
+	              ...srcStage,
+	              steps:
+	                srcStage.steps != null
+	                  ? srcStage.steps
+	                  : state.workflow.stages[stageName]?.steps || 1,
+	            };
+	            return acc;
+	          }, {}),
+	        },
+	      },
+	      stageNodes: newStageNodes,
+	      stageEdges: newStageEdges,
+	    }));
   },
+
+	  // Toggle whether a whole stage is enabled (e.g. macrostep)
+	  toggleStageEnabled: (stageName) =>
+	    set((state) => {
+	      const currentEnabled = state.workflow.stages[stageName]?.enabled !== false;
+	      return {
+	        workflow: {
+	          ...state.workflow,
+	          stages: {
+	            ...state.workflow.stages,
+	            [stageName]: {
+	              ...state.workflow.stages[stageName],
+	              enabled: !currentEnabled,
+	            },
+	          },
+	        },
+	      };
+	    }),
 
   // Export workflow to JSON
   exportWorkflow: () => {
@@ -264,12 +333,13 @@ const useWorkflowStore = create((set, get) => ({
       const functionEdges = edges.filter(e => e.sourceHandle === 'func-out' || !e.sourceHandle);
       const execution_order = functionNodes.map((n) => n.id); // Simple order for now
 
-      stages[stageName] = {
-        enabled: workflow.stages[stageName]?.enabled !== false,
-        functions,
-        parameters, // NEW: Parameter nodes
-        execution_order,
-      };
+	      stages[stageName] = {
+	        enabled: workflow.stages[stageName]?.enabled !== false,
+	        steps: workflow.stages[stageName]?.steps || 1,
+	        functions,
+	        parameters, // NEW: Parameter nodes
+	        execution_order,
+	      };
     });
 
     return {
@@ -325,6 +395,26 @@ const useWorkflowStore = create((set, get) => ({
     return newId;
   },
 
+	  // Toggle whether a specific function node is enabled (by node id)
+	  toggleFunctionEnabled: (nodeId) =>
+	    set((state) => {
+	      const newStageNodes = {};
+	      Object.keys(state.stageNodes).forEach((stageName) => {
+	        newStageNodes[stageName] = state.stageNodes[stageName].map((node) =>
+	          node.id === nodeId
+	            ? {
+	                ...node,
+	                data: {
+	                  ...node.data,
+	                  enabled: node.data.enabled === false,
+	                },
+	              }
+	            : node
+	        );
+	      });
+	      return { stageNodes: newStageNodes };
+	    }),
+
   // Remove a function from a stage
   removeFunction: (stage, nodeId) =>
     set((state) => ({
@@ -360,6 +450,21 @@ const useWorkflowStore = create((set, get) => ({
       },
     })),
 
+	  // Update stage steps (e.g. number of macrosteps)
+	  setStageSteps: (stageName, steps) =>
+	    set((state) => ({
+	      workflow: {
+	        ...state.workflow,
+	        stages: {
+	          ...state.workflow.stages,
+	          [stageName]: {
+	            ...state.workflow.stages[stageName],
+	            steps,
+	          },
+	        },
+	      },
+	    })),
+
   // Clear all workflow data
   clearWorkflow: () =>
     set({
@@ -372,12 +477,12 @@ const useWorkflowStore = create((set, get) => ({
           created: new Date().toISOString().split('T')[0],
         },
         stages: {
-          initialization: { enabled: true, functions: [], execution_order: [] },
-          macrostep: { enabled: false, functions: [], execution_order: [] },
-          intracellular: { enabled: true, functions: [], execution_order: [] },
-          microenvironment: { enabled: true, functions: [], execution_order: [] },
-          intercellular: { enabled: true, functions: [], execution_order: [] },
-          finalization: { enabled: true, functions: [], execution_order: [] },
+	          initialization: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	          macrostep: { enabled: false, steps: 1, functions: [], execution_order: [] },
+	          intracellular: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	          microenvironment: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	          intercellular: { enabled: true, steps: 1, functions: [], execution_order: [] },
+	          finalization: { enabled: true, steps: 1, functions: [], execution_order: [] },
         },
       },
       stageNodes: {

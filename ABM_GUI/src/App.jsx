@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Play, BarChart3 } from 'lucide-react';
+import { Download, Upload, FileJson, Play, Pause, BarChart3 } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import SimulationRunner from './components/SimulationRunner';
@@ -24,9 +24,9 @@ const VIEWS = [
 ];
 
 function App() {
-  const [currentView, setCurrentView] = useState('workflow');
-  const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow } =
-    useWorkflowStore();
+		  const [currentView, setCurrentView] = useState('workflow');
+		  const { currentStage, setCurrentStage, workflow, loadWorkflow, exportWorkflow, toggleStageEnabled, setStageSteps } =
+		    useWorkflowStore();
 
   // Preload function registry on app mount
   useEffect(() => {
@@ -117,23 +117,59 @@ function App() {
       {currentView === 'workflow' && (
         <>
           {/* Stage Tabs */}
-          <div className="stage-tabs">
-            {STAGES.map((stage) => (
-              <button
-                key={stage.id}
-                className={`stage-tab ${currentStage === stage.id ? 'active' : ''}`}
-                onClick={() => setCurrentStage(stage.id)}
-                style={{
-                  '--stage-color': stage.color,
-                }}
-              >
-                <span className="stage-indicator" style={{ background: stage.color }} />
-                {stage.label}
-              </button>
-            ))}
-          </div>
+	          <div className="stage-tabs">
+	            {STAGES.map((stage) => {
+	              const isEnabled = workflow.stages[stage.id]?.enabled !== false;
+	              return (
+	                <button
+	                  key={stage.id}
+	                  className={`stage-tab ${currentStage === stage.id ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}`}
+	                  onClick={() => setCurrentStage(stage.id)}
+	                  style={{
+	                    '--stage-color': stage.color,
+	                  }}
+	                >
+	                  <span className="stage-indicator" style={{ background: stage.color }} />
+	                  <span className="stage-label">{stage.label}</span>
+	                  <button
+	                    className="stage-toggle-btn"
+	                    onClick={(e) => {
+	                      e.stopPropagation();
+	                      toggleStageEnabled(stage.id);
+	                    }}
+	                    title={isEnabled ? 'Disable stage' : 'Enable stage'}
+	                  >
+	                    {isEnabled ? (
+	                      <Play size={14} className="stage-status enabled" />
+	                    ) : (
+	                      <Pause size={14} className="stage-status disabled" />
+	                    )}
+	                  </button>
+	                </button>
+	              );
+	            })}
+	          </div>
+		  
+	          {/* Macrostep stage settings (outside canvas) */}
+	          {currentStage === 'macrostep' && (
+	            <div className="stage-settings">
+	              <label className="stage-settings-label">Number of macrosteps</label>
+	              <input
+	                type="number"
+	                min={1}
+	                value={workflow.stages.macrostep?.steps || 1}
+	                onChange={(e) =>
+	                  setStageSteps(
+	                    'macrostep',
+	                    Math.max(1, parseInt(e.target.value, 10) || 1),
+	                  )
+	                }
+	                className="stage-settings-input"
+	              />
+	            </div>
+	          )}
 
-          {/* Main Content */}
+	          {/* Main Content */}
           <div className="app-content">
             <FunctionPalette currentStage={currentStage} />
             <WorkflowCanvas key={currentStage} stage={currentStage} />

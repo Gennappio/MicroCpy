@@ -58,12 +58,11 @@ Examples:
         """
     )
 
-    # Main simulation - mutually exclusive modes
-    sim_group = parser.add_mutually_exclusive_group()
-    sim_group.add_argument('--sim', metavar='CONFIG',
-                       help='Run default pipeline with config file (hardcoded behavior)')
-    sim_group.add_argument('--workflow', metavar='WORKFLOW_JSON',
-                       help='Run workflow (complete user control, config loaded by workflow functions)')
+    # Main simulation - can use --sim alone, --workflow alone, or both together
+    parser.add_argument('--sim', metavar='CONFIG',
+                       help='Run with config file (default pipeline if no workflow, or config setup for workflow)')
+    parser.add_argument('--workflow', metavar='WORKFLOW_JSON',
+                       help='Run workflow (complete user control, optionally with --sim for config setup)')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -115,19 +114,22 @@ Examples:
     success_count = 0
     total_count = 0
 
-    # Main simulation - two separate modes
-    if args.sim:
-        # Default pipeline mode
+    # Main simulation - three modes: --sim only, --workflow only, or both together
+    if args.sim or args.workflow:
         total_count += 1
         run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
-        sim_args = ['--sim', args.sim]
-        if run_tool(run_sim_path, sim_args):
-            success_count += 1
-    elif args.workflow:
-        # Workflow mode (no config file, loaded by workflow functions)
-        total_count += 1
-        run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
-        sim_args = ['--workflow', args.workflow]
+        sim_args = []
+
+        if args.sim and args.workflow:
+            # Both: workflow controls execution, config provides setup
+            sim_args = ['--sim', args.sim, '--workflow', args.workflow]
+        elif args.sim:
+            # Config only: default pipeline mode
+            sim_args = ['--sim', args.sim]
+        else:
+            # Workflow only: workflow must provide initialization
+            sim_args = ['--workflow', args.workflow]
+
         if run_tool(run_sim_path, sim_args):
             success_count += 1
 

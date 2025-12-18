@@ -1,0 +1,369 @@
+{
+  "version": "1.0",
+  "name": "Jayatilake Metabolic Symbiosis Workflow - 2D CSV (macrostep)",
+  "description": "Workflow with all parameters exposed in GUI - no YAML config file dependency.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Jayatilake Metabolic Symbiosis - 2D CSV",
+    "created": "2025-12-18",
+    "notes": "All parameters are configurable from the GUI via parameter nodes."
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "description": "Setup simulation infrastructure using GUI-configurable parameters.",
+      "functions": [
+        {
+          "id": "setup_sim",
+          "function_name": "setup_simulation",
+          "enabled": true,
+          "parameters": {
+            "name": "Jayatilake 2D CSV",
+            "duration": 0.5,
+            "dt": 0.1,
+            "output_dir": "results",
+            "save_interval": 1,
+            "diffusion_step": 1,
+            "intracellular_step": 1,
+            "intercellular_step": 1
+          }
+        },
+        {
+          "id": "setup_domain_node",
+          "function_name": "setup_domain",
+          "enabled": true,
+          "parameters": {
+            "dimensions": 2,
+            "size_x": 500.0,
+            "size_y": 500.0,
+            "size_z": 400.0,
+            "nx": 25,
+            "ny": 25,
+            "nz": 25,
+            "cell_height": 20.0
+          }
+        },
+        {
+          "id": "add_oxygen",
+          "function_name": "add_substance",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Oxygen",
+            "diffusion_coeff": 1.0e-9,
+            "production_rate": 0.0,
+            "uptake_rate": 3.0e-17,
+            "initial_value": 0.07,
+            "boundary_value": 0.07,
+            "boundary_type": "fixed",
+            "unit": "mM"
+          }
+        },
+        {
+          "id": "add_glucose",
+          "function_name": "add_substance",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Glucose",
+            "diffusion_coeff": 6.70e-11,
+            "production_rate": 0.0,
+            "uptake_rate": 3.0e-15,
+            "initial_value": 5.0,
+            "boundary_value": 5.0,
+            "boundary_type": "fixed",
+            "unit": "mM"
+          }
+        },
+        {
+          "id": "add_lactate",
+          "function_name": "add_substance",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Lactate",
+            "diffusion_coeff": 6.70e-11,
+            "production_rate": 3.0e-15,
+            "uptake_rate": 0.0,
+            "initial_value": 1.0,
+            "boundary_value": 1.0,
+            "boundary_type": "fixed",
+            "unit": "mM"
+          }
+        },
+        {
+          "id": "add_h",
+          "function_name": "add_substance",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "H",
+            "diffusion_coeff": 1.0e-9,
+            "production_rate": 2.0e-20,
+            "uptake_rate": 3.0e-15,
+            "initial_value": 4e-5,
+            "boundary_value": 4e-5,
+            "boundary_type": "fixed",
+            "unit": "mM"
+          }
+        },
+        {
+          "id": "add_ph",
+          "function_name": "add_substance",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "pH",
+            "diffusion_coeff": 1.0e-9,
+            "production_rate": 0.0,
+            "uptake_rate": 0.0,
+            "initial_value": 7.4,
+            "boundary_value": 7.4,
+            "boundary_type": "fixed",
+            "unit": "pH"
+          }
+        },
+        {
+          "id": "setup_env",
+          "function_name": "setup_environment",
+          "enabled": true,
+          "parameters": {
+            "ph": 7.4
+          }
+        },
+        {
+          "id": "setup_custom",
+          "function_name": "setup_custom_parameters",
+          "enabled": true,
+          "parameters": {
+            "cell_cycle_time": 240.0,
+            "max_cell_age": 500.0,
+            "max_atp": 30.0,
+            "max_atp_rate": 1.0e-14,
+            "atp_threshold": 0.8,
+            "glyco_oxygen_ratio": 0.1,
+            "proton_coefficient": 0.01,
+            "glucose_factor": 2.0,
+            "KG": 0.5,
+            "KO2": 0.01,
+            "KL": 1.0,
+            "oxygen_vmax": 1.0e-16,
+            "glucose_vmax": 3.0e-15,
+            "necrosis_threshold_oxygen": 0.011,
+            "necrosis_threshold_glucose": 0.23,
+            "base_migration_rate": 0.0
+          }
+        },
+        {
+          "id": "assoc_oxygen",
+          "function_name": "add_association",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Oxygen",
+            "gene_input": "Oxygen_supply",
+            "threshold": 0.022
+          }
+        },
+        {
+          "id": "assoc_glucose",
+          "function_name": "add_association",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Glucose",
+            "gene_input": "Glucose_supply",
+            "threshold": 0.5
+          }
+        },
+        {
+          "id": "assoc_lactate",
+          "function_name": "add_association",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "Lactate",
+            "gene_input": "MCT1_stimulus",
+            "threshold": 2.0
+          }
+        },
+        {
+          "id": "assoc_h",
+          "function_name": "add_association",
+          "enabled": true,
+          "parameters": {
+            "substance_name": "H",
+            "gene_input": "Proton_level",
+            "threshold": 0.00008
+          }
+        },
+        {
+          "id": "setup_gene_net",
+          "function_name": "setup_gene_network",
+          "enabled": true,
+          "parameters": {
+            "bnd_file": "jaya_microc.bnd",
+            "propagation_steps": 500,
+            "random_initialization": true
+          }
+        },
+        {
+          "id": "setup_pop",
+          "function_name": "setup_population",
+          "enabled": true,
+          "parameters": {
+            "enable_gene_network": true,
+            "custom_functions_module": "jayatilake_experiment_cell_functions.py"
+          }
+        },
+        {
+          "id": "setup_out",
+          "function_name": "setup_output",
+          "enabled": true,
+          "parameters": {
+            "save_data_interval": 1,
+            "save_plots_interval": 1,
+            "save_final_plots": true,
+            "save_initial_plots": true,
+            "status_print_interval": 1,
+            "save_cellstate_interval": 1
+          }
+        },
+        {
+          "id": "load_cells_csv",
+          "function_name": "load_cells_from_csv",
+          "enabled": true,
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
+          }
+        },
+        {
+          "id": "generate_initial_plots",
+          "function_name": "generate_initial_plots",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "setup_sim",
+        "setup_domain_node",
+        "add_oxygen",
+        "add_glucose",
+        "add_lactate",
+        "add_h",
+        "add_ph",
+        "setup_env",
+        "setup_custom",
+        "assoc_oxygen",
+        "assoc_glucose",
+        "assoc_lactate",
+        "assoc_h",
+        "setup_gene_net",
+        "setup_pop",
+        "setup_out",
+        "load_cells_csv",
+        "generate_initial_plots"
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+	      "steps": 1,
+	      "parameters": [],
+	      "description": "Macrostep orchestrating intracellular, microenvironment, intercellular and CSV export each simulation step.",
+      "functions": [
+        {
+          "id": "intracellular_step_node",
+          "function_name": "intracellular_step",
+          "enabled": true,
+          "parameters": {},
+          "step_count": 1
+        },
+        {
+          "id": "microenvironment_step_node",
+          "function_name": "microenvironment_step",
+          "enabled": true,
+          "parameters": {},
+          "step_count": 1
+        },
+        {
+          "id": "intercellular_step_node",
+          "function_name": "intercellular_step",
+          "enabled": true,
+          "parameters": {},
+          "step_count": 1
+        },
+        {
+          "id": "csv_export_node",
+          "function_name": "export_csv_checkpoint_conditional",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "intracellular_step_node",
+        "microenvironment_step_node",
+        "intercellular_step_node",
+        "csv_export_node"
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "description": "Standard intracellular update driven by engine helpers (metabolism, gene networks, phenotypes, death).",
+      "functions": [
+        {
+          "id": "intracellular_1",
+          "function_name": "standard_intracellular_update",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "intracellular_1"
+      ]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "description": "Standard diffusion / microenvironment update using FiPy.",
+      "functions": [
+        {
+          "id": "diffusion_1",
+          "function_name": "standard_diffusion_update",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "diffusion_1"
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "description": "Standard intercellular update (division, migration) driven by engine helpers.",
+      "functions": [
+        {
+          "id": "intercellular_1",
+          "function_name": "standard_intercellular_update",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "intercellular_1"
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "description": "Generate final plots and print summary statistics.",
+      "functions": [
+        {
+          "id": "generate_plots",
+          "function_name": "generate_summary_plots",
+          "enabled": true,
+          "parameters": {}
+        },
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "enabled": true,
+          "parameters": {}
+        }
+      ],
+      "execution_order": [
+        "generate_plots",
+        "print_summary"
+      ]
+    }
+  }
+}

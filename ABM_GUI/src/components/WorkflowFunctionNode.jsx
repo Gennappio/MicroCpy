@@ -2,12 +2,15 @@ import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
 import { getFunction } from '../data/functionRegistry';
+import useWorkflowStore from '../store/workflowStore';
 import './WorkflowFunctionNode.css';
 
 /**
  * Custom node component for workflow functions
  */
-const WorkflowFunctionNode = ({ data, selected }) => {
+const WorkflowFunctionNode = ({ id, data, selected }) => {
+  const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
   // Get function metadata to know inputs/outputs
@@ -23,22 +26,39 @@ const WorkflowFunctionNode = ({ data, selected }) => {
 
   // Get parameter definitions from metadata
   const parameterDefs = functionMetadata.parameters || [];
-  const inputs = functionMetadata.inputs || [];
-  const outputs = functionMetadata.outputs || [];
+
+  const handleToggleEnabled = (e) => {
+    e.stopPropagation();
+    toggleFunctionEnabled(id);
+  };
 
   return (
     <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}>
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
 
+      {/* General parameter input handle on LEFT side */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="params"
+        className="parameter-handle-input"
+        style={{ top: '50%' }}
+        title="Parameter input"
+      />
+
       <div className="node-header">
-        <div className="node-status">
+        <button
+          className="node-status"
+          onClick={handleToggleEnabled}
+          title={enabled ? 'Disable node' : 'Enable node'}
+        >
           {enabled ? (
             <Play size={14} className="status-icon enabled" />
           ) : (
             <Pause size={14} className="status-icon disabled" />
           )}
-        </div>
+        </button>
         <div className="node-title">
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
@@ -96,25 +116,7 @@ const WorkflowFunctionNode = ({ data, selected }) => {
         </div>
       )}
 
-      {/* Output handles section */}
-      {outputs.length > 0 && (
-        <div className="node-outputs">
-          {outputs.map((output) => (
-            <div key={`output-${output}`} className="output-row">
-              <span className="output-label">{output}</span>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`output-${output}`}
-                className="parameter-handle-output"
-                style={{ top: 'auto', right: '-6px' }}
-                title={`Output: ${output}`}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* Function flow output handle on BOTTOM only - no right-side handles */}
       <Handle type="source" position={Position.Bottom} id="func-out" className="function-handle" />
     </div>
   );

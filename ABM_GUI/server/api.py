@@ -73,8 +73,8 @@ def stream_output(process, log_queue):
     is_running = False
 
 
-def run_simulation_async(config_path, workflow_path):
-    """Run MicroC simulation in background thread"""
+def run_simulation_async(workflow_path):
+    """Run MicroC workflow in background thread (workflow-only mode)"""
     global simulation_process, is_running
 
     try:
@@ -88,28 +88,20 @@ def run_simulation_async(config_path, workflow_path):
         # Get microc-2.0 directory (working directory for simulation)
         microc_dir = microc_path.parent
 
-        # Build command - can use both --sim and --workflow together
-        cmd = [
-            sys.executable,
-            str(microc_path)
-        ]
-
-        if workflow_path and config_path:
-            # Workflow mode with config file - workflow controls execution, config provides setup
-            cmd.extend(["--sim", config_path, "--workflow", workflow_path])
-            log_queue.put(f"[START] Running workflow with config: {config_path} + {workflow_path}\n")
-        elif workflow_path:
-            # Workflow-only mode - workflow must provide initialization
-            cmd.extend(["--workflow", workflow_path])
-            log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
-        elif config_path:
-            # Default pipeline mode - hardcoded behavior
-            cmd.extend(["--sim", config_path])
-            log_queue.put(f"[START] Running default pipeline: {config_path}\n")
-        else:
-            log_queue.put(f"[ERROR] Either config_path or workflow_path must be provided\n")
+        # Build command - GUI runs workflows only
+        if not workflow_path:
+            log_queue.put(f"[ERROR] Workflow path must be provided\n")
             is_running = False
             return
+
+        cmd = [
+            sys.executable,
+            str(microc_path),
+            "--workflow",
+            workflow_path,
+        ]
+
+        log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
 
         log_queue.put(f"[INFO] Command: {' '.join(cmd)}\n")
         log_queue.put(f"[INFO] Working directory: {microc_dir}\n")
@@ -152,12 +144,11 @@ def run_simulation():
         return jsonify({'error': 'Simulation already running'}), 400
 
     data = request.json
-    config_path = data.get('config_path')  # Optional - only for --sim mode
-    workflow_data = data.get('workflow')   # Optional - only for --workflow mode
+    workflow_data = data.get('workflow')   # Workflow definition is required
 
-    # Must have either config_path or workflow
-    if not config_path and not workflow_data:
-        return jsonify({'error': 'Either config_path or workflow is required'}), 400
+    # Must have a workflow definition
+    if not workflow_data:
+        return jsonify({'error': 'Workflow is required'}), 400
 
     # Save workflow to temporary file if provided
     workflow_path = None
@@ -177,14 +168,13 @@ def run_simulation():
     is_running = True
     simulation_thread = threading.Thread(
         target=run_simulation_async,
-        args=(config_path, workflow_path)
+        args=(workflow_path,)
     )
     simulation_thread.daemon = True
     simulation_thread.start()
 
     return jsonify({
         'status': 'started',
-        'config': config_path,
         'workflow': workflow_path
     })
 

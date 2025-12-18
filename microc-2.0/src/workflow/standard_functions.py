@@ -18,8 +18,13 @@ from src.workflow.functions.initialization import (
     setup_simulation,
     setup_domain,
     setup_substances,
+    add_substance,
     setup_population,
     setup_output,
+    setup_environment,
+    setup_custom_parameters,
+    add_association,
+    setup_gene_network,
     load_cells_from_vtk,
     load_cells_from_csv,
 )
@@ -64,6 +69,9 @@ from src.workflow.functions.output.export_csv import (
 from src.workflow.functions.output.export_vtk import (
     export_vtk_checkpoint,
 )
+from src.workflow.functions.macrostep.intracellular_step import intracellular_step
+from src.workflow.functions.macrostep.microenvironment_step import microenvironment_step
+from src.workflow.functions.macrostep.intercellular_step import intercellular_step
 
 
 # ============================================================================
@@ -219,6 +227,223 @@ def initialize_simulation_infrastructure(
 
     except Exception as e:
         print(f"[WORKFLOW] Error initializing infrastructure: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+@register_function(
+    display_name="Configure Time and Steps",
+    description=(
+        "Configure dt, macrosteps and steps_per_macrostep from workflow "
+        "parameters and compute total_steps = macrosteps × steps_per_macrostep. "
+        "These values are stored in the context so that SimulationEngine uses "
+        "them instead of YAML time/end_time when available."
+    ),
+    category="INITIALIZATION",
+    parameters=[
+        {
+            "name": "dt",
+            "type": "FLOAT",
+            "description": "Time step dt (hours per physical update)",
+            "default": 0.1,
+            "required": True,
+            "min_value": 0.0,
+        },
+        {
+            "name": "macrosteps",
+            "type": "INT",
+            "description": "Number of macrosteps (high-level loop iterations)",
+            "default": 1,
+            "required": True,
+            "min_value": 1,
+        },
+        {
+            "name": "steps_per_macrostep",
+            "type": "INT",
+            "description": (
+                "Number of physical simulation steps inside each macrostep. "
+                "Total physical steps = macrosteps × steps_per_macrostep."
+            ),
+            "default": 1,
+            "required": True,
+            "min_value": 1,
+        },
+        {
+            "name": "checkpoint_interval",
+            "type": "INT",
+            "description": (
+                "Checkpoint interval in physical steps (optional, <=0 to disable). "
+                "This is stored in context as checkpoint_interval and also applied "
+                "to config.output.save_cellstate_interval when a config is present."
+            ),
+            "default": 0,
+            "required": False,
+            "min_value": 0,
+        },
+        {
+            "name": "save_data_interval",
+            "type": "INT",
+            "description": (
+                "Results sampling interval in physical steps (optional, <=0 to "
+                "leave unchanged). This is stored in context as "
+                "save_data_interval and also applied to "
+                "config.output.save_data_interval when a config is present."
+            ),
+            "default": 0,
+            "required": False,
+            "min_value": 0,
+        },
+	    ],
+	    outputs=[],
+	    cloneable=False,
+	)
+def configure_time_and_steps(
+    context: Dict[str, Any],
+    dt: float,
+    macrosteps: int,
+    steps_per_macrostep: int,
+    checkpoint_interval: int = 0,
+    save_data_interval: int = 0,
+    **kwargs,
+) -> bool:
+    """Configure dt, macrosteps and steps_per_macrostep from workflow parameters.
+
+    This function is intended to be called in the *initialization* stage from the
+    workflow editor GUI. It takes dt, macrosteps and steps_per_macrostep from
+    parameter nodes, computes::
+
+        total_steps = macrosteps * steps_per_macrostep
+
+    and stores the following in the workflow context:
+
+    - ``context['dt']``
+    - ``context['macrosteps']``
+    - ``context['steps_per_macrostep']``
+    - ``context['total_steps']``
+    - optionally ``context['checkpoint_interval']``
+    - optionally ``context['save_data_interval']``
+
+    When a MicroC ``config`` object is already present in the context (for
+    example because ``load_config_file`` was used), this function also keeps the
+    YAML/config object in sync by overriding:
+
+    - ``config.time.dt``
+    - ``config.time.end_time`` (computed from total_steps × dt)
+    - ``config.output.save_cellstate_interval`` (if checkpoint_interval > 0)
+    - ``config.output.save_data_interval`` (if save_data_interval > 0)
+
+    The SimulationEngine workflow runner will prefer ``context['total_steps']``
+    and ``context['dt']`` over values from the YAML config when they are
+    available, so this node makes dt / macrosteps / steps_per_macrostep fully
+    controllable from the workflow GUI.
+    """
+
+    print("[WORKFLOW] Configuring time and steps from workflow parameters...")
+
+    try:
+        # Normalise and validate inputs
+        dt_value = float(dt)
+        if dt_value <= 0.0:
+            raise ValueError("dt must be > 0")
+
+        # ------------------------------------------------------------------
+        # Determine macrosteps.
+        #
+        # Primary source (what you control in the GUI):
+        #   - the "steps" field on the *macrostep stage* (outside the canvas).
+        #     This comes from workflow.stages["macrostep"].steps and is edited
+        #     via the macrostep stage tab in the GUI.
+        #
+        # The explicit "macrosteps" function parameter is kept for backward
+        # compatibility but is treated as a fallback only. In normal GUI use
+        # you don't need to touch it; you just set macrostep.stage.steps.
+        # ------------------------------------------------------------------
+        macrosteps_int = 0
+        executor = context.get("_executor")
+        if executor is not None:
+            try:
+                workflow = getattr(executor, "workflow", None)
+                if workflow is not None:
+                    macro_stage = workflow.get_stage("macrostep")
+                    if macro_stage is not None:
+                        macrosteps_int = int(getattr(macro_stage, "steps", 0) or 0)
+            except Exception:
+                # If anything goes wrong here, fall back to function parameter
+                macrosteps_int = 0
+
+        # Fallback: use the explicit macrosteps argument if stage.steps
+        # was not available or is <= 0.
+        if macrosteps_int <= 0:
+            macrosteps_int = int(macrosteps)
+
+        steps_per_macro_int = int(steps_per_macrostep)
+
+        if macrosteps_int <= 0 or steps_per_macro_int <= 0:
+            raise ValueError("macrosteps and steps_per_macrostep must be > 0")
+
+        total_steps = macrosteps_int * steps_per_macro_int
+
+        # Store in context so run_workflow_mode / SimulationEngine can see them
+        context["dt"] = dt_value
+        context["macrosteps"] = macrosteps_int
+        context["steps_per_macrostep"] = steps_per_macro_int
+        context["total_steps"] = total_steps
+
+        if checkpoint_interval is not None:
+            try:
+                checkpoint_int = int(checkpoint_interval)
+            except (TypeError, ValueError):
+                checkpoint_int = 0
+        else:
+            checkpoint_int = 0
+
+        if checkpoint_int > 0:
+            context["checkpoint_interval"] = checkpoint_int
+
+        if save_data_interval is not None:
+            try:
+                save_data_int = int(save_data_interval)
+            except (TypeError, ValueError):
+                save_data_int = 0
+        else:
+            save_data_int = 0
+
+        if save_data_int > 0:
+            context["save_data_interval"] = save_data_int
+
+        # Keep existing config (if any) in sync so legacy code continues to work
+        config = context.get("config")
+        if config is not None and hasattr(config, "time"):
+            try:
+                config.time.dt = dt_value
+                config.time.end_time = dt_value * float(total_steps)
+            except Exception:
+                # Be robust against partially initialised configs
+                pass
+
+        if config is not None and hasattr(config, "output"):
+            try:
+                if checkpoint_int > 0:
+                    setattr(config.output, "save_cellstate_interval", checkpoint_int)
+                if save_data_int > 0:
+                    setattr(config.output, "save_data_interval", save_data_int)
+            except Exception:
+                pass
+
+        print(
+            f"   [+] dt={dt_value}, macrosteps={macrosteps_int}, "
+            f"steps_per_macrostep={steps_per_macro_int}, total_steps={total_steps}"
+        )
+        if checkpoint_int > 0:
+            print(f"   [+] checkpoint_interval={checkpoint_int} (physical steps)")
+        if save_data_int > 0:
+            print(f"   [+] save_data_interval={save_data_int} (physical steps)")
+
+        return True
+
+    except Exception as e:
+        print(f"[WORKFLOW] Error configuring time / steps: {e}")
         import traceback
         traceback.print_exc()
         return False

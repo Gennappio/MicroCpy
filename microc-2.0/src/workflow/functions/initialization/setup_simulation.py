@@ -14,6 +14,16 @@ from src.workflow.decorators import register_function
     display_name="Setup Simulation",
     description="Initialize simulation parameters (name, duration, timestep)",
     category="INITIALIZATION",
+    parameters=[
+        {"name": "name", "type": "STRING", "description": "Simulation name", "default": "MicroCpy Simulation"},
+        {"name": "duration", "type": "FLOAT", "description": "Total simulation time", "default": 10.0},
+        {"name": "dt", "type": "FLOAT", "description": "Timestep size", "default": 0.1},
+        {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
+        {"name": "save_interval", "type": "INT", "description": "How often to save data", "default": 10},
+        {"name": "diffusion_step", "type": "INT", "description": "Run diffusion every N steps", "default": 1},
+        {"name": "intracellular_step", "type": "INT", "description": "Run intracellular every N steps", "default": 1},
+        {"name": "intercellular_step", "type": "INT", "description": "Run intercellular every N steps", "default": 1},
+    ],
     outputs=["config"],
     cloneable=False
 )

@@ -12,6 +12,14 @@ from src.workflow.decorators import register_function
     display_name="Setup Output",
     description="Configure output settings (plots, data saving)",
     category="INITIALIZATION",
+    parameters=[
+        {"name": "save_data_interval", "type": "INT", "description": "Save data every N steps", "default": 10},
+        {"name": "save_plots_interval", "type": "INT", "description": "Generate plots every N steps", "default": 10},
+        {"name": "save_final_plots", "type": "BOOL", "description": "Generate plots at the end", "default": True},
+        {"name": "save_initial_plots", "type": "BOOL", "description": "Generate plots at the beginning", "default": True},
+        {"name": "status_print_interval", "type": "INT", "description": "Print status every N steps", "default": 10},
+        {"name": "save_cellstate_interval", "type": "INT", "description": "Save cell states every N steps (0=disabled)", "default": 0},
+    ],
     outputs=[],
     cloneable=False
 )

@@ -14,7 +14,6 @@ const SimulationRunner = () => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [configPath, setConfigPath] = useState('tests/jayatilake_experiment/jayatilake_experiment_config.yaml');
 
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
@@ -138,13 +137,8 @@ const SimulationRunner = () => {
         workflow: workflow,
       };
 
-      // Add config path if provided
-      if (configPath && configPath.trim()) {
-        requestBody.config_path = configPath.trim();
-        addLog('info', `🚀 Starting workflow with config: ${configPath}`);
-      } else {
-        addLog('info', '🚀 Starting workflow-only mode (config loaded by workflow functions)');
-      }
+      // Always run in workflow-only mode from the GUI
+      addLog('info', '🚀 Starting workflow execution');
 
       // Start simulation
       const response = await fetch(`${API_BASE_URL}/run`, {
@@ -234,24 +228,7 @@ const SimulationRunner = () => {
         </div>
       </div>
 
-      {/* Config Path Input */}
-      <div className="config-input-section">
-        <label htmlFor="config-path">
-          Config File (optional - leave empty if workflow provides initialization):
-        </label>
-        <input
-          id="config-path"
-          type="text"
-          value={configPath}
-          onChange={(e) => setConfigPath(e.target.value)}
-          placeholder="tests/jayatilake_experiment/jayatilake_experiment_config.yaml"
-          disabled={isRunning}
-          className="config-path-input"
-        />
-        <small className="config-hint">
-          Path relative to microc-2.0 directory. Leave empty if your workflow has initialization functions.
-        </small>
-      </div>
+      {/* Config file input removed: GUI runs workflows only */}
 
       {error && (
         <div className="error-banner">

@@ -173,11 +173,33 @@ class WorkflowExecutor:
         for step_iteration in range(num_steps):
             # Execute each function in order
             for workflow_func in functions:
-                # Check if this individual function has a step_count (for macrostep stage)
-                func_step_count = max(1, getattr(workflow_func, 'step_count', 1)) # TODO: why ? if zero the loop will not run anyway
+                # Determine this function's step count.
+                #
+                # Primary source: a "step_count" parameter coming from connected
+                # blue parameter nodes or the function's own parameters. This
+                # allows the GUI to drive repetitions via a parameter socket.
+                #
+                # Fallback: the WorkflowFunction.step_count field stored in the
+                # workflow JSON (editable via the node's Step Count field).
+                merged_params = stage.merge_parameters_for_function(workflow_func)
+
+                param_step_count = merged_params.get("step_count")
+                func_step_count = None
+                if param_step_count is not None:
+                    try:
+                        func_step_count = int(param_step_count)
+                    except (TypeError, ValueError):
+                        func_step_count = None
+
+                if func_step_count is None or func_step_count <= 0:
+                    func_step_count = getattr(workflow_func, "step_count", 1)
+
+                func_step_count = max(1, int(func_step_count))
 
                 if func_step_count > 1:
-                    print(f"[WORKFLOW] Function '{workflow_func.function_name}' will execute {func_step_count} times")
+                    print(
+                        f"[WORKFLOW] Function '{workflow_func.function_name}' will execute {func_step_count} times"
+                    )
 
                 # Execute this function 'func_step_count' times
                 for func_iteration in range(func_step_count):

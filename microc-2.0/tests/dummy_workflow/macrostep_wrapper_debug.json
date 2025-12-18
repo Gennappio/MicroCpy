@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "name": "Macrostep Wrapper Debug Workflow",
+  "description": "Test macrostep utility nodes calling intracellular and microenvironment stages twice.",
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "init_debug",
+          "function_name": "debug_initialization_2",
+          "function_file": "",
+          "parameters": {
+            "message": "INIT"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 0}
+        }
+      ],
+      "execution_order": ["init_debug"]
+    },
+    "intracellular": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "intra1",
+          "function_name": "debug_intracellular_1",
+          "function_file": "",
+          "parameters": {
+            "message": "INTRACELLULAR 1"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 100}
+        },
+        {
+          "id": "intra2",
+          "function_name": "debug_intracellular_2",
+          "function_file": "",
+          "parameters": {
+            "message": "INTRACELLULAR 2"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 200}
+        }
+      ],
+      "execution_order": ["intra1", "intra2"]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "micro1",
+          "function_name": "debug_microenvironment_1",
+          "function_file": "",
+          "parameters": {
+            "message": "MICRO 1"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 300}
+        },
+        {
+          "id": "micro2",
+          "function_name": "debug_microenvironment_2",
+          "function_file": "",
+          "parameters": {
+            "message": "MICRO 2"
+          },
+          "enabled": true,
+          "position": {"x": 0, "y": 400}
+        }
+      ],
+      "execution_order": ["micro1", "micro2"]
+    },
+    "macrostep": {
+      "enabled": true,
+      "functions": [
+        {
+          "id": "macro_intra_before",
+          "function_name": "intracellular_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "macro_micro",
+          "function_name": "microenvironment_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 400, "y": 200}
+        },
+        {
+          "id": "macro_intra_after",
+          "function_name": "intracellular_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 600, "y": 300}
+        }
+      ],
+      "execution_order": [
+        "macro_intra_before",
+        "macro_micro",
+        "macro_intra_after"
+      ]
+    }
+  }
+}
+

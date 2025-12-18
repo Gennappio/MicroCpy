@@ -119,19 +119,34 @@ class SimulationEngine:
         return results
 
     def _run_with_workflow(self, num_steps: int, dt: Optional[float] = None, verbose: bool = False) -> SimulationResults:
+        """Workflow-driven execution using the attached workflow definition.
+
+        This method delegates stage execution (initialization, macrostep or
+        per-stage updates, finalization) to the WorkflowExecutor.
         """
-        Workflow-driven execution.
-        Uses workflow_executor to call custom functions at each stage.
-        """
+
         dt = dt if dt is not None else self.config.time.dt
         results = SimulationResults.empty()
 
         print(f"[WORKFLOW] Running simulation with workflow: {self.workflow.name}")
 
+        # Compute macrostep semantics once up-front.
+        macrostep_stage = self.workflow.get_stage("macrostep")
+        macro_defined = macrostep_stage is not None
+        has_macro = (
+            macrostep_stage
+            and macrostep_stage.enabled
+            and len(macrostep_stage.get_enabled_functions_in_order()) > 0
+        )
+
         # Execute initialization stage once at the beginning (unless already done externally)
         if not self.skip_workflow_init and self.workflow.get_stage("initialization"):
             print(f"[WORKFLOW] Executing initialization stage...")
             context = self._build_context(step=0, dt=dt)
+            # Expose the workflow executor in the context so initialization
+            # functions can, if needed, schedule additional workflow stages
+            # or access executor utilities.
+            context["_executor"] = self.workflow_executor
             self.workflow_executor.execute_initialization(context)
 
         for step in range(num_steps):
@@ -140,19 +155,23 @@ class SimulationEngine:
 
             # Build execution context for workflow functions
             context = self._build_context(step=step, dt=dt)
+            # Provide the workflow executor in the context so macrostep utility
+            # nodes (intracellular_step, microenvironment_step, intercellular_step)
+            # can call back into the executor to run entire stages when used.
+            context["_executor"] = self.workflow_executor
 
-            # Check if macrostep stage exists (new flexible execution model)
-            macrostep_stage = self.workflow.get_stage("macrostep")
-            if macrostep_stage and macrostep_stage.enabled:
-                # Use macrostep stage - user has full control over execution order
-                # The macrostep stage contains nodes for intracellular, microenvironment, intercellular
-                # and custom functions, each with their own step_count
+            if has_macro:
+                # Use macrostep stage - user has full control over execution order.
+                # The macrostep stage contains nodes for intracellular, microenvironment,
+                # intercellular and custom functions, each with their own step_count.
                 self.workflow_executor.execute_macrostep(context)
-            else:
-                # Legacy mode: use separate intracellular, microenvironment, intercellular stages
+            elif not macro_defined:
+                # Legacy mode: no macrostep stage defined at all. Use separate
+                # intracellular, microenvironment, intercellular stages driven
+                # directly by the orchestrator as before.
 
                 # Intracellular stage (fast)
-                if updates['intracellular']:
+                if updates["intracellular"]:
                     # Execute ONLY workflow intracellular stage
                     # User has full control over what happens
                     stage = self.workflow.get_stage("intracellular")
@@ -160,7 +179,7 @@ class SimulationEngine:
                         self.workflow_executor.execute_intracellular(context)
 
                 # Diffusion/Microenvironment stage (medium)
-                if updates['diffusion']:
+                if updates["diffusion"]:
                     # Execute ONLY workflow diffusion/microenvironment stage
                     # User has full control over what happens
                     # Try microenvironment first (preferred name), fall back to diffusion (legacy)
@@ -169,12 +188,25 @@ class SimulationEngine:
                         self.workflow_executor.execute_diffusion(context)
 
                 # Intercellular stage (slow)
-                if updates['intercellular']:
+                if updates["intercellular"]:
                     # Execute ONLY workflow intercellular stage
                     # User has full control over what happens
                     stage = self.workflow.get_stage("intercellular")
                     if stage and stage.enabled:
                         self.workflow_executor.execute_intercellular(context)
+            else:
+                # Macrostep stage exists but is disabled or has no enabled
+                # functions. In the new semantics, intracellular,
+                # microenvironment and intercellular stages are *only* allowed
+                # to run when orchestrated via macrostep. Therefore, when
+                # macrostep is present but disabled/empty, we deliberately
+                # skip these stages entirely here.
+                if step == 0 and verbose:
+                    print(
+                        "[WORKFLOW] Macrostep stage exists but is disabled or empty - "
+                        "skipping intracellular, microenvironment and intercellular "
+                        "stages in engine workflow mode."
+                    )
 
             # Collect data for standard finalization functions (plots, summaries)
             # This ensures that standard workflow functions like generate_summary_plots work
@@ -196,14 +228,17 @@ class SimulationEngine:
         if self.workflow.get_stage("finalization"):
             print(f"[WORKFLOW] Executing finalization stage...")
             context = self._build_context(step=num_steps, dt=dt)
+            # Expose the executor here as well for any advanced finalization
+            # functions that might want to inspect or trigger workflow stages.
+            context["_executor"] = self.workflow_executor
             # Add results to context for finalization functions (convert to dict for compatibility)
-            context['results'] = {
-                'time': results.time,
-                'substance_stats': results.substance_stats,
-                'cell_counts': results.cell_counts,
-                'gene_network_states': results.gene_network_states,
+            context["results"] = {
+                "time": results.time,
+                "substance_stats": results.substance_stats,
+                "cell_counts": results.cell_counts,
+                "gene_network_states": results.gene_network_states,
             }
-            context['num_steps'] = num_steps
+            context["num_steps"] = num_steps
             self.workflow_executor.execute_finalization(context)
 
         return results

@@ -12,6 +12,16 @@ from src.workflow.decorators import register_function
     display_name="Setup Domain",
     description="Initialize spatial domain and mesh",
     category="INITIALIZATION",
+    parameters=[
+        {"name": "dimensions", "type": "INT", "description": "2 or 3 for 2D/3D simulation", "default": 2},
+        {"name": "size_x", "type": "FLOAT", "description": "Domain size in X (micrometers)", "default": 500.0},
+        {"name": "size_y", "type": "FLOAT", "description": "Domain size in Y (micrometers)", "default": 500.0},
+        {"name": "size_z", "type": "FLOAT", "description": "Domain size in Z (micrometers, 3D only)", "default": 400.0},
+        {"name": "nx", "type": "INT", "description": "Mesh cells in X direction", "default": 25},
+        {"name": "ny", "type": "INT", "description": "Mesh cells in Y direction", "default": 25},
+        {"name": "nz", "type": "INT", "description": "Mesh cells in Z direction (3D only)", "default": 25},
+        {"name": "cell_height", "type": "FLOAT", "description": "Biological cell height (micrometers)", "default": 20.0},
+    ],
     outputs=["domain", "mesh"],
     cloneable=False
 )
