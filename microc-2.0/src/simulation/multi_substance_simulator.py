@@ -124,6 +124,7 @@ class MultiSubstanceSimulator:
         # FiPy variables if available
         self.fipy_variables = {}
         self.fipy_mesh = None
+        self._fipy_mesh_centered = False  # Track if mesh has been centered
         if FIPY_AVAILABLE:
             self._setup_fipy()
 
@@ -157,10 +158,9 @@ class MultiSubstanceSimulator:
         self.state = MultiSubstanceState()
         self._initialize_substances()
 
-        # Rebuild FiPy variables for the new set of substances
-        self.fipy_variables = {}
+        # Create FiPy variables for each substance (incrementally, preserving mesh)
         if FIPY_AVAILABLE:
-            self._setup_fipy()
+            self._add_fipy_variables_for_substances()
 
     def _initialize_substances(self):
         """Initialize all substances from configuration"""
@@ -180,9 +180,14 @@ class MultiSubstanceSimulator:
 
             if self.verbose:
                 print(f"[OK] Initialized {name}: {initial_conc} {substance_config.initial_value.unit}")
-    
+
     def _setup_fipy(self):
-        """Setup FiPy variables for diffusion simulation"""
+        """Setup FiPy variables for diffusion simulation (initial setup only).
+
+        This method should only be called ONCE during simulator construction.
+        It sets up the mesh and creates FiPy variables, then centers the mesh.
+        For incremental substance additions, use _add_fipy_variables_for_substances().
+        """
         if not FIPY_AVAILABLE:
             return
 
@@ -191,13 +196,50 @@ class MultiSubstanceSimulator:
         self.fipy_mesh = self.mesh_manager.solver_mesh
 
         # Create FiPy variables for each substance
+        self._create_fipy_variables_for_substances()
+
+        # Center the solver mesh at origin after all FiPy variables and boundary conditions are set
+        # This ensures proper coordinate system alignment
+        # IMPORTANT: Only call this ONCE during initial setup, not on incremental additions
+        self.mesh_manager.center_solver_mesh_at_origin()
+        self._fipy_mesh_centered = True
+
+    def _add_fipy_variables_for_substances(self):
+        """Add FiPy variables for new substances without recreating or recentering the mesh.
+
+        This is used by initialize_substances() when substances are added incrementally
+        via workflow functions. The mesh must already be set up and centered.
+        """
+        if not FIPY_AVAILABLE:
+            return
+
+        # If mesh hasn't been set up yet, do full setup
+        if self.fipy_mesh is None:
+            self._setup_fipy()
+            return
+
+        # Otherwise, just add variables for substances that don't have them yet
+        self._create_fipy_variables_for_substances()
+
+    def _create_fipy_variables_for_substances(self):
+        """Create FiPy CellVariables for substances that don't have them yet.
+
+        This is the core logic shared by both initial setup and incremental additions.
+        """
+        if not FIPY_AVAILABLE or self.fipy_mesh is None:
+            return
+
         for name, substance_state in self.state.substances.items():
+            # Skip substances that already have FiPy variables
+            if name in self.fipy_variables:
+                continue
+
             initial_value = substance_state.config.initial_value.value
             boundary_value = substance_state.config.boundary_value.value
-            
+
             # Create variable
             var = CellVariable(name=name, mesh=self.fipy_mesh, value=initial_value)
-            
+
             # Set boundary conditions
             if substance_state.config.boundary_type == "fixed":
                 # Original fixed boundary behavior - constant value on all boundaries
@@ -216,12 +258,8 @@ class MultiSubstanceSimulator:
             elif substance_state.config.boundary_type == "linear_gradient":
                 # Default linear gradient: 0 left, 1 right, gradients top/bottom
                 self._apply_gradient_boundary_conditions(var, name, boundary_value)
-            
-            self.fipy_variables[name] = var
 
-        # Center the solver mesh at origin after all FiPy variables and boundary conditions are set
-        # This ensures proper coordinate system alignment
-        self.mesh_manager.center_solver_mesh_at_origin()
+            self.fipy_variables[name] = var
     
     def _apply_gradient_boundary_conditions(self, var, substance_name, default_boundary_value):
         """Apply gradient boundary conditions: 0 on left, 1 on right, gradients on top/bottom"""
