@@ -8,3 +8,16 @@
   background: #fafafa;
 }
 
+/* Ensure edges (arrows/strokes) are above group nodes but below interactive nodes */
+.react-flow__edge {
+  z-index: 5 !important;
+}
+
+.react-flow__edge-path {
+  z-index: 5 !important;
+}
+
+.react-flow__edge-text {
+  z-index: 5 !important;
+}
+

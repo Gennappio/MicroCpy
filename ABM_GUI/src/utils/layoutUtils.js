@@ -139,7 +139,7 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     // Calculate group dimensions - VERY LARGE for maximum readability
     const numParams = connectedParams.length;
     const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
-    const groupHeight = GROUP_PADDING * 2 + 60 + Math.max(FUNC_NODE_HEIGHT, paramsHeight) + 40; // Header + content + margin
+    const groupHeight = GROUP_PADDING * 2 + 60 + Math.max(FUNC_NODE_HEIGHT, paramsHeight) + 120; // Header + content + MUCH MORE margin
     const groupWidth = 1200; // MUCH LARGER - increased from 800
 
     const groupX = isLeft ? LEFT_X : RIGHT_X;
