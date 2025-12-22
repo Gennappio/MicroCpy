@@ -114,3 +114,14 @@
   font-style: italic;
 }
 
+.parameter-node.expanded {
+  min-width: 350px;
+  max-width: 400px;
+}
+
+.param-node-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+

@@ -1,0 +1,48 @@
+.function-parameter-group {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0284c7;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 16px rgba(2, 132, 199, 0.15);
+  min-width: 320px;
+  transition: all 0.3s ease;
+}
+
+.function-parameter-group:hover {
+  box-shadow: 0 12px 24px rgba(2, 132, 199, 0.25);
+  border-color: #0369a1;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(2, 132, 199, 0.3);
+}
+
+.group-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0c4a6e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-param-count {
+  background: rgba(2, 132, 199, 0.2);
+  color: #0369a1;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
