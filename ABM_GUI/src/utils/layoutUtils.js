@@ -139,13 +139,13 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     // Calculate group dimensions - VERY LARGE for maximum readability
     const numParams = connectedParams.length;
     const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
-    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 80; // Increased vertical padding
+    const groupHeight = GROUP_PADDING * 2 + 60 + Math.max(FUNC_NODE_HEIGHT, paramsHeight) + 40; // Header + content + margin
     const groupWidth = 1200; // MUCH LARGER - increased from 800
 
     const groupX = isLeft ? LEFT_X : RIGHT_X;
     const groupY = currentY;
 
-    // Create group node
+    // Create group node - purely visual background container
     const groupId = `group_${funcNode.id}`;
     const groupNode = {
       id: groupId,
@@ -158,6 +158,7 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
         border: '2px dashed #94a3b8',
         borderRadius: '12px',
         padding: '10px',
+        zIndex: 0, // Ensure group is in background
       },
       data: {
         label: funcNode.data.customName || funcNode.data.functionName,
@@ -165,30 +166,42 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
         paramCount: numParams,
         description: funcNode.data.description || '', // Add description support
       },
+      selectable: false, // Make group non-selectable
+      draggable: false, // Make group non-draggable
     };
     groups.push(groupNode);
 
-    // Position function node inside group
+    // Position function node inside group (on the right side)
+    // Account for actual function node width (~180-220px) and ensure it's enclosed
     const layoutedFunc = {
       ...funcNode,
       parentId: groupId,
       extent: 'parent',
       position: {
-        x: GROUP_PADDING + 250,
-        y: GROUP_PADDING,
+        x: groupWidth - GROUP_PADDING - 220, // Position from right edge
+        y: GROUP_PADDING + 60, // Below header
+      },
+      style: {
+        ...funcNode.style,
+        zIndex: 10, // Ensure function node is above group
       },
     };
     allNodes.push(layoutedFunc);
 
-    // Position parameter nodes inside group, stacked vertically to the left
+    // Position parameter nodes inside group, stacked vertically on the left
+    // Account for actual parameter node width (~200-250px) and ensure they're enclosed
     connectedParams.forEach((paramNode, paramIdx) => {
       const layoutedParam = {
         ...paramNode,
         parentId: groupId,
         extent: 'parent',
         position: {
-          x: GROUP_PADDING,
-          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 20 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
+          x: GROUP_PADDING + 20, // Add margin from left edge
+          y: GROUP_PADDING + 60 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)), // Below header
+        },
+        style: {
+          ...paramNode.style,
+          zIndex: 10, // Ensure parameter nodes are above group
         },
       };
       allNodes.push(layoutedParam);

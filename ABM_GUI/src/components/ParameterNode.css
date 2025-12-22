@@ -7,6 +7,8 @@
   padding: 12px;
   box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 10; /* Ensure parameter nodes are above group */
 }
 
 .parameter-node.selected {
