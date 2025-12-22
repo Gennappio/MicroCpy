@@ -93,10 +93,13 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
   const LEFT_X = 50;
   const RIGHT_X = 700;
   const START_Y = 50;
-  const GROUP_PADDING = 20;
-  const PARAM_NODE_HEIGHT = 50;
-  const FUNC_NODE_HEIGHT = 100;
-  const PARAM_SPACING = 10;
+  const GROUP_PADDING = 30;
+  const PARAM_NODE_HEIGHT = 70;
+  const PARAM_NODE_WIDTH = 280;
+  const FUNC_NODE_HEIGHT = 120;
+  const FUNC_NODE_WIDTH = 220;
+  const PARAM_SPACING = 15;
+  const VERTICAL_GAP_BETWEEN_GROUPS = 60;
 
   // Build a map of function order
   const orderMap = {};
@@ -136,11 +139,11 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     const isLeft = orderIdx % 2 === 0;
     const connectedParams = funcToParams[funcNode.id] || [];
 
-    // Calculate group dimensions
+    // Calculate group dimensions based on number of parameters
     const numParams = connectedParams.length;
-    const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
-    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 40;
-    const groupWidth = 550;
+    const paramsHeight = numParams > 0 ? numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING) - PARAM_SPACING : 0;
+    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + (numParams > 0 ? 30 + paramsHeight : 0);
+    const groupWidth = GROUP_PADDING * 2 + Math.max(PARAM_NODE_WIDTH, FUNC_NODE_WIDTH + 50);
 
     const groupX = isLeft ? LEFT_X : RIGHT_X;
     const groupY = currentY;
@@ -154,10 +157,10 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
       style: {
         width: groupWidth,
         height: groupHeight,
-        backgroundColor: 'rgba(241, 245, 249, 0.8)',
-        border: '2px dashed #94a3b8',
-        borderRadius: '12px',
-        padding: '10px',
+        backgroundColor: 'rgba(241, 245, 249, 0.9)',
+        border: '3px dashed #64748b',
+        borderRadius: '16px',
+        padding: `${GROUP_PADDING}px`,
       },
       data: {
         label: funcNode.data.customName || funcNode.data.functionName,
@@ -167,19 +170,19 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     };
     groups.push(groupNode);
 
-    // Position function node inside group
+    // Position function node inside group at the top
     const layoutedFunc = {
       ...funcNode,
       parentId: groupId,
       extent: 'parent',
       position: {
-        x: GROUP_PADDING + 250,
+        x: GROUP_PADDING + 20,
         y: GROUP_PADDING,
       },
     };
     allNodes.push(layoutedFunc);
 
-    // Position parameter nodes inside group, stacked vertically to the left
+    // Position parameter nodes inside group, stacked vertically below function
     connectedParams.forEach((paramNode, paramIdx) => {
       const layoutedParam = {
         ...paramNode,
@@ -187,14 +190,14 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
         extent: 'parent',
         position: {
           x: GROUP_PADDING,
-          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 20 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
+          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 25 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
         },
       };
       allNodes.push(layoutedParam);
     });
 
     // Update Y for next group
-    currentY += groupHeight + 40;
+    currentY += groupHeight + VERTICAL_GAP_BETWEEN_GROUPS;
   });
 
   // Add orphan parameter nodes (not connected to any function)

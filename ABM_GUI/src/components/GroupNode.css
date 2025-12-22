@@ -1,38 +1,38 @@
 .group-node {
-  background: linear-gradient(135deg, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%);
-  border: 3px dashed #64748b;
-  border-radius: 16px;
-  padding: 20px;
-  min-width: 400px;
-  min-height: 200px;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.98) 100%);
+  border: 3px dashed #475569;
+  border-radius: 18px;
+  padding: 0;
   pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .group-node-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: rgba(71, 85, 105, 0.1);
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, rgba(71, 85, 105, 0.08) 0%, rgba(71, 85, 105, 0.04) 100%);
+  border-bottom: 2px solid rgba(71, 85, 105, 0.15);
+  border-radius: 15px 15px 0 0;
   pointer-events: auto;
 }
 
 .group-node-label {
-  font-weight: 700;
-  font-size: 13px;
-  color: #334155;
+  font-weight: 800;
+  font-size: 14px;
+  color: #1e293b;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .group-node-badge {
-  background: #475569;
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
   color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
