@@ -1,9 +1,9 @@
 .group-node {
-  background: transparent; /* REMOVE background - only show border */
-  border: 4px dashed #64748b;
-  border-radius: 20px;
-  padding: 20px; /* Reduced since header is now outside */
-  padding-top: 30px; /* Extra top padding for visual balance */
+  background: transparent; /* No background */
+  border: none; /* REMOVE border completely */
+  border-radius: 0;
+  padding: 20px;
+  padding-top: 30px;
   min-width: 1100px;
   min-height: 400px;
   pointer-events: none; /* Group itself is non-interactive */
