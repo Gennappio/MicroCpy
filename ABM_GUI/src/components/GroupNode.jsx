@@ -6,14 +6,21 @@ import './GroupNode.css';
  * Creates a rectangular border around related nodes for better readability
  */
 const GroupNode = ({ data }) => {
-  const { label, functionName, paramCount } = data;
+  const { label, functionName, paramCount, description } = data;
 
   return (
     <div className="group-node">
       <div className="group-node-header">
-        <span className="group-node-label">{label || functionName}</span>
-        {paramCount > 0 && (
-          <span className="group-node-badge">{paramCount} params</span>
+        <div className="group-node-title-section">
+          <span className="group-node-label">{label || functionName}</span>
+          {paramCount > 0 && (
+            <span className="group-node-badge">{paramCount} params</span>
+          )}
+        </div>
+        {description && (
+          <div className="group-node-description">
+            {description}
+          </div>
         )}
       </div>
     </div>

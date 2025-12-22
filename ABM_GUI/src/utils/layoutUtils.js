@@ -89,17 +89,14 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
  * @returns {Object} - { nodes: layoutedNodes, edges: edges }
  */
 export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
-  // Layout constants - Balanced size for readability and zoom
+  // Layout constants
   const LEFT_X = 50;
-  const RIGHT_X = 700;
+  const RIGHT_X = 900; // Increased to accommodate wider groups
   const START_Y = 50;
-  const GROUP_PADDING = 25;
-  const PARAM_NODE_HEIGHT = 80;
-  const PARAM_NODE_WIDTH = 300;
+  const GROUP_PADDING = 20;
+  const PARAM_NODE_HEIGHT = 50;
   const FUNC_NODE_HEIGHT = 100;
-  const FUNC_NODE_WIDTH = 250;
-  const PARAM_SPACING = 12;
-  const VERTICAL_GAP_BETWEEN_GROUPS = 50;
+  const PARAM_SPACING = 10;
 
   // Build a map of function order
   const orderMap = {};
@@ -139,11 +136,11 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     const isLeft = orderIdx % 2 === 0;
     const connectedParams = funcToParams[funcNode.id] || [];
 
-    // Calculate group dimensions based on number of parameters
+    // Calculate group dimensions - MUCH WIDER for better readability
     const numParams = connectedParams.length;
-    const paramsHeight = numParams > 0 ? numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING) - PARAM_SPACING : 0;
-    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + (numParams > 0 ? 30 + paramsHeight : 0);
-    const groupWidth = GROUP_PADDING * 2 + Math.max(PARAM_NODE_WIDTH, FUNC_NODE_WIDTH + 50);
+    const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
+    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 40;
+    const groupWidth = 800; // Increased from 550
 
     const groupX = isLeft ? LEFT_X : RIGHT_X;
     const groupY = currentY;
@@ -157,32 +154,33 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
       style: {
         width: groupWidth,
         height: groupHeight,
-        backgroundColor: 'rgba(241, 245, 249, 0.9)',
-        border: '3px dashed #64748b',
-        borderRadius: '16px',
-        padding: `${GROUP_PADDING}px`,
+        backgroundColor: 'rgba(241, 245, 249, 0.8)',
+        border: '2px dashed #94a3b8',
+        borderRadius: '12px',
+        padding: '10px',
       },
       data: {
         label: funcNode.data.customName || funcNode.data.functionName,
         functionName: funcNode.data.functionName,
         paramCount: numParams,
+        description: funcNode.data.description || '', // Add description support
       },
     };
     groups.push(groupNode);
 
-    // Position function node inside group at the top
+    // Position function node inside group
     const layoutedFunc = {
       ...funcNode,
       parentId: groupId,
       extent: 'parent',
       position: {
-        x: GROUP_PADDING + 20,
+        x: GROUP_PADDING + 250,
         y: GROUP_PADDING,
       },
     };
     allNodes.push(layoutedFunc);
 
-    // Position parameter nodes inside group, stacked vertically below function
+    // Position parameter nodes inside group, stacked vertically to the left
     connectedParams.forEach((paramNode, paramIdx) => {
       const layoutedParam = {
         ...paramNode,
@@ -190,14 +188,14 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
         extent: 'parent',
         position: {
           x: GROUP_PADDING,
-          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 25 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
+          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 20 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
         },
       };
       allNodes.push(layoutedParam);
     });
 
     // Update Y for next group
-    currentY += groupHeight + VERTICAL_GAP_BETWEEN_GROUPS;
+    currentY += groupHeight + 40;
   });
 
   // Add orphan parameter nodes (not connected to any function)

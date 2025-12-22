@@ -17,6 +17,7 @@
           "id": "setup_sim",
           "function_name": "setup_simulation",
           "enabled": true,
+          "description": "Initialize simulation with time steps, output settings, and step intervals",
           "parameters": {
             "name": "Jayatilake 2D CSV",
             "total_steps": 5,
@@ -32,6 +33,7 @@
           "id": "setup_domain_node",
           "function_name": "setup_domain",
           "enabled": true,
+          "description": "Define spatial domain dimensions and grid resolution for the simulation",
           "parameters": {
             "dimensions": 2,
             "size_x": 500.0,
@@ -130,6 +132,7 @@
           "id": "setup_custom",
           "function_name": "setup_custom_parameters",
           "enabled": true,
+          "description": "Configure custom cell parameters including metabolism, ATP production, and migration behavior",
           "parameters": {},
           "parameter_nodes": [
             "param_cell_cycle",

@@ -1,10 +1,10 @@
 .workflow-function-node {
-  min-width: 220px;
+  min-width: 180px;
   background: white;
   border: 2px solid #1a192b;
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
 
@@ -37,8 +37,6 @@
 
 .status-icon {
   color: #10b981;
-  width: 16px;
-  height: 16px;
 }
 
 .status-icon.disabled {
@@ -87,7 +85,6 @@
   align-items: center;
   color: #6b7280;
   transition: color 0.2s;
-  flex-shrink: 0;
 }
 
 .node-edit-btn:hover {
