@@ -89,17 +89,17 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
  * @returns {Object} - { nodes: layoutedNodes, edges: edges }
  */
 export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
-  // Layout constants - MUCH LARGER for better readability
+  // Layout constants - Balanced size for readability and zoom
   const LEFT_X = 50;
-  const RIGHT_X = 1000;
+  const RIGHT_X = 700;
   const START_Y = 50;
-  const GROUP_PADDING = 50;
-  const PARAM_NODE_HEIGHT = 120;
-  const PARAM_NODE_WIDTH = 450;
-  const FUNC_NODE_HEIGHT = 180;
-  const FUNC_NODE_WIDTH = 380;
-  const PARAM_SPACING = 25;
-  const VERTICAL_GAP_BETWEEN_GROUPS = 100;
+  const GROUP_PADDING = 25;
+  const PARAM_NODE_HEIGHT = 80;
+  const PARAM_NODE_WIDTH = 300;
+  const FUNC_NODE_HEIGHT = 100;
+  const FUNC_NODE_WIDTH = 250;
+  const PARAM_SPACING = 12;
+  const VERTICAL_GAP_BETWEEN_GROUPS = 50;
 
   // Build a map of function order
   const orderMap = {};
