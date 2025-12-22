@@ -1,5 +1,5 @@
 .group-node {
-  background: linear-gradient(135deg, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%);
+  background: transparent; /* REMOVE background - only show border */
   border: 4px dashed #64748b;
   border-radius: 20px;
   padding: 20px; /* Reduced since header is now outside */
