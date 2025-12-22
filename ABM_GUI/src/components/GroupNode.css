@@ -1,0 +1,38 @@
+.group-node {
+  background: linear-gradient(135deg, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%);
+  border: 3px dashed #64748b;
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 400px;
+  min-height: 200px;
+  pointer-events: none;
+}
+
+.group-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(71, 85, 105, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  pointer-events: auto;
+}
+
+.group-node-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-node-badge {
+  background: #475569;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+

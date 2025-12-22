@@ -78,9 +78,9 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
 /**
  * Create a staggered layout specifically for workflow stages
  * This creates a vertically flowing layout where:
- * - Function nodes are arranged vertically with staggered horizontal offsets
- * - Parameter nodes are positioned to the left of their connected functions
- * - Nodes are spaced out to avoid overlaps
+ * - Each function and its parameters are grouped in a visual container
+ * - Groups are arranged vertically with staggered horizontal offsets
+ * - Parameter nodes are displayed individually within the group
  *
  * @param {Array} functionNodes - Function nodes
  * @param {Array} paramNodes - Parameter nodes
@@ -89,12 +89,14 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
  * @returns {Object} - { nodes: layoutedNodes, edges: edges }
  */
 export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
-  // Layout constants for vertical staggered layout
-  const LEFT_X = 100;
-  const RIGHT_X = 800;
-  const PARAM_OFFSET_X = -350; // Parameter nodes to the left of function
+  // Layout constants
+  const LEFT_X = 50;
+  const RIGHT_X = 700;
   const START_Y = 50;
-  const VERTICAL_SPACING = 270; // Space between each pair vertically
+  const GROUP_PADDING = 20;
+  const PARAM_NODE_HEIGHT = 50;
+  const FUNC_NODE_HEIGHT = 100;
+  const PARAM_SPACING = 10;
 
   // Build a map of function order
   const orderMap = {};
@@ -110,55 +112,110 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     }
   });
 
-  // Position function nodes in a vertical staggered pattern
-  // Each pair (function + params) goes down, alternating left/right
-  const layoutedFuncNodes = functionNodes.map((node) => {
-    const orderIdx = orderMap[node.id] || 0;
-    // Alternate between left and right for each node
-    const isLeft = orderIdx % 2 === 0;
-    const yPos = START_Y + (orderIdx * VERTICAL_SPACING);
+  // Build a map of which parameters connect to which function
+  const funcToParams = {};
+  functionNodes.forEach((func) => {
+    funcToParams[func.id] = [];
+  });
+  edges.forEach((edge) => {
+    if (edge.sourceHandle === 'params' && funcToParams[edge.target]) {
+      const paramNode = paramNodes.find((p) => p.id === edge.source);
+      if (paramNode) {
+        funcToParams[edge.target].push(paramNode);
+      }
+    }
+  });
 
-    return {
-      ...node,
-      position: {
-        x: isLeft ? LEFT_X : RIGHT_X,
-        y: yPos,
+  // Calculate group heights and positions
+  const groups = [];
+  const allNodes = [];
+  let currentY = START_Y;
+
+  functionNodes.forEach((funcNode) => {
+    const orderIdx = orderMap[funcNode.id] || 0;
+    const isLeft = orderIdx % 2 === 0;
+    const connectedParams = funcToParams[funcNode.id] || [];
+
+    // Calculate group dimensions
+    const numParams = connectedParams.length;
+    const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
+    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 40;
+    const groupWidth = 550;
+
+    const groupX = isLeft ? LEFT_X : RIGHT_X;
+    const groupY = currentY;
+
+    // Create group node
+    const groupId = `group_${funcNode.id}`;
+    const groupNode = {
+      id: groupId,
+      type: 'groupNode',
+      position: { x: groupX, y: groupY },
+      style: {
+        width: groupWidth,
+        height: groupHeight,
+        backgroundColor: 'rgba(241, 245, 249, 0.8)',
+        border: '2px dashed #94a3b8',
+        borderRadius: '12px',
+        padding: '10px',
+      },
+      data: {
+        label: funcNode.data.customName || funcNode.data.functionName,
+        functionName: funcNode.data.functionName,
+        paramCount: numParams,
       },
     };
-  });
+    groups.push(groupNode);
 
-  // Build a map of function positions for parameter node placement
-  const funcPositionMap = {};
-  layoutedFuncNodes.forEach((node) => {
-    funcPositionMap[node.id] = node.position;
-  });
+    // Position function node inside group
+    const layoutedFunc = {
+      ...funcNode,
+      parentId: groupId,
+      extent: 'parent',
+      position: {
+        x: GROUP_PADDING + 250,
+        y: GROUP_PADDING,
+      },
+    };
+    allNodes.push(layoutedFunc);
 
-  // Position parameter nodes based on their connected function
-  // Parameters stay with their function (same column, same row)
-  const layoutedParamNodes = paramNodes.map((paramNode) => {
-    // Find the function this parameter is connected to
-    const connectedEdge = edges.find(
-      (e) => e.source === paramNode.id && e.sourceHandle === 'params'
-    );
-
-    if (connectedEdge && funcPositionMap[connectedEdge.target]) {
-      const funcPos = funcPositionMap[connectedEdge.target];
-      // Position parameter node to the left of its function
-      return {
+    // Position parameter nodes inside group, stacked vertically to the left
+    connectedParams.forEach((paramNode, paramIdx) => {
+      const layoutedParam = {
         ...paramNode,
+        parentId: groupId,
+        extent: 'parent',
         position: {
-          x: funcPos.x + PARAM_OFFSET_X,
-          y: funcPos.y, // Same Y as function
+          x: GROUP_PADDING,
+          y: GROUP_PADDING + FUNC_NODE_HEIGHT + 20 + (paramIdx * (PARAM_NODE_HEIGHT + PARAM_SPACING)),
         },
       };
-    }
+      allNodes.push(layoutedParam);
+    });
 
-    // Fallback position if no connection found
-    return paramNode;
+    // Update Y for next group
+    currentY += groupHeight + 40;
+  });
+
+  // Add orphan parameter nodes (not connected to any function)
+  const connectedParamIds = new Set();
+  edges.forEach((edge) => {
+    if (edge.sourceHandle === 'params') {
+      connectedParamIds.add(edge.source);
+    }
+  });
+  paramNodes.forEach((paramNode) => {
+    if (!connectedParamIds.has(paramNode.id)) {
+      allNodes.push({
+        ...paramNode,
+        position: { x: LEFT_X, y: currentY },
+      });
+      currentY += PARAM_NODE_HEIGHT + 20;
+    }
   });
 
   return {
-    nodes: [...layoutedParamNodes, ...layoutedFuncNodes],
+    nodes: [...groups, ...allNodes],
     edges,
   };
 }

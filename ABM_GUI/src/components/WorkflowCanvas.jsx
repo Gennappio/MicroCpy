@@ -11,6 +11,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import WorkflowFunctionNode from './WorkflowFunctionNode';
 import ParameterNode from './ParameterNode';
+import GroupNode from './GroupNode';
 import ParameterEditor from './ParameterEditor';
 import useWorkflowStore from '../store/workflowStore';
 import { getDefaultParameters } from '../data/functionRegistry';
@@ -19,6 +20,7 @@ import './WorkflowCanvas.css';
 const nodeTypes = {
   workflowFunction: WorkflowFunctionNode,
   parameterNode: ParameterNode,
+  groupNode: GroupNode,
 };
 
 /**
