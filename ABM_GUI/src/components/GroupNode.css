@@ -13,54 +13,54 @@
 .group-node-header {
   display: inline-flex; /* Changed from flex to inline-flex to fit content */
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px; /* Reduced padding */
+  gap: 3px; /* Much smaller gap */
+  padding: 4px 8px; /* MUCH smaller padding */
   background: rgba(71, 85, 105, 0.2); /* Slightly more opaque to be visible above edges */
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: 4px; /* Smaller radius */
+  margin-bottom: 8px; /* Smaller margin */
   pointer-events: none; /* Header is also non-interactive - just displays info */
   position: relative;
   z-index: 6; /* Header above edges (z-index: 5) but below child nodes (z-index: 10) */
   width: auto; /* Auto width to fit content */
-  max-width: 90%; /* Don't exceed 90% of group width */
+  max-width: 60%; /* Smaller max width */
 }
 
 .group-node-title-section {
   display: flex;
   justify-content: flex-start; /* Changed from space-between to flex-start */
   align-items: center;
-  gap: 10px; /* Add gap between label and badge */
+  gap: 6px; /* Smaller gap between label and badge */
   width: auto; /* Changed from 100% to auto to fit content */
 }
 
 .group-node-label {
-  font-weight: 700;
-  font-size: 13px; /* Reduced from 15px */
+  font-weight: 600; /* Lighter weight */
+  font-size: 10px; /* MUCH smaller */
   color: #334155;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   white-space: nowrap; /* Prevent wrapping */
 }
 
 .group-node-badge {
   background: #475569;
   color: white;
-  font-size: 10px; /* Reduced from 12px */
-  font-weight: 600;
-  padding: 3px 8px; /* Reduced padding */
-  border-radius: 10px;
+  font-size: 8px; /* MUCH smaller */
+  font-weight: 500;
+  padding: 2px 5px; /* MUCH smaller padding */
+  border-radius: 6px;
   white-space: nowrap; /* Prevent wrapping */
 }
 
 .group-node-description {
-  font-size: 12px; /* Reduced from 13px */
+  font-size: 9px; /* MUCH smaller */
   color: #475569;
-  line-height: 1.4;
+  line-height: 1.3;
   font-weight: 400;
   font-style: italic;
-  padding: 4px 0; /* Reduced padding */
+  padding: 2px 0; /* MUCH smaller padding */
   border-top: 1px solid rgba(71, 85, 105, 0.15);
-  padding-top: 6px; /* Reduced padding */
+  padding-top: 3px; /* MUCH smaller padding */
   width: auto; /* Fit content */
 }
 
