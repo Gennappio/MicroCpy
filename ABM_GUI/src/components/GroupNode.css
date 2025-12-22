@@ -11,50 +11,56 @@
 }
 
 .group-node-header {
-  display: flex;
+  display: inline-flex; /* Changed from flex to inline-flex to fit content */
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 8px 12px; /* Reduced padding */
   background: rgba(71, 85, 105, 0.2); /* Slightly more opaque to be visible above edges */
-  border-radius: 10px;
+  border-radius: 8px;
   margin-bottom: 16px;
   pointer-events: none; /* Header is also non-interactive - just displays info */
   position: relative;
   z-index: 6; /* Header above edges (z-index: 5) but below child nodes (z-index: 10) */
+  width: auto; /* Auto width to fit content */
+  max-width: 90%; /* Don't exceed 90% of group width */
 }
 
 .group-node-title-section {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start; /* Changed from space-between to flex-start */
   align-items: center;
-  width: 100%;
+  gap: 10px; /* Add gap between label and badge */
+  width: auto; /* Changed from 100% to auto to fit content */
 }
 
 .group-node-label {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 13px; /* Reduced from 15px */
   color: #334155;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .group-node-badge {
   background: #475569;
   color: white;
-  font-size: 12px;
+  font-size: 10px; /* Reduced from 12px */
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 12px;
+  padding: 3px 8px; /* Reduced padding */
+  border-radius: 10px;
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .group-node-description {
-  font-size: 13px;
+  font-size: 12px; /* Reduced from 13px */
   color: #475569;
-  line-height: 1.5;
+  line-height: 1.4;
   font-weight: 400;
   font-style: italic;
-  padding: 6px 0;
+  padding: 4px 0; /* Reduced padding */
   border-top: 1px solid rgba(71, 85, 105, 0.15);
-  padding-top: 10px;
+  padding-top: 6px; /* Reduced padding */
+  width: auto; /* Fit content */
 }
 
