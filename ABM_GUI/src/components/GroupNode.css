@@ -2,27 +2,31 @@
   background: linear-gradient(135deg, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%);
   border: 4px dashed #64748b;
   border-radius: 20px;
-  padding: 30px;
+  padding: 20px; /* Reduced since header is now outside */
+  padding-top: 30px; /* Extra top padding for visual balance */
   min-width: 1100px;
-  min-height: 400px; /* Increased from 300px */
+  min-height: 400px;
   pointer-events: none; /* Group itself is non-interactive */
   position: relative;
   z-index: 0; /* Ensure group is in background */
 }
 
-.group-node-header {
-  display: inline-flex; /* Changed from flex to inline-flex to fit content */
+/* Title box positioned OUTSIDE the main rectangle at top-left */
+.group-node-header-external {
+  display: inline-flex;
   flex-direction: column;
-  gap: 3px; /* Much smaller gap */
-  padding: 4px 8px; /* MUCH smaller padding */
-  background: rgba(71, 85, 105, 0.2); /* Slightly more opaque to be visible above edges */
-  border-radius: 4px; /* Smaller radius */
-  margin-bottom: 8px; /* Smaller margin */
-  pointer-events: none; /* Header is also non-interactive - just displays info */
-  position: relative;
-  z-index: 6; /* Header above edges (z-index: 5) but below child nodes (z-index: 10) */
-  width: auto; /* Auto width to fit content */
-  max-width: 60%; /* Smaller max width */
+  gap: 3px;
+  padding: 4px 8px;
+  background: rgba(71, 85, 105, 0.85); /* Darker, more opaque */
+  border-radius: 6px;
+  pointer-events: none;
+  position: absolute;
+  top: -12px; /* Position ABOVE the rectangle */
+  left: 20px; /* Position from left edge */
+  z-index: 6; /* Above edges but below child nodes */
+  width: auto;
+  max-width: 500px; /* Reasonable max width */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .group-node-title-section {
@@ -34,33 +38,34 @@
 }
 
 .group-node-label {
-  font-weight: 600; /* Lighter weight */
-  font-size: 10px; /* MUCH smaller */
-  color: #334155;
+  font-weight: 600;
+  font-size: 11px;
+  color: #f1f5f9; /* Light color for dark background */
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  white-space: nowrap; /* Prevent wrapping */
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .group-node-badge {
-  background: #475569;
+  background: #1e293b;
   color: white;
-  font-size: 8px; /* MUCH smaller */
+  font-size: 9px;
   font-weight: 500;
-  padding: 2px 5px; /* MUCH smaller padding */
-  border-radius: 6px;
-  white-space: nowrap; /* Prevent wrapping */
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .group-node-description {
-  font-size: 9px; /* MUCH smaller */
-  color: #475569;
+  font-size: 10px;
+  color: #e2e8f0; /* Light color for dark background */
   line-height: 1.3;
   font-weight: 400;
   font-style: italic;
-  padding: 2px 0; /* MUCH smaller padding */
-  border-top: 1px solid rgba(71, 85, 105, 0.15);
-  padding-top: 3px; /* MUCH smaller padding */
-  width: auto; /* Fit content */
+  padding: 2px 0;
+  border-top: 1px solid rgba(241, 245, 249, 0.2);
+  padding-top: 3px;
+  width: auto;
+  max-width: 450px; /* Prevent too wide */
 }
 
