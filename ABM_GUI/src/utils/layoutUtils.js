@@ -91,9 +91,9 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
 export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
   // Layout constants
   const LEFT_X = 50;
-  const RIGHT_X = 900; // Increased to accommodate wider groups
+  const RIGHT_X = 1300; // MUCH LARGER - increased to accommodate very wide groups
   const START_Y = 50;
-  const GROUP_PADDING = 20;
+  const GROUP_PADDING = 40; // Increased padding for more space
   const PARAM_NODE_HEIGHT = 50;
   const FUNC_NODE_HEIGHT = 100;
   const PARAM_SPACING = 10;
@@ -136,11 +136,11 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     const isLeft = orderIdx % 2 === 0;
     const connectedParams = funcToParams[funcNode.id] || [];
 
-    // Calculate group dimensions - MUCH WIDER for better readability
+    // Calculate group dimensions - VERY LARGE for maximum readability
     const numParams = connectedParams.length;
     const paramsHeight = numParams * (PARAM_NODE_HEIGHT + PARAM_SPACING);
-    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 40;
-    const groupWidth = 800; // Increased from 550
+    const groupHeight = GROUP_PADDING * 2 + FUNC_NODE_HEIGHT + paramsHeight + 80; // Increased vertical padding
+    const groupWidth = 1200; // MUCH LARGER - increased from 800
 
     const groupX = isLeft ? LEFT_X : RIGHT_X;
     const groupY = currentY;
