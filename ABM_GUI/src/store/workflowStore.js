@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createStaggeredLayout } from '../utils/layoutUtils';
 
 /**
  * Workflow Store - Manages the entire workflow state
@@ -77,14 +78,8 @@ const useWorkflowStore = create((set, get) => ({
       finalization: [],
     };
 
-    // Layout constants for tidy positioning
-    const FUNC_NODE_X = 350;           // X position for function nodes
-    const PARAM_NODE_X = 50;           // X position for parameter nodes (to the left)
-    const START_Y = 50;                // Starting Y position
-    const FUNC_NODE_SPACING = 120;     // Vertical spacing between function nodes
-    const PARAM_NODE_OFFSET_Y = 10;    // Y offset for param node relative to function
-
     // Convert workflow functions and parameter nodes to React Flow nodes for ALL stages
+    // Uses staggered layout for visual arrangement
     Object.keys(newStageNodes).forEach((stageName) => {
       // Handle backward compatibility: "diffusion" -> "microenvironment"
       const actualStageName = stageName === 'microenvironment' && !stages[stageName] && stages['diffusion']
@@ -93,31 +88,18 @@ const useWorkflowStore = create((set, get) => ({
       const stage = stages[actualStageName];
       if (!stage) return;
 
-      const allNodes = [];
       const allEdges = [];
       const createdParamNodeIds = new Set(); // Track created parameter nodes
 
-      // Build execution order index map for positioning
+      // Build execution order for layout
       const executionOrder = stage.execution_order || [];
-      const orderIndexMap = {};
-      executionOrder.forEach((funcId, idx) => {
-        orderIndexMap[funcId] = idx;
-      });
-
-      // For functions not in execution_order, assign indices after the ordered ones
-      let nextUnorderedIdx = executionOrder.length;
-      stage.functions.forEach((func) => {
-        if (!(func.id in orderIndexMap)) {
-          orderIndexMap[func.id] = nextUnorderedIdx++;
-        }
-      });
 
       // Create parameter nodes from the parameters array (if exists)
-      // Position them based on linked function positions
-      const explicitParamNodes = (stage.parameters || []).map((param, idx) => ({
+      // Positions will be set by staggered layout
+      const explicitParamNodes = (stage.parameters || []).map((param) => ({
         id: param.id,
         type: 'parameterNode',
-        position: param.position || { x: PARAM_NODE_X, y: START_Y + idx * FUNC_NODE_SPACING },
+        position: param.position || { x: 0, y: 0 }, // Will be set by staggered layout
         data: {
           label: param.label || 'Parameters',
           parameters: param.parameters || {},
@@ -125,7 +107,6 @@ const useWorkflowStore = create((set, get) => ({
         },
       }));
       explicitParamNodes.forEach(node => createdParamNodeIds.add(node.id));
-      allNodes.push(...explicitParamNodes);
 
       // Auto-create parameter nodes for functions that have parameters but no parameter_nodes connections
       const autoCreatedParamNodes = [];
@@ -136,17 +117,11 @@ const useWorkflowStore = create((set, get) => ({
         // If function has parameters but no parameter node connections, create a parameter node
         if (hasParameters && !hasParamNodeConnections) {
           const paramNodeId = `param_auto_${func.id}`;
-          const funcOrderIdx = orderIndexMap[func.id] || 0;
-          const funcY = START_Y + funcOrderIdx * FUNC_NODE_SPACING;
 
           const paramNode = {
             id: paramNodeId,
             type: 'parameterNode',
-            position: {
-              // Parameter nodes positioned to the LEFT of function nodes
-              x: PARAM_NODE_X,
-              y: funcY + PARAM_NODE_OFFSET_Y
-            },
+            position: { x: 0, y: 0 }, // Will be set by staggered layout
             data: {
               label: `${func.custom_name || func.function_name} Parameters`,
               parameters: func.parameters || {},
@@ -163,17 +138,13 @@ const useWorkflowStore = create((set, get) => ({
           func.parameter_nodes.push(paramNodeId);
         }
       });
-      allNodes.push(...autoCreatedParamNodes);
 
-      // Create function nodes - use execution order for Y positioning
+      // Create function nodes (positions will be set by staggered layout)
       const functionNodes = stage.functions.map((func) => {
-        const orderIdx = orderIndexMap[func.id] || 0;
-        const defaultY = START_Y + orderIdx * FUNC_NODE_SPACING;
-
         return {
           id: func.id,
           type: 'workflowFunction',
-          position: func.position || { x: FUNC_NODE_X, y: defaultY },
+          position: func.position || { x: 0, y: 0 }, // Will be overwritten by layout
           data: {
             label: func.function_name,
             functionName: func.function_name,
@@ -188,7 +159,6 @@ const useWorkflowStore = create((set, get) => ({
           },
         };
       });
-      allNodes.push(...functionNodes);
 
       // Create parameter connection edges
       stage.functions.forEach((func) => {
@@ -208,7 +178,7 @@ const useWorkflowStore = create((set, get) => ({
                 height: 20,
               },
               style: {
-                strokeWidth: 2,
+                strokeWidth: 4,
                 stroke: '#3b82f6', // Blue for parameter connections
               },
             });
@@ -232,12 +202,23 @@ const useWorkflowStore = create((set, get) => ({
             height: 20,
           },
           style: {
-            strokeWidth: 2,
+            strokeWidth: 6,
           },
         });
       }
 
-      newStageNodes[stageName] = allNodes;
+      // Collect all parameter nodes (explicit + auto-created)
+      const allParamNodes = [...explicitParamNodes, ...autoCreatedParamNodes];
+
+      // Apply staggered layout to position nodes
+      const { nodes: layoutedNodes } = createStaggeredLayout(
+        functionNodes,
+        allParamNodes,
+        allEdges,
+        executionOrder
+      );
+
+      newStageNodes[stageName] = layoutedNodes;
       newStageEdges[stageName] = allEdges;
     });
 

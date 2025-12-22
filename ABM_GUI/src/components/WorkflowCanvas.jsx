@@ -39,16 +39,25 @@ const WorkflowCanvas = ({ stage }) => {
 
   // Track if we're syncing from store to prevent infinite loops
   const isSyncingFromStore = useRef(false);
+  // Track if we've already fitted the view for this stage
+  const hasFittedView = useRef({});
 
   // Sync local state with store when store changes (e.g., workflow loaded)
   React.useEffect(() => {
     isSyncingFromStore.current = true;
-    setNodes(stageNodes[stage] || []);
+    const newNodes = stageNodes[stage] || [];
+    setNodes(newNodes);
+
     // Reset flag after a tick to allow local changes to propagate
     setTimeout(() => {
       isSyncingFromStore.current = false;
+      // Only fit view once when nodes are first loaded for this stage
+      if (reactFlowInstance && newNodes.length > 0 && !hasFittedView.current[stage]) {
+        reactFlowInstance.fitView({ padding: 0.2, duration: 200 });
+        hasFittedView.current[stage] = true;
+      }
     }, 0);
-  }, [stageNodes[stage], setNodes]);
+  }, [stageNodes[stage], setNodes, reactFlowInstance, stage]);
 
   React.useEffect(() => {
     isSyncingFromStore.current = true;
@@ -84,11 +93,11 @@ const WorkflowCanvas = ({ stage }) => {
             animated: !isParameterConnection, // Only animate function connections
             markerEnd: {
               type: 'arrowclosed',
-              width: 20,
-              height: 20,
+              width: 30,
+              height: 30,
             },
             style: {
-              strokeWidth: 2,
+              strokeWidth: 4,
               stroke: isParameterConnection ? '#3b82f6' : undefined, // Blue for parameter connections
             },
           },
