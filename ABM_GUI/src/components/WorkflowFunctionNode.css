@@ -1,5 +1,5 @@
 .workflow-function-node {
-  min-width: 180px;
+  width: 320px; /* Fixed width to fit 40 characters */
   background: white;
   border: 2px solid #1a192b;
   border-radius: 8px;
@@ -9,6 +9,7 @@
   position: relative;
   z-index: 10; /* Ensure function nodes are above group */
   overflow: visible; /* Ensure handles outside node bounds are visible */
+  box-sizing: border-box; /* Include border and padding in width */
 }
 
 .workflow-function-node.selected {
@@ -55,6 +56,8 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  word-break: break-word; /* Allow long words to break */
+  overflow-wrap: break-word; /* Ensure text wraps */
 }
 
 .template-badge {

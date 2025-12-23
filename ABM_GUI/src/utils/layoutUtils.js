@@ -91,16 +91,17 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
 export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
   // Layout constants
   const LEFT_X = 50;
-  const RIGHT_X = 1300; // Offset for alternating groups
+  const RIGHT_X = 1400; // Offset for alternating groups
   const START_Y = 50;
-  const GROUP_PADDING = 60; // Padding inside group around nodes
-  const GROUP_MARGIN = 30; // Margin between nodes inside group
+  const GROUP_PADDING = 80; // Padding inside group around nodes (increased for more space)
+  const GROUP_MARGIN = 60; // Margin between nodes inside group (increased)
   const PARAM_NODE_WIDTH = 260; // Actual parameter node width
   const PARAM_NODE_HEIGHT = 80; // Actual parameter node height (with content)
-  const FUNC_NODE_WIDTH = 240; // Actual function node width
-  const FUNC_NODE_HEIGHT = 200; // Actual function node height (with parameters list)
-  const PARAM_SPACING = 15; // Vertical spacing between parameter nodes
+  const FUNC_NODE_WIDTH = 320; // Fixed function node width (matches CSS)
+  const FUNC_NODE_HEIGHT = 250; // Actual function node height (with parameters list)
+  const PARAM_SPACING = 20; // Vertical spacing between parameter nodes (increased)
   const HEADER_HEIGHT = 40; // Height reserved for title box
+  const GROUP_VERTICAL_SPACING = 100; // Spacing between groups vertically (increased)
 
   // Build a map of function order
   const orderMap = {};
@@ -219,7 +220,7 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     });
 
     // Update Y for next group with gap between groups
-    currentY += groupHeight + 60;
+    currentY += groupHeight + GROUP_VERTICAL_SPACING;
   });
 
   // Add orphan parameter nodes (not connected to any function)

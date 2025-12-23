@@ -14,7 +14,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
   const [functionMetadata, setFunctionMetadata] = useState(null);
 
-  const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
+  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
   // Load function metadata asynchronously to ensure registry is loaded
   useEffect(() => {
@@ -101,9 +101,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         )}
       </div>
 
-      {description && (
-        <div className="node-description">{description}</div>
-      )}
+      {/* Description hidden - only visible in settings dialog */}
 
       {/* Parameter labels and handles section - based on function metadata */}
       {parameterDefs.length > 0 && (
