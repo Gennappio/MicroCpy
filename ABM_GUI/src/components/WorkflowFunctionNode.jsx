@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, useEdges } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
 import { getFunction } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
@@ -10,7 +10,7 @@ import './WorkflowFunctionNode.css';
  */
 const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
-  const edges = useWorkflowStore((state) => state.edges);
+  const edges = useEdges(); // Use reactflow's useEdges hook
 
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
@@ -29,8 +29,9 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const parameterDefs = functionMetadata.parameters || [];
 
   // Find all parameter nodes connected to this function
-  const connectedParamNodes = edges
-    .filter(edge => edge.target === id && edge.targetHandle === 'params')
+  // Look for edges that target this node with any params-related handle
+  const connectedParamNodes = (edges || [])
+    .filter(edge => edge.target === id && (edge.targetHandle === 'params' || edge.targetHandle?.startsWith('params-')))
     .map(edge => edge.source);
 
   const handleToggleEnabled = (e) => {

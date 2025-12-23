@@ -131,20 +131,28 @@ function App() {
 	                >
 	                  <span className="stage-indicator" style={{ background: stage.color }} />
 	                  <span className="stage-label">{stage.label}</span>
-	                  <button
+	                  <span
 	                    className="stage-toggle-btn"
 	                    onClick={(e) => {
 	                      e.stopPropagation();
 	                      toggleStageEnabled(stage.id);
 	                    }}
 	                    title={isEnabled ? 'Disable stage' : 'Enable stage'}
+	                    role="button"
+	                    tabIndex={0}
+	                    onKeyDown={(e) => {
+	                      if (e.key === 'Enter' || e.key === ' ') {
+	                        e.stopPropagation();
+	                        toggleStageEnabled(stage.id);
+	                      }
+	                    }}
 	                  >
 	                    {isEnabled ? (
 	                      <Play size={14} className="stage-status enabled" />
 	                    ) : (
 	                      <Pause size={14} className="stage-status disabled" />
 	                    )}
-	                  </button>
+	                  </span>
 	                </button>
 	              );
 	            })}
