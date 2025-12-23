@@ -1,15 +1,16 @@
 .workflow-function-node {
-  width: 320px; /* Fixed width to fit 40 characters */
+  width: 192px; /* 40% smaller: 320px * 0.6 = 192px */
   background: white;
   border: 2px solid #1a192b;
   border-radius: 8px;
-  padding: 12px;
+  padding: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   position: relative;
   z-index: 10; /* Ensure function nodes are above group */
   overflow: visible; /* Ensure handles outside node bounds are visible */
   box-sizing: border-box; /* Include border and padding in width */
+  font-size: 12px; /* Slightly smaller font */
 }
 
 .workflow-function-node.selected {
@@ -232,15 +233,16 @@
 }
 
 .parameter-handle-input {
-  background: #3b82f6 !important;
-  width: 10px !important;
-  height: 10px !important;
+  background: #3b82f6 !important; /* Blue like strokes */
+  width: 8px !important; /* 20% smaller: 10px * 0.8 = 8px */
+  height: 8px !important; /* 20% smaller: 10px * 0.8 = 8px */
   border: 2px solid white !important;
-  left: -17px !important; /* Position on node border: 12px padding + 5px to center handle */
+  left: -16px !important; /* Adjust for smaller size */
 }
 
 .parameter-row.disconnected .parameter-handle-input {
-  background: #cbd5e1 !important;
+  background: #3b82f6 !important; /* Keep blue even when disconnected */
+  opacity: 0.5; /* Reduce opacity for disconnected state */
 }
 
 .parameter-handle-output {

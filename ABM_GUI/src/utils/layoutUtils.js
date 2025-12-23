@@ -97,8 +97,8 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
   const GROUP_MARGIN = 60; // Margin between nodes inside group (increased)
   const PARAM_NODE_WIDTH = 260; // Actual parameter node width
   const PARAM_NODE_HEIGHT = 80; // Actual parameter node height (with content)
-  const FUNC_NODE_WIDTH = 320; // Fixed function node width (matches CSS)
-  const FUNC_NODE_HEIGHT = 250; // Actual function node height (with parameters list)
+  const FUNC_NODE_WIDTH = 192; // Fixed function node width (40% smaller: 320 * 0.6 = 192)
+  const FUNC_NODE_HEIGHT = 150; // Actual function node height (40% smaller)
   const PARAM_SPACING = 20; // Vertical spacing between parameter nodes (increased)
   const HEADER_HEIGHT = 40; // Height reserved for title box
   const GROUP_VERTICAL_SPACING = 100; // Spacing between groups vertically (increased)
