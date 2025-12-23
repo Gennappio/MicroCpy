@@ -32,6 +32,7 @@ code {
   padding: 0;
   font-size: 12px;
   box-shadow: none;
+  overflow: visible !important; /* Ensure handles outside node bounds are visible */
 }
 
 .react-flow__node.selected {

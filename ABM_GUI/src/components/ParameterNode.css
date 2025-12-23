@@ -9,6 +9,7 @@
   transition: all 0.2s ease;
   position: relative;
   z-index: 10; /* Ensure parameter nodes are above group */
+  overflow: visible; /* Ensure handles outside node bounds are visible */
 }
 
 .parameter-node.selected {
