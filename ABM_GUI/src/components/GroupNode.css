@@ -1,5 +1,5 @@
 .group-node {
-  background: transparent; /* Transparent background so edges are visible */
+  background: #f0fdf4; /* Very light pastel green */
   border: 2px solid #cbd5e1; /* Visible border for enclosing box */
   border-radius: 12px;
   padding: 20px;
