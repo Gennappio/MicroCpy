@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position, useEdges } from 'reactflow';
+import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
 import { getFunction } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
@@ -11,6 +11,7 @@ import './WorkflowFunctionNode.css';
 const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
   const edges = useEdges(); // Use reactflow's useEdges hook
+  const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
 
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
@@ -25,14 +26,17 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const isTemplate = !customName && !isCustom;
   const displayName = customName || label;
 
-  // Get parameter definitions from metadata
-  const parameterDefs = functionMetadata.parameters || [];
-
-  // Find all parameter nodes connected to this function
+  // Find all parameter nodes connected to this function with their labels
   // Look for edges that target this node with any params-related handle
-  const connectedParamNodes = (edges || [])
+  const connectedParamNodesWithLabels = (edges || [])
     .filter(edge => edge.target === id && (edge.targetHandle === 'params' || edge.targetHandle?.startsWith('params-')))
-    .map(edge => edge.source);
+    .map(edge => {
+      const paramNode = (nodes || []).find(n => n.id === edge.source);
+      return {
+        id: edge.source,
+        label: paramNode?.data?.label || edge.source,
+      };
+    });
 
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
@@ -43,37 +47,6 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
     <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}>
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
-
-      {/* Individual parameter input handles on LEFT side - one per connected parameter node */}
-      {connectedParamNodes.length > 0 && connectedParamNodes.map((paramNodeId, index) => {
-        const totalParams = connectedParamNodes.length;
-        const spacing = 100 / (totalParams + 1); // Distribute evenly
-        const topPosition = spacing * (index + 1); // Position as percentage
-
-        return (
-          <Handle
-            key={`param-${paramNodeId}`}
-            type="target"
-            position={Position.Left}
-            id={`params-${index}`} // Unique ID for each parameter connection
-            className="parameter-handle-input"
-            style={{ top: `${topPosition}%` }}
-            title={`Parameter: ${paramNodeId}`}
-          />
-        );
-      })}
-
-      {/* Fallback: If no parameter nodes connected, show single general handle */}
-      {connectedParamNodes.length === 0 && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="params"
-          className="parameter-handle-input"
-          style={{ top: '50%' }}
-          title="Parameter input"
-        />
-      )}
 
       <div className="node-header">
         <button
@@ -110,20 +83,20 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-description">{description}</div>
       )}
 
-      {/* Parameter labels and handles section */}
-      {parameterDefs.length > 0 && (
+      {/* Parameter labels and handles section - based on connected parameter nodes */}
+      {connectedParamNodesWithLabels.length > 0 && (
         <div className="node-parameters">
-          {parameterDefs.map((param) => (
-            <div key={`param-${param.name}`} className="parameter-row">
+          {connectedParamNodesWithLabels.map((paramNode, index) => (
+            <div key={`param-${paramNode.id}`} className="parameter-row">
               <Handle
                 type="target"
                 position={Position.Left}
-                id={`param-${param.name}`}
+                id={`params-${index}`}
                 className="parameter-handle-input"
                 style={{ top: 'auto', left: '-6px' }}
-                title={param.description || param.name}
+                title={paramNode.label}
               />
-              <span className="parameter-label">{param.name}</span>
+              <span className="parameter-label">{paramNode.label}</span>
             </div>
           ))}
         </div>
