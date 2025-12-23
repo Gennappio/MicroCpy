@@ -231,7 +231,7 @@
   width: 10px !important;
   height: 10px !important;
   border: 2px solid white !important;
-  left: 0px !important;
+  left: -5px !important; /* Center handle on left border (half of 10px width) */
 }
 
 .parameter-row.disconnected .parameter-handle-input {

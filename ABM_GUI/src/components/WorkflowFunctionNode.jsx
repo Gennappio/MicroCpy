@@ -106,7 +106,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
                   position={Position.Left}
                   id={handleId}
                   className="parameter-handle-input"
-                  style={{ top: 'auto', left: '0px' }}
+                  style={{ top: 'auto' }}
                   title={isConnected ? `Provided by: ${isConnected.label}` : (param.description || param.name)}
                 />
                 <span className="parameter-label" title={param.description}>
