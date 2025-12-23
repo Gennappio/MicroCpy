@@ -154,11 +154,8 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
       style: {
         width: groupWidth,
         height: groupHeight,
-        backgroundColor: 'rgba(241, 245, 249, 0.8)',
-        border: '2px dashed #94a3b8',
-        borderRadius: '12px',
-        padding: '10px',
-        zIndex: 0, // Ensure group is in background
+        zIndex: -100, // NEGATIVE z-index to ensure group is behind EVERYTHING including edges
+        // No backgroundColor or border - handled by CSS (transparent)
       },
       data: {
         label: funcNode.data.customName || funcNode.data.functionName,
