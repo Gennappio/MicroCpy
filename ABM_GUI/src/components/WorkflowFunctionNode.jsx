@@ -15,7 +15,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
-  // Get function metadata to know inputs/outputs
+  // Get function metadata to know inputs/outputs and parameters
   const functionMetadata = getFunction(functionName) || { inputs: [], outputs: [], parameters: [] };
 
   // Get function file from data or parameters
@@ -26,16 +26,25 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const isTemplate = !customName && !isCustom;
   const displayName = customName || label;
 
-  // Find all parameter nodes connected to this function with their labels
-  // Look for edges that target this node with any params-related handle
-  const connectedParamNodesWithLabels = (edges || [])
-    .filter(edge => edge.target === id && (edge.targetHandle === 'params' || edge.targetHandle?.startsWith('params-')))
-    .map(edge => {
+  // Get parameter definitions from function metadata - these define the sockets
+  const parameterDefs = functionMetadata.parameters || [];
+
+  // Find which parameter nodes are connected and which parameters they provide
+  // Build a map from parameter name to the node that provides it
+  const parameterToNode = {};
+  (edges || [])
+    .filter(edge => edge.target === id && edge.targetHandle?.startsWith('params-'))
+    .forEach(edge => {
       const paramNode = (nodes || []).find(n => n.id === edge.source);
-      return {
-        id: edge.source,
-        label: paramNode?.data?.label || edge.source,
-      };
+      if (paramNode && paramNode.data && paramNode.data.parameters) {
+        // This parameter node provides all the parameters in its data.parameters object
+        Object.keys(paramNode.data.parameters).forEach(paramName => {
+          parameterToNode[paramName] = {
+            id: edge.source,
+            label: paramNode.data.label || edge.source,
+          };
+        });
+      }
     });
 
   const handleToggleEnabled = (e) => {
@@ -83,22 +92,30 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-description">{description}</div>
       )}
 
-      {/* Parameter labels and handles section - based on connected parameter nodes */}
-      {connectedParamNodesWithLabels.length > 0 && (
+      {/* Parameter labels and handles section - based on function metadata */}
+      {parameterDefs.length > 0 && (
         <div className="node-parameters">
-          {connectedParamNodesWithLabels.map((paramNode, index) => (
-            <div key={`param-${paramNode.id}`} className="parameter-row">
-              <Handle
-                type="target"
-                position={Position.Left}
-                id={`params-${index}`}
-                className="parameter-handle-input"
-                style={{ top: 'auto', left: '-6px' }}
-                title={paramNode.label}
-              />
-              <span className="parameter-label">{paramNode.label}</span>
-            </div>
-          ))}
+          {parameterDefs.map((param, index) => {
+            const handleId = `params-${index}`;
+            const isConnected = parameterToNode[param.name];
+
+            return (
+              <div key={`param-${param.name}`} className={`parameter-row ${isConnected ? 'connected' : 'disconnected'}`}>
+                <Handle
+                  type="target"
+                  position={Position.Left}
+                  id={handleId}
+                  className="parameter-handle-input"
+                  style={{ top: 'auto', left: '0px' }}
+                  title={isConnected ? `Provided by: ${isConnected.label}` : (param.description || param.name)}
+                />
+                <span className="parameter-label" title={param.description}>
+                  {param.name}
+                  {!isConnected && param.required !== false && <span className="required-indicator">*</span>}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 

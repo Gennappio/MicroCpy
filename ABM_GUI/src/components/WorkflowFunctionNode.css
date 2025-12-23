@@ -158,8 +158,16 @@
   display: flex;
   align-items: center;
   position: relative;
-  padding-left: 8px;
+  padding-left: 12px;
   min-height: 20px;
+}
+
+.parameter-row.disconnected {
+  opacity: 0.6;
+}
+
+.parameter-row.connected {
+  opacity: 1;
 }
 
 .parameter-label {
@@ -170,6 +178,18 @@
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid #bfdbfe;
+}
+
+.parameter-row.disconnected .parameter-label {
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.required-indicator {
+  color: #ef4444;
+  margin-left: 2px;
+  font-weight: bold;
 }
 
 .node-outputs {
@@ -211,7 +231,11 @@
   width: 10px !important;
   height: 10px !important;
   border: 2px solid white !important;
-  left: -6px !important;
+  left: 0px !important;
+}
+
+.parameter-row.disconnected .parameter-handle-input {
+  background: #cbd5e1 !important;
 }
 
 .parameter-handle-output {
