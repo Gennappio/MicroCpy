@@ -1,7 +1,7 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
-import { getFunction } from '../data/functionRegistry';
+import { getFunction, getFunctionAsync } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowFunctionNode.css';
 
@@ -12,11 +12,24 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
   const edges = useEdges(); // Use reactflow's useEdges hook
   const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
+  const [functionMetadata, setFunctionMetadata] = useState(null);
 
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
-  // Get function metadata to know inputs/outputs and parameters
-  const functionMetadata = getFunction(functionName) || { inputs: [], outputs: [], parameters: [] };
+  // Load function metadata asynchronously to ensure registry is loaded
+  useEffect(() => {
+    const loadMetadata = async () => {
+      const metadata = await getFunctionAsync(functionName);
+      setFunctionMetadata(metadata || { inputs: [], outputs: [], parameters: [] });
+    };
+    // Try sync first (if cache is ready), otherwise async
+    const syncMetadata = getFunction(functionName);
+    if (syncMetadata) {
+      setFunctionMetadata(syncMetadata);
+    } else {
+      loadMetadata();
+    }
+  }, [functionName]);
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
@@ -27,7 +40,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const displayName = customName || label;
 
   // Get parameter definitions from function metadata - these define the sockets
-  const parameterDefs = functionMetadata.parameters || [];
+  const parameterDefs = functionMetadata?.parameters || [];
 
   // Find which parameter nodes are connected and which parameters they provide
   // Build a map from parameter name to the node that provides it
