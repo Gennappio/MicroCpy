@@ -158,7 +158,7 @@
   display: flex;
   align-items: center;
   position: relative;
-  padding-left: 12px;
+  padding-left: 0px; /* Remove padding so handles can be on border */
   min-height: 20px;
 }
 
@@ -176,6 +176,7 @@
   font-weight: 500;
   background: #eff6ff;
   padding: 2px 6px;
+  margin-left: 8px; /* Add margin to separate from handle */
   border-radius: 3px;
   border: 1px solid #bfdbfe;
 }
@@ -231,7 +232,7 @@
   width: 10px !important;
   height: 10px !important;
   border: 2px solid white !important;
-  left: -5px !important; /* Center handle on left border (half of 10px width) */
+  left: -17px !important; /* Position on node border: 12px padding + 5px to center handle */
 }
 
 .parameter-row.disconnected .parameter-handle-input {
