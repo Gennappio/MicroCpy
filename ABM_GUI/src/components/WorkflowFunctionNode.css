@@ -1,16 +1,17 @@
+/* UPDATED: 2025-12-23 - Function nodes 40% smaller */
 .workflow-function-node {
-  width: 192px; /* 40% smaller: 320px * 0.6 = 192px */
+  width: 192px !important; /* 40% smaller: 320px * 0.6 = 192px */
   background: white;
   border: 2px solid #1a192b;
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px !important;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   position: relative;
   z-index: 10; /* Ensure function nodes are above group */
   overflow: visible; /* Ensure handles outside node bounds are visible */
   box-sizing: border-box; /* Include border and padding in width */
-  font-size: 12px; /* Slightly smaller font */
+  font-size: 12px !important; /* Slightly smaller font */
 }
 
 .workflow-function-node.selected {
@@ -232,16 +233,17 @@
   border: 2px solid white !important;
 }
 
+/* UPDATED: 2025-12-23 - Blue handles, 20% smaller */
 .parameter-handle-input {
-  background: #3b82f6 !important; /* Blue like strokes */
-  width: 8px !important; /* 20% smaller: 10px * 0.8 = 8px */
-  height: 8px !important; /* 20% smaller: 10px * 0.8 = 8px */
+  background: #3b82f6 !important; /* Blue like strokes - UPDATED */
+  width: 8px !important; /* 20% smaller: 10px * 0.8 = 8px - UPDATED */
+  height: 8px !important; /* 20% smaller: 10px * 0.8 = 8px - UPDATED */
   border: 2px solid white !important;
   left: -16px !important; /* Adjust for smaller size */
 }
 
 .parameter-row.disconnected .parameter-handle-input {
-  background: #3b82f6 !important; /* Keep blue even when disconnected */
+  background: #3b82f6 !important; /* Keep blue even when disconnected - UPDATED */
   opacity: 0.5; /* Reduce opacity for disconnected state */
 }
 
