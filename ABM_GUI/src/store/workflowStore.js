@@ -170,7 +170,7 @@ const useWorkflowStore = create((set, get) => ({
               sourceHandle: 'params',
               target: func.id,
               targetHandle: `params-${index}`, // Unique handle for each parameter connection
-              type: 'smoothstep',
+              type: 'spline',
               animated: false,
               markerEnd: {
                 type: 'arrowclosed',
@@ -194,7 +194,7 @@ const useWorkflowStore = create((set, get) => ({
           sourceHandle: 'func-out',
           target: stage.execution_order[i + 1],
           targetHandle: 'func-in',
-          type: 'smoothstep',
+          type: 'spline',
           animated: true,
           markerEnd: {
             type: 'arrowclosed',
