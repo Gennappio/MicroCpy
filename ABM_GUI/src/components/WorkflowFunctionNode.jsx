@@ -10,6 +10,7 @@ import './WorkflowFunctionNode.css';
  */
 const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const edges = useWorkflowStore((state) => state.edges);
 
   const { label, functionName, enabled, description, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
 
@@ -27,6 +28,11 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   // Get parameter definitions from metadata
   const parameterDefs = functionMetadata.parameters || [];
 
+  // Find all parameter nodes connected to this function
+  const connectedParamNodes = edges
+    .filter(edge => edge.target === id && edge.targetHandle === 'params')
+    .map(edge => edge.source);
+
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
     toggleFunctionEnabled(id);
@@ -37,15 +43,36 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
 
-      {/* General parameter input handle on LEFT side */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="params"
-        className="parameter-handle-input"
-        style={{ top: '50%' }}
-        title="Parameter input"
-      />
+      {/* Individual parameter input handles on LEFT side - one per connected parameter node */}
+      {connectedParamNodes.length > 0 && connectedParamNodes.map((paramNodeId, index) => {
+        const totalParams = connectedParamNodes.length;
+        const spacing = 100 / (totalParams + 1); // Distribute evenly
+        const topPosition = spacing * (index + 1); // Position as percentage
+
+        return (
+          <Handle
+            key={`param-${paramNodeId}`}
+            type="target"
+            position={Position.Left}
+            id={`params-${index}`} // Unique ID for each parameter connection
+            className="parameter-handle-input"
+            style={{ top: `${topPosition}%` }}
+            title={`Parameter: ${paramNodeId}`}
+          />
+        );
+      })}
+
+      {/* Fallback: If no parameter nodes connected, show single general handle */}
+      {connectedParamNodes.length === 0 && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="params"
+          className="parameter-handle-input"
+          style={{ top: '50%' }}
+          title="Parameter input"
+        />
+      )}
 
       <div className="node-header">
         <button

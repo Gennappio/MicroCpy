@@ -160,16 +160,16 @@ const useWorkflowStore = create((set, get) => ({
         };
       });
 
-      // Create parameter connection edges
+      // Create parameter connection edges - one edge per parameter node with unique target handle
       stage.functions.forEach((func) => {
         if (func.parameter_nodes && Array.isArray(func.parameter_nodes)) {
-          func.parameter_nodes.forEach((paramNodeId) => {
+          func.parameter_nodes.forEach((paramNodeId, index) => {
             allEdges.push({
               id: `e-param-${paramNodeId}-${func.id}`,
               source: paramNodeId,
               sourceHandle: 'params',
               target: func.id,
-              targetHandle: 'params',
+              targetHandle: `params-${index}`, // Unique handle for each parameter connection
               type: 'smoothstep',
               animated: false,
               markerEnd: {

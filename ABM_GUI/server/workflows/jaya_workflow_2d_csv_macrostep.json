@@ -18,115 +18,129 @@
           "function_name": "setup_simulation",
           "enabled": true,
           "description": "Initialize simulation with time steps, output settings, and step intervals",
-          "parameters": {
-            "name": "Jayatilake 2D CSV",
-            "total_steps": 5,
-            "dt": 0.1,
-            "output_dir": "results",
-            "save_interval": 1,
-            "diffusion_step": 1,
-            "intracellular_step": 1,
-            "intercellular_step": 1
-          }
+          "parameters": {},
+          "parameter_nodes": [
+            "param_sim_name",
+            "param_sim_total_steps",
+            "param_sim_dt",
+            "param_sim_output_dir",
+            "param_sim_save_interval",
+            "param_sim_diffusion_step",
+            "param_sim_intracellular_step",
+            "param_sim_intercellular_step"
+          ]
         },
         {
           "id": "setup_domain_node",
           "function_name": "setup_domain",
           "enabled": true,
           "description": "Define spatial domain dimensions and grid resolution for the simulation",
-          "parameters": {
-            "dimensions": 2,
-            "size_x": 500.0,
-            "size_y": 500.0,
-            "size_z": 400.0,
-            "nx": 25,
-            "ny": 25,
-            "nz": 25,
-            "cell_height": 20.0
-          }
+          "parameters": {},
+          "parameter_nodes": [
+            "param_domain_dimensions",
+            "param_domain_size_x",
+            "param_domain_size_y",
+            "param_domain_size_z",
+            "param_domain_nx",
+            "param_domain_ny",
+            "param_domain_nz",
+            "param_domain_cell_height"
+          ]
         },
         {
           "id": "add_oxygen",
           "function_name": "add_substance",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Oxygen",
-            "diffusion_coeff": 1.0e-9,
-            "production_rate": 0.0,
-            "uptake_rate": 3.0e-17,
-            "initial_value": 0.07,
-            "boundary_value": 0.07,
-            "boundary_type": "fixed",
-            "unit": "mM"
-          }
+          "description": "Add Oxygen substance with diffusion and uptake properties",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_oxygen_name",
+            "param_oxygen_diffusion_coeff",
+            "param_oxygen_production_rate",
+            "param_oxygen_uptake_rate",
+            "param_oxygen_initial_value",
+            "param_oxygen_boundary_value",
+            "param_oxygen_boundary_type",
+            "param_oxygen_unit"
+          ]
         },
         {
           "id": "add_glucose",
           "function_name": "add_substance",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Glucose",
-            "diffusion_coeff": 6.70e-11,
-            "production_rate": 0.0,
-            "uptake_rate": 3.0e-15,
-            "initial_value": 5.0,
-            "boundary_value": 5.0,
-            "boundary_type": "fixed",
-            "unit": "mM"
-          }
+          "description": "Add Glucose substance with diffusion and uptake properties",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_glucose_name",
+            "param_glucose_diffusion_coeff",
+            "param_glucose_production_rate",
+            "param_glucose_uptake_rate",
+            "param_glucose_initial_value",
+            "param_glucose_boundary_value",
+            "param_glucose_boundary_type",
+            "param_glucose_unit"
+          ]
         },
         {
           "id": "add_lactate",
           "function_name": "add_substance",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Lactate",
-            "diffusion_coeff": 6.70e-11,
-            "production_rate": 3.0e-15,
-            "uptake_rate": 0.0,
-            "initial_value": 1.0,
-            "boundary_value": 1.0,
-            "boundary_type": "fixed",
-            "unit": "mM"
-          }
+          "description": "Add Lactate substance with diffusion and production properties",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_lactate_name",
+            "param_lactate_diffusion_coeff",
+            "param_lactate_production_rate",
+            "param_lactate_uptake_rate",
+            "param_lactate_initial_value",
+            "param_lactate_boundary_value",
+            "param_lactate_boundary_type",
+            "param_lactate_unit"
+          ]
         },
         {
           "id": "add_h",
           "function_name": "add_substance",
           "enabled": true,
-          "parameters": {
-            "substance_name": "H",
-            "diffusion_coeff": 1.0e-9,
-            "production_rate": 2.0e-20,
-            "uptake_rate": 3.0e-15,
-            "initial_value": 4e-5,
-            "boundary_value": 4e-5,
-            "boundary_type": "fixed",
-            "unit": "mM"
-          }
+          "description": "Add H+ (proton) substance with diffusion and production/uptake properties",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_h_name",
+            "param_h_diffusion_coeff",
+            "param_h_production_rate",
+            "param_h_uptake_rate",
+            "param_h_initial_value",
+            "param_h_boundary_value",
+            "param_h_boundary_type",
+            "param_h_unit"
+          ]
         },
         {
           "id": "add_ph",
           "function_name": "add_substance",
           "enabled": true,
-          "parameters": {
-            "substance_name": "pH",
-            "diffusion_coeff": 1.0e-9,
-            "production_rate": 0.0,
-            "uptake_rate": 0.0,
-            "initial_value": 7.4,
-            "boundary_value": 7.4,
-            "boundary_type": "fixed",
-            "unit": "pH"
-          }
+          "description": "Add pH substance for tracking acidity levels",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_ph_name",
+            "param_ph_diffusion_coeff",
+            "param_ph_production_rate",
+            "param_ph_uptake_rate",
+            "param_ph_initial_value",
+            "param_ph_boundary_value",
+            "param_ph_boundary_type",
+            "param_ph_unit"
+          ]
         },
         {
           "id": "setup_env",
           "function_name": "setup_environment",
           "enabled": true,
-          "parameters": {
-            "ph": 7.4
-          }
+          "description": "Configure environment parameters including pH levels",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_env_ph"
+          ]
         },
         {
           "id": "setup_custom",
@@ -148,81 +162,97 @@
           "id": "assoc_oxygen",
           "function_name": "add_association",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Oxygen",
-            "gene_input": "Oxygen_supply",
-            "threshold": 0.022
-          }
+          "description": "Link Oxygen substance to gene network input",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_assoc_oxygen_substance",
+            "param_assoc_oxygen_gene_input",
+            "param_assoc_oxygen_threshold"
+          ]
         },
         {
           "id": "assoc_glucose",
           "function_name": "add_association",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Glucose",
-            "gene_input": "Glucose_supply",
-            "threshold": 0.5
-          }
+          "description": "Link Glucose substance to gene network input",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_assoc_glucose_substance",
+            "param_assoc_glucose_gene_input",
+            "param_assoc_glucose_threshold"
+          ]
         },
         {
           "id": "assoc_lactate",
           "function_name": "add_association",
           "enabled": true,
-          "parameters": {
-            "substance_name": "Lactate",
-            "gene_input": "MCT1_stimulus",
-            "threshold": 2.0
-          }
+          "description": "Link Lactate substance to gene network input",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_assoc_lactate_substance",
+            "param_assoc_lactate_gene_input",
+            "param_assoc_lactate_threshold"
+          ]
         },
         {
           "id": "assoc_h",
           "function_name": "add_association",
           "enabled": true,
-          "parameters": {
-            "substance_name": "H",
-            "gene_input": "Proton_level",
-            "threshold": 0.00008
-          }
+          "description": "Link H+ (proton) substance to gene network input",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_assoc_h_substance",
+            "param_assoc_h_gene_input",
+            "param_assoc_h_threshold"
+          ]
         },
         {
           "id": "setup_gene_net",
           "function_name": "setup_gene_network",
           "enabled": true,
-          "parameters": {
-            "bnd_file": "jaya_microc.bnd",
-            "propagation_steps": 500,
-            "random_initialization": true
-          }
+          "description": "Configure gene regulatory network with BND file and propagation settings",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_gene_net_bnd_file",
+            "param_gene_net_propagation_steps",
+            "param_gene_net_random_init"
+          ]
         },
         {
           "id": "setup_pop",
           "function_name": "setup_population",
           "enabled": true,
-          "parameters": {
-            "enable_gene_network": true,
-            "custom_functions_module": "jayatilake_experiment_cell_functions.py"
-          }
+          "description": "Initialize cell population with gene network and custom cell functions",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_pop_enable_gene_network",
+            "param_pop_custom_functions_module"
+          ]
         },
         {
           "id": "setup_out",
           "function_name": "setup_output",
           "enabled": true,
-          "parameters": {
-            "save_data_interval": 1,
-            "save_plots_interval": 1,
-            "save_final_plots": true,
-            "save_initial_plots": true,
-            "status_print_interval": 1,
-            "save_cellstate_interval": 1
-          }
+          "description": "Configure output settings for data saving, plots, and status reporting",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_out_save_data_interval",
+            "param_out_save_plots_interval",
+            "param_out_save_final_plots",
+            "param_out_save_initial_plots",
+            "param_out_status_print_interval",
+            "param_out_save_cellstate_interval"
+          ]
         },
         {
           "id": "load_cells_csv",
           "function_name": "load_cells_from_csv",
           "enabled": true,
-          "parameters": {
-            "file_path": "tests/jayatilake_experiment/example_2d_cells.csv"
-          }
+          "description": "Load initial cell positions and states from CSV file",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_load_csv_file_path"
+          ]
         },
         {
           "id": "generate_initial_plots",
@@ -252,64 +282,110 @@
         "generate_initial_plots"
       ],
       "parameters": [
-        {
-          "id": "param_cell_cycle",
-          "label": "Cell Cycle",
-          "parameters": {
-            "cell_cycle_time": 240.0
-          }
-        },
-        {
-          "id": "param_cell_age",
-          "label": "Cell Age",
-          "parameters": {
-            "max_cell_age": 500.0
-          }
-        },
-        {
-          "id": "param_atp",
-          "label": "ATP Settings",
-          "parameters": {
-            "max_atp": 30.0,
-            "max_atp_rate": 1.0e-14,
-            "atp_threshold": 0.8
-          }
-        },
-        {
-          "id": "param_metabolism",
-          "label": "Metabolism",
-          "parameters": {
-            "glyco_oxygen_ratio": 0.1,
-            "proton_coefficient": 0.01,
-            "glucose_factor": 2.0
-          }
-        },
-        {
-          "id": "param_kinetics",
-          "label": "Kinetics",
-          "parameters": {
-            "KG": 0.5,
-            "KO2": 0.01,
-            "KL": 1.0,
-            "oxygen_vmax": 1.0e-16,
-            "glucose_vmax": 3.0e-15
-          }
-        },
-        {
-          "id": "param_necrosis",
-          "label": "Necrosis Thresholds",
-          "parameters": {
-            "necrosis_threshold_oxygen": 0.011,
-            "necrosis_threshold_glucose": 0.23
-          }
-        },
-        {
-          "id": "param_migration",
-          "label": "Migration",
-          "parameters": {
-            "base_migration_rate": 0.0
-          }
-        }
+        {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Jayatilake 2D CSV"}},
+        {"id": "param_sim_total_steps", "label": "Total Steps", "parameters": {"total_steps": 5}},
+        {"id": "param_sim_dt", "label": "Time Step (dt)", "parameters": {"dt": 0.1}},
+        {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results"}},
+        {"id": "param_sim_save_interval", "label": "Save Interval", "parameters": {"save_interval": 1}},
+        {"id": "param_sim_diffusion_step", "label": "Diffusion Step", "parameters": {"diffusion_step": 1}},
+        {"id": "param_sim_intracellular_step", "label": "Intracellular Step", "parameters": {"intracellular_step": 1}},
+        {"id": "param_sim_intercellular_step", "label": "Intercellular Step", "parameters": {"intercellular_step": 1}},
+
+        {"id": "param_domain_dimensions", "label": "Dimensions", "parameters": {"dimensions": 2}},
+        {"id": "param_domain_size_x", "label": "Size X (μm)", "parameters": {"size_x": 500.0}},
+        {"id": "param_domain_size_y", "label": "Size Y (μm)", "parameters": {"size_y": 500.0}},
+        {"id": "param_domain_size_z", "label": "Size Z (μm)", "parameters": {"size_z": 400.0}},
+        {"id": "param_domain_nx", "label": "Grid NX", "parameters": {"nx": 25}},
+        {"id": "param_domain_ny", "label": "Grid NY", "parameters": {"ny": 25}},
+        {"id": "param_domain_nz", "label": "Grid NZ", "parameters": {"nz": 25}},
+        {"id": "param_domain_cell_height", "label": "Cell Height (μm)", "parameters": {"cell_height": 20.0}},
+
+        {"id": "param_oxygen_name", "label": "Substance Name", "parameters": {"substance_name": "Oxygen"}},
+        {"id": "param_oxygen_diffusion_coeff", "label": "Diffusion Coeff", "parameters": {"diffusion_coeff": 1.0e-9}},
+        {"id": "param_oxygen_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
+        {"id": "param_oxygen_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 3.0e-17}},
+        {"id": "param_oxygen_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.07}},
+        {"id": "param_oxygen_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.07}},
+        {"id": "param_oxygen_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
+        {"id": "param_oxygen_unit", "label": "Unit", "parameters": {"unit": "mM"}},
+
+        {"id": "param_glucose_name", "label": "Substance Name", "parameters": {"substance_name": "Glucose"}},
+        {"id": "param_glucose_diffusion_coeff", "label": "Diffusion Coeff", "parameters": {"diffusion_coeff": 6.70e-11}},
+        {"id": "param_glucose_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
+        {"id": "param_glucose_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 3.0e-15}},
+        {"id": "param_glucose_initial_value", "label": "Initial Value", "parameters": {"initial_value": 5.0}},
+        {"id": "param_glucose_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 5.0}},
+        {"id": "param_glucose_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
+        {"id": "param_glucose_unit", "label": "Unit", "parameters": {"unit": "mM"}},
+
+        {"id": "param_lactate_name", "label": "Substance Name", "parameters": {"substance_name": "Lactate"}},
+        {"id": "param_lactate_diffusion_coeff", "label": "Diffusion Coeff", "parameters": {"diffusion_coeff": 6.70e-11}},
+        {"id": "param_lactate_production_rate", "label": "Production Rate", "parameters": {"production_rate": 3.0e-15}},
+        {"id": "param_lactate_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}},
+        {"id": "param_lactate_initial_value", "label": "Initial Value", "parameters": {"initial_value": 1.0}},
+        {"id": "param_lactate_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 1.0}},
+        {"id": "param_lactate_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
+        {"id": "param_lactate_unit", "label": "Unit", "parameters": {"unit": "mM"}},
+
+        {"id": "param_h_name", "label": "Substance Name", "parameters": {"substance_name": "H"}},
+        {"id": "param_h_diffusion_coeff", "label": "Diffusion Coeff", "parameters": {"diffusion_coeff": 1.0e-9}},
+        {"id": "param_h_production_rate", "label": "Production Rate", "parameters": {"production_rate": 2.0e-20}},
+        {"id": "param_h_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 3.0e-15}},
+        {"id": "param_h_initial_value", "label": "Initial Value", "parameters": {"initial_value": 4e-5}},
+        {"id": "param_h_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 4e-5}},
+        {"id": "param_h_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
+        {"id": "param_h_unit", "label": "Unit", "parameters": {"unit": "mM"}},
+
+        {"id": "param_ph_name", "label": "Substance Name", "parameters": {"substance_name": "pH"}},
+        {"id": "param_ph_diffusion_coeff", "label": "Diffusion Coeff", "parameters": {"diffusion_coeff": 1.0e-9}},
+        {"id": "param_ph_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
+        {"id": "param_ph_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}},
+        {"id": "param_ph_initial_value", "label": "Initial Value", "parameters": {"initial_value": 7.4}},
+        {"id": "param_ph_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 7.4}},
+        {"id": "param_ph_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
+        {"id": "param_ph_unit", "label": "Unit", "parameters": {"unit": "pH"}},
+
+        {"id": "param_env_ph", "label": "Environment pH", "parameters": {"ph": 7.4}},
+
+        {"id": "param_cell_cycle", "label": "Cell Cycle Time", "parameters": {"cell_cycle_time": 240.0}},
+        {"id": "param_cell_age", "label": "Max Cell Age", "parameters": {"max_cell_age": 500.0}},
+        {"id": "param_atp", "label": "Max ATP", "parameters": {"max_atp": 30.0, "max_atp_rate": 1.0e-14, "atp_threshold": 0.8}},
+        {"id": "param_metabolism", "label": "Metabolism", "parameters": {"glyco_oxygen_ratio": 0.1, "proton_coefficient": 0.01, "glucose_factor": 2.0}},
+        {"id": "param_kinetics", "label": "Kinetics", "parameters": {"KG": 0.5, "KO2": 0.01, "KL": 1.0, "oxygen_vmax": 1.0e-16, "glucose_vmax": 3.0e-15}},
+        {"id": "param_necrosis", "label": "Necrosis Thresholds", "parameters": {"necrosis_threshold_oxygen": 0.011, "necrosis_threshold_glucose": 0.23}},
+        {"id": "param_migration", "label": "Migration Rate", "parameters": {"base_migration_rate": 0.0}},
+
+        {"id": "param_assoc_oxygen_substance", "label": "Substance Name", "parameters": {"substance_name": "Oxygen"}},
+        {"id": "param_assoc_oxygen_gene_input", "label": "Gene Input", "parameters": {"gene_input": "Oxygen_supply"}},
+        {"id": "param_assoc_oxygen_threshold", "label": "Threshold", "parameters": {"threshold": 0.022}},
+
+        {"id": "param_assoc_glucose_substance", "label": "Substance Name", "parameters": {"substance_name": "Glucose"}},
+        {"id": "param_assoc_glucose_gene_input", "label": "Gene Input", "parameters": {"gene_input": "Glucose_supply"}},
+        {"id": "param_assoc_glucose_threshold", "label": "Threshold", "parameters": {"threshold": 0.5}},
+
+        {"id": "param_assoc_lactate_substance", "label": "Substance Name", "parameters": {"substance_name": "Lactate"}},
+        {"id": "param_assoc_lactate_gene_input", "label": "Gene Input", "parameters": {"gene_input": "MCT1_stimulus"}},
+        {"id": "param_assoc_lactate_threshold", "label": "Threshold", "parameters": {"threshold": 2.0}},
+
+        {"id": "param_assoc_h_substance", "label": "Substance Name", "parameters": {"substance_name": "H"}},
+        {"id": "param_assoc_h_gene_input", "label": "Gene Input", "parameters": {"gene_input": "Proton_level"}},
+        {"id": "param_assoc_h_threshold", "label": "Threshold", "parameters": {"threshold": 0.00008}},
+
+        {"id": "param_gene_net_bnd_file", "label": "BND File", "parameters": {"bnd_file": "jaya_microc.bnd"}},
+        {"id": "param_gene_net_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}},
+        {"id": "param_gene_net_random_init", "label": "Random Init", "parameters": {"random_initialization": true}},
+
+        {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": true}},
+        {"id": "param_pop_custom_functions_module", "label": "Custom Functions Module", "parameters": {"custom_functions_module": "jayatilake_experiment_cell_functions.py"}},
+
+        {"id": "param_out_save_data_interval", "label": "Save Data Interval", "parameters": {"save_data_interval": 1}},
+        {"id": "param_out_save_plots_interval", "label": "Save Plots Interval", "parameters": {"save_plots_interval": 1}},
+        {"id": "param_out_save_final_plots", "label": "Save Final Plots", "parameters": {"save_final_plots": true}},
+        {"id": "param_out_save_initial_plots", "label": "Save Initial Plots", "parameters": {"save_initial_plots": true}},
+        {"id": "param_out_status_print_interval", "label": "Status Print Interval", "parameters": {"status_print_interval": 1}},
+        {"id": "param_out_save_cellstate_interval", "label": "Save Cell State Interval", "parameters": {"save_cellstate_interval": 1}},
+
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/example_2d_cells.csv"}}
       ]
     },
     "macrostep": {
