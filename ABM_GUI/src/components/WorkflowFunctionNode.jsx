@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
-import { getFunction, getFunctionAsync } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowFunctionNode.css';
 
@@ -12,24 +10,8 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
   const edges = useEdges(); // Use reactflow's useEdges hook
   const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
-  const [functionMetadata, setFunctionMetadata] = useState(null);
 
   const { label, functionName, enabled, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
-
-  // Load function metadata asynchronously to ensure registry is loaded
-  useEffect(() => {
-    const loadMetadata = async () => {
-      const metadata = await getFunctionAsync(functionName);
-      setFunctionMetadata(metadata || { inputs: [], outputs: [], parameters: [] });
-    };
-    // Try sync first (if cache is ready), otherwise async
-    const syncMetadata = getFunction(functionName);
-    if (syncMetadata) {
-      setFunctionMetadata(syncMetadata);
-    } else {
-      loadMetadata();
-    }
-  }, [functionName]);
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
@@ -39,26 +21,8 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const isTemplate = !customName && !isCustom;
   const displayName = customName || label;
 
-  // Get parameter definitions from function metadata - these define the sockets
-  const parameterDefs = functionMetadata?.parameters || [];
-
-  // Find which parameter nodes are connected and which parameters they provide
-  // Build a map from parameter name to the node that provides it
-  const parameterToNode = {};
-  (edges || [])
-    .filter(edge => edge.target === id && edge.targetHandle?.startsWith('params-'))
-    .forEach(edge => {
-      const paramNode = (nodes || []).find(n => n.id === edge.source);
-      if (paramNode && paramNode.data && paramNode.data.parameters) {
-        // This parameter node provides all the parameters in its data.parameters object
-        Object.keys(paramNode.data.parameters).forEach(paramName => {
-          parameterToNode[paramName] = {
-            id: edge.source,
-            label: paramNode.data.label || edge.source,
-          };
-        });
-      }
-    });
+  // Note: We no longer use parameterDefs directly since we create handles
+  // based on incoming edges, not function metadata
 
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
@@ -66,7 +30,10 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   };
 
   return (
-    <div className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}>
+    <div
+      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}
+      style={{ width: '350px', padding: '8px', fontSize: '13px' }}
+    >
       {/* Function flow handles (top and bottom) */}
       <Handle type="target" position={Position.Top} id="func-in" className="function-handle" />
 
@@ -103,32 +70,47 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
       {/* Description hidden - only visible in settings dialog */}
 
-      {/* Parameter labels and handles section - based on function metadata */}
-      {parameterDefs.length > 0 && (
-        <div className="node-parameters">
-          {parameterDefs.map((param, index) => {
-            const handleId = `params-${index}`;
-            const isConnected = parameterToNode[param.name];
+      {/* Parameter handles section - create handles for incoming parameter connections */}
+      {/* We need handles that match the targetHandle IDs used in edges (params-0, params-1, etc.) */}
+      <div className="node-parameters">
+        {/* Create handles for each connected parameter node (by index) */}
+        {(edges || [])
+          .filter(edge => edge.target === id && edge.targetHandle?.startsWith('params-'))
+          .map((edge) => {
+            const handleId = edge.targetHandle; // Use the exact handle ID from the edge
+            const paramNode = (nodes || []).find(n => n.id === edge.source);
+            const paramLabel = paramNode?.data?.label || 'Parameters';
+            // Get the parameter names from the connected node
+            const paramNames = paramNode?.data?.parameters
+              ? Object.keys(paramNode.data.parameters).join(', ')
+              : '';
 
             return (
-              <div key={`param-${param.name}`} className={`parameter-row ${isConnected ? 'connected' : 'disconnected'}`}>
+              <div key={`param-handle-${handleId}`} className="parameter-row connected">
                 <Handle
                   type="target"
                   position={Position.Left}
                   id={handleId}
                   className="parameter-handle-input"
-                  style={{ top: 'auto' }}
-                  title={isConnected ? `Provided by: ${isConnected.label}` : (param.description || param.name)}
+                  style={{
+                    top: 'auto',
+                    background: '#3b82f6',
+                    backgroundColor: '#3b82f6',
+                    width: '8px',
+                    height: '8px',
+                    border: '2px solid white',
+                    left: '-16px'
+                  }}
+                  title={`From: ${paramLabel}`}
                 />
-                <span className="parameter-label" title={param.description}>
-                  {param.name}
-                  {!isConnected && param.required !== false && <span className="required-indicator">*</span>}
+                <span className="parameter-label" title={paramNames}>
+                  {paramLabel.replace(' Parameters', '').substring(0, 20)}
+                  {paramLabel.length > 20 ? '...' : ''}
                 </span>
               </div>
             );
           })}
-        </div>
-      )}
+      </div>
 
       <div className="node-function-name">{functionName}</div>
 

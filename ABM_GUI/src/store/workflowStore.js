@@ -176,6 +176,7 @@ const useWorkflowStore = create((set, get) => ({
                 type: 'arrowclosed',
                 width: 20,
                 height: 20,
+                color: '#3b82f6', // Blue arrow tip
               },
               style: {
                 strokeWidth: 4,

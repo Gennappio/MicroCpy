@@ -1,6 +1,6 @@
-/* UPDATED: 2025-12-23 - Function nodes 40% smaller */
+/* UPDATED: 2025-12-23 - Function nodes sized for 40 characters */
 .workflow-function-node {
-  width: 192px !important; /* 40% smaller: 320px * 0.6 = 192px */
+  width: 350px !important; /* Wide enough for 40 characters */
   background: white;
   border: 2px solid #1a192b;
   border-radius: 8px;
@@ -11,7 +11,7 @@
   z-index: 10; /* Ensure function nodes are above group */
   overflow: visible; /* Ensure handles outside node bounds are visible */
   box-sizing: border-box; /* Include border and padding in width */
-  font-size: 12px !important; /* Slightly smaller font */
+  font-size: 13px !important; /* Readable font size */
 }
 
 .workflow-function-node.selected {
@@ -233,17 +233,20 @@
   border: 2px solid white !important;
 }
 
-/* UPDATED: 2025-12-23 - Blue handles, 20% smaller */
-.parameter-handle-input {
+/* UPDATED: 2025-12-27 - Blue handles, 20% smaller - FORCE BLUE COLOR */
+.workflow-function-node .parameter-handle-input,
+.workflow-function-node .react-flow__handle.parameter-handle-input {
   background: #3b82f6 !important; /* Blue like strokes - UPDATED */
+  background-color: #3b82f6 !important; /* Force blue - UPDATED */
   width: 8px !important; /* 20% smaller: 10px * 0.8 = 8px - UPDATED */
   height: 8px !important; /* 20% smaller: 10px * 0.8 = 8px - UPDATED */
   border: 2px solid white !important;
   left: -16px !important; /* Adjust for smaller size */
 }
 
-.parameter-row.disconnected .parameter-handle-input {
+.workflow-function-node .parameter-row.disconnected .parameter-handle-input {
   background: #3b82f6 !important; /* Keep blue even when disconnected - UPDATED */
+  background-color: #3b82f6 !important; /* Force blue - UPDATED */
   opacity: 0.5; /* Reduce opacity for disconnected state */
 }
 
