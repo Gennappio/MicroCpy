@@ -12,6 +12,7 @@ import 'reactflow/dist/style.css';
 import WorkflowFunctionNode from './WorkflowFunctionNode';
 import ParameterNode from './ParameterNode';
 import GroupNode from './GroupNode';
+import InitNode from './InitNode';
 import ParameterEditor from './ParameterEditor';
 import useWorkflowStore from '../store/workflowStore';
 import { getDefaultParameters } from '../data/functionRegistry';
@@ -21,6 +22,7 @@ const nodeTypes = {
   workflowFunction: WorkflowFunctionNode,
   parameterNode: ParameterNode,
   groupNode: GroupNode,
+  initNode: InitNode,
 };
 
 /**
@@ -36,8 +38,21 @@ const WorkflowCanvas = ({ stage }) => {
     useWorkflowStore();
 
   // Initialize with current stage's nodes and edges
-  const [nodes, setNodes, onNodesChange] = useNodesState(stageNodes[stage] || []);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(stageNodes[stage] || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(stageEdges[stage] || []);
+
+  // Wrap onNodesChange to prevent deletion of Init node
+  const onNodesChange = useCallback((changes) => {
+    // Filter out delete operations for Init nodes
+    const filteredChanges = changes.filter(change => {
+      if (change.type === 'remove' && change.id.startsWith('init-')) {
+        console.log('[CANVAS] Prevented deletion of Init node');
+        return false;
+      }
+      return true;
+    });
+    onNodesChangeBase(filteredChanges);
+  }, [onNodesChangeBase]);
 
   // Track if we're syncing from store to prevent infinite loops
   const isSyncingFromStore = useRef(false);
@@ -84,23 +99,33 @@ const WorkflowCanvas = ({ stage }) => {
 
   const onConnect = useCallback(
     (params) => {
-      // Determine if this is a parameter connection or function connection
-      const isParameterConnection = params.sourceHandle === 'params' || params.targetHandle === 'params';
+      // Determine connection type
+      const isParameterConnection = params.sourceHandle === 'params' || params.targetHandle?.startsWith('params');
+      const isInitConnection = params.sourceHandle === 'init-out';
+
+      // Determine edge color
+      let strokeColor = undefined;
+      if (isInitConnection) {
+        strokeColor = '#dc2626'; // Red for Init connections
+      } else if (isParameterConnection) {
+        strokeColor = '#3b82f6'; // Blue for parameter connections
+      }
 
       setEdges((eds) =>
         addEdge(
           {
             ...params,
-            type: 'smoothstep',
-            animated: !isParameterConnection, // Only animate function connections
+            type: 'default',
+            animated: !isParameterConnection, // Animate function and init connections
             markerEnd: {
               type: 'arrowclosed',
-              width: 30,
-              height: 30,
+              width: 20,
+              height: 20,
+              color: strokeColor,
             },
             style: {
-              strokeWidth: 4,
-              stroke: isParameterConnection ? '#3b82f6' : undefined, // Blue for parameter connections
+              strokeWidth: isParameterConnection ? 4 : 6,
+              stroke: strokeColor,
             },
           },
           eds

@@ -139,6 +139,18 @@ const useWorkflowStore = create((set, get) => ({
         }
       });
 
+      // Create the Init node - always present in every stage
+      const initNodeId = `init-${stageName}`;
+      const initNode = {
+        id: initNodeId,
+        type: 'initNode',
+        position: { x: 0, y: 0 }, // Will be set by layout
+        data: {
+          label: 'INIT',
+        },
+        deletable: false, // Cannot be deleted
+      };
+
       // Create function nodes (positions will be set by staggered layout)
       const functionNodes = stage.functions.map((func) => {
         return {
@@ -187,6 +199,29 @@ const useWorkflowStore = create((set, get) => ({
         }
       });
 
+      // Create edge from Init to first function in execution order (if any)
+      if (stage.execution_order.length > 0) {
+        allEdges.push({
+          id: `e-init-${stage.execution_order[0]}`,
+          source: initNodeId,
+          sourceHandle: 'init-out',
+          target: stage.execution_order[0],
+          targetHandle: 'func-in',
+          type: 'default',
+          animated: true,
+          markerEnd: {
+            type: 'arrowclosed',
+            width: 20,
+            height: 20,
+            color: '#dc2626', // Red arrow tip to match Init node
+          },
+          style: {
+            strokeWidth: 6,
+            stroke: '#dc2626', // Red edge from Init
+          },
+        });
+      }
+
       // Create function flow edges based on execution order
       for (let i = 0; i < stage.execution_order.length - 1; i++) {
         allEdges.push({
@@ -211,12 +246,13 @@ const useWorkflowStore = create((set, get) => ({
       // Collect all parameter nodes (explicit + auto-created)
       const allParamNodes = [...explicitParamNodes, ...autoCreatedParamNodes];
 
-      // Apply staggered layout to position nodes
+      // Apply staggered layout to position nodes (now includes Init node)
       const { nodes: layoutedNodes } = createStaggeredLayout(
         functionNodes,
         allParamNodes,
         allEdges,
-        executionOrder
+        executionOrder,
+        initNode  // Pass Init node to layout
       );
 
       newStageNodes[stageName] = layoutedNodes;
@@ -272,21 +308,70 @@ const useWorkflowStore = create((set, get) => ({
     const state = get();
     const { workflow, stageNodes, stageEdges } = state;
 
+    /**
+     * Find all nodes reachable from Init node via graph traversal
+     * Returns an ordered array of function node IDs based on BFS traversal
+     */
+    const findReachableNodes = (nodes, edges, stageName) => {
+      const initNodeId = `init-${stageName}`;
+      const initNode = nodes.find(n => n.id === initNodeId);
+      if (!initNode) return [];
+
+      // Build adjacency list from edges (following func-out -> func-in connections)
+      const adjacency = {};
+      edges.forEach(edge => {
+        if (edge.sourceHandle === 'func-out' || edge.sourceHandle === 'init-out') {
+          if (!adjacency[edge.source]) adjacency[edge.source] = [];
+          adjacency[edge.source].push(edge.target);
+        }
+      });
+
+      // BFS from Init node to find reachable nodes in order
+      const visited = new Set();
+      const executionOrder = [];
+      const queue = [initNodeId];
+      visited.add(initNodeId);
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        const neighbors = adjacency[current] || [];
+
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor);
+            // Only add function nodes to execution order (not Init)
+            const node = nodes.find(n => n.id === neighbor);
+            if (node && node.type === 'workflowFunction') {
+              executionOrder.push(neighbor);
+            }
+            queue.push(neighbor);
+          }
+        }
+      }
+
+      return executionOrder;
+    };
+
     // Convert React Flow nodes back to workflow functions and parameter nodes
     const stages = {};
     Object.keys(workflow.stages).forEach((stageName) => {
       const nodes = stageNodes[stageName] || [];
       const edges = stageEdges[stageName] || [];
 
+      // Find execution order by traversing from Init node
+      // Only nodes connected to Init (directly or indirectly) will be in execution_order
+      const execution_order = findReachableNodes(nodes, edges, stageName);
+
       // Separate function nodes and parameter nodes
       const functionNodes = nodes.filter(n => n.type === 'workflowFunction');
       const parameterNodes = nodes.filter(n => n.type === 'parameterNode');
 
-      // Export function nodes
+      // Export ALL function nodes (connected or not) - they stay in the canvas
+      // Only connected ones will be in execution_order
       const functions = functionNodes.map((node) => {
         // Find parameter connections for this function
         const parameterConnections = edges
-          .filter(e => e.target === node.id && e.targetHandle === 'params')
+          .filter(e => e.target === node.id && e.targetHandle?.startsWith('params'))
           .map(e => e.source); // IDs of connected parameter nodes
 
         return {
@@ -298,12 +383,12 @@ const useWorkflowStore = create((set, get) => ({
           position: node.position,
           description: node.data.description || '',
           custom_name: node.data.customName || '',
-          step_count: node.data.stepCount || 1, // NEW: Save step_count to JSON
-          parameter_nodes: parameterConnections, // NEW: IDs of connected parameter nodes
+          step_count: node.data.stepCount || 1,
+          parameter_nodes: parameterConnections,
         };
       });
 
-      // Export parameter nodes
+      // Export ALL parameter nodes
       const parameters = parameterNodes.map((node) => ({
         id: node.id,
         label: node.data.label || 'Parameters',
@@ -311,17 +396,13 @@ const useWorkflowStore = create((set, get) => ({
         position: node.position,
       }));
 
-      // Execution order from function flow edges only
-      const functionEdges = edges.filter(e => e.sourceHandle === 'func-out' || !e.sourceHandle);
-      const execution_order = functionNodes.map((n) => n.id); // Simple order for now
-
-	      stages[stageName] = {
-	        enabled: workflow.stages[stageName]?.enabled !== false,
-	        steps: workflow.stages[stageName]?.steps || 1,
-	        functions,
-	        parameters, // NEW: Parameter nodes
-	        execution_order,
-	      };
+      stages[stageName] = {
+        enabled: workflow.stages[stageName]?.enabled !== false,
+        steps: workflow.stages[stageName]?.steps || 1,
+        functions,
+        parameters,
+        execution_order,
+      };
     });
 
     return {

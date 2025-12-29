@@ -1,0 +1,70 @@
+/* Init Node Styles - Red, larger, always visible starting point */
+
+.init-node {
+  width: 120px;
+  height: 80px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border: 3px solid #991b1b;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 100; /* Always on top */
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.init-node:hover {
+  box-shadow: 0 8px 16px rgba(220, 38, 38, 0.5);
+  transform: translateY(-2px);
+}
+
+.init-node.selected {
+  border-color: #fef2f2;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.3), 0 8px 16px rgba(220, 38, 38, 0.5);
+}
+
+.init-node-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.init-icon {
+  color: white;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+.init-label {
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.3);
+}
+
+.init-handle-output {
+  background: #dc2626 !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: 3px solid white !important;
+  bottom: -8px !important;
+}
+
+/* Pulse animation to make Init node stand out */
+@keyframes init-pulse {
+  0%, 100% {
+    box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+  }
+}
+
+.init-node:not(.selected) {
+  animation: init-pulse 2s ease-in-out infinite;
+}
+

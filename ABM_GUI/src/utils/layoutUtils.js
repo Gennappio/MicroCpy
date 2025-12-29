@@ -78,6 +78,7 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
 /**
  * Create a staggered layout specifically for workflow stages
  * This creates a vertically flowing layout where:
+ * - Init node is positioned at the top center
  * - Each function and its parameters are grouped in a visual container
  * - Groups are arranged vertically with staggered horizontal offsets
  * - Parameter nodes are displayed individually within the group
@@ -86,13 +87,16 @@ export function getLayoutedNodes(nodes, edges, options = {}) {
  * @param {Array} paramNodes - Parameter nodes
  * @param {Array} edges - All edges
  * @param {Array} executionOrder - Order of function execution
+ * @param {Object} initNode - The Init node (optional)
  * @returns {Object} - { nodes: layoutedNodes, edges: edges }
  */
-export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = []) {
+export function createStaggeredLayout(functionNodes, paramNodes, edges, executionOrder = [], initNode = null) {
   // Layout constants
   const LEFT_X = 50;
   const RIGHT_X = 1400; // Offset for alternating groups
-  const START_Y = 50;
+  const INIT_NODE_HEIGHT = 100; // Height reserved for Init node
+  const INIT_SPACING = 60; // Space between Init and first group
+  const START_Y = initNode ? 50 + INIT_NODE_HEIGHT + INIT_SPACING : 50;
   const GROUP_PADDING = 80; // Padding inside group around nodes (increased for more space)
   const GROUP_MARGIN = 60; // Margin between nodes inside group (increased)
   const PARAM_NODE_WIDTH = 260; // Actual parameter node width
@@ -240,8 +244,23 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
     }
   });
 
+  // Position the Init node at the top center if it exists
+  const initNodes = [];
+  if (initNode) {
+    // Calculate the center position (between left and right groups)
+    const initX = (LEFT_X + RIGHT_X) / 2 - 60; // Center the 120px wide Init node
+    initNodes.push({
+      ...initNode,
+      position: { x: initX, y: 50 },
+      style: {
+        ...initNode.style,
+        zIndex: 100, // Init node always on top
+      },
+    });
+  }
+
   return {
-    nodes: [...groups, ...allNodes],
+    nodes: [...initNodes, ...groups, ...allNodes],
     edges,
   };
 }

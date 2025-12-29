@@ -3,7 +3,7 @@ import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader } from 'lucide
 import useWorkflowStore from '../store/workflowStore';
 import './SimulationRunner.css';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 /**
  * SimulationRunner Component
