@@ -1,13 +1,16 @@
 /* Init Node Styles - Red, larger, always visible starting point */
 
 .init-node {
-  width: 120px;
-  height: 80px;
+  min-width: 180px;
+  max-width: 220px;
+  min-height: 80px;
+  padding: 0 12px 8px 12px;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   border: 3px solid #991b1b;
   border-radius: 12px;
   box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
@@ -40,10 +43,13 @@
 
 .init-label {
   color: white;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 0.5px;
   text-shadow: 0 2px 2px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  line-height: 1.2;
+  word-wrap: break-word;
 }
 
 .init-handle-output {
@@ -66,5 +72,61 @@
 
 .init-node:not(.selected) {
   animation: init-pulse 2s ease-in-out infinite;
+}
+
+/* Settings icon in top-right corner */
+.init-settings-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0.7;
+  transition: all 0.2s;
+  pointer-events: none;
+}
+
+.init-node:hover .init-settings-icon {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Parameter section for macrostep controller */
+.init-parameter-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  width: 100%;
+}
+
+.init-parameter-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 4px 12px;
+  min-height: 24px;
+}
+
+.init-parameter-handle {
+  position: absolute;
+  left: -5px !important;
+}
+
+.init-parameter-label {
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.2s;
+}
+
+.init-parameter-label.grayed {
+  opacity: 0.5;
 }
 

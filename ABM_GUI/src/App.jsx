@@ -157,25 +157,6 @@ function App() {
 	              );
 	            })}
 	          </div>
-		  
-	          {/* Macrostep stage settings (outside canvas) */}
-	          {currentStage === 'macrostep' && (
-	            <div className="stage-settings">
-	              <label className="stage-settings-label">Number of macrosteps</label>
-	              <input
-	                type="number"
-	                min={1}
-	                value={workflow.stages.macrostep?.steps || 1}
-	                onChange={(e) =>
-	                  setStageSteps(
-	                    'macrostep',
-	                    Math.max(1, parseInt(e.target.value, 10) || 1),
-	                  )
-	                }
-	                className="stage-settings-input"
-	              />
-	            </div>
-	          )}
 
 	          {/* Main Content */}
           <div className="app-content">

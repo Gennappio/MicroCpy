@@ -141,12 +141,18 @@ const useWorkflowStore = create((set, get) => ({
 
       // Create the Init node - always present in every stage
       const initNodeId = `init-${stageName}`;
+      // Generate label based on stage name (e.g., "Initialization Controller")
+      const capitalizedStage = stageName.charAt(0).toUpperCase() + stageName.slice(1);
       const initNode = {
         id: initNodeId,
         type: 'initNode',
         position: { x: 0, y: 0 }, // Will be set by layout
         data: {
-          label: 'INIT',
+          label: `${capitalizedStage} Controller`,
+          // For macrostep controller, set the number of steps from the stage
+          ...(stageName === 'macrostep' && {
+            numberOfSteps: stage.steps || 1,
+          }),
         },
         deletable: false, // Cannot be deleted
       };
@@ -172,6 +178,29 @@ const useWorkflowStore = create((set, get) => ({
         };
       });
 
+      // Create edge from controller parameter node to controller (if specified)
+      if (stageName === 'macrostep' && stage.controller_parameter_node) {
+        allEdges.push({
+          id: `e-controller-param-${stage.controller_parameter_node}-${initNodeId}`,
+          source: stage.controller_parameter_node,
+          sourceHandle: 'params',
+          target: initNodeId,
+          targetHandle: 'steps-param',
+          type: 'default',
+          animated: false,
+          markerEnd: {
+            type: 'arrowclosed',
+            width: 10,
+            height: 10,
+            color: '#3b82f6', // Blue arrow tip
+          },
+          style: {
+            strokeWidth: 4,
+            stroke: '#3b82f6', // Blue edge
+          },
+        });
+      }
+
       // Create parameter connection edges - one edge per parameter node with unique target handle
       stage.functions.forEach((func) => {
         if (func.parameter_nodes && Array.isArray(func.parameter_nodes)) {
@@ -186,8 +215,8 @@ const useWorkflowStore = create((set, get) => ({
               animated: false,
               markerEnd: {
                 type: 'arrowclosed',
-                width: 20,
-                height: 20,
+                width: 10,
+                height: 10,
                 color: '#3b82f6', // Blue arrow tip
               },
               style: {
@@ -211,8 +240,8 @@ const useWorkflowStore = create((set, get) => ({
           animated: true,
           markerEnd: {
             type: 'arrowclosed',
-            width: 20,
-            height: 20,
+            width: 10,
+            height: 10,
             color: '#dc2626', // Red arrow tip to match Init node
           },
           style: {
@@ -234,8 +263,8 @@ const useWorkflowStore = create((set, get) => ({
           animated: true,
           markerEnd: {
             type: 'arrowclosed',
-            width: 20,
-            height: 20,
+            width: 10,
+            height: 10,
           },
           style: {
             strokeWidth: 6,
@@ -396,12 +425,40 @@ const useWorkflowStore = create((set, get) => ({
         position: node.position,
       }));
 
+      // For macrostep stage, get the number of steps from the controller node
+      let stageSteps = workflow.stages[stageName]?.steps || 1;
+      let controllerParameterNode = null;
+
+      if (stageName === 'macrostep') {
+        const controllerNode = nodes.find(n => n.id === `init-${stageName}`);
+        if (controllerNode) {
+          // If a parameter node is connected, use its value; otherwise use the controller's value
+          if (controllerNode.data.isStepsParameterConnected && controllerNode.data.connectedStepsValue !== undefined) {
+            stageSteps = controllerNode.data.connectedStepsValue;
+
+            // Find which parameter node is connected to the controller
+            const controllerEdge = edges.find(
+              e => e.targetHandle === 'steps-param' && e.target === `init-${stageName}`
+            );
+            if (controllerEdge) {
+              controllerParameterNode = controllerEdge.source;
+            }
+          } else if (controllerNode.data.numberOfSteps) {
+            stageSteps = controllerNode.data.numberOfSteps;
+          }
+        }
+      }
+
       stages[stageName] = {
         enabled: workflow.stages[stageName]?.enabled !== false,
-        steps: workflow.stages[stageName]?.steps || 1,
+        steps: stageSteps,
         functions,
         parameters,
         execution_order,
+        // Add controller_parameter_node for macrostep stage if connected
+        ...(stageName === 'macrostep' && controllerParameterNode && {
+          controller_parameter_node: controllerParameterNode,
+        }),
       };
     });
 

@@ -391,7 +391,7 @@
     "macrostep": {
       "enabled": true,
       "steps": 5,
-      "parameters": [],
+      "controller_parameter_node": "param_macrostep_steps",
       "description": "Macrostep orchestrating intracellular, microenvironment, intercellular and CSV export each simulation step.",
       "functions": [
         {
@@ -399,21 +399,30 @@
           "function_name": "intracellular_step",
           "enabled": true,
           "parameters": {},
-          "step_count": 1
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_intracellular_step_count"
+          ]
         },
         {
           "id": "microenvironment_step_node",
           "function_name": "microenvironment_step",
           "enabled": true,
           "parameters": {},
-          "step_count": 1
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_microenvironment_step_count"
+          ]
         },
         {
           "id": "intercellular_step_node",
           "function_name": "intercellular_step",
           "enabled": true,
           "parameters": {},
-          "step_count": 1
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_intercellular_step_count"
+          ]
         },
         {
           "id": "csv_export_node",
@@ -427,6 +436,12 @@
         "microenvironment_step_node",
         "intercellular_step_node",
         "csv_export_node"
+      ],
+      "parameters": [
+        {"id": "param_macrostep_steps", "label": "Number of Macrosteps", "parameters": {"steps": 5}},
+        {"id": "param_intracellular_step_count", "label": "Intracellular Step Count", "parameters": {"step_count": 1}},
+        {"id": "param_microenvironment_step_count", "label": "Microenvironment Step Count", "parameters": {"step_count": 1}},
+        {"id": "param_intercellular_step_count", "label": "Intercellular Step Count", "parameters": {"step_count": 1}}
       ]
     },
     "intracellular": {
