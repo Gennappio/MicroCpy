@@ -4,7 +4,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
 import './ParameterEditor.css';
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5001';
 
 
 /**

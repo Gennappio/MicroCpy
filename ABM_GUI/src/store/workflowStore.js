@@ -460,13 +460,10 @@ const useWorkflowStore = create((set, get) => ({
       let controllerParameterNode = null;
 
       const controllerNode = nodes.find(n => n.id === `init-${stageName}`);
-      console.log(`[EXPORT] Stage: ${stageName}, Controller node:`, controllerNode);
-      console.log(`[EXPORT] Stage: ${stageName}, Controller data:`, controllerNode?.data);
       if (controllerNode) {
         // For macrostep stage, check if a parameter node is connected
         if (stageName === 'macrostep' && controllerNode.data.isStepsParameterConnected && controllerNode.data.connectedStepsValue !== undefined) {
           stageSteps = controllerNode.data.connectedStepsValue;
-          console.log(`[EXPORT] Stage: ${stageName}, Using connected parameter value: ${stageSteps}`);
 
           // Find which parameter node is connected to the controller
           const controllerEdge = edges.find(
@@ -478,10 +475,8 @@ const useWorkflowStore = create((set, get) => ({
         } else if (controllerNode.data.numberOfSteps) {
           // Use the controller's numberOfSteps value (for all stages)
           stageSteps = controllerNode.data.numberOfSteps;
-          console.log(`[EXPORT] Stage: ${stageName}, Using numberOfSteps from controller: ${stageSteps}`);
         }
       }
-      console.log(`[EXPORT] Stage: ${stageName}, Final stageSteps: ${stageSteps}`);
 
       stages[stageName] = {
         enabled: workflow.stages[stageName]?.enabled !== false,

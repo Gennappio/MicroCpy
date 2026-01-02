@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, RotateCcw, Edit2, Eye, AlertCircle, CheckCircle } from 'lucide-react';
 import './CodeViewer.css';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5001';
 
 /**
  * Code Viewer Component - View and edit function source code

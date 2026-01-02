@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import './ResultsExplorer.css';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5001';
 
 function ResultsExplorer() {
   const [results, setResults] = useState([]);

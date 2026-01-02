@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python api.py
 ```
 
-The server will start on `http://localhost:5000`
+The server will start on `http://localhost:5001`
 
 ## API Endpoints
 
@@ -96,7 +96,7 @@ data: {"type": "complete", "message": "[COMPLETE] Simulation completed successfu
 ┌─────────────────┐         HTTP/SSE          ┌─────────────────┐
 │                 │ ◄────────────────────────► │                 │
 │  React Frontend │                            │  Flask Backend  │
-│  (Port 3000)    │                            │  (Port 5000)    │
+│  (Port 3001)    │                            │  (Port 5001)    │
 │                 │                            │                 │
 └─────────────────┘                            └────────┬────────┘
                                                         │
@@ -138,14 +138,14 @@ For production, use a WSGI server like Gunicorn:
 
 ```bash
 pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 api:app
+gunicorn -w 4 -b 0.0.0.0:5001 api:app
 ```
 
 ## Troubleshooting
 
 ### "Backend server not reachable"
 - Make sure the server is running: `python api.py`
-- Check that port 5000 is not in use
+- Check that port 5001 is not in use
 - Verify CORS is enabled in `api.py`
 
 ### "MicroC not found"
