@@ -1,0 +1,343 @@
+{
+  "version": "1.0",
+  "name": "Untitled Workflow",
+  "description": "",
+  "metadata": {
+    "author": "",
+    "created": "2025-12-16"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "steps": 1,
+      "functions": [
+        {
+          "id": "debug_initialization_2_1765902104430",
+          "function_name": "debug_initialization_2",
+          "function_file": "",
+          "parameters": {
+            "message": "INITIALIZATION 1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for initialization stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_initialization_2_1765902104430"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "param_auto_debug_initialization_2_1765902104430",
+          "label": "debug_initialization_2 Parameters",
+          "parameters": {
+            "message": "INITIALIZATION 1"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        }
+      ],
+      "execution_order": [
+        "debug_initialization_2_1765902104430"
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "steps": 5,
+      "functions": [
+        {
+          "id": "intercellular_step_1765901946472",
+          "function_name": "intercellular_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Execute all intercellular stage functions (use step_count to control repetitions)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "intracellular_step_1765901948256",
+          "function_name": "intracellular_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Execute all intracellular stage functions (use step_count to control repetitions)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "microenvironment_step_1765901951636",
+          "function_name": "microenvironment_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Execute all microenvironment/diffusion stage functions (use step_count to control repetitions)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "intracellular_step_1765902073450",
+          "function_name": "intracellular_step",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Execute all intracellular stage functions (use step_count to control repetitions)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "intercellular_step_1765901946472",
+        "intracellular_step_1765901948256",
+        "microenvironment_step_1765901951636",
+        "intracellular_step_1765902073450"
+      ],
+      "function_edges": [
+        {
+          "source": "intercellular_step_1765901946472",
+          "target": "intracellular_step_1765901948256"
+        },
+        {
+          "source": "intracellular_step_1765901948256",
+          "target": "microenvironment_step_1765901951636"
+        },
+        {
+          "source": "microenvironment_step_1765901951636",
+          "target": "intracellular_step_1765902073450"
+        }
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "steps": 1,
+      "functions": [
+        {
+          "id": "debug_intracellular_2_1765901964621",
+          "function_name": "debug_intracellular_2",
+          "function_file": "",
+          "parameters": {
+            "message": "INTRACELLULAR 2"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for intracellular stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_intracellular_2_1765901964621"
+          ]
+        },
+        {
+          "id": "debug_intracellular_1_1765901980625",
+          "function_name": "debug_intracellular_1",
+          "function_file": "",
+          "parameters": {
+            "message": "INTRACELLULAR 1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for intracellular stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_intracellular_1_1765901980625"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "param_auto_debug_intracellular_2_1765901964621",
+          "label": "debug_intracellular_2 Parameters",
+          "parameters": {
+            "message": "INTRACELLULAR 2"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        },
+        {
+          "id": "param_auto_debug_intracellular_1_1765901980625",
+          "label": "debug_intracellular_1 Parameters",
+          "parameters": {
+            "message": "INTRACELLULAR 1"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        }
+      ],
+      "execution_order": [
+        "debug_intracellular_2_1765901964621",
+        "debug_intracellular_1_1765901980625"
+      ],
+      "function_edges": [
+        {
+          "source": "debug_intracellular_2_1765901964621",
+          "target": "debug_intracellular_1_1765901980625"
+        }
+      ]
+    },
+    "microenvironment": {
+      "enabled": true,
+      "steps": 1,
+      "functions": [
+        {
+          "id": "debug_microenvironment_1_1765902016581",
+          "function_name": "debug_microenvironment_1",
+          "function_file": "",
+          "parameters": {
+            "message": "MICRO 1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for microenvironment stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_microenvironment_1_1765902016581"
+          ]
+        },
+        {
+          "id": "debug_microenvironment_3_1765902019223",
+          "function_name": "debug_microenvironment_3",
+          "function_file": "",
+          "parameters": {
+            "message": "MICRO 2"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for microenvironment stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_microenvironment_3_1765902019223"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "param_auto_debug_microenvironment_1_1765902016581",
+          "label": "debug_microenvironment_1 Parameters",
+          "parameters": {
+            "message": "MICRO 1"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        },
+        {
+          "id": "param_auto_debug_microenvironment_3_1765902019223",
+          "label": "debug_microenvironment_3 Parameters",
+          "parameters": {
+            "message": "MICRO 2"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        }
+      ],
+      "execution_order": [
+        "debug_microenvironment_1_1765902016581",
+        "debug_microenvironment_3_1765902019223"
+      ],
+      "function_edges": [
+        {
+          "source": "debug_microenvironment_1_1765902016581",
+          "target": "debug_microenvironment_3_1765902019223"
+        }
+      ]
+    },
+    "intercellular": {
+      "enabled": true,
+      "steps": 1,
+      "functions": [
+        {
+          "id": "debug_intercellular_3_1765902058682",
+          "function_name": "debug_intercellular_3",
+          "function_file": "",
+          "parameters": {
+            "message": "INTER 3"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "Debug function for intercellular stage (prints message)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_auto_debug_intercellular_3_1765902058682"
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "param_auto_debug_intercellular_3_1765902058682",
+          "label": "debug_intercellular_3 Parameters",
+          "parameters": {
+            "message": "INTER 3"
+          },
+          "position": {
+            "x": 80,
+            "y": 120
+          }
+        }
+      ],
+      "execution_order": [
+        "debug_intercellular_3_1765902058682"
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "steps": 1,
+      "functions": [],
+      "parameters": [],
+      "execution_order": []
+    }
+  }
+}

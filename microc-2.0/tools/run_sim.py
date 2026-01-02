@@ -1453,10 +1453,18 @@ def run_workflow_mode(args):
         )
 
         if has_macro:
-            print("[WORKFLOW] Executing macrostep stage once...")
+            # Get the number of steps from the macrostep stage
+            num_macro_steps = max(1, macrostep_stage.steps) if hasattr(macrostep_stage, 'steps') else 1
+            if num_macro_steps > 1:
+                print(f"[WORKFLOW] Executing macrostep stage {num_macro_steps} times...")
+            else:
+                print("[WORKFLOW] Executing macrostep stage once...")
             # Provide executor in context for macrostep wrapper functions if they need it
             context["_executor"] = executor
-            context = executor.execute_macrostep(context)
+            for macro_step in range(num_macro_steps):
+                if num_macro_steps > 1:
+                    print(f"[WORKFLOW] Macrostep iteration {macro_step + 1}/{num_macro_steps}")
+                context = executor.execute_macrostep(context)
         elif not macro_defined:
             print(
                 "[WORKFLOW] Executing standard stages once (intracellular, "

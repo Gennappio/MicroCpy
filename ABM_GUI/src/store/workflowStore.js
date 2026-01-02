@@ -149,10 +149,8 @@ const useWorkflowStore = create((set, get) => ({
         position: { x: 0, y: 0 }, // Will be set by layout
         data: {
           label: `${capitalizedStage} Controller`,
-          // For macrostep controller, set the number of steps from the stage
-          ...(stageName === 'macrostep' && {
-            numberOfSteps: stage.steps || 1,
-          }),
+          // Set the number of steps from the stage (for all stages)
+          numberOfSteps: stage.steps || 1,
         },
         deletable: false, // Cannot be deleted
       };
@@ -251,25 +249,49 @@ const useWorkflowStore = create((set, get) => ({
         });
       }
 
-      // Create function flow edges based on execution order
-      for (let i = 0; i < stage.execution_order.length - 1; i++) {
-        allEdges.push({
-          id: `e-${stage.execution_order[i]}-${stage.execution_order[i + 1]}`,
-          source: stage.execution_order[i],
-          sourceHandle: 'func-out',
-          target: stage.execution_order[i + 1],
-          targetHandle: 'func-in',
-          type: 'default', // Bezier curve (smooth)
-          animated: true,
-          markerEnd: {
-            type: 'arrowclosed',
-            width: 10,
-            height: 10,
-          },
-          style: {
-            strokeWidth: 6,
-          },
+      // Create function flow edges - prefer function_edges if available, otherwise use execution_order
+      if (stage.function_edges && Array.isArray(stage.function_edges) && stage.function_edges.length > 0) {
+        // Use preserved function edges (maintains connections even if disconnected from controller)
+        stage.function_edges.forEach((edge) => {
+          allEdges.push({
+            id: `e-${edge.source}-${edge.target}`,
+            source: edge.source,
+            sourceHandle: 'func-out',
+            target: edge.target,
+            targetHandle: 'func-in',
+            type: 'default',
+            animated: true,
+            markerEnd: {
+              type: 'arrowclosed',
+              width: 10,
+              height: 10,
+            },
+            style: {
+              strokeWidth: 6,
+            },
+          });
         });
+      } else {
+        // Fallback: Create function flow edges based on execution order (legacy behavior)
+        for (let i = 0; i < stage.execution_order.length - 1; i++) {
+          allEdges.push({
+            id: `e-${stage.execution_order[i]}-${stage.execution_order[i + 1]}`,
+            source: stage.execution_order[i],
+            sourceHandle: 'func-out',
+            target: stage.execution_order[i + 1],
+            targetHandle: 'func-in',
+            type: 'default', // Bezier curve (smooth)
+            animated: true,
+            markerEnd: {
+              type: 'arrowclosed',
+              width: 10,
+              height: 10,
+            },
+            style: {
+              strokeWidth: 6,
+            },
+          });
+        }
       }
 
       // Collect all parameter nodes (explicit + auto-created)
@@ -425,29 +447,41 @@ const useWorkflowStore = create((set, get) => ({
         position: node.position,
       }));
 
-      // For macrostep stage, get the number of steps from the controller node
+      // Export function-to-function edges (preserve connections even if disconnected from controller)
+      const function_edges = edges
+        .filter(e => e.sourceHandle === 'func-out' && e.targetHandle === 'func-in')
+        .map(e => ({
+          source: e.source,
+          target: e.target,
+        }));
+
+      // Get the number of steps from the controller node
       let stageSteps = workflow.stages[stageName]?.steps || 1;
       let controllerParameterNode = null;
 
-      if (stageName === 'macrostep') {
-        const controllerNode = nodes.find(n => n.id === `init-${stageName}`);
-        if (controllerNode) {
-          // If a parameter node is connected, use its value; otherwise use the controller's value
-          if (controllerNode.data.isStepsParameterConnected && controllerNode.data.connectedStepsValue !== undefined) {
-            stageSteps = controllerNode.data.connectedStepsValue;
+      const controllerNode = nodes.find(n => n.id === `init-${stageName}`);
+      console.log(`[EXPORT] Stage: ${stageName}, Controller node:`, controllerNode);
+      console.log(`[EXPORT] Stage: ${stageName}, Controller data:`, controllerNode?.data);
+      if (controllerNode) {
+        // For macrostep stage, check if a parameter node is connected
+        if (stageName === 'macrostep' && controllerNode.data.isStepsParameterConnected && controllerNode.data.connectedStepsValue !== undefined) {
+          stageSteps = controllerNode.data.connectedStepsValue;
+          console.log(`[EXPORT] Stage: ${stageName}, Using connected parameter value: ${stageSteps}`);
 
-            // Find which parameter node is connected to the controller
-            const controllerEdge = edges.find(
-              e => e.targetHandle === 'steps-param' && e.target === `init-${stageName}`
-            );
-            if (controllerEdge) {
-              controllerParameterNode = controllerEdge.source;
-            }
-          } else if (controllerNode.data.numberOfSteps) {
-            stageSteps = controllerNode.data.numberOfSteps;
+          // Find which parameter node is connected to the controller
+          const controllerEdge = edges.find(
+            e => e.targetHandle === 'steps-param' && e.target === `init-${stageName}`
+          );
+          if (controllerEdge) {
+            controllerParameterNode = controllerEdge.source;
           }
+        } else if (controllerNode.data.numberOfSteps) {
+          // Use the controller's numberOfSteps value (for all stages)
+          stageSteps = controllerNode.data.numberOfSteps;
+          console.log(`[EXPORT] Stage: ${stageName}, Using numberOfSteps from controller: ${stageSteps}`);
         }
       }
+      console.log(`[EXPORT] Stage: ${stageName}, Final stageSteps: ${stageSteps}`);
 
       stages[stageName] = {
         enabled: workflow.stages[stageName]?.enabled !== false,
@@ -455,6 +489,8 @@ const useWorkflowStore = create((set, get) => ({
         functions,
         parameters,
         execution_order,
+        // Preserve function-to-function edges
+        ...(function_edges.length > 0 && { function_edges }),
         // Add controller_parameter_node for macrostep stage if connected
         ...(stageName === 'macrostep' && controllerParameterNode && {
           controller_parameter_node: controllerParameterNode,
