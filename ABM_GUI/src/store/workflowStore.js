@@ -47,6 +47,9 @@ const useWorkflowStore = create((set, get) => ({
     finalization: [],
   },
 
+  // Simulation logs (persistent across tab changes)
+  simulationLogs: [],
+
   // Actions
   setCurrentStage: (stage) => set({ currentStage: stage }),
 
@@ -57,6 +60,16 @@ const useWorkflowStore = create((set, get) => ({
         ...metadata,
       },
     })),
+
+  // Simulation log actions
+  addSimulationLog: (type, message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    set((state) => ({
+      simulationLogs: [...state.simulationLogs, { type, message, timestamp }],
+    }));
+  },
+
+  clearSimulationLogs: () => set({ simulationLogs: [] }),
 
   // Load workflow from JSON - LOADS ALL STAGES
   loadWorkflow: (workflowJson) => {

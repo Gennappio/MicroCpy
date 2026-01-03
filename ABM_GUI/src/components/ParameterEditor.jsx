@@ -230,14 +230,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     if (isParameterNode) {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
-    } else if (isCustomFunction) {
-      // For custom functions, also save function name, file, description, and step_count
-      onSave(parameters, customName, {
-        functionName,
-        functionFile,
-        description,
-        stepCount,
-      });
     } else {
       // For standard functions, save parameters, custom name, and step_count
       onSave(parameters, customName, { stepCount });
@@ -321,33 +313,19 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Handle custom functions (no metadata in registry)
-  const isCustomFunction = node.data.isCustom || !functionMetadata;
-
-  if (!functionMetadata && !isCustomFunction && !isParameterNode) {
+  // Return null if no function metadata and not a parameter node
+  if (!functionMetadata && !isParameterNode) {
     return null;
   }
 
   const displayName = isParameterNode
     ? (customName || 'Parameter Node')
-    : (isCustomFunction
-      ? node.data.functionName
-      : functionMetadata.displayName);
+    : functionMetadata.displayName;
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
 
-  const parametersList = isCustomFunction
-    ? Object.keys(parameters)
-        .filter(key => key !== 'function_file')
-        .map(key => ({
-          name: key,
-          type: typeof parameters[key] === 'number'
-            ? (Number.isInteger(parameters[key]) ? 'integer' : 'float')
-            : typeof parameters[key] === 'boolean' ? 'boolean' : 'string',
-          default: parameters[key],
-        }))
-    : functionMetadata.parameters;
+  const parametersList = functionMetadata ? functionMetadata.parameters : [];
 
   return (
     <div className="parameter-editor-overlay" onClick={onClose}>
@@ -355,7 +333,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
-          {isCustomFunction && <span className="custom-badge">Custom Function</span>}
           {!isParameterNode && (
             <button className="btn btn-secondary" onClick={handleToggleCode}>
               <Eye size={14} />
@@ -373,7 +350,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
           </div>
         )}
 
-        {!isCustomFunction && !isParameterNode && functionMetadata && (
+        {!isParameterNode && functionMetadata && (
           <div className="editor-description">{functionMetadata.description}</div>
         )}
 
@@ -536,60 +513,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-              {/* Custom Function Configuration */}
-              {!isParameterNode && isCustomFunction && (
-                <>
-                  <div className="parameter-field">
-                    <label className="param-label">
-                      <Edit2 size={14} />
-                      Function Name
-                    </label>
-                    <div className="param-description">
-                      The name of the Python function to call
-                    </div>
-                    <input
-                      type="text"
-                      value={functionName}
-                      onChange={(e) => setFunctionName(e.target.value)}
-                      placeholder="my_custom_function"
-                      className="param-input"
-                    />
-                  </div>
-
-
-                  <div className="parameter-field">
-                    <label className="param-label">
-                      Function File
-                    </label>
-                    <div className="param-description">
-                      Path to the Python file containing this function
-                    </div>
-                    <input
-                      type="text"
-                      value={functionFile}
-                      onChange={(e) => setFunctionFile(e.target.value)}
-                      placeholder="path/to/my_functions.py"
-                      className="param-input"
-                    />
-                  </div>
-
-                  <div className="parameter-field">
-                    <label className="param-label">
-                      Description
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="What does this function do?"
-                      className="param-input"
-                      rows={2}
-                    />
-                  </div>
-                </>
-              )}
-
-          {/* Custom Name Field for Standard Functions */}
-          {!isParameterNode && !isCustomFunction && (
+          {/* Custom Name Field for Function Nodes */}
+          {!isParameterNode && functionMetadata && (
             <div className="parameter-field rename-field">
               <label className="param-label">
                 <Edit2 size={14} />
@@ -640,53 +565,26 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             <>
               <div className="section-divider">
                 Parameters
-                {isCustomFunction && (
-                  <button className="btn-add-param" onClick={handleAddParameter}>
-                    <Plus size={14} />
-                    Add Parameter
-                  </button>
-                )}
               </div>
 
               {parametersList.length === 0 ? (
                 <div className="no-parameters">
-                  {isCustomFunction
-                    ? 'No parameters defined. Click "Add Parameter" to add one.'
-                    : 'This function has no parameters'}
+                  This function has no parameters
                 </div>
               ) : (
                 parametersList.map((param) => (
                   <div key={param.name} className="parameter-field">
                     <div className="param-header">
-                      {isCustomFunction ? (
-                        <input
-                          type="text"
-                          value={param.name}
-                          onChange={(e) => handleRenameParameter(param.name, e.target.value)}
-                          className="param-name-input"
-                          placeholder="parameter_name"
-                        />
-                      ) : (
-                        <label className="param-label">
-                          {param.name}
-                          {param.required && <span className="required">*</span>}
-                        </label>
-                      )}
-                      {isCustomFunction && (
-                        <button
-                          className="btn-remove-param"
-                          onClick={() => handleRemoveParameter(param.name)}
-                          title="Remove parameter"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                      <label className="param-label">
+                        {param.name}
+                        {param.required && <span className="required">*</span>}
+                      </label>
                     </div>
-                    {param.description && !isCustomFunction && (
+                    {param.description && (
                       <div className="param-description">{param.description}</div>
                     )}
                     {renderParameterInput(param)}
-                    {param.default !== undefined && !isCustomFunction && (
+                    {param.default !== undefined && (
                       <div className="param-default">Default: {param.default}</div>
                     )}
                   </div>

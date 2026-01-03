@@ -550,17 +550,24 @@ class AutoPlotter:
         growth_factors = ['FGF', 'TGFA', 'HGF']
         colors = ['cyan', 'magenta', 'yellow']
         
+        has_growth_factor_data = False
         for substance, color in zip(growth_factors, colors):
             if substance in substance_data and 'mean' in substance_data[substance]:
                 data = substance_data[substance]['mean']
                 if any(x > 1e-10 for x in data):  # Only plot if non-zero
-                    ax4.plot(time_points[:len(data)], data, 
+                    ax4.plot(time_points[:len(data)], data,
                             label=substance, color=color, linewidth=2)
-        
+                    has_growth_factor_data = True
+
         ax4.set_xlabel('Time')
         ax4.set_ylabel('Concentration (mM)')
         ax4.set_title('Growth Factors')
-        ax4.legend()
+        # Only add legend if there are labeled artists to show
+        if has_growth_factor_data:
+            ax4.legend()
+        else:
+            ax4.text(0.5, 0.5, 'No growth factor data', transform=ax4.transAxes,
+                    ha='center', va='center', fontsize=12, color='gray')
         ax4.grid(True, alpha=0.3)
         if any('FGF' in substance_data or 'TGFA' in substance_data or 'HGF' in substance_data for _ in [1]):
             ax4.set_yscale('log')

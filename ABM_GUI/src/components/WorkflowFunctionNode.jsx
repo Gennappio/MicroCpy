@@ -11,14 +11,14 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const edges = useEdges(); // Use reactflow's useEdges hook
   const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
 
-  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, isCustom, stepCount } = data;
+  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, stepCount } = data;
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
   const fileName = filePath ? filePath.split('/').pop() : '';
 
   // Determine display name and whether to show template indicator
-  const isTemplate = !customName && !isCustom;
+  const isTemplate = !customName;
   const displayName = customName || label;
 
   // Note: We no longer use parameterDefs directly since we create handles
@@ -31,7 +31,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} ${isCustom ? 'custom' : ''}`}
+      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
       style={{ width: '350px', padding: '8px', fontSize: '13px' }}
     >
       {/* Function flow handles (top and bottom) */}
@@ -52,7 +52,6 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-title">
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
-          {isCustom && <span className="custom-badge-small">CUSTOM</span>}
         </div>
         {onEdit && (
           <button

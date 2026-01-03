@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, Trash2 } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './SimulationRunner.css';
 
@@ -11,12 +11,16 @@ const API_BASE_URL = 'http://localhost:5001/api';
  */
 const SimulationRunner = () => {
   const [isRunning, setIsRunning] = useState(false);
-  const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
+
+  // Use store for persistent logs
+  const logs = useWorkflowStore((state) => state.simulationLogs);
+  const addLog = useWorkflowStore((state) => state.addSimulationLog);
+  const clearLogs = useWorkflowStore((state) => state.clearSimulationLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
 
   // Auto-scroll to bottom when new logs arrive
@@ -115,16 +119,15 @@ const SimulationRunner = () => {
     }
   };
 
-  const addLog = (type, message) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs((prev) => [...prev, { type, message, timestamp }]);
+  const handleClearLogs = () => {
+    clearLogs();
   };
 
   const handleRun = async () => {
     if (isRunning) return;
 
     setError(null);
-    setLogs([]);
+    clearLogs();
 
     try {
       // Export current workflow
@@ -210,6 +213,15 @@ const SimulationRunner = () => {
         </div>
 
         <div className="header-controls">
+          <button
+            className="btn btn-clear"
+            onClick={handleClearLogs}
+            disabled={logs.length === 0 || isRunning}
+            title="Clear logs"
+          >
+            <Trash2 size={16} />
+            Clear Logs
+          </button>
           {!isRunning ? (
             <button
               className="btn btn-run"

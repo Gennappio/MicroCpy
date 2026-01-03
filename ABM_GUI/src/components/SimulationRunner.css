@@ -97,6 +97,23 @@
   white-space: nowrap;
 }
 
+.btn-clear {
+  background: #6b7280;
+  color: white;
+}
+
+.btn-clear:hover:not(:disabled) {
+  background: #4b5563;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+}
+
+.btn-clear:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .btn-run {
   background: #10b981;
   color: white;

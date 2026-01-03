@@ -353,13 +353,6 @@ const WorkflowCanvas = ({ stage }) => {
                       ...(customMetadata?.stepCount !== undefined && {
                         stepCount: customMetadata.stepCount,
                       }),
-                      // For custom functions, also update function name, file, and description
-                      ...(customMetadata && {
-                        functionName: customMetadata.functionName,
-                        functionFile: customMetadata.functionFile,
-                        description: customMetadata.description,
-                        label: customMetadata.functionName,
-                      }),
                     },
                   }
                 : node

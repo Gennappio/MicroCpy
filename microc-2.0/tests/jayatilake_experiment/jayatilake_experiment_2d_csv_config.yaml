@@ -36,7 +36,7 @@ diffusion:
 output:
   save_data_interval: 1
   save_plots_interval: 1
-  save_final_plots: true
+  save_final_plots: true 
   save_initial_plots: true
   status_print_interval: 1
   save_cellstate_interval: 1

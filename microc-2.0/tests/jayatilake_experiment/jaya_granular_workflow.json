@@ -530,26 +530,71 @@
     },
     "finalization": {
       "enabled": true,
-      "description": "Generate final plots and print summary statistics.",
+      "description": "GRANULAR finalization: individual functions for statistics collection, data saving, plotting, and export. Each step can be enabled/disabled independently.",
       "functions": [
         {
-          "id": "generate_plots",
-          "function_name": "generate_summary_plots",
+          "id": "collect_statistics_node",
+          "function_name": "collect_statistics",
           "enabled": true,
-          "description": "Generate summary plots of simulation results",
-          "parameters": {}
+          "description": "Collect final simulation statistics (cell counts, phenotype distribution, metabolic states, substance concentrations). Results stored in context for other finalization functions.",
+          "parameters": {},
+          "parameter_nodes": []
         },
         {
-          "id": "print_summary",
+          "id": "save_simulation_data_node",
+          "function_name": "save_simulation_data",
+          "enabled": true,
+          "description": "Save simulation data to files (configuration summary, time series, substance statistics). Creates JSON and NPY files in output directory.",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_save_config",
+            "param_save_timeseries",
+            "param_save_substances"
+          ]
+        },
+        {
+          "id": "generate_summary_plots_node",
+          "function_name": "generate_summary_plots",
+          "enabled": true,
+          "description": "Generate summary plots including substance heatmaps, cell distributions, and time series plots. Uses AutoPlotter for visualization.",
+          "parameters": {},
+          "parameter_nodes": []
+        },
+        {
+          "id": "export_final_state_node",
+          "function_name": "export_final_state",
+          "enabled": true,
+          "description": "Export final simulation state to files. Supports CSV export for cells and substances, and optional VTK export for ParaView visualization.",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_export_cells_csv",
+            "param_export_substances_csv",
+            "param_export_vtk"
+          ]
+        },
+        {
+          "id": "print_simulation_summary_node",
           "function_name": "print_simulation_summary",
           "enabled": true,
-          "description": "Print final simulation statistics",
-          "parameters": {}
+          "description": "Print final simulation summary to console including cell counts, phenotype distribution, and output locations.",
+          "parameters": {},
+          "parameter_nodes": []
         }
       ],
       "execution_order": [
-        "generate_plots",
-        "print_summary"
+        "collect_statistics_node",
+        "save_simulation_data_node",
+        "generate_summary_plots_node",
+        "export_final_state_node",
+        "print_simulation_summary_node"
+      ],
+      "parameters": [
+        {"id": "param_save_config", "label": "Save Configuration", "parameters": {"save_config": true}},
+        {"id": "param_save_timeseries", "label": "Save Time Series", "parameters": {"save_timeseries": true}},
+        {"id": "param_save_substances", "label": "Save Substance Stats", "parameters": {"save_substances": true}},
+        {"id": "param_export_cells_csv", "label": "Export Cells CSV", "parameters": {"export_cells_csv": true}},
+        {"id": "param_export_substances_csv", "label": "Export Substances CSV", "parameters": {"export_substances_csv": true}},
+        {"id": "param_export_vtk", "label": "Export VTK", "parameters": {"export_vtk": false}}
       ]
     }
   }
