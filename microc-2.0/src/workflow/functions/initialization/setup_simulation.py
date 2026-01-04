@@ -12,17 +12,12 @@ from src.workflow.decorators import register_function
 
 @register_function(
     display_name="Setup Simulation",
-    description="Initialize simulation parameters (name, timestep, total steps)",
+    description="Initialize simulation infrastructure (name, timestep, output directory)",
     category="INITIALIZATION",
     parameters=[
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "MicroCpy Simulation"},
-        {"name": "total_steps", "type": "INT", "description": "Total number of simulation steps", "default": 100},
-        {"name": "dt", "type": "FLOAT", "description": "Timestep size", "default": 0.1},
+        {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
-        {"name": "save_interval", "type": "INT", "description": "How often to save data", "default": 10},
-        {"name": "diffusion_step", "type": "INT", "description": "Run diffusion every N steps", "default": 1},
-        {"name": "intracellular_step", "type": "INT", "description": "Run intracellular every N steps", "default": 1},
-        {"name": "intercellular_step", "type": "INT", "description": "Run intercellular every N steps", "default": 1},
     ],
     outputs=["config"],
     cloneable=False
@@ -30,37 +25,33 @@ from src.workflow.decorators import register_function
 def setup_simulation(
     context: Dict[str, Any],
     name: str = "MicroCpy Simulation",
-    total_steps: int = 100,
     dt: float = 0.1,
     output_dir: str = "results",
-    save_interval: int = 10,
-    diffusion_step: int = 1,
-    intracellular_step: int = 1,
-    intercellular_step: int = 1,
     **kwargs
 ) -> bool:
     """
-    Setup simulation parameters.
+    Setup simulation infrastructure.
+
+    This function creates the minimal config object and output directories.
+
+    Note: The following parameters are intentionally NOT included here because
+    they are controlled elsewhere in the granular workflow:
+    - total_steps: Controlled by macrostep.steps in the workflow JSON
+    - save_interval: Not needed - finalization functions are called explicitly
+    - diffusion_step/intracellular_step/intercellular_step: Controlled by
+      step_count on individual nodes in the macrostep canvas
 
     Args:
         context: Workflow context
         name: Simulation name
-        total_steps: Total number of simulation steps
-        dt: Timestep size
+        dt: Timestep size (hours)
         output_dir: Base output directory
-        save_interval: How often to save data
-        diffusion_step: How often to run diffusion (every N steps)
-        intracellular_step: How often to run intracellular updates (every N steps)
-        intercellular_step: How often to run intercellular updates (every N steps)
         **kwargs: Additional parameters
 
     Returns:
         True if successful
     """
     print(f"[WORKFLOW] Setting up simulation: {name}")
-
-    # Compute duration from total_steps and dt
-    duration = float(total_steps) * float(dt)
 
     try:
         # Create timestamped output directory
@@ -71,22 +62,15 @@ def setup_simulation(
         plots_dir = timestamped_dir / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
 
-        # Set total_steps in context so the engine uses it
-        context['total_steps'] = int(total_steps)
+        # Set dt in context so the engine uses it
         context['dt'] = float(dt)
 
         # Store simulation parameters in context (for later use)
         context['simulation_params'] = {
             'name': name,
-            'total_steps': int(total_steps),
-            'duration': duration,
             'dt': dt,
             'output_dir': timestamped_dir,
             'plots_dir': plots_dir,
-            'save_interval': save_interval,
-            'diffusion_step': diffusion_step,
-            'intracellular_step': intracellular_step,
-            'intercellular_step': intercellular_step,
         }
 
         # Initialize results tracking
@@ -111,12 +95,14 @@ def setup_simulation(
                 self.log_simulation_status = False
                 self._workflow_mode = True  # Mark as workflow mode
                 # Set time config from parameters
+                # Note: end_time is not set here - it's controlled by macrostep.steps
+                # Multi-timescale is controlled by step_count on nodes in macrostep canvas
                 self.time = TimeConfig(
                     dt=dt,
-                    end_time=duration,
-                    diffusion_step=diffusion_step,
-                    intracellular_step=intracellular_step,
-                    intercellular_step=intercellular_step
+                    end_time=100.0,  # Placeholder - actual steps controlled by macrostep.steps
+                    diffusion_step=1,  # Controlled by step_count on microenvironment_step node
+                    intracellular_step=1,  # Controlled by step_count on intracellular_step node
+                    intercellular_step=1  # Controlled by step_count on intercellular_step node
                 )
                 # Set default diffusion config (can be overridden by parameters)
                 self.diffusion = DiffusionConfig(
@@ -126,13 +112,15 @@ def setup_simulation(
                     twodimensional_adjustment_coefficient=1.0
                 )
                 # Set default output config
+                # Note: save intervals are not used in granular workflow -
+                # finalization functions are called explicitly
                 self.output = OutputConfig(
-                    save_data_interval=save_interval,
-                    save_plots_interval=save_interval,
+                    save_data_interval=1,
+                    save_plots_interval=1,
                     save_final_plots=True,
                     save_initial_plots=True,
-                    status_print_interval=save_interval,
-                    save_cellstate_interval=save_interval
+                    status_print_interval=1,
+                    save_cellstate_interval=1
                 )
                 # Set default initial state config
                 self.initial_state = InitialStateConfig()
@@ -147,14 +135,11 @@ def setup_simulation(
         context['config'] = MinimalConfig()
 
         print(f"   [+] Simulation name: {name}")
-        print(f"   [+] Total steps: {total_steps}")
         print(f"   [+] Timestep: {dt}")
-        print(f"   [+] Duration: {duration} time units")
         print(f"   [+] Output directory: {timestamped_dir}")
-        print(f"   [+] Multi-timescale: diffusion={diffusion_step}, intracellular={intracellular_step}, intercellular={intercellular_step}")
 
         return True
-        
+
     except Exception as e:
         print(f"[ERROR] Failed to setup simulation: {e}")
         import traceback
