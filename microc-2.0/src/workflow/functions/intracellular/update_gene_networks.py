@@ -16,6 +16,7 @@ from src.workflow.decorators import register_function
     display_name="Update Gene Networks",
     description="Update gene network states and propagate signals",
     category="INTRACELLULAR",
+    inputs=["population", "simulator", "gene_network", "config", "helpers"],
     outputs=[],
     cloneable=False
 )
