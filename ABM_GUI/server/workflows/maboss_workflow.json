@@ -1,0 +1,145 @@
+{
+  "version": "1.0",
+  "name": "Simple Cell Fate MaBoSS Workflow",
+  "description": "A minimal workflow demonstrating pyMaBoSS stochastic Boolean network simulation. Models DNA damage -> p53 -> Apoptosis pathway.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Cell Fate Decision Demo",
+    "reference": "Simple cell fate model: DNA damage triggers p53, which leads to apoptosis. Without damage, cells survive and proliferate.",
+    "created": "2026-01-04"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Initialize MaBoSS simulation with Boolean network model and time parameters",
+      "functions": [
+        {
+          "id": "load_config_node",
+          "function_name": "load_config_file",
+          "enabled": true,
+          "description": "Load YAML config with domain, substances, and associations",
+          "parameters": {
+            "config_file": "tests/maboss_example/cell_fate_config.yaml"
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "setup_maboss_node",
+          "function_name": "setup_maboss",
+          "enabled": true,
+          "description": "Initialize pyMaBoSS with cell_fate.bnd/.cfg and time parameters",
+          "parameters": {
+            "bnd_file": "tests/maboss_example/cell_fate.bnd",
+            "cfg_file": "tests/maboss_example/cell_fate.cfg",
+            "max_time": 20,
+            "time_tick": 0.1,
+            "sample_count": 1000
+          },
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "id": "load_cells_node",
+          "function_name": "load_cells_from_csv",
+          "enabled": true,
+          "description": "Load 5 initial cells with gene states",
+          "parameters": {
+            "file_path": "tests/maboss_example/simple_cells.csv"
+          },
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "load_config_node",
+        "setup_maboss_node",
+        "load_cells_node"
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "steps": 200,
+      "description": "Main simulation loop - 200 steps (max_time=20.0 / time_tick=0.1)",
+      "functions": [
+        {
+          "id": "intracellular_step_node",
+          "function_name": "intracellular_step",
+          "enabled": true,
+          "description": "Run intracellular processes including MaBoSS step",
+          "parameters": {},
+          "step_count": 1,
+          "position": {
+            "x": 200,
+            "y": 150
+          }
+        }
+      ],
+      "execution_order": [
+        "intracellular_step_node"
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Run pyMaBoSS stochastic Boolean network simulation for one time_tick",
+      "functions": [
+        {
+          "id": "run_maboss_step_node",
+          "function_name": "run_maboss_step",
+          "enabled": true,
+          "description": "Run MaBoSS: set inputs from environment, run stochastic simulation, update gene states",
+          "parameters": {},
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "run_maboss_step_node"
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Save results and generate plots for GUI visualization",
+      "functions": [
+        {
+          "id": "print_summary_node",
+          "function_name": "print_simulation_summary",
+          "enabled": true,
+          "description": "Print summary showing which cells became apoptotic vs proliferating",
+          "parameters": {},
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "save_maboss_results_node",
+          "function_name": "save_maboss_results",
+          "enabled": true,
+          "description": "Save MaBoSS results and generate plots for GUI",
+          "parameters": {},
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        }
+      ],
+      "execution_order": [
+        "print_summary_node",
+        "save_maboss_results_node"
+      ]
+    }
+  }
+}
+
