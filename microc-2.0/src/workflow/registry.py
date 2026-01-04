@@ -128,6 +128,10 @@ def get_default_registry() -> FunctionRegistry:
     import tests.jayatilake_experiment.jayatilake_experiment_cell_functions
     import src.workflow.functions.macrostep  # Macrostep stage runner functions
 
+    # Import MaBoSS functions
+    import src.workflow.functions.initialization.setup_maboss
+    import src.workflow.functions.intracellular.run_maboss_step
+
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
     return get_decorator_registry()
