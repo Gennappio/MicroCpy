@@ -17,17 +17,12 @@
           "id": "setup_sim",
           "function_name": "setup_simulation",
           "enabled": true,
-          "description": "Initialize simulation with time steps, output settings, and step intervals",
+          "description": "Initialize simulation infrastructure (name, timestep, output directory). Note: total_steps is controlled by macrostep.steps, multi-timescale by step_count on nodes.",
           "parameters": {},
           "parameter_nodes": [
             "param_sim_name",
-            "param_sim_total_steps",
             "param_sim_dt",
-            "param_sim_output_dir",
-            "param_sim_save_interval",
-            "param_sim_diffusion_step",
-            "param_sim_intracellular_step",
-            "param_sim_intercellular_step"
+            "param_sim_output_dir"
           ]
         },
         {
@@ -256,13 +251,8 @@
       ],
       "parameters": [
         {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Jayatilake 2D CSV Granular"}},
-        {"id": "param_sim_total_steps", "label": "Total Steps", "parameters": {"total_steps": 5}},
         {"id": "param_sim_dt", "label": "Time Step (dt)", "parameters": {"dt": 0.1}},
         {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results"}},
-        {"id": "param_sim_save_interval", "label": "Save Interval", "parameters": {"save_interval": 1}},
-        {"id": "param_sim_diffusion_step", "label": "Diffusion Step", "parameters": {"diffusion_step": 1}},
-        {"id": "param_sim_intracellular_step", "label": "Intracellular Step", "parameters": {"intracellular_step": 1}},
-        {"id": "param_sim_intercellular_step", "label": "Intercellular Step", "parameters": {"intercellular_step": 1}},
 
         {"id": "param_domain_dimensions", "label": "Dimensions", "parameters": {"dimensions": 2}},
         {"id": "param_domain_size_x", "label": "Size X (μm)", "parameters": {"size_x": 500.0}},
