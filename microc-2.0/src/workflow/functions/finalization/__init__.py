@@ -11,6 +11,7 @@ from .print_simulation_summary import print_simulation_summary
 from .save_simulation_data import save_simulation_data
 from .export_final_state import export_final_state
 from .collect_statistics import collect_statistics
+from .save_maboss_results import save_maboss_results
 
 __all__ = [
     'generate_initial_plots',
@@ -19,5 +20,6 @@ __all__ = [
     'save_simulation_data',
     'export_final_state',
     'collect_statistics',
+    'save_maboss_results',
 ]
 

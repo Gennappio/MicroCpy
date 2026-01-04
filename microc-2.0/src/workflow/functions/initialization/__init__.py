@@ -15,6 +15,7 @@ from .setup_environment import setup_environment
 from .setup_custom_parameters import setup_custom_parameters
 from .setup_associations import add_association
 from .setup_gene_network import setup_gene_network
+from .setup_maboss import setup_maboss
 from .load_cells_from_vtk import load_cells_from_vtk
 from .load_cells_from_csv import load_cells_from_csv
 
@@ -29,6 +30,7 @@ __all__ = [
     'setup_custom_parameters',
     'add_association',
     'setup_gene_network',
+    'setup_maboss',
     'load_cells_from_vtk',
     'load_cells_from_csv',
 ]
