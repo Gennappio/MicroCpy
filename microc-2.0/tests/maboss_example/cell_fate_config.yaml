@@ -1,0 +1,119 @@
+# Simple Cell Fate MaBoSS Example Configuration
+# Demonstrates DNA damage -> p53 -> Apoptosis pathway
+
+# DEBUG FLAGS
+debug_phenotype_detailed: false
+log_simulation_status: true
+
+# Domain configuration - 2D simulation
+domain:
+  size_x: 200.0
+  size_x_unit: "um"
+  size_y: 200.0
+  size_y_unit: "um"
+  nx: 10
+  ny: 10
+  dimensions: 2
+  cell_height: 20.0
+  cell_height_unit: "um"
+
+# Time configuration
+time:
+  dt: 0.1
+  end_time: 2.0  # Short run for demo
+  diffusion_step: 1
+  intracellular_step: 1
+  intercellular_step: 1
+
+# Diffusion solver configuration
+diffusion:
+  max_iterations: 1000
+  tolerance: 1e-6
+  solver_type: "steady_state"
+  twodimensional_adjustment_coefficient: 1.0
+
+# Output configuration
+output:
+  save_data_interval: 1
+  save_plots_interval: 1
+  save_final_plots: true 
+  save_initial_plots: true
+  status_print_interval: 1
+  save_cellstate_interval: 1
+
+# Initial state configuration - CSV format for 2D
+initial_state:
+  file_path: "tests/maboss_example/simple_cells.csv"
+
+# Substances (minimal for demo)
+substances:
+  Oxygen:
+    diffusion_coeff: 1.0e-9
+    production_rate: 0.0
+    uptake_rate: 3.0e-17
+    initial_value: 0.07
+    boundary_value: 0.07
+    boundary_type: "fixed"
+    unit: "mM"
+
+# Substance-to-gene network associations
+# DNA_damage is triggered when oxygen is low (stress signal)
+associations:
+  Oxygen: "DNA_damage"
+
+# Gene activation thresholds
+thresholds:
+  DNA_damage:
+    threshold: 0.03  # DNA damage triggered when oxygen < 0.03 mM
+
+# Gene network configuration - using our simple cell fate model
+gene_network:
+  bnd_file: "cell_fate.bnd"
+  cfg_file: "cell_fate.cfg"
+  propagation_steps: 100
+  random_initialization: false
+  output_nodes: ["Proliferation", "Apoptosis"]
+
+  nodes:
+    # Input node - DNA damage (triggered by low oxygen)
+    DNA_damage:
+      is_input: true
+      default_state: false
+    # Internal nodes
+    p53:
+      is_input: false
+      default_state: false
+    Survival:
+      is_input: false
+      default_state: true
+    # Output nodes
+    Apoptosis:
+      is_input: false
+      default_state: false
+    Proliferation:
+      is_input: false
+      default_state: false
+
+# Environment configuration
+environment:
+  ph: 7.4
+
+# Custom parameters
+custom_parameters:
+  cell_cycle_time: 100
+  max_cell_age: 500.0
+  atp_threshold: 0.8
+
+# Population parameters
+initial_cell_count: 5
+max_population_size: 100
+
+# Output directories
+output_dir: "results"
+plots_dir: "results/plots"
+data_dir: "results/data"
+
+# Custom functions for timing and phenotype updates
+custom_functions_path: "maboss_cell_functions.py"
+custom_functions_module: "maboss_cell_functions"
+
