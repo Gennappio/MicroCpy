@@ -1,0 +1,34 @@
+// Simple Cell Fate Boolean Network Model
+// A minimal example demonstrating MaBoSS gene network simulation
+// Nodes: DNA_damage, p53, Apoptosis, Proliferation, Survival
+
+Node DNA_damage {
+    logic = (DNA_damage);
+    rate_up = @logic ? $u_DNA_damage : 0;
+    rate_down = @logic ? 0 : $d_DNA_damage;
+}
+
+Node p53 {
+    logic = (DNA_damage);
+    rate_up = @logic ? $u_p53 : 0;
+    rate_down = @logic ? 0 : $d_p53;
+}
+
+Node Apoptosis {
+    logic = (p53 & !Survival);
+    rate_up = @logic ? $u_Apoptosis : 0;
+    rate_down = @logic ? 0 : $d_Apoptosis;
+}
+
+Node Proliferation {
+    logic = (!p53 & !Apoptosis & Survival);
+    rate_up = @logic ? $u_Proliferation : 0;
+    rate_down = @logic ? 0 : $d_Proliferation;
+}
+
+Node Survival {
+    logic = (!DNA_damage & !Apoptosis);
+    rate_up = @logic ? $u_Survival : 0;
+    rate_down = @logic ? 0 : $d_Survival;
+}
+
