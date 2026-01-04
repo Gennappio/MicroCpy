@@ -137,6 +137,19 @@ class WorkflowExecutor:
         except ImportError:
             pass
 
+        # Try to get from the registry (decorator-based functions)
+        if function_name in self.registry.functions:
+            metadata = self.registry.functions[function_name]
+            # Import the function from its module
+            try:
+                module = importlib.import_module(metadata.module_path)
+                if hasattr(module, function_name):
+                    func = getattr(module, function_name)
+                    self.function_cache[cache_key] = func
+                    return func
+            except ImportError as e:
+                print(f"[WORKFLOW] Failed to import {metadata.module_path}: {e}")
+
         # Function not found
         print(f"[WORKFLOW] Warning: Function '{function_name}' not found in custom or standard functions")
         return None
