@@ -1,23 +1,23 @@
 {
   "version": "1.0",
-  "name": "Gene Network Update Test Workflow",
-  "description": "Minimal workflow for testing gene network updates with visible parameters. Uses array of gene network instances for batch testing.",
+  "name": "Gene Network Update Test",
+  "description": "Granular workflow for gene network testing. Same structure as brute_gene_network_workflow.json.",
   "metadata": {
     "author": "MicroCpy Team",
     "experiment": "Gene Network Testing",
-    "created": "2026-01-04",
-    "notes": "This workflow tests gene network propagation with explicit parameter nodes visible on the canvas. Use this to debug gene network behavior before running full simulations."
+    "created": "2026-01-05",
+    "notes": "Number of cells = number of runs. Input states set manually via canvas."
   },
   "stages": {
     "initialization": {
       "enabled": true,
-      "description": "Initialize standalone gene network for testing",
+      "description": "Initialize gene network, set inputs, create population",
       "functions": [
         {
-          "id": "init_gene_net",
+          "id": "init_gene_network",
           "function_name": "initialize_standalone_gene_network",
           "enabled": true,
-          "description": "Load BND file and create standalone gene network",
+          "description": "Load BND file and create gene network",
           "parameters": {},
           "parameter_nodes": ["param_bnd_file", "param_random_init"]
         },
@@ -25,79 +25,82 @@
           "id": "set_inputs",
           "function_name": "set_gene_network_inputs",
           "enabled": true,
-          "description": "Set input node states for the gene network",
+          "description": "Set input node states",
           "parameters": {},
-          "parameter_nodes": [
-            "param_oxygen_supply",
-            "param_glucose_supply",
-            "param_mct1_stimulus",
-            "param_proton_level",
-            "param_fgfr_stimulus",
-            "param_egfr_stimulus",
-            "param_cmet_stimulus",
-            "param_growth_inhibitor",
-            "param_dna_damage",
-            "param_tgfbr_stimulus"
-          ]
+          "parameter_nodes": ["param_oxygen_supply", "param_glucose_supply"]
+        },
+        {
+          "id": "create_population",
+          "function_name": "create_test_population",
+          "enabled": true,
+          "description": "Create N cells",
+          "parameters": {},
+          "parameter_nodes": ["param_num_cells"]
         }
       ],
-      "execution_order": ["init_gene_net", "set_inputs"],
+      "execution_order": ["init_gene_network", "set_inputs", "create_population"],
       "parameters": [
-        {"id": "param_bnd_file", "label": "BND File", "parameters": {"bnd_file": "jaya_microc.bnd"}},
+        {"id": "param_bnd_file", "label": "BND File Path", "parameters": {"bnd_file": "jaya_microc.bnd"}},
         {"id": "param_random_init", "label": "Random Initialization", "parameters": {"random_initialization": true}},
-        
+        {"id": "param_num_cells", "label": "Number of Cells (= runs)", "parameters": {"num_cells": 100}},
         {"id": "param_oxygen_supply", "label": "Oxygen Supply", "parameters": {"Oxygen_supply": true}},
-        {"id": "param_glucose_supply", "label": "Glucose Supply", "parameters": {"Glucose_supply": true}},
-        {"id": "param_mct1_stimulus", "label": "MCT1 Stimulus", "parameters": {"MCT1_stimulus": false}},
-        {"id": "param_proton_level", "label": "Proton Level", "parameters": {"Proton_level": false}},
-        {"id": "param_fgfr_stimulus", "label": "FGFR Stimulus", "parameters": {"FGFR_stimulus": false}},
-        {"id": "param_egfr_stimulus", "label": "EGFR Stimulus", "parameters": {"EGFR_stimulus": false}},
-        {"id": "param_cmet_stimulus", "label": "cMET Stimulus", "parameters": {"cMET_stimulus": false}},
-        {"id": "param_growth_inhibitor", "label": "Growth Inhibitor", "parameters": {"Growth_Inhibitor": false}},
-        {"id": "param_dna_damage", "label": "DNA Damage", "parameters": {"DNA_damage": false}},
-        {"id": "param_tgfbr_stimulus", "label": "TGFBR Stimulus", "parameters": {"TGFBR_stimulus": false}}
+        {"id": "param_glucose_supply", "label": "Glucose Supply", "parameters": {"Glucose_supply": true}}
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "description": "Update gene networks",
+      "functions": [
+        {
+          "id": "update_gene_networks_node",
+          "function_name": "update_gene_networks",
+          "enabled": true,
+          "description": "Propagate gene network",
+          "parameters": {},
+          "parameter_nodes": ["param_propagation_steps"]
+        }
+      ],
+      "execution_order": ["update_gene_networks_node"],
+      "parameters": [
+        {"id": "param_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}}
       ]
     },
     "macrostep": {
       "enabled": true,
-      "description": "Run gene network propagation",
+      "description": "Run intracellular step",
       "steps": 1,
       "functions": [
         {
-          "id": "run_propagation",
-          "function_name": "run_gene_network_propagation",
+          "id": "intracellular_step_node",
+          "function_name": "intracellular_step",
           "enabled": true,
-          "description": "Run gene network propagation and collect statistics",
+          "description": "Execute intracellular stage",
           "parameters": {},
-          "parameter_nodes": ["param_propagation_steps", "param_num_runs", "param_verbose"]
+          "step_count": 1,
+          "parameter_nodes": []
         }
       ],
-      "execution_order": ["run_propagation"],
-      "parameters": [
-        {"id": "param_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}},
-        {"id": "param_num_runs", "label": "Number of Runs", "parameters": {"num_runs": 100}},
-        {"id": "param_verbose", "label": "Verbose Output", "parameters": {"verbose": false}}
-      ]
+      "execution_order": ["intracellular_step_node"],
+      "parameters": []
     },
     "finalization": {
       "enabled": true,
-      "description": "Print final results",
+      "description": "Print results",
       "functions": [
         {
-          "id": "print_states",
+          "id": "print_results",
           "function_name": "print_gene_network_states",
           "enabled": true,
-          "description": "Print current gene network states",
+          "description": "Print gene network statistics",
           "parameters": {},
-          "parameter_nodes": ["param_show_all_nodes"]
+          "parameter_nodes": ["param_show_per_cell"]
         }
       ],
-      "execution_order": ["print_states"],
+      "execution_order": ["print_results"],
       "parameters": [
-        {"id": "param_show_all_nodes", "label": "Show All Nodes", "parameters": {"show_all_nodes": false}}
+        {"id": "param_show_per_cell", "label": "Show Per-Cell Results", "parameters": {"show_per_cell": false}}
       ]
     }
   },
   "parameters": []
 }
-
