@@ -16,6 +16,9 @@ from src.workflow.decorators import register_function
     display_name="Update Gene Networks",
     description="Update gene network states and propagate signals",
     category="INTRACELLULAR",
+    parameters=[
+        {"name": "propagation_steps", "type": "INT", "description": "Number of gene network propagation steps", "default": 500},
+    ],
     inputs=["population", "simulator", "gene_network", "config", "helpers"],
     outputs=[],
     cloneable=False
@@ -26,6 +29,7 @@ def update_gene_networks(
     gene_network,
     config,
     helpers: Dict[str, Any],
+    propagation_steps: int = None,
     **kwargs
 ) -> None:
     """
@@ -43,6 +47,7 @@ def update_gene_networks(
         gene_network: Gene network object for gene regulation
         config: Configuration object with simulation parameters
         helpers: Dictionary of helper functions from the engine
+        propagation_steps: Number of gene network propagation steps (overrides config)
         **kwargs: Additional parameters (ignored)
 
     Returns:
@@ -54,9 +59,12 @@ def update_gene_networks(
     # Get gene network configuration
     associations = config.associations if hasattr(config, 'associations') else {}
     thresholds = config.thresholds if hasattr(config, 'thresholds') else {}
-    propagation_steps = 500
-    if hasattr(config, 'gene_network') and config.gene_network is not None:
-        propagation_steps = getattr(config.gene_network, 'propagation_steps', 500)
+
+    # Use explicit parameter if provided, otherwise fallback to config
+    if propagation_steps is None:
+        propagation_steps = 500
+        if hasattr(config, 'gene_network') and config.gene_network is not None:
+            propagation_steps = getattr(config.gene_network, 'propagation_steps', 500)
 
     updated_cells = {}
 

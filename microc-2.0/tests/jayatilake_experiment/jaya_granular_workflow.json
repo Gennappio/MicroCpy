@@ -423,7 +423,7 @@
           "enabled": true,
           "description": "Update gene regulatory networks based on local environment. Sets input gene states from substance concentrations, propagates Boolean network, and caches gene states for phenotype determination.",
           "parameters": {},
-          "parameter_nodes": []
+          "parameter_nodes": ["param_intracellular_propagation_steps"]
         },
         {
           "id": "update_phenotypes_node",
@@ -448,7 +448,9 @@
         "update_phenotypes_node",
         "remove_dead_cells_node"
       ],
-      "parameters": []
+      "parameters": [
+        {"id": "param_intracellular_propagation_steps", "label": "Gene Network Propagation Steps", "parameters": {"propagation_steps": 500}}
+      ]
     },
     "microenvironment": {
       "enabled": true,

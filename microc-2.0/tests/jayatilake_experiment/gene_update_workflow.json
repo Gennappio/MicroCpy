@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "name": "Gene Network Update Test Workflow",
+  "description": "Minimal workflow for testing gene network updates with visible parameters. Uses array of gene network instances for batch testing.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Gene Network Testing",
+    "created": "2026-01-04",
+    "notes": "This workflow tests gene network propagation with explicit parameter nodes visible on the canvas. Use this to debug gene network behavior before running full simulations."
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "description": "Initialize standalone gene network for testing",
+      "functions": [
+        {
+          "id": "init_gene_net",
+          "function_name": "initialize_standalone_gene_network",
+          "enabled": true,
+          "description": "Load BND file and create standalone gene network",
+          "parameters": {},
+          "parameter_nodes": ["param_bnd_file", "param_random_init"]
+        },
+        {
+          "id": "set_inputs",
+          "function_name": "set_gene_network_inputs",
+          "enabled": true,
+          "description": "Set input node states for the gene network",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_oxygen_supply",
+            "param_glucose_supply",
+            "param_mct1_stimulus",
+            "param_proton_level",
+            "param_fgfr_stimulus",
+            "param_egfr_stimulus",
+            "param_cmet_stimulus",
+            "param_growth_inhibitor",
+            "param_dna_damage",
+            "param_tgfbr_stimulus"
+          ]
+        }
+      ],
+      "execution_order": ["init_gene_net", "set_inputs"],
+      "parameters": [
+        {"id": "param_bnd_file", "label": "BND File", "parameters": {"bnd_file": "jaya_microc.bnd"}},
+        {"id": "param_random_init", "label": "Random Initialization", "parameters": {"random_initialization": true}},
+        
+        {"id": "param_oxygen_supply", "label": "Oxygen Supply", "parameters": {"Oxygen_supply": true}},
+        {"id": "param_glucose_supply", "label": "Glucose Supply", "parameters": {"Glucose_supply": true}},
+        {"id": "param_mct1_stimulus", "label": "MCT1 Stimulus", "parameters": {"MCT1_stimulus": false}},
+        {"id": "param_proton_level", "label": "Proton Level", "parameters": {"Proton_level": false}},
+        {"id": "param_fgfr_stimulus", "label": "FGFR Stimulus", "parameters": {"FGFR_stimulus": false}},
+        {"id": "param_egfr_stimulus", "label": "EGFR Stimulus", "parameters": {"EGFR_stimulus": false}},
+        {"id": "param_cmet_stimulus", "label": "cMET Stimulus", "parameters": {"cMET_stimulus": false}},
+        {"id": "param_growth_inhibitor", "label": "Growth Inhibitor", "parameters": {"Growth_Inhibitor": false}},
+        {"id": "param_dna_damage", "label": "DNA Damage", "parameters": {"DNA_damage": false}},
+        {"id": "param_tgfbr_stimulus", "label": "TGFBR Stimulus", "parameters": {"TGFBR_stimulus": false}}
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "description": "Run gene network propagation",
+      "steps": 1,
+      "functions": [
+        {
+          "id": "run_propagation",
+          "function_name": "run_gene_network_propagation",
+          "enabled": true,
+          "description": "Run gene network propagation and collect statistics",
+          "parameters": {},
+          "parameter_nodes": ["param_propagation_steps", "param_num_runs", "param_verbose"]
+        }
+      ],
+      "execution_order": ["run_propagation"],
+      "parameters": [
+        {"id": "param_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}},
+        {"id": "param_num_runs", "label": "Number of Runs", "parameters": {"num_runs": 100}},
+        {"id": "param_verbose", "label": "Verbose Output", "parameters": {"verbose": false}}
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "description": "Print final results",
+      "functions": [
+        {
+          "id": "print_states",
+          "function_name": "print_gene_network_states",
+          "enabled": true,
+          "description": "Print current gene network states",
+          "parameters": {},
+          "parameter_nodes": ["param_show_all_nodes"]
+        }
+      ],
+      "execution_order": ["print_states"],
+      "parameters": [
+        {"id": "param_show_all_nodes", "label": "Show All Nodes", "parameters": {"show_all_nodes": false}}
+      ]
+    }
+  },
+  "parameters": []
+}
+

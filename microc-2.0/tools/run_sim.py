@@ -1465,6 +1465,17 @@ def run_workflow_mode(args):
                 if num_macro_steps > 1:
                     print(f"[WORKFLOW] Macrostep iteration {macro_step + 1}/{num_macro_steps}")
                 context = executor.execute_macrostep(context)
+
+            # Execute finalization stage after macrostep
+            final_stage = workflow.get_stage("finalization")
+            if (
+                final_stage
+                and final_stage.enabled
+                and len(final_stage.get_enabled_functions_in_order()) > 0
+            ):
+                context.setdefault("results", {})
+                context.setdefault("num_steps", num_macro_steps)
+                context = executor.execute_finalization(context)
         elif not macro_defined:
             print(
                 "[WORKFLOW] Executing standard stages once (intracellular, "

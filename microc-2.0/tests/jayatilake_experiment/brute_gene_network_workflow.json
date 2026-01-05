@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "name": "Brute Force Gene Network Benchmark Workflow",
+  "description": "Replicates benchmarks/gene_network_standalone.py functionality. Runs multiple gene network simulations with specified inputs and collects statistics on fate and metabolic nodes.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Gene Network Benchmark",
+    "created": "2026-01-04",
+    "notes": "This workflow replicates the benchmark script behavior: load BND file, set inputs (like test_simple_inputs.txt), run multiple propagation cycles, and report statistics on mitoATP, glycoATP, and fate nodes."
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "description": "Initialize gene network with BND file and input conditions",
+      "functions": [
+        {
+          "id": "init_gene_net",
+          "function_name": "initialize_standalone_gene_network",
+          "enabled": true,
+          "description": "Load BND file and create standalone gene network",
+          "parameters": {},
+          "parameter_nodes": ["param_bnd_file", "param_random_init"]
+        },
+        {
+          "id": "set_inputs",
+          "function_name": "set_gene_network_inputs",
+          "enabled": true,
+          "description": "Set input node states matching test_simple_inputs.txt format",
+          "parameters": {},
+          "parameter_nodes": [
+            "param_input_file",
+            "param_oxygen_supply",
+            "param_glucose_supply",
+            "param_mct1_stimulus",
+            "param_proton_level",
+            "param_fgfr_stimulus",
+            "param_egfr_stimulus",
+            "param_cmet_stimulus",
+            "param_growth_inhibitor",
+            "param_dna_damage",
+            "param_tgfbr_stimulus"
+          ]
+        },
+        {
+          "id": "print_initial",
+          "function_name": "print_gene_network_states",
+          "enabled": true,
+          "description": "Print initial gene network states before propagation",
+          "parameters": {},
+          "parameter_nodes": ["param_show_all_init"]
+        }
+      ],
+      "execution_order": ["init_gene_net", "set_inputs", "print_initial"],
+      "parameters": [
+        {"id": "param_bnd_file", "label": "BND File Path", "parameters": {"bnd_file": "jaya_microc.bnd"}},
+        {"id": "param_random_init", "label": "Random Initialization", "parameters": {"random_initialization": true}},
+        
+        {"id": "param_input_file", "label": "Input File (optional)", "parameters": {"input_file": ""}},
+        {"id": "param_oxygen_supply", "label": "Oxygen Supply (ON/OFF)", "parameters": {"Oxygen_supply": true}},
+        {"id": "param_glucose_supply", "label": "Glucose Supply (ON/OFF)", "parameters": {"Glucose_supply": true}},
+        {"id": "param_mct1_stimulus", "label": "MCT1 Stimulus", "parameters": {"MCT1_stimulus": false}},
+        {"id": "param_proton_level", "label": "Proton Level", "parameters": {"Proton_level": false}},
+        {"id": "param_fgfr_stimulus", "label": "FGFR Stimulus", "parameters": {"FGFR_stimulus": false}},
+        {"id": "param_egfr_stimulus", "label": "EGFR Stimulus", "parameters": {"EGFR_stimulus": false}},
+        {"id": "param_cmet_stimulus", "label": "cMET Stimulus", "parameters": {"cMET_stimulus": false}},
+        {"id": "param_growth_inhibitor", "label": "Growth Inhibitor", "parameters": {"Growth_Inhibitor": false}},
+        {"id": "param_dna_damage", "label": "DNA Damage", "parameters": {"DNA_damage": false}},
+        {"id": "param_tgfbr_stimulus", "label": "TGFBR Stimulus", "parameters": {"TGFBR_stimulus": false}},
+        
+        {"id": "param_show_all_init", "label": "Show All Nodes (init)", "parameters": {"show_all_nodes": false}}
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "description": "Run gene network benchmark with multiple runs",
+      "steps": 1,
+      "functions": [
+        {
+          "id": "run_benchmark",
+          "function_name": "run_gene_network_propagation",
+          "enabled": true,
+          "description": "Run gene network propagation (equivalent to --runs and --steps in CLI)",
+          "parameters": {},
+          "parameter_nodes": ["param_propagation_steps", "param_num_runs", "param_verbose"]
+        }
+      ],
+      "execution_order": ["run_benchmark"],
+      "parameters": [
+        {"id": "param_propagation_steps", "label": "Propagation Steps (--steps)", "parameters": {"propagation_steps": 1000}},
+        {"id": "param_num_runs", "label": "Number of Runs (--runs)", "parameters": {"num_runs": 100}},
+        {"id": "param_verbose", "label": "Verbose Output", "parameters": {"verbose": false}}
+      ]
+    },
+    "finalization": {
+      "enabled": true,
+      "description": "Print final results",
+      "functions": [
+        {
+          "id": "print_final",
+          "function_name": "print_gene_network_states",
+          "enabled": true,
+          "description": "Print final gene network states after propagation",
+          "parameters": {},
+          "parameter_nodes": ["param_show_all_final"]
+        }
+      ],
+      "execution_order": ["print_final"],
+      "parameters": [
+        {"id": "param_show_all_final", "label": "Show All Nodes (final)", "parameters": {"show_all_nodes": false}}
+      ]
+    }
+  },
+  "parameters": []
+}
+
