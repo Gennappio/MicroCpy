@@ -234,8 +234,8 @@ class MultiSubstanceSimulator:
             if name in self.fipy_variables:
                 continue
 
-            initial_value = substance_state.config.initial_value.value
-            boundary_value = substance_state.config.boundary_value.value
+            initial_value = float(substance_state.config.initial_value.value)
+            boundary_value = float(substance_state.config.boundary_value.value)
 
             # Create variable
             var = CellVariable(name=name, mesh=self.fipy_mesh, value=initial_value)
@@ -347,8 +347,8 @@ class MultiSubstanceSimulator:
             config = substance_state.config
 
             # Get current configuration values
-            initial_value = substance_state.config.initial_value.value
-            boundary_value = substance_state.config.boundary_value.value
+            initial_value = float(substance_state.config.initial_value.value)
+            boundary_value = float(substance_state.config.boundary_value.value)
 
             # Use the existing FiPy variable (don't create a fresh one each time)
             # This allows the solver to use the previous solution as initial guess

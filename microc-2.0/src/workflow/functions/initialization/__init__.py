@@ -9,6 +9,7 @@ from .setup_simulation import setup_simulation
 from .setup_domain import setup_domain
 from .setup_substances import setup_substances
 from .add_substance import add_substance
+from .finalize_substances import finalize_substances
 from .setup_population import setup_population
 from .setup_output import setup_output
 from .setup_environment import setup_environment
@@ -24,6 +25,7 @@ __all__ = [
     'setup_domain',
     'setup_substances',
     'add_substance',
+    'finalize_substances',
     'setup_population',
     'setup_output',
     'setup_environment',

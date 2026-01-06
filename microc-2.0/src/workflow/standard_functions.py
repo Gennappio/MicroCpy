@@ -19,6 +19,7 @@ from src.workflow.functions.initialization import (
     setup_domain,
     setup_substances,
     add_substance,
+    finalize_substances,
     setup_population,
     setup_output,
     setup_environment,

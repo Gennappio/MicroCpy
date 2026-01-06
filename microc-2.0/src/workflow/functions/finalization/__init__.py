@@ -12,6 +12,7 @@ from .save_simulation_data import save_simulation_data
 from .export_final_state import export_final_state
 from .collect_statistics import collect_statistics
 from .save_maboss_results import save_maboss_results
+from .plot_concentration_heatmaps import plot_concentration_heatmaps
 
 __all__ = [
     'generate_initial_plots',
@@ -21,5 +22,6 @@ __all__ = [
     'export_final_state',
     'collect_statistics',
     'save_maboss_results',
+    'plot_concentration_heatmaps',
 ]
 

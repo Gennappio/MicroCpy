@@ -101,8 +101,8 @@ def add_substance(
         # Import helper to configure substances
         from src.workflow.functions.diffusion.run_diffusion_solver import _configure_substances
 
-        # Configure this single substance
-        _configure_substances(config, simulator, [substance_def])
+        # Configure this single substance (don't reinitialize simulator yet)
+        _configure_substances(config, simulator, [substance_def], reinitialize_simulator=False)
 
         print(f"   [+] Added {substance_name}: D={diffusion_coeff}, init={initial_value} {unit}")
 

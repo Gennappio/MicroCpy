@@ -203,18 +203,19 @@ def _collect_substance_definitions(kwargs):
     return substances
 
 
-def _configure_substances(config, simulator, substances):
+def _configure_substances(config, simulator, substances, reinitialize_simulator=True):
     """
-    Configure substances in the simulator (called once on first run).
+    Configure substances in the simulator.
 
     Args:
         config: Configuration object
         simulator: Diffusion simulator
         substances: List of substance definitions (each with name, diffusion_coeff, etc.)
+        reinitialize_simulator: Whether to reinitialize the simulator after adding substances.
+                               Set to False when adding substances incrementally, then call
+                               simulator.initialize_substances() manually after all are added.
     """
     from src.config.config import SubstanceConfig
-
-    print(f"[WORKFLOW] Configuring substances in diffusion solver")
 
     # Initialize substances dict if not exists
     if not hasattr(config, 'substances'):
@@ -250,11 +251,10 @@ def _configure_substances(config, simulator, substances):
 
         print(f"   [+] Configured substance: {name} (D={sub_config.diffusion_coeff:.2e}, init={sub_config.initial_value})")
 
-    # Reinitialize simulator with new substances
-    if hasattr(simulator, 'initialize_substances'):
+    # Reinitialize simulator with ALL substances (only if requested)
+    if reinitialize_simulator and hasattr(simulator, 'initialize_substances'):
         simulator.initialize_substances(config.substances)
-
-    print(f"   [+] Configured {len(config.substances)} substances in diffusion solver")
+        print(f"   [+] Initialized {len(config.substances)} substances in diffusion solver")
 
 
 def _convert_to_position_reactions(reaction_terms):
