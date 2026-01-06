@@ -123,6 +123,12 @@
           "description": "Load cells from CSV",
           "parameters": {},
           "parameter_nodes": ["param_load_csv_file_path"]
+        },
+        {
+          "id": "generate_initial_plots",
+          "function_name": "generate_initial_plots",
+          "enabled": true,
+          "parameters": {}
         }
       ],
       "execution_order": [
@@ -139,7 +145,8 @@
         "finalize_subs",
         "setup_gene_net",
         "setup_pop",
-        "load_cells_csv"
+        "load_cells_csv",
+        "generate_initial_plots"
       ],
       "parameters": [
         {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Diffusion-Reaction Test"}},
