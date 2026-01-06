@@ -157,28 +157,28 @@
         {"id": "param_oxygen_name", "label": "Name", "parameters": {"substance_name": "Oxygen"}},
         {"id": "param_oxygen_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 100000.0}},
         {"id": "param_oxygen_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
-        {"id": "param_oxygen_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 10.0}},
+        {"id": "param_oxygen_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}},
         {"id": "param_oxygen_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.285}},
         {"id": "param_oxygen_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.285}},
-        {"id": "param_oxygen_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "dirichlet"}},
+        {"id": "param_oxygen_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
         {"id": "param_oxygen_unit", "label": "Unit", "parameters": {"unit": "mM"}},
 
         {"id": "param_glucose_name", "label": "Name", "parameters": {"substance_name": "Glucose"}},
         {"id": "param_glucose_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 18000.0}},
         {"id": "param_glucose_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
-        {"id": "param_glucose_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.5}},
+        {"id": "param_glucose_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}},
         {"id": "param_glucose_initial_value", "label": "Initial Value", "parameters": {"initial_value": 5.0}},
         {"id": "param_glucose_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 5.0}},
-        {"id": "param_glucose_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "dirichlet"}},
+        {"id": "param_glucose_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
         {"id": "param_glucose_unit", "label": "Unit", "parameters": {"unit": "mM"}},
 
         {"id": "param_lactate_name", "label": "Name", "parameters": {"substance_name": "Lactate"}},
         {"id": "param_lactate_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 6000.0}},
-        {"id": "param_lactate_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.5}},
+        {"id": "param_lactate_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}},
         {"id": "param_lactate_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}},
         {"id": "param_lactate_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}},
         {"id": "param_lactate_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}},
-        {"id": "param_lactate_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "dirichlet"}},
+        {"id": "param_lactate_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}},
         {"id": "param_lactate_unit", "label": "Unit", "parameters": {"unit": "mM"}},
 
         {"id": "param_h_name", "label": "Name", "parameters": {"substance_name": "H"}},
@@ -273,29 +273,24 @@
     },
     "finalization": {
       "enabled": true,
-      "description": "Generate concentration heatmaps and summary.",
+      "description": "Generate final plots and print summary statistics.",
       "functions": [
         {
-          "id": "plot_heatmaps",
-          "function_name": "plot_concentration_heatmaps",
+          "id": "generate_plots",
+          "function_name": "generate_summary_plots",
           "enabled": true,
-          "description": "Generate heatmap plots for each substance",
-          "parameters": {},
-          "parameter_nodes": ["param_plot_output_dir", "param_plot_colormap", "param_plot_show_cells"]
+          "parameters": {}
         },
         {
           "id": "print_summary",
           "function_name": "print_simulation_summary",
           "enabled": true,
-          "description": "Print simulation summary",
           "parameters": {}
         }
       ],
-      "execution_order": ["plot_heatmaps", "print_summary"],
-      "parameters": [
-        {"id": "param_plot_output_dir", "label": "Plot Output Dir", "parameters": {"output_dir": "results/diffusion_reaction/plots"}},
-        {"id": "param_plot_colormap", "label": "Colormap", "parameters": {"colormap": "viridis"}},
-        {"id": "param_plot_show_cells", "label": "Show Cells", "parameters": {"show_cells": true}}
+      "execution_order": [
+        "generate_plots",
+        "print_summary"
       ]
     }
   }
