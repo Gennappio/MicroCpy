@@ -152,7 +152,7 @@
         {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Diffusion-Reaction Test"}},
         {"id": "param_sim_total_steps", "label": "Total Steps", "parameters": {"total_steps": 1}},
         {"id": "param_sim_dt", "label": "Time Step (dt)", "parameters": {"dt": 1.0}},
-        {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results/diffusion_reaction"}},
+        {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results"}},
 
         {"id": "param_domain_dimensions", "label": "Dimensions", "parameters": {"dimensions": 2}},
         {"id": "param_domain_size_x", "label": "Size X (μm)", "parameters": {"size_x": 500.0}},
