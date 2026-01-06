@@ -101,20 +101,12 @@
           "parameters": {}
         },
         {
-          "id": "setup_gene_net",
-          "function_name": "setup_gene_network",
-          "enabled": true,
-          "description": "Configure gene network",
-          "parameters": {},
-          "parameter_nodes": ["param_gene_net_bnd_file", "param_gene_net_propagation_steps", "param_gene_net_random_init"]
-        },
-        {
           "id": "setup_pop",
           "function_name": "setup_population",
           "enabled": true,
-          "description": "Initialize cell population",
+          "description": "Initialize cell population (no gene network)",
           "parameters": {},
-          "parameter_nodes": ["param_pop_enable_gene_network", "param_pop_custom_functions_module"]
+          "parameter_nodes": ["param_pop_enable_gene_network"]
         },
         {
           "id": "load_cells_csv",
@@ -143,7 +135,6 @@
         "add_hgf",
         "add_gi",
         "finalize_subs",
-        "setup_gene_net",
         "setup_pop",
         "load_cells_csv",
         "generate_initial_plots"
@@ -233,14 +224,9 @@
         {"id": "param_gi_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "neumann"}},
         {"id": "param_gi_unit", "label": "Unit", "parameters": {"unit": "nM"}},
 
-        {"id": "param_gene_net_bnd_file", "label": "BND File", "parameters": {"bnd_file": "tests/jayatilake_experiment/jayatilake.bnd"}},
-        {"id": "param_gene_net_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 1}},
-        {"id": "param_gene_net_random_init", "label": "Random Init", "parameters": {"random_init": false}},
+        {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": false}},
 
-        {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": true}},
-        {"id": "param_pop_custom_functions_module", "label": "Custom Functions", "parameters": {"custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py"}},
-
-        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/example_2d_cells.csv"}}
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/simple_cells_2d.csv"}}
       ]
     },
     "macrostep": {
