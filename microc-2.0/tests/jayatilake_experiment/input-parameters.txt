@@ -1,0 +1,17 @@
+Input			Inital	Threshold
+DNA_damage		0	0.5
+EGFR_stimulus		0	1.0e-6
+TGFBR_stimulus		0	0.5
+FGFR_stimulus		0	1.0e-6
+Oxygen_supply		0.10	0.022
+EGFRI			0	5e-3
+FGFRI			0	5e-3
+Glucose_supply		5.0	4.0
+Growth_Inhibitor	0.0	5e-5	
+cMET_stimulus		0	1.0e-6
+cMETI			0	5e-3
+pH_min			8.0	6.0
+MCT1_stimulus		5.0	1.5
+MCT1I			0	17.0e-6
+MCT4I			0	1.0
+GLUT1I			0	4.0e-6
