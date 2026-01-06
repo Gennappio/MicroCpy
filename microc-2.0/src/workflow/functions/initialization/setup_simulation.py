@@ -80,6 +80,12 @@ def setup_simulation(
             'substance_stats': {}
         }
 
+        # Initialize helpers dict (for workflow-only mode)
+        # In full simulation mode, this is populated by SimulationEngine._build_context()
+        # In workflow-only mode, we need an empty dict to satisfy function signatures
+        if 'helpers' not in context:
+            context['helpers'] = {}
+
         # Create a minimal config object that will be populated by other setup functions
         # This is a placeholder that will be filled in by setup_domain, setup_substances, etc.
         from src.config.config import TimeConfig, DiffusionConfig, OutputConfig, InitialStateConfig
