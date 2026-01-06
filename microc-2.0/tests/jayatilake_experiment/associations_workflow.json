@@ -23,7 +23,7 @@
         },
         {
           "id": "add_oxygen",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "Oxygen (threshold 0.022 mM for Oxygen_supply)",
           "parameters": {},
@@ -31,7 +31,7 @@
         },
         {
           "id": "assoc_oxygen",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -39,7 +39,7 @@
         },
         {
           "id": "add_glucose",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "Glucose (threshold 4.0 mM for Glucose_supply)",
           "parameters": {},
@@ -47,7 +47,7 @@
         },
         {
           "id": "assoc_glucose",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -55,7 +55,7 @@
         },
         {
           "id": "add_lactate",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "Lactate (threshold 1.5 mM for MCT1_stimulus)",
           "parameters": {},
@@ -63,7 +63,7 @@
         },
         {
           "id": "assoc_lactate",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -71,7 +71,7 @@
         },
         {
           "id": "add_fgf",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "FGF (threshold 1e-6 mM for FGFR_stimulus)",
           "parameters": {},
@@ -79,7 +79,7 @@
         },
         {
           "id": "assoc_fgf",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -87,7 +87,7 @@
         },
         {
           "id": "add_tgfa",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "TGFA (threshold 1e-6 mM for EGFR_stimulus)",
           "parameters": {},
@@ -95,7 +95,7 @@
         },
         {
           "id": "assoc_tgfa",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -103,7 +103,7 @@
         },
         {
           "id": "add_hgf",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "HGF (threshold 1e-6 mM for cMET_stimulus)",
           "parameters": {},
@@ -111,7 +111,7 @@
         },
         {
           "id": "assoc_hgf",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},
@@ -119,7 +119,7 @@
         },
         {
           "id": "add_gi",
-          "function_name": "add_mock_substance",
+          "function_name": "add_substance",
           "enabled": true,
           "description": "Growth Inhibitor (threshold 5e-5 mM for Growth_Inhibitor)",
           "parameters": {},
@@ -127,7 +127,7 @@
         },
         {
           "id": "assoc_gi",
-          "function_name": "add_mock_association",
+          "function_name": "add_association",
           "enabled": true,
           "description": "",
           "parameters": {},

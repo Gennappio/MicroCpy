@@ -36,35 +36,55 @@ def add_substance(
     boundary_value: float = 0.285,
     boundary_type: str = "fixed",
     unit: str = "mM",
+    concentration: float = None,  # Simple mode: just set concentration
     **kwargs
 ) -> bool:
     """
     Add a single substance to the simulation.
-    
+
+    Works in two modes:
+    1. Full simulation mode (config + simulator present): configures diffusion solver
+    2. Simple mode (no config/simulator): just stores concentration in context
+
     Args:
-        context: Workflow context (must contain config and simulator)
+        context: Workflow context
         substance_name: Name of the substance
-        diffusion_coeff: Diffusion coefficient (um^2/min)
-        production_rate: Production rate
-        uptake_rate: Uptake/consumption rate
-        initial_value: Initial concentration
-        boundary_value: Boundary concentration
-        boundary_type: "fixed" or "neumann"
-        unit: Concentration unit
+        diffusion_coeff: Diffusion coefficient (um^2/min) - full mode only
+        production_rate: Production rate - full mode only
+        uptake_rate: Uptake/consumption rate - full mode only
+        initial_value: Initial concentration - full mode only
+        boundary_value: Boundary concentration - full mode only
+        boundary_type: "fixed" or "neumann" - full mode only
+        unit: Concentration unit - full mode only
+        concentration: Simple mode - just sets this concentration value
         **kwargs: Additional parameters
-        
+
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Adding substance: {substance_name}")
-
     try:
         config = context.get('config')
         simulator = context.get('simulator')
 
+        # If concentration is provided, use simple mode
+        if concentration is not None:
+            # Simple mode: just store concentration in context
+            if 'substances' not in context:
+                context['substances'] = {}
+            context['substances'][substance_name] = concentration
+            print(f"[SUBSTANCE] {substance_name} = {concentration}")
+            return True
+
+        # Full simulation mode
         if not config or not simulator:
-            print("[ERROR] Config and simulator must be set up before adding substances")
-            return False
+            # Fallback to simple mode with initial_value as concentration
+            if 'substances' not in context:
+                context['substances'] = {}
+            context['substances'][substance_name] = initial_value
+            print(f"[SUBSTANCE] {substance_name} = {initial_value}")
+            return True
+
+        print(f"[WORKFLOW] Adding substance: {substance_name}")
 
         # Build substance definition
         substance_def = {
@@ -85,9 +105,9 @@ def add_substance(
         _configure_substances(config, simulator, [substance_def])
 
         print(f"   [+] Added {substance_name}: D={diffusion_coeff}, init={initial_value} {unit}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"[ERROR] Failed to add substance {substance_name}: {e}")
         import traceback

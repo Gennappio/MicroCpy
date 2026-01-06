@@ -29,48 +29,57 @@ def add_association(
 ) -> bool:
     """
     Add a substance-to-gene association.
-    
+
+    Works in two modes:
+    1. Full simulation mode (config present): stores in config object
+    2. Simple mode (no config): stores directly in context
+
     Args:
         context: Workflow context
         substance_name: Name of the substance
         gene_input: Gene network input node name
         threshold: Activation threshold
         **kwargs: Additional parameters
-        
+
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Adding association: {substance_name} -> {gene_input}")
-    
     try:
         config = context.get('config')
-        
-        if not config:
-            print("[ERROR] Config must be set up before associations")
-            return False
-        
-        # Ensure associations dict exists
-        if not hasattr(config, 'associations') or config.associations is None:
-            config.associations = {}
-        
-        # Ensure thresholds dict exists
-        if not hasattr(config, 'thresholds') or config.thresholds is None:
-            config.thresholds = {}
 
-        # Add association
-        config.associations[substance_name] = gene_input
+        if config:
+            # Full simulation mode: store in config
+            # Ensure associations dict exists
+            if not hasattr(config, 'associations') or config.associations is None:
+                config.associations = {}
 
-        # Add threshold as an object with .threshold attribute (expected by population.py)
-        class ThresholdConfig:
-            def __init__(self, threshold_value):
-                self.threshold = threshold_value
+            # Ensure thresholds dict exists
+            if not hasattr(config, 'thresholds') or config.thresholds is None:
+                config.thresholds = {}
 
-        config.thresholds[gene_input] = ThresholdConfig(threshold)
-        
-        print(f"   [+] {substance_name} -> {gene_input} (threshold: {threshold})")
-        
+            # Add association
+            config.associations[substance_name] = gene_input
+
+            # Add threshold as an object with .threshold attribute (expected by population.py)
+            class ThresholdConfig:
+                def __init__(self, threshold_value):
+                    self.threshold = threshold_value
+
+            config.thresholds[gene_input] = ThresholdConfig(threshold)
+        else:
+            # Simple mode: store directly in context
+            if 'associations' not in context:
+                context['associations'] = {}
+            if 'thresholds' not in context:
+                context['thresholds'] = {}
+
+            context['associations'][substance_name] = gene_input
+            context['thresholds'][gene_input] = threshold
+
+        print(f"[ASSOCIATION] {substance_name} -> {gene_input} (threshold: {threshold})")
+
         return True
-        
+
     except Exception as e:
         print(f"[ERROR] Failed to add association: {e}")
         import traceback

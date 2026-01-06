@@ -207,111 +207,6 @@ def initialize_population(
 
 
 # ============================================================================
-# REUSABLE NODE 1.5a: Add Mock Substance
-# Adds a substance with a fixed concentration to MockSimulator
-# ============================================================================
-
-@register_function(
-    display_name="Add Mock Substance",
-    description="Add a substance with uniform concentration (for testing without diffusion)",
-    category="INITIALIZATION",
-    parameters=[
-        {"name": "substance_name", "type": "STRING", "description": "Name of the substance (e.g., Oxygen)", "default": "Oxygen"},
-        {"name": "concentration", "type": "FLOAT", "description": "Uniform concentration value", "default": 0.0},
-    ],
-    inputs=["context"],
-    outputs=[],
-    cloneable=True
-)
-def add_mock_substance(
-    context: Dict[str, Any],
-    substance_name: str = "Oxygen",
-    concentration: float = 0.0,
-    **kwargs
-) -> bool:
-    """
-    Add a mock substance with uniform concentration.
-
-    This is for testing gene networks without real diffusion simulation.
-    The substance has the same concentration everywhere.
-    """
-    try:
-        # Get or create simulator
-        simulator = context.get('simulator')
-        if simulator is None:
-            simulator = MockSimulator(concentrations={})
-            context['simulator'] = simulator
-
-        # Add substance concentration
-        simulator.concentrations[substance_name] = concentration
-
-        print(f"[SUBSTANCE] Added '{substance_name}' with concentration = {concentration}")
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] Failed to add mock substance: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-# ============================================================================
-# REUSABLE NODE 1.5b: Add Mock Association
-# Links a substance to a gene network input node
-# ============================================================================
-
-@register_function(
-    display_name="Add Mock Association",
-    description="Link a substance to a gene network input node with threshold",
-    category="INITIALIZATION",
-    parameters=[
-        {"name": "substance_name", "type": "STRING", "description": "Name of the substance", "default": "Oxygen"},
-        {"name": "gene_input", "type": "STRING", "description": "Gene network input node name", "default": "Oxygen_supply"},
-        {"name": "threshold", "type": "FLOAT", "description": "Activation threshold (substance > threshold = ON)", "default": 0.022},
-    ],
-    inputs=["context"],
-    outputs=[],
-    cloneable=True
-)
-def add_mock_association(
-    context: Dict[str, Any],
-    substance_name: str = "Oxygen",
-    gene_input: str = "Oxygen_supply",
-    threshold: float = 0.022,
-    **kwargs
-) -> bool:
-    """
-    Add a substance-to-gene association with threshold.
-
-    If the substance concentration > threshold, the gene input is ON.
-    Otherwise it is OFF.
-    """
-    try:
-        # Get or create config
-        config = context.get('config')
-        if config is None:
-            config = MockConfig(associations={}, thresholds={})
-            context['config'] = config
-
-        # Add association
-        config.associations[substance_name] = gene_input
-
-        # Add threshold (store as dict with 'threshold' key for compatibility)
-        config.thresholds[gene_input] = {'threshold': threshold}
-
-        print(f"[ASSOCIATION] {substance_name} -> {gene_input} (threshold: {threshold})")
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] Failed to add mock association: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-# ============================================================================
 # REUSABLE NODE 2: Initialize Gene Networks
 # Attaches gene networks to all cells in population
 # ============================================================================
@@ -501,7 +396,7 @@ def set_gene_network_inputs(
 
 
 # ============================================================================
-# REUSABLE NODE 3.5: Apply Associations to Gene Input States
+# REUSABLE NODE: Apply Associations to Gene Input States
 # Reads substance concentrations and associations, sets gene inputs accordingly
 # ============================================================================
 
@@ -522,49 +417,45 @@ def apply_associations_to_inputs(
     Apply substance-to-gene associations.
 
     For each association (substance -> gene_input):
-    - Read substance concentration from simulator
+    - Read substance concentration
     - Compare to threshold
     - Set gene_input = ON if concentration > threshold, else OFF
 
-    This is for use after add_mock_substance and add_mock_association.
+    This is for use after add_substance and add_association.
     """
     try:
-        config = context.get('config')
-        simulator = context.get('simulator')
         population = context.get('population')
+        config = context.get('config')
 
-        if not config:
-            print("[ERROR] No config in context")
-            return False
+        # Get substances from context
+        substances = context.get('substances', {})
 
-        if not simulator:
-            print("[ERROR] No simulator in context")
-            return False
+        # Get associations and thresholds from either context or config
+        associations = context.get('associations', {})
+        thresholds = context.get('thresholds', {})
 
-        # Get associations and thresholds
-        associations = getattr(config, 'associations', {}) or {}
-        thresholds = getattr(config, 'thresholds', {}) or {}
+        # If not in context directly, try config object
+        if not associations and config:
+            associations = getattr(config, 'associations', {}) or {}
+            thresholds_config = getattr(config, 'thresholds', {}) or {}
+            # Convert config thresholds to simple dict
+            for gene_input, threshold_obj in thresholds_config.items():
+                if hasattr(threshold_obj, 'threshold'):
+                    thresholds[gene_input] = threshold_obj.threshold
+                else:
+                    thresholds[gene_input] = threshold_obj
 
         if not associations:
             print("[WARNING] No associations defined")
             return True
-
-        # Get substance concentrations
-        concentrations = simulator.concentrations if hasattr(simulator, 'concentrations') else {}
 
         # Build input states based on associations
         input_states = {}
 
         print(f"[ASSOCIATIONS] Applying {len(associations)} associations:")
         for substance_name, gene_input in associations.items():
-            concentration = concentrations.get(substance_name, 0.0)
-
-            # Get threshold
-            threshold_info = thresholds.get(gene_input, {})
-            if isinstance(threshold_info, dict):
-                threshold = threshold_info.get('threshold', 0.0)
-            else:
-                threshold = getattr(threshold_info, 'threshold', 0.0)
+            concentration = substances.get(substance_name, 0.0)
+            threshold = thresholds.get(gene_input, 0.0)
 
             # Compare concentration to threshold
             is_on = concentration > threshold
