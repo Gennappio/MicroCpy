@@ -13,6 +13,7 @@ import WorkflowFunctionNode from './WorkflowFunctionNode';
 import ParameterNode from './ParameterNode';
 import GroupNode from './GroupNode';
 import InitNode from './InitNode';
+import SubWorkflowCallNode from './SubWorkflowCallNode';
 import ParameterEditor from './ParameterEditor';
 import ControllerSettings from './ControllerSettings';
 import useWorkflowStore from '../store/workflowStore';
@@ -24,6 +25,7 @@ const nodeTypes = {
   parameterNode: ParameterNode,
   groupNode: GroupNode,
   initNode: InitNode,
+  subworkflowCall: SubWorkflowCallNode,
 };
 
 /**
@@ -265,6 +267,27 @@ const WorkflowCanvas = ({ stage }) => {
           data: {
             label: droppedData.label || 'New Parameters',
             parameters: droppedData.parameters || {},
+            onEdit: () => {
+              setSelectedNode(newNode);
+              setShowParameterEditor(true);
+            },
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      } else if (droppedData.type === 'subworkflowCall') {
+        // It's a sub-workflow call node
+        const newId = `subworkflow_${droppedData.subworkflowName}_${Date.now()}`;
+        const newNode = {
+          id: newId,
+          type: 'subworkflowCall',
+          position,
+          data: {
+            label: droppedData.label || droppedData.subworkflowName,
+            subworkflowName: droppedData.subworkflowName,
+            iterations: droppedData.iterations || 1,
+            parameters: droppedData.parameters || {},
+            enabled: true,
+            description: droppedData.description || '',
             onEdit: () => {
               setSelectedNode(newNode);
               setShowParameterEditor(true);
