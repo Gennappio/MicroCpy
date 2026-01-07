@@ -1,0 +1,116 @@
+{
+  "version": "2.0",
+  "name": "Test Workflow v2.0",
+  "description": "Test workflow demonstrating sub-workflow features",
+  "subworkflows": {
+    "main": {
+      "description": "Main workflow that orchestrates sub-workflows",
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 10
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call-init",
+          "subworkflow_name": "initialization",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "description": "Initialize simulation",
+          "parameter_nodes": [],
+          "context_mapping": {}
+        },
+        {
+          "id": "call-step",
+          "subworkflow_name": "step",
+          "iterations": 10,
+          "parameters": {},
+          "enabled": true,
+          "description": "Execute simulation step",
+          "parameter_nodes": [],
+          "context_mapping": {}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["call-init", "call-step"],
+      "enabled": true,
+      "deletable": false
+    },
+    "initialization": {
+      "description": "Initialize simulation state",
+      "controller": {
+        "id": "controller-init",
+        "label": "INITIALIZATION CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-init-1",
+          "function_name": "initialize_cells",
+          "parameters": {
+            "num_cells": 100,
+            "cell_radius": 5.0
+          },
+          "enabled": true,
+          "description": "Initialize cell population",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 200}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["func-init-1"],
+      "enabled": true,
+      "deletable": false
+    },
+    "step": {
+      "description": "Single simulation step",
+      "controller": {
+        "id": "controller-step",
+        "label": "STEP CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-step-1",
+          "function_name": "update_cells",
+          "parameters": {},
+          "enabled": true,
+          "description": "Update cell states",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "func-step-2",
+          "function_name": "update_environment",
+          "parameters": {},
+          "enabled": true,
+          "description": "Update microenvironment",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 300}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["func-step-1", "func-step-2"],
+      "enabled": true,
+      "deletable": true
+    }
+  },
+  "metadata": {
+    "created": "2026-01-07",
+    "author": "Test User"
+  }
+}
+

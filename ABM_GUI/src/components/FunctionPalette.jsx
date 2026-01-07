@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Database } from 'lucide-react';
+import { ChevronDown, ChevronRight, Database, Zap } from 'lucide-react';
 import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
+import useWorkflowStore from '../store/workflowStore';
 import './FunctionPalette.css';
 
 /**
  * Function Palette - Sidebar with draggable functions
  */
 const FunctionPalette = ({ currentStage }) => {
+  const workflow = useWorkflowStore((state) => state.workflow);
   const [stageFunctions, setStageFunctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState({
@@ -15,6 +17,7 @@ const FunctionPalette = ({ currentStage }) => {
     [FunctionCategory.MICROENVIRONMENT]: true,
     [FunctionCategory.INTERCELLULAR]: true,
     [FunctionCategory.FINALIZATION]: true,
+    'subworkflows': true,
   });
 
   // Load registry on mount and when stage changes
@@ -61,6 +64,18 @@ const FunctionPalette = ({ currentStage }) => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const onDragStartSubWorkflow = (event, subworkflowName) => {
+    const subworkflowCallData = {
+      type: 'subworkflowCall',
+      subworkflowName: subworkflowName,
+      label: subworkflowName,
+      iterations: 1,
+      parameters: {},
+    };
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(subworkflowCallData));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
   const categoryLabels = {
     [FunctionCategory.INITIALIZATION]: 'Initialization',
     [FunctionCategory.INTRACELLULAR]: 'Intracellular',
@@ -94,6 +109,52 @@ const FunctionPalette = ({ currentStage }) => {
             </div>
           </div>
         </div>
+
+        {/* Sub-workflows Section (v2.0 only) */}
+        {workflow.version === '2.0' && (
+          <div className="palette-category">
+            <div
+              className="category-header"
+              onClick={() => toggleCategory('subworkflows')}
+            >
+              {expandedCategories['subworkflows'] ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+              <span>Sub-workflows</span>
+              <span className="category-count">
+                {Object.keys(workflow.subworkflows || {}).filter(name => name !== currentStage).length}
+              </span>
+            </div>
+
+            {expandedCategories['subworkflows'] && (
+              <div className="category-functions">
+                {Object.keys(workflow.subworkflows || {})
+                  .filter(name => name !== currentStage) // Don't show current sub-workflow
+                  .map((subworkflowName) => (
+                    <div
+                      key={subworkflowName}
+                      className="function-item subworkflow-item"
+                      draggable
+                      onDragStart={(e) => onDragStartSubWorkflow(e, subworkflowName)}
+                    >
+                      <div className="function-item-icon">
+                        <Zap size={14} />
+                      </div>
+                      <div className="function-item-name">{subworkflowName}</div>
+                      <div className="function-item-description">
+                        {workflow.subworkflows[subworkflowName].description || 'Sub-workflow call'}
+                      </div>
+                    </div>
+                  ))}
+                {Object.keys(workflow.subworkflows || {}).filter(name => name !== currentStage).length === 0 && (
+                  <div className="no-functions">No other sub-workflows available</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Standard Functions Category */}
         <div className="palette-category">

@@ -9,8 +9,15 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, List
-from .schema import WorkflowDefinition, WorkflowStage, WorkflowFunction
+from typing import Dict, Any, Optional, Callable, List, Tuple
+from .schema import (
+    WorkflowDefinition,
+    WorkflowStage,
+    WorkflowFunction,
+    SubWorkflow,
+    SubWorkflowCall,
+    ControllerNode
+)
 from .registry import FunctionRegistry, get_default_registry
 
 
@@ -25,7 +32,7 @@ class WorkflowExecutor:
     def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None):
         """
         Initialize the workflow executor.
-        
+
         Args:
             workflow: WorkflowDefinition to execute
             custom_functions_module: Module containing custom function implementations
@@ -36,11 +43,20 @@ class WorkflowExecutor:
         self.config = config
         self.registry = get_default_registry()
         self.function_cache: Dict[str, Callable] = {}
-        
+
+        # Call stack tracking for sub-workflows
+        self.call_stack: List[Dict[str, Any]] = []
+        self.max_call_depth = 100  # Prevent stack overflow
+
         # Validate workflow
-        errors = workflow.validate()
-        if errors:
-            raise ValueError(f"Invalid workflow: {errors}")
+        validation_result = workflow.validate()
+        if not validation_result['valid']:
+            error_msg = "Invalid workflow:\n"
+            error_msg += "\n".join(f"  ERROR: {e}" for e in validation_result['errors'])
+            if validation_result['warnings']:
+                error_msg += "\n\nWarnings:\n"
+                error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
+            raise ValueError(error_msg)
     
     def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
         """
@@ -290,9 +306,209 @@ class WorkflowExecutor:
             import traceback
             traceback.print_exc()
             return None
-    
+
+    def execute_subworkflow(self, subworkflow_name: str, context: Dict[str, Any],
+                           iterations: int = 1, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Execute a sub-workflow.
+
+        Args:
+            subworkflow_name: Name of the sub-workflow to execute
+            context: Execution context
+            iterations: Number of times to execute the sub-workflow
+            parameters: Additional parameters to pass to the sub-workflow
+
+        Returns:
+            Updated context
+        """
+        # Check if we're using the new sub-workflow system
+        if self.workflow.version != "2.0":
+            print(f"[WORKFLOW] Warning: Sub-workflow execution only supported in version 2.0")
+            return context
+
+        # Get the sub-workflow
+        subworkflow = self.workflow.get_subworkflow(subworkflow_name)
+        if not subworkflow or not subworkflow.enabled:
+            print(f"[WORKFLOW] Warning: Sub-workflow '{subworkflow_name}' not found or disabled")
+            return context
+
+        # Check call depth to prevent infinite recursion
+        if len(self.call_stack) >= self.max_call_depth:
+            raise RecursionError(
+                f"Maximum call depth ({self.max_call_depth}) exceeded. "
+                f"Possible infinite recursion in sub-workflow calls. "
+                f"Call stack: {' -> '.join(c['name'] for c in self.call_stack)}"
+            )
+
+        # Add to call stack
+        call_info = {
+            'name': subworkflow_name,
+            'iteration': 0,
+            'total_iterations': iterations
+        }
+        self.call_stack.append(call_info)
+
+        try:
+            # Execute the sub-workflow 'iterations' times
+            for iteration in range(iterations):
+                call_info['iteration'] = iteration + 1
+
+                if iterations > 1:
+                    print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}' (iteration {iteration + 1}/{iterations})")
+                else:
+                    print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}'")
+
+                # Merge input parameters into context
+                if parameters:
+                    context = {**context, **parameters}
+
+                # Get nodes in execution order
+                nodes_to_execute = []
+                for node_id in subworkflow.execution_order:
+                    # Find the node
+                    func = subworkflow.get_function_by_id(node_id)
+                    if func:
+                        nodes_to_execute.append(('function', func))
+                        continue
+
+                    call = subworkflow.get_subworkflow_call_by_id(node_id)
+                    if call:
+                        nodes_to_execute.append(('subworkflow_call', call))
+                        continue
+
+                # Execute each node in order
+                for node_type, node in nodes_to_execute:
+                    if node_type == 'function':
+                        if node.enabled:
+                            try:
+                                result = self._execute_function_in_subworkflow(node, context, subworkflow)
+                                if result is not None:
+                                    context.update(result)
+                            except Exception as e:
+                                print(f"[WORKFLOW] Error executing function '{node.function_name}' in sub-workflow '{subworkflow_name}': {e}")
+                                import traceback
+                                traceback.print_exc()
+
+                    elif node_type == 'subworkflow_call':
+                        if node.enabled:
+                            try:
+                                # Merge parameters for the sub-workflow call
+                                merged_params = subworkflow.merge_parameters_for_subworkflow_call(node)
+
+                                # Get iterations (from parameters or default)
+                                call_iterations = merged_params.get('iterations', node.iterations)
+                                try:
+                                    call_iterations = int(call_iterations)
+                                except (TypeError, ValueError):
+                                    call_iterations = 1
+
+                                # Recursively execute the called sub-workflow
+                                context = self.execute_subworkflow(
+                                    node.subworkflow_name,
+                                    context,
+                                    iterations=call_iterations,
+                                    parameters=merged_params
+                                )
+                            except Exception as e:
+                                print(f"[WORKFLOW] Error executing sub-workflow call to '{node.subworkflow_name}': {e}")
+                                import traceback
+                                traceback.print_exc()
+
+        finally:
+            # Remove from call stack
+            self.call_stack.pop()
+
+        return context
+
+    def _execute_function_in_subworkflow(self, workflow_func: WorkflowFunction,
+                                         context: Dict[str, Any],
+                                         subworkflow: SubWorkflow) -> Optional[Dict[str, Any]]:
+        """
+        Execute a function within a sub-workflow.
+
+        Similar to _execute_function but uses SubWorkflow for parameter merging.
+        """
+        # Get function_file from top-level attribute or parameters
+        function_file = workflow_func.function_file or workflow_func.parameters.get('function_file')
+
+        # Get function implementation
+        func = self._get_function_implementation(workflow_func.function_name, function_file)
+        if func is None:
+            return None
+
+        # Get function metadata from registry
+        metadata = self.registry.get(workflow_func.function_name)
+
+        # Prepare function arguments
+        kwargs = {}
+
+        # Merge parameters from parameter nodes and function's own parameters
+        merged_params = subworkflow.merge_parameters_for_function(workflow_func)
+
+        # Add custom parameters from merged parameters (excluding metadata fields)
+        metadata_fields = {'function_file', 'custom_name'}
+        for key, value in merged_params.items():
+            if key not in metadata_fields:
+                kwargs[key] = value
+
+        # Add context data based on function inputs
+        if metadata:
+            for input_name in metadata.inputs:
+                if input_name == 'context':
+                    kwargs['context'] = context
+                elif input_name in context:
+                    kwargs[input_name] = context[input_name]
+
+        # For custom functions, ensure context is first
+        if function_file and 'context' not in kwargs:
+            kwargs = {'context': context, **kwargs}
+
+        # Always add config if available
+        if self.config is not None and not function_file and 'config' not in kwargs:
+            kwargs['config'] = self.config
+
+        # Execute function
+        try:
+            result = func(**kwargs)
+            return {"result": result} if result is not None else None
+        except TypeError as e:
+            print(f"[WORKFLOW] Function '{workflow_func.function_name}' called with wrong arguments: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def get_call_stack(self) -> List[Dict[str, Any]]:
+        """
+        Get the current call stack for debugging.
+
+        Returns:
+            List of call stack entries with name, iteration, and total_iterations
+        """
+        return self.call_stack.copy()
+
+    def execute_main(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the main workflow (for version 2.0 sub-workflow system).
+
+        Args:
+            context: Initial execution context
+
+        Returns:
+            Updated context after executing main workflow
+        """
+        if self.workflow.version == "2.0":
+            return self.execute_subworkflow("main", context)
+        else:
+            # For version 1.0, execute initialization as the entry point
+            return self.execute_initialization(context)
+
     def execute_initialization(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute initialization stage."""
+        """Execute initialization stage (legacy v1.0)."""
+        if self.workflow.version == "2.0":
+            # In v2.0, check if there's an 'initialization' sub-workflow
+            if 'initialization' in self.workflow.subworkflows:
+                return self.execute_subworkflow("initialization", context)
+            return context
         return self.execute_stage("initialization", context)
 
     def execute_macrostep(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -306,6 +522,12 @@ class WorkflowExecutor:
         NOTE: Unlike other stages, macrostep.steps controls the ENGINE loop count,
         not the internal repetition. The macrostep executes once per engine step.
         """
+        if self.workflow.version == "2.0":
+            # In v2.0, check if there's a 'macrostep' sub-workflow
+            if 'macrostep' in self.workflow.subworkflows:
+                return self.execute_subworkflow("macrostep", context)
+            return context
+
         stage = self.workflow.get_stage("macrostep")
         if not stage or not stage.enabled:
             return context
@@ -348,10 +570,22 @@ class WorkflowExecutor:
 
     def execute_intracellular(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute intracellular stage."""
+        if self.workflow.version == "2.0":
+            if 'intracellular' in self.workflow.subworkflows:
+                return self.execute_subworkflow("intracellular", context)
+            return context
         return self.execute_stage("intracellular", context)
-    
+
     def execute_diffusion(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute diffusion stage (legacy name)."""
+        if self.workflow.version == "2.0":
+            # Try microenvironment or diffusion sub-workflow
+            if 'microenvironment' in self.workflow.subworkflows:
+                return self.execute_subworkflow("microenvironment", context)
+            if 'diffusion' in self.workflow.subworkflows:
+                return self.execute_subworkflow("diffusion", context)
+            return context
+
         # Try microenvironment first, fall back to diffusion for backward compatibility
         if "microenvironment" in self.workflow.stages:
             return self.execute_stage("microenvironment", context)
@@ -359,17 +593,32 @@ class WorkflowExecutor:
 
     def execute_microenvironment(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute microenvironment stage (preferred name for diffusion)."""
+        if self.workflow.version == "2.0":
+            if 'microenvironment' in self.workflow.subworkflows:
+                return self.execute_subworkflow("microenvironment", context)
+            if 'diffusion' in self.workflow.subworkflows:
+                return self.execute_subworkflow("diffusion", context)
+            return context
+
         # Try microenvironment first, fall back to diffusion for backward compatibility
         if "microenvironment" in self.workflow.stages:
             return self.execute_stage("microenvironment", context)
         return self.execute_stage("diffusion", context)
-    
+
     def execute_intercellular(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute intercellular stage."""
+        if self.workflow.version == "2.0":
+            if 'intercellular' in self.workflow.subworkflows:
+                return self.execute_subworkflow("intercellular", context)
+            return context
         return self.execute_stage("intercellular", context)
-    
+
     def execute_finalization(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute finalization stage."""
+        if self.workflow.version == "2.0":
+            if 'finalization' in self.workflow.subworkflows:
+                return self.execute_subworkflow("finalization", context)
+            return context
         return self.execute_stage("finalization", context)
 
 

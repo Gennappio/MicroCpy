@@ -1,0 +1,144 @@
+.subworkflow-call-node {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: 2px solid #7c3aed;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  transition: all 0.2s;
+  color: white;
+}
+
+.subworkflow-call-node.selected {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
+  border-color: #6d28d9;
+}
+
+.subworkflow-call-node.disabled {
+  opacity: 0.5;
+  background: linear-gradient(135deg, #a78bfa 0%, #9333ea 100%);
+}
+
+.subworkflow-call-node .node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.subworkflow-call-node .node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subworkflow-call-node .subworkflow-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+}
+
+.subworkflow-call-node .node-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+}
+
+.subworkflow-call-node .node-status {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.subworkflow-call-node .node-status:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.subworkflow-call-node .status-icon {
+  color: white;
+}
+
+.subworkflow-call-node .node-edit-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s;
+}
+
+.subworkflow-call-node .node-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.subworkflow-call-node .node-parameters {
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subworkflow-call-node .parameter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
+  position: relative;
+}
+
+.subworkflow-call-node .parameter-label {
+  color: white;
+  font-weight: 500;
+}
+
+.subworkflow-call-node .node-subworkflow-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 4px 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.subworkflow-call-node .node-iterations {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 4px 0;
+  padding: 2px 6px;
+  background: rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.subworkflow-call-node .node-description {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.subworkflow-call-node .function-handle {
+  background: #fbbf24;
+  border: 2px solid white;
+  width: 12px;
+  height: 12px;
+}
+
+.subworkflow-call-node .parameter-handle-input {
+  background: #8b5cf6;
+  border: 2px solid white;
+}
+

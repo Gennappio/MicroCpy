@@ -41,13 +41,13 @@ class WorkflowLoader:
         
         # Create workflow from dictionary
         workflow = WorkflowDefinition.from_dict(data)
-        
+
         # Validate workflow
-        errors = workflow.validate()
-        if errors:
-            error_msg = "Workflow validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+        validation_result = workflow.validate()
+        if not validation_result['valid']:
+            error_msg = "Workflow validation failed:\n" + "\n".join(f"  - {e}" for e in validation_result['errors'])
             raise ValueError(error_msg)
-        
+
         return workflow
     
     @staticmethod
@@ -64,9 +64,9 @@ class WorkflowLoader:
             ValueError: If workflow validation fails
         """
         # Validate before saving
-        errors = workflow.validate()
-        if errors:
-            error_msg = "Cannot save invalid workflow:\n" + "\n".join(f"  - {e}" for e in errors)
+        validation_result = workflow.validate()
+        if not validation_result['valid']:
+            error_msg = "Cannot save invalid workflow:\n" + "\n".join(f"  - {e}" for e in validation_result['errors'])
             raise ValueError(error_msg)
         
         file_path = Path(file_path)

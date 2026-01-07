@@ -6,12 +6,13 @@ serialized to/from JSON and executed by the workflow executor.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 from enum import Enum
+import re
 
 
 class WorkflowStageType(Enum):
-    """Types of workflow stages in the simulation lifecycle."""
+    """Types of workflow stages in the simulation lifecycle (legacy)."""
     INITIALIZATION = "initialization"
     MACROSTEP = "macrostep"  # Configurable macro-step with custom execution order
     INTRACELLULAR = "intracellular"
@@ -19,6 +20,15 @@ class WorkflowStageType(Enum):
     MICROENVIRONMENT = "microenvironment"  # Preferred name for diffusion stage
     INTERCELLULAR = "intercellular"
     FINALIZATION = "finalization"
+
+
+class NodeType(Enum):
+    """Types of nodes in a sub-workflow."""
+    CONTROLLER = "controller"  # Entry point node (one per sub-workflow)
+    WORKFLOW_FUNCTION = "workflowFunction"  # Regular function node
+    SUBWORKFLOW_CALL = "subworkflow_call"  # Call to another sub-workflow
+    PARAMETER_NODE = "parameterNode"  # Parameter storage node
+    GROUP_NODE = "groupNode"  # Visual grouping node
 
 
 @dataclass
@@ -117,6 +127,100 @@ class WorkflowFunction:
             custom_name=data.get("custom_name", ""),
             parameter_nodes=data.get("parameter_nodes", []),
             step_count=data.get("step_count", 1)
+        )
+
+
+@dataclass
+class SubWorkflowCall:
+    """
+    Represents a call to another sub-workflow.
+
+    Attributes:
+        id: Unique identifier for this sub-workflow call
+        subworkflow_name: Name of the sub-workflow to call
+        iterations: Number of times to execute the sub-workflow (default: 1)
+        parameters: Parameters to pass to the sub-workflow
+        enabled: Whether this call should be executed
+        position: UI position for visual editor (x, y coordinates)
+        description: Optional description of this call
+        parameter_nodes: List of parameter node IDs connected to this call
+        context_mapping: Optional mapping of context variables to pass
+    """
+    id: str
+    subworkflow_name: str
+    iterations: int = 1
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    enabled: bool = True
+    position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
+    description: str = ""
+    parameter_nodes: List[str] = field(default_factory=list)
+    context_mapping: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "type": "subworkflow_call",
+            "subworkflow_name": self.subworkflow_name,
+            "iterations": self.iterations,
+            "parameters": self.parameters,
+            "enabled": self.enabled,
+            "position": self.position,
+            "description": self.description,
+            "parameter_nodes": self.parameter_nodes,
+            "context_mapping": self.context_mapping
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SubWorkflowCall":
+        """Create from dictionary (JSON deserialization)."""
+        return cls(
+            id=data["id"],
+            subworkflow_name=data["subworkflow_name"],
+            iterations=data.get("iterations", 1),
+            parameters=data.get("parameters", {}),
+            enabled=data.get("enabled", True),
+            position=data.get("position", {"x": 0, "y": 0}),
+            description=data.get("description", ""),
+            parameter_nodes=data.get("parameter_nodes", []),
+            context_mapping=data.get("context_mapping", {})
+        )
+
+
+@dataclass
+class ControllerNode:
+    """
+    Represents the controller/entry point node for a sub-workflow.
+
+    Attributes:
+        id: Unique identifier for this controller
+        label: Display label (default: "CONTROLLER")
+        position: UI position for visual editor
+        number_of_steps: Number of steps (for compatibility, usually 1)
+    """
+    id: str
+    label: str = "CONTROLLER"
+    position: Dict[str, float] = field(default_factory=lambda: {"x": 100, "y": 100})
+    number_of_steps: int = 1
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "type": "controller",
+            "label": self.label,
+            "position": self.position,
+            "number_of_steps": self.number_of_steps
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ControllerNode":
+        """Create from dictionary (JSON deserialization)."""
+        return cls(
+            id=data["id"],
+            label=data.get("label", "CONTROLLER"),
+            position=data.get("position", {"x": 100, "y": 100}),
+            number_of_steps=data.get("number_of_steps", 1)
         )
 
 
@@ -231,80 +335,357 @@ class WorkflowStage:
 
 
 @dataclass
+class InputParameter:
+    """
+    Represents an input parameter definition for a sub-workflow.
+
+    Attributes:
+        name: Parameter name
+        type: Parameter type (e.g., "FLOAT", "INTEGER", "STRING")
+        required: Whether this parameter is required
+        default: Default value if not provided
+        description: Description of the parameter
+    """
+    name: str
+    type: str = "STRING"
+    required: bool = False
+    default: Any = None
+    description: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        result = {
+            "name": self.name,
+            "type": self.type,
+            "required": self.required,
+            "description": self.description
+        }
+        if self.default is not None:
+            result["default"] = self.default
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "InputParameter":
+        """Create from dictionary (JSON deserialization)."""
+        return cls(
+            name=data["name"],
+            type=data.get("type", "STRING"),
+            required=data.get("required", False),
+            default=data.get("default"),
+            description=data.get("description", "")
+        )
+
+
+@dataclass
+class SubWorkflow:
+    """
+    Represents a sub-workflow in the new workflow system.
+
+    A sub-workflow is a reusable workflow component that can be called
+    from other sub-workflows. Each sub-workflow has:
+    - A controller node (entry point)
+    - Functions and sub-workflow calls
+    - Parameter nodes
+    - Input parameter definitions
+    - Execution order
+
+    Attributes:
+        name: Unique name for this sub-workflow
+        description: Description of what this sub-workflow does
+        controller: Controller node (entry point)
+        functions: List of function nodes
+        subworkflow_calls: List of calls to other sub-workflows
+        parameters: List of parameter nodes
+        execution_order: Ordered list of node IDs defining execution sequence
+        input_parameters: List of input parameter definitions
+        enabled: Whether this sub-workflow is enabled
+        deletable: Whether this sub-workflow can be deleted (main is not deletable)
+    """
+    name: str
+    description: str = ""
+    controller: Optional[ControllerNode] = None
+    functions: List[WorkflowFunction] = field(default_factory=list)
+    subworkflow_calls: List[SubWorkflowCall] = field(default_factory=list)
+    parameters: List[ParameterNode] = field(default_factory=list)
+    execution_order: List[str] = field(default_factory=list)
+    input_parameters: List[InputParameter] = field(default_factory=list)
+    enabled: bool = True
+    deletable: bool = True
+
+    def __post_init__(self):
+        """Initialize controller if not provided."""
+        if self.controller is None:
+            self.controller = ControllerNode(
+                id=f"controller-{self.name}",
+                label=f"{self.name.upper()} CONTROLLER"
+            )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        result = {
+            "description": self.description,
+            "enabled": self.enabled,
+            "deletable": self.deletable,
+            "execution_order": self.execution_order
+        }
+
+        if self.controller:
+            result["controller"] = self.controller.to_dict()
+
+        if self.functions:
+            result["functions"] = [f.to_dict() for f in self.functions]
+
+        if self.subworkflow_calls:
+            result["subworkflow_calls"] = [s.to_dict() for s in self.subworkflow_calls]
+
+        if self.parameters:
+            result["parameters"] = [p.to_dict() for p in self.parameters]
+
+        if self.input_parameters:
+            result["input_parameters"] = [ip.to_dict() for ip in self.input_parameters]
+
+        return result
+
+    @classmethod
+    def from_dict(cls, name: str, data: Dict[str, Any]) -> "SubWorkflow":
+        """Create from dictionary (JSON deserialization)."""
+        controller = None
+        if "controller" in data:
+            controller = ControllerNode.from_dict(data["controller"])
+
+        functions = [WorkflowFunction.from_dict(f) for f in data.get("functions", [])]
+        subworkflow_calls = [SubWorkflowCall.from_dict(s) for s in data.get("subworkflow_calls", [])]
+        parameters = [ParameterNode.from_dict(p) for p in data.get("parameters", [])]
+        input_parameters = [InputParameter.from_dict(ip) for ip in data.get("input_parameters", [])]
+
+        return cls(
+            name=name,
+            description=data.get("description", ""),
+            controller=controller,
+            functions=functions,
+            subworkflow_calls=subworkflow_calls,
+            parameters=parameters,
+            execution_order=data.get("execution_order", []),
+            input_parameters=input_parameters,
+            enabled=data.get("enabled", True),
+            deletable=data.get("deletable", True)
+        )
+
+    def get_function_by_id(self, function_id: str) -> Optional[WorkflowFunction]:
+        """Get a function by its ID."""
+        for func in self.functions:
+            if func.id == function_id:
+                return func
+        return None
+
+    def get_subworkflow_call_by_id(self, call_id: str) -> Optional[SubWorkflowCall]:
+        """Get a sub-workflow call by its ID."""
+        for call in self.subworkflow_calls:
+            if call.id == call_id:
+                return call
+        return None
+
+    def get_parameter_node_by_id(self, param_id: str) -> Optional[ParameterNode]:
+        """Get a parameter node by its ID."""
+        for param in self.parameters:
+            if param.id == param_id:
+                return param
+        return None
+
+    def get_all_nodes(self) -> List[Any]:
+        """Get all nodes (functions, sub-workflow calls, parameters)."""
+        nodes = []
+        if self.controller:
+            nodes.append(self.controller)
+        nodes.extend(self.functions)
+        nodes.extend(self.subworkflow_calls)
+        nodes.extend(self.parameters)
+        return nodes
+
+    def merge_parameters_for_function(self, func: WorkflowFunction) -> Dict[str, Any]:
+        """
+        Merge parameters from connected parameter nodes with function's own parameters.
+        Same logic as WorkflowStage.
+        """
+        merged = {}
+        substances = []
+
+        for param_node_id in func.parameter_nodes:
+            param_node = self.get_parameter_node_by_id(param_node_id)
+            if param_node:
+                if 'name' in param_node.parameters and 'diffusion_coeff' in param_node.parameters:
+                    substances.append(param_node.parameters)
+                else:
+                    merged.update(param_node.parameters)
+
+        if substances:
+            merged['substances'] = substances
+
+        merged.update(func.parameters)
+        return merged
+
+    def merge_parameters_for_subworkflow_call(self, call: SubWorkflowCall) -> Dict[str, Any]:
+        """
+        Merge parameters from connected parameter nodes with sub-workflow call's own parameters.
+        """
+        merged = {}
+
+        for param_node_id in call.parameter_nodes:
+            param_node = self.get_parameter_node_by_id(param_node_id)
+            if param_node:
+                merged.update(param_node.parameters)
+
+        merged.update(call.parameters)
+        return merged
+
+
+@dataclass
 class WorkflowDefinition:
     """
     Complete workflow definition for a MicroC simulation.
-    
+
+    Supports both legacy stage-based workflows and new sub-workflow-based workflows.
+
     Attributes:
         version: Workflow schema version (for future compatibility)
+                 "1.0" = legacy stage-based
+                 "2.0" = new sub-workflow-based
         name: Human-readable workflow name
         description: Detailed description of the workflow
-        stages: Dictionary mapping stage types to stage definitions
+        stages: Dictionary mapping stage types to stage definitions (legacy, v1.0)
+        subworkflows: Dictionary mapping sub-workflow names to sub-workflow definitions (v2.0)
         metadata: Additional metadata (author, creation date, etc.)
     """
-    version: str = "1.0"
+    version: str = "2.0"
     name: str = "Untitled Workflow"
     description: str = ""
     stages: Dict[str, WorkflowStage] = field(default_factory=dict)
+    subworkflows: Dict[str, SubWorkflow] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
-        """Initialize default stages if not provided."""
-        if not self.stages:
-            self.stages = {
-                "initialization": WorkflowStage(),
-                "intracellular": WorkflowStage(),
-                "diffusion": WorkflowStage(),
-                "intercellular": WorkflowStage(),
-                "finalization": WorkflowStage()
-            }
-    
+        """Initialize default structure based on version."""
+        if self.version == "2.0":
+            # New sub-workflow-based system
+            if not self.subworkflows:
+                # Create default main sub-workflow
+                self.subworkflows = {
+                    "main": SubWorkflow(
+                        name="main",
+                        description="Main workflow entry point",
+                        deletable=False
+                    )
+                }
+        elif self.version == "1.0":
+            # Legacy stage-based system
+            if not self.stages:
+                self.stages = {
+                    "initialization": WorkflowStage(),
+                    "intracellular": WorkflowStage(),
+                    "diffusion": WorkflowStage(),
+                    "intercellular": WorkflowStage(),
+                    "finalization": WorkflowStage()
+                }
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "version": self.version,
             "name": self.name,
             "description": self.description,
-            "stages": {
-                stage_name: stage.to_dict() 
-                for stage_name, stage in self.stages.items()
-            },
             "metadata": self.metadata
         }
-    
+
+        if self.version == "2.0":
+            result["subworkflows"] = {
+                name: subworkflow.to_dict()
+                for name, subworkflow in self.subworkflows.items()
+            }
+        else:
+            result["stages"] = {
+                stage_name: stage.to_dict()
+                for stage_name, stage in self.stages.items()
+            }
+
+        return result
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowDefinition":
         """Create from dictionary (JSON deserialization)."""
-        stages = {
-            stage_name: WorkflowStage.from_dict(stage_data)
-            for stage_name, stage_data in data.get("stages", {}).items()
-        }
-        return cls(
-            version=data.get("version", "1.0"),
-            name=data.get("name", "Untitled Workflow"),
-            description=data.get("description", ""),
-            stages=stages,
-            metadata=data.get("metadata", {})
-        )
-    
+        version = data.get("version", "1.0")
+
+        if version == "2.0":
+            # New sub-workflow format
+            subworkflows = {
+                name: SubWorkflow.from_dict(name, subworkflow_data)
+                for name, subworkflow_data in data.get("subworkflows", {}).items()
+            }
+            return cls(
+                version=version,
+                name=data.get("name", "Untitled Workflow"),
+                description=data.get("description", ""),
+                subworkflows=subworkflows,
+                metadata=data.get("metadata", {})
+            )
+        else:
+            # Legacy stage format
+            stages = {
+                stage_name: WorkflowStage.from_dict(stage_data)
+                for stage_name, stage_data in data.get("stages", {}).items()
+            }
+            return cls(
+                version=version,
+                name=data.get("name", "Untitled Workflow"),
+                description=data.get("description", ""),
+                stages=stages,
+                metadata=data.get("metadata", {})
+            )
+
     def get_stage(self, stage_name: str) -> Optional[WorkflowStage]:
-        """Get a workflow stage by name."""
+        """Get a workflow stage by name (legacy v1.0)."""
         return self.stages.get(stage_name)
+
+    def get_subworkflow(self, subworkflow_name: str) -> Optional[SubWorkflow]:
+        """Get a sub-workflow by name (v2.0)."""
+        return self.subworkflows.get(subworkflow_name)
     
-    def validate(self) -> List[str]:
+    def validate(self) -> Dict[str, Any]:
         """
         Validate the workflow definition.
-        
+
         Returns:
-            List of validation error messages (empty if valid)
+            Dictionary with:
+                - 'valid': bool indicating if workflow is valid
+                - 'errors': List of critical error messages
+                - 'warnings': List of warning messages
         """
         errors = []
-        
+        warnings = []
+
         # Check version
-        if self.version != "1.0":
+        if self.version not in ["1.0", "2.0"]:
             errors.append(f"Unsupported workflow version: {self.version}")
-        
-        # Check each stage
+            return {'valid': False, 'errors': errors, 'warnings': warnings}
+
+        if self.version == "1.0":
+            # Legacy stage-based validation
+            errors.extend(self._validate_stages())
+        else:
+            # New sub-workflow-based validation
+            stage_errors, stage_warnings = self._validate_subworkflows()
+            errors.extend(stage_errors)
+            warnings.extend(stage_warnings)
+
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'warnings': warnings
+        }
+
+    def _validate_stages(self) -> List[str]:
+        """Validate legacy stage-based workflow."""
+        errors = []
+
         for stage_name, stage in self.stages.items():
             # Check that execution order references valid function IDs
             function_ids = {f.id for f in stage.functions}
@@ -314,10 +695,189 @@ class WorkflowDefinition:
                         f"Stage '{stage_name}': execution_order references "
                         f"unknown function ID '{func_id}'"
                     )
-            
+
             # Check for duplicate function IDs
             if len(function_ids) != len(stage.functions):
                 errors.append(f"Stage '{stage_name}': duplicate function IDs found")
-        
+
         return errors
+
+    def _validate_subworkflows(self) -> tuple[List[str], List[str]]:
+        """Validate sub-workflow-based workflow."""
+        errors = []
+        warnings = []
+
+        # 1. Main workflow validation
+        if 'main' not in self.subworkflows:
+            errors.append("CRITICAL: Main workflow is missing. Every workflow must have a 'main' entry point.")
+            return errors, warnings
+
+        main_workflow = self.subworkflows['main']
+        if not main_workflow.controller:
+            errors.append("Main workflow must have a controller node (entry point).")
+
+        if main_workflow.deletable:
+            errors.append("Main workflow must not be deletable.")
+
+        # 2. Sub-workflow naming validation
+        reserved_names = ['init', 'system']
+        for name in self.subworkflows.keys():
+            if name.lower() in reserved_names and name != 'main':
+                errors.append(f"Sub-workflow name '{name}' is reserved. Please choose a different name.")
+
+            # Check naming convention
+            if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name):
+                errors.append(
+                    f"Sub-workflow name '{name}' is invalid. "
+                    f"Must start with a letter and contain only letters, numbers, and underscores."
+                )
+
+            # Check name length
+            if len(name) > 50:
+                errors.append(f"Sub-workflow name '{name}' is too long (max 50 characters).")
+
+        # Check for duplicate names (case-insensitive)
+        names_lower = [n.lower() for n in self.subworkflows.keys()]
+        if len(names_lower) != len(set(names_lower)):
+            errors.append("Duplicate sub-workflow names detected (case-insensitive).")
+
+        # 3. Controller node validation
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            if not subworkflow.controller:
+                errors.append(
+                    f"Sub-workflow '{subworkflow_name}' has no controller node. "
+                    f"Each sub-workflow must have exactly one controller as entry point."
+                )
+
+        # 4. Sub-workflow reference validation
+        available_subworkflows = set(self.subworkflows.keys())
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            for call in subworkflow.subworkflow_calls:
+                target = call.subworkflow_name
+
+                # Check if target exists
+                if target not in available_subworkflows:
+                    errors.append(
+                        f"Sub-workflow '{subworkflow_name}' calls non-existent sub-workflow '{target}'. "
+                        f"Available sub-workflows: {', '.join(available_subworkflows)}"
+                    )
+
+                # Check for self-reference (direct recursion)
+                if target == subworkflow_name:
+                    warnings.append(
+                        f"⚠️  Sub-workflow '{subworkflow_name}' calls itself directly. "
+                        f"This will cause infinite recursion unless iterations are limited."
+                    )
+
+        # 5. Circular dependency detection
+        circular_warnings = self._detect_circular_dependencies()
+        warnings.extend(circular_warnings)
+
+        # 6. Execution order validation
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            all_node_ids = {f.id for f in subworkflow.functions}
+            all_node_ids.update({c.id for c in subworkflow.subworkflow_calls})
+
+            for node_id in subworkflow.execution_order:
+                if node_id not in all_node_ids:
+                    errors.append(
+                        f"Sub-workflow '{subworkflow_name}': execution_order references "
+                        f"unknown node ID '{node_id}'"
+                    )
+
+            # Check for duplicate IDs
+            all_ids = [f.id for f in subworkflow.functions]
+            all_ids.extend([c.id for c in subworkflow.subworkflow_calls])
+            all_ids.extend([p.id for p in subworkflow.parameters])
+            if subworkflow.controller:
+                all_ids.append(subworkflow.controller.id)
+
+            if len(all_ids) != len(set(all_ids)):
+                errors.append(f"Sub-workflow '{subworkflow_name}': duplicate node IDs found")
+
+        # 7. Iterations parameter validation
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            for call in subworkflow.subworkflow_calls:
+                iterations = call.iterations
+
+                try:
+                    iterations_int = int(iterations)
+
+                    if iterations_int < 1:
+                        errors.append(
+                            f"Sub-workflow call in '{subworkflow_name}' has invalid iterations: {iterations}. "
+                            f"Must be >= 1."
+                        )
+
+                    if iterations_int > 1000:
+                        warnings.append(
+                            f"⚠️  Sub-workflow call in '{subworkflow_name}' has very high iterations: {iterations}. "
+                            f"This may cause performance issues."
+                        )
+
+                except (ValueError, TypeError):
+                    errors.append(
+                        f"Sub-workflow call in '{subworkflow_name}' has invalid iterations value: {iterations}. "
+                        f"Must be an integer >= 1."
+                    )
+
+        # 8. Description validation (warnings only)
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            if not subworkflow.description.strip():
+                warnings.append(
+                    f"⚠️  Sub-workflow '{subworkflow_name}' has no description. "
+                    f"Add a description to help users understand what this sub-workflow does."
+                )
+
+        return errors, warnings
+
+    def _detect_circular_dependencies(self) -> List[str]:
+        """
+        Detect circular dependencies using DFS-based cycle detection.
+        Returns list of warning messages about circular dependencies.
+        """
+        warnings = []
+
+        # Build dependency graph
+        graph = {}
+        for subworkflow_name, subworkflow in self.subworkflows.items():
+            graph[subworkflow_name] = []
+            for call in subworkflow.subworkflow_calls:
+                if call.subworkflow_name:
+                    graph[subworkflow_name].append(call.subworkflow_name)
+
+        # DFS to detect cycles
+        def dfs(node: str, visited: Set[str], rec_stack: Set[str], path: List[str]) -> Optional[List[str]]:
+            visited.add(node)
+            rec_stack.add(node)
+            path.append(node)
+
+            for neighbor in graph.get(node, []):
+                if neighbor not in visited:
+                    cycle = dfs(neighbor, visited, rec_stack, path[:])
+                    if cycle:
+                        return cycle
+                elif neighbor in rec_stack:
+                    # Found a cycle
+                    cycle_start = path.index(neighbor)
+                    return path[cycle_start:] + [neighbor]
+
+            rec_stack.remove(node)
+            return None
+
+        visited: Set[str] = set()
+        for subworkflow_name in graph.keys():
+            if subworkflow_name not in visited:
+                cycle = dfs(subworkflow_name, visited, set(), [])
+                if cycle:
+                    cycle_str = ' → '.join(cycle)
+                    warnings.append(
+                        f"⚠️  CIRCULAR DEPENDENCY DETECTED: {cycle_str}\n"
+                        f"   This will cause infinite recursion. Consider:\n"
+                        f"   - Setting 'iterations' parameter to limit execution\n"
+                        f"   - Adding conditional logic to break the cycle\n"
+                        f"   - Restructuring your workflow to avoid the cycle"
+                    )
+
+        return warnings
 

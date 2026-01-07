@@ -1,0 +1,522 @@
+MicroC-GUI: Building Reusable Workflows (Progressive Tutorial Chapter)
+=====================================================================
+
+This chapter describes a practical methodology to build working workflows in MicroC-GUI, using four progressively more complex workflow definitions that culminate in a multiscale tumour simulation. The goal is twofold: (i) to provide a reproducible, step-by-step pathway for new users; and (ii) to illustrate how reusable workflow nodes enable modular model composition, customization, and sharing.
+
+The chapter references four workflow JSON files distributed with the codebase (relative to the MicroC repository root):
+
+- microc-2.0/tests/jayatilake_experiment/brute_gene_network_workflow.json
+- microc-2.0/tests/jayatilake_experiment/associations_workflow.json
+- microc-2.0/tests/jayatilake_experiment/diffusionreaction_workflow.json
+- microc-2.0/tests/jayatilake_experiment/jaya_granular_workflow.json
+
+Audience and assumptions
+------------------------
+
+This text is written for an academic audience (Methods/Software sections). It assumes the reader is familiar with basic concepts in computational modelling (e.g., “parameters”, “execution order”, “solver tolerances”) but may not be familiar with the MicroC codebase. For this reason, we make explicit:
+
+- the workflow JSON schema used by the GUI;
+- the runtime semantics (how nodes are resolved and executed);
+- the required inputs for each tutorial workflow; and
+- the concrete output artefacts that support reproducibility.
+
+Paths are provided relative to the repository root unless otherwise noted.
+
+
+1. Workflow abstraction in MicroC-GUI
+------------------------------------
+
+MicroC-GUI expresses a simulation as a workflow: an ordered sequence of executable “function nodes” organized into named stages (e.g., initialization, intracellular, microenvironment/diffusion). Each function node maps to a concrete implementation in the MicroC workflow registry and is executed with a set of parameters provided through “parameter nodes”.
+
+In the underlying workflow engine, each stage contains:
+
+- functions: a list of function nodes (each with an id and function_name)
+- parameters: a list of parameter nodes (each with an id, label, and a parameters dictionary)
+- execution_order: an ordered list of function ids defining the execution sequence
+- enabled flags (on both stages and function nodes), allowing modular activation/deactivation
+
+Parameter nodes represent reusable, named parameter bundles. A function node can reference one or more parameter nodes, and the runtime merges those parameter dictionaries to build the final keyword arguments passed to the function. Function-local parameters (i.e., the function node’s own parameters field) override values provided by parameter nodes, which allows the same parameter node to be reused across different contexts while still permitting local adjustments.
+
+1.1 Workflow JSON schema (minimal technical reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+At minimum, each workflow contains top-level metadata plus a “stages” object:
+
+- version: schema version (current: "1.0")
+- name / description: human-readable identifiers (used in GUI)
+- stages: a mapping from stage name → stage definition
+
+Each stage definition includes:
+
+- enabled: boolean
+- functions: list of function nodes, each with:
+  - id: unique within the stage
+  - function_name: symbol used to resolve a callable
+  - enabled: boolean
+  - parameters: dict of direct node parameters (overrides parameter nodes)
+  - parameter_nodes: list of parameter node ids to be merged into this node
+  - step_count: integer (optional); repetition count for that node
+- parameters: list of parameter nodes, each with:
+  - id: unique within the stage
+  - label: UI label (documentation-facing)
+  - parameters: dict of key/value pairs (e.g., dt, diffusion_coeff, threshold)
+- execution_order: list of function node ids (defining schedule)
+
+The engine validates that each id in execution_order exists in functions and that function ids are unique.
+
+1.2 Parameter merging and “reusable nodes”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+MicroC-GUI promotes reuse by separating “what to execute” (function nodes) from “how to parameterize it” (parameter nodes).
+
+Runtime parameter resolution follows two rules:
+
+- Parameter nodes are merged first, in the order they are listed in function_node.parameter_nodes.
+- The function node’s own parameters dict is merged last and therefore has precedence.
+
+Special case (substance definitions): when multiple parameter nodes represent substances, they are collected into a list rather than overwriting each other, so that a single diffusion solver node can receive multiple substances.
+
+1.3 Function resolution: registry functions vs custom functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A function node is resolved in one of two ways:
+
+- Registry function (recommended): function_name is registered via the workflow decorator system and imported from the corresponding module.
+- Custom function (advanced): the node includes a function_file pointing to a Python file; the engine dynamically imports that file and looks up function_name inside it.
+
+This dual mechanism supports both “stable core nodes” (for reproducible workflows) and experiment-specific logic (for exploratory studies).
+
+1.4 Stage semantics and macrostep semantics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Most stages (initialization, intracellular, microenvironment/diffusion, intercellular, finalization) may define stage.steps, which repeats the entire stage schedule that many times per macrostep iteration.
+
+Macrostep is treated differently: macrostep defines the overall per-time-step schedule (a sequence of stage triggers and optional extra nodes). In workflow-driven simulations, macrostep.steps defines how many engine iterations are executed. Within macrostep, each node may still repeat via its step_count.
+
+This distinction is critical for multiscale scheduling:
+
+- stage.steps repeats a stage inside one macrostep iteration
+- macrostep.steps repeats the whole macrostep loop (simulation duration)
+
+
+2. A general procedure to build a working workflow
+-------------------------------------------------
+
+The following procedure is recommended for constructing workflows that are both robust and reusable. Although the GUI provides a visual representation, the principles apply to both GUI editing and direct JSON editing.
+
+2.1 Identify the multiscale stages
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+At minimum, most MicroC workflows use:
+
+- initialization: set up simulation context, domain, population, substances, gene networks, and outputs
+- macrostep: orchestrate the per-time-step schedule (optional but recommended for complex cases)
+- intracellular: update gene networks and intracellular metabolism/phenotypes
+- microenvironment (diffusion): update spatial substance fields
+- intercellular: update cell-level actions (division, migration, death removal)
+- finalization: collect statistics, export state, generate plots
+
+Not all stages are required for all experiments; the progressive examples illustrate when each becomes necessary.
+
+2.2 Assemble function nodes and parameter nodes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In MicroC-GUI, each node corresponds to a single callable with clearly defined responsibilities (e.g., “setup_domain”, “add_substance”, “run_diffusion_solver”). Parameters should be externalized into parameter nodes when they are:
+
+- conceptually cohesive (e.g., all diffusion parameters for one substance)
+- likely to be reused across workflows (e.g., domain geometry, solver tolerances)
+- likely to be tuned repeatedly (e.g., thresholds for associations)
+
+This design encourages “node reuse”: users can copy parameter nodes between workflows or keep them consistent across model variants.
+
+2.3 Define explicit execution order
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Correct execution order is a primary determinant of correctness. For example, substances must exist before associations referencing them can be created; gene networks must be attached before association-driven inputs can be applied; and diffusion must be executed before intracellular updates if cell logic depends on local concentrations.
+
+Therefore, each stage should define an explicit execution_order list that is treated as the canonical schedule for that stage.
+
+2.4 Validate incrementally
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A practical rule is to validate the workflow at each added capability:
+
+- First validate gene network execution in isolation (brute_gene_network_workflow)
+- Then validate environment-to-gene coupling via associations (associations_workflow)
+- Then validate diffusion-reaction field generation (diffusionreaction_workflow)
+- Finally validate multiscale coupling and temporal progression (jaya_granular_workflow)
+
+This progression reduces debugging complexity: each workflow adds one new subsystem while reusing previously validated blocks.
+
+2.5 Running workflows (CLI reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Although this chapter emphasizes MicroC-GUI, it is often useful for reviewers and readers to validate workflows from the command line. MicroC provides a unified runner:
+
+- python microc-2.0/run_microc.py --workflow <workflow.json>
+- python microc-2.0/run_microc.py --sim <config.yaml> --workflow <workflow.json>
+
+The first form executes a workflow directly. The second form uses a YAML configuration to set up simulation infrastructure, then delegates the simulation schedule to the workflow.
+
+In either case, the workflow runner injects the absolute workflow path into the execution context as workflow_file. Several initialization nodes use this to resolve relative paths for resources (e.g., BND files, CSV files, and custom function modules).
+
+Outputs are written to a timestamped directory of the form:
+
+results/YYYYMMDD_HHMMSS/
+  csv_cells/
+  csv_substances/
+  plots/
+  <copied config/workflow files>
+  log_simulation_status.txt
+
+
+3. Tutorial workflow 1: Running a gene network in isolation
+-----------------------------------------------------------
+
+Workflow file: brute_gene_network_workflow.json
+
+Objective
+~~~~~~~~~
+
+This workflow demonstrates the minimal pipeline required to execute a Boolean gene regulatory network across a population of cells, without spatial diffusion or intercellular mechanics. It is primarily intended as a “unit test” for intracellular network propagation, and as a pedagogical entry point for workflow construction.
+
+Core reusable blocks (nodes)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Initialization stage:
+
+- initialize_population: creates N cells (N is a parameter node)
+- initialize_gene_networks: attaches a gene network (BND file) to all cells
+- set_gene_network_inputs: sets a set of input nodes (e.g., Oxygen_supply, Glucose_supply, …) that remain fixed during propagation
+
+Intracellular stage:
+
+- update_gene_networks_standalone: propagates the gene network for a specified number of steps
+
+Finalization stage:
+
+- print_gene_network_states: reports gene network statistics (optionally per-cell)
+
+Technical notes (standalone-capable execution)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The functions used in this workflow are designed to run without a full simulation infrastructure. When a diffusion simulator and a YAML-derived configuration are absent, the workflow nodes create lightweight mock objects (e.g., a mock population and a mock “uniform concentration” substrate provider) and store them in the workflow context. This enables gene network benchmarking without requiring spatial diffusion or FiPy.
+
+For reproducibility in publications, it is recommended to:
+
+- explicitly report the BND file used and the input nodes held fixed;
+- report whether random initialization is enabled (for non-input nodes); and
+- report propagation_steps and any stopping/summary criteria used.
+
+Recommended workflow-building narrative
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Start by loading a BND network file and enabling random initialization if exploring attractors.
+- Declare N (number of cells/runs) as a parameter node to facilitate scaling benchmarks.
+- Treat gene input nodes as explicit experimental conditions (ON/OFF) controlled through parameter nodes.
+- Keep the workflow intentionally “thin” to ensure that gene network dynamics can be interpreted without confounding microenvironmental coupling.
+
+Suggested figures
+~~~~~~~~~~~~~~~~
+
+- Figure 1: Screenshot of the MicroC-GUI workflow canvas highlighting the minimal pipeline:
+  Initialize Population → Initialize Gene Networks → Set Input States → Update Gene Networks → Print Results.
+- Figure 2: A small table or bar chart summarizing final gene state frequencies (or attractor statistics) across the N runs.
+
+Suggested supplementary material
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Table S1: List of gene network input nodes used (e.g., Oxygen_supply, Glucose_supply, MCT1_stimulus) and their experimental meaning.
+- Table S2: Parameterization used for benchmark runs (num_cells, propagation_steps, random initialization settings).
+
+
+4. Tutorial workflow 2: Preparing workflows for substance-driven inputs (associations)
+------------------------------------------------------------------------------------
+
+Workflow file: associations_workflow.json
+
+Objective
+~~~~~~~~~
+
+This workflow introduces the concept of “associations”: mappings from substance concentrations to gene network input states using thresholds. This establishes a key multiscale coupling mechanism: microenvironmental variables (continuous concentrations) can drive intracellular Boolean inputs.
+
+Core reusable blocks (nodes)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Initialization stage:
+
+- add_substance (repeated): declares substances (e.g., Oxygen, Glucose, Lactate, growth factors) and assigns a concentration
+- add_association (repeated): defines a mapping (substance_name, gene_input, threshold)
+- initialize_gene_networks: attaches gene networks
+- apply_associations_to_inputs: computes gene input ON/OFF from substance concentrations and thresholds
+
+Conceptual interpretation
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The association rule is:
+
+If concentration(substance) > threshold  → gene_input = ON
+Else                                     → gene_input = OFF
+
+This workflow uses “mock substances” (scalar values rather than diffusing fields) to teach coupling logic before introducing diffusion PDEs.
+
+Technical notes (association data model)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Associations are stored as mappings:
+
+- substance_name → gene_input
+
+and thresholds are stored per gene input. In a full simulation context, thresholds are stored in configuration objects expected by the population update functions; in a standalone context, they may be stored directly in the workflow context.
+
+The add_substance node used here supports a simple “scalar concentration” mode: if a concentration is provided, the node stores a single value for that substance rather than configuring diffusion PDE parameters. This is intentional for pedagogy: the user learns the coupling interface (continuous → Boolean) prior to introducing spatially varying fields.
+
+Suggested figures
+~~~~~~~~~~~~~~~~
+
+- Figure 3: Diagram of the association mechanism (substance concentration → threshold comparator → Boolean gene input).
+- Figure 4: Screenshot showing one repeated pattern instance (Add Substance + Add Association), then generalized to multiple substances.
+
+Suggested supplementary material
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Figure S1: Sensitivity analysis plots showing how varying threshold values shifts the activation of gene inputs (and, when embedded in a full workflow, shifts phenotypic outcomes).
+
+
+5. Tutorial workflow 3: Running the diffusion-reaction solver
+-------------------------------------------------------------
+
+Workflow file: diffusionreaction_workflow.json
+
+Objective
+~~~~~~~~~
+
+This workflow teaches how to build a microenvironment in MicroC: define a spatial domain, declare diffusing substances with boundary conditions, instantiate a population, and solve diffusion-reaction to (steady-state) using the FiPy-based solver. The emphasis is on the microenvironment layer, keeping gene networks disabled to reduce degrees of freedom.
+
+Core reusable blocks (nodes)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Initialization stage:
+
+- setup_simulation: initializes the simulation context (name, dt, output directory)
+- setup_domain: defines spatial geometry and grid resolution (here a 2D domain)
+- add_substance (repeated): declares diffusion coefficients, production/uptake rates, initial values, boundary values, and boundary types
+- finalize_substances: commits the substance configuration to the simulator
+- setup_population: creates population container (with enable_gene_network=false in this workflow)
+- load_cells_from_csv: loads cell positions from a CSV file
+- generate_initial_plots: optional baseline visualization
+
+Microenvironment stage:
+
+- run_diffusion_solver: runs a steady-state diffusion solver with configurable max iterations and tolerance
+
+Finalization stage:
+
+- generate_summary_plots and print_simulation_summary: produce domain heatmaps and report summary metrics
+
+Technical notes (diffusion solver interface)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The diffusion solver node solves diffusion with reaction source terms contributed by cells. In the current implementation, the solver supports:
+
+- solver_type: "steady_state" (default) or "transient"
+- max_iterations and tolerance: iterative convergence parameters
+- boundary_type per substance: "fixed" (Dirichlet) or "neumann" (flux)
+
+Substance definitions include:
+
+- diffusion_coeff
+- production_rate and uptake_rate
+- initial_value and boundary_value
+- unit (e.g., mM, nM, pH) for correct interpretation and reporting
+
+In this workflow, cells are loaded from a CSV file and can contribute consumption/production terms; gene networks are disabled to isolate the microenvironment subsystem.
+
+Suggested figures
+~~~~~~~~~~~~~~~~
+
+- Figure 5: Workflow canvas emphasizing domain setup and repeated “add_substance” blocks.
+- Figure 6: Representative heatmaps of oxygen/glucose/lactate steady-state fields (side-by-side), with cell positions overlaid.
+- Figure 7: A schematic explaining how cell consumption/production acts as a spatial source term in the PDE.
+
+Suggested supplementary material
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Figure S2: Convergence curves (residual vs iteration) for each substance field, illustrating solver stability at chosen tolerances.
+- Table S3: Domain and grid parameters used (size_x, size_y, nx, ny, cell_height) and their biological interpretation.
+
+
+6. Tutorial workflow 4: Integrating multiscale components (Jayatilake granular workflow)
+---------------------------------------------------------------------------------------
+
+Workflow file: jaya_granular_workflow.json
+
+Objective
+~~~~~~~~~
+
+This workflow provides a fully modular (“granular”) multiscale schedule suitable for tumour microenvironment studies. All major subsystems are explicitly exposed as function nodes with enable/disable toggles and parameter nodes, enabling users to customize the execution order, selectively remove mechanisms, and perform controlled ablations.
+
+The workflow demonstrates how a complex case can be constructed by reusing the same blocks introduced in workflows 1–3:
+
+- gene network propagation (workflow 1)
+- association-driven input mapping (workflow 2)
+- diffusion-reaction solving (workflow 3)
+
+Macrostep orchestration (temporal schedule)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The workflow includes a macrostep stage that orchestrates the per-step schedule. Conceptually:
+
+- macrostep.steps defines the number of engine iterations (i.e., the simulation duration in “macrosteps”)
+- within each macrostep, a user-defined sequence is executed (e.g., intracellular → microenvironment → intercellular → export)
+- each macrostep node can optionally run multiple times via a per-node step_count (to support multi-timescale coupling without code changes)
+
+Technical notes (custom experiment logic and path resolution)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the Jayatilake granular workflow, population-level behaviour may be augmented through a custom functions module (a Python file referenced in parameters). This module provides experiment-specific implementations (e.g., metabolism, phenotype mapping, reaction terms) while the workflow provides the schedule and parameterization.
+
+Resource paths (BND files, custom modules, and CSV inputs) are commonly provided as relative paths. At runtime, initialization nodes attempt multiple resolution strategies, including workflow-relative resolution via workflow_file, resolution relative to the microc-2.0 root, and (for certain resources) searching under tests/. For reproducibility in publications, it is preferable to use stable repository-relative paths and/or archive referenced resources together with the workflow JSON.
+
+Granular stages (mechanistic decomposition)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Initialization stage (selected blocks):
+
+- setup_domain and add_substance blocks define microenvironment substrate fields (Oxygen, Glucose, Lactate, H+, pH).
+- add_association blocks connect selected substances (e.g., Oxygen, Glucose, Lactate, H+) to gene network inputs via thresholds.
+- setup_gene_network configures the BND file and propagation settings.
+- setup_population enables gene networks and loads custom experiment functions (e.g., Jayatilake-specific cell functions).
+- setup_output configures data saving and plotting intervals.
+- load_cells_from_csv supplies initial spatial configuration.
+
+Intracellular stage:
+
+- update_metabolism: updates consumption/production rates and metabolic state.
+- update_gene_networks: maps local environment to input nodes, propagates the Boolean network, and caches gene states.
+- update_phenotypes: converts gene states to phenotypes using a priority rule (e.g., necrosis dominates).
+- remove_dead_cells: optional cleanup step to remove apoptotic/necrotic cells.
+
+Microenvironment stage:
+
+- run_diffusion_solver: updates all substance fields given cell reaction terms.
+
+Intercellular stage:
+
+- update_cell_division: creates daughter cells when phenotype and thresholds permit.
+- update_cell_migration: optional movement logic (chemotaxis and/or random walk).
+
+Finalization stage:
+
+- collect_statistics, save_simulation_data, generate_summary_plots, export_final_state, and print_simulation_summary
+
+Recommended workflow-building narrative
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For academic reproducibility and pedagogy, it is useful to present this workflow as a composition of previously validated subgraphs:
+
+- “Intracellular core”: update_metabolism + update_gene_networks + update_phenotypes
+- “Microenvironment core”: add_substance* + finalize_substances + run_diffusion_solver
+- “Coupling interface”: add_association* + (association application inside update_gene_networks)
+- “Population dynamics”: update_cell_division (+ optionally migration)
+- “Reproducible outputs”: save_simulation_data + export_final_state + summary plots
+
+Suggested figures
+~~~~~~~~~~~~~~~~
+
+- Figure 8: High-level block diagram of the macrostep schedule (intracellular → microenvironment → intercellular).
+- Figure 9: Screenshot of the granular workflow canvas with color-coded stages (initialization/intracellular/microenvironment/intercellular/finalization).
+- Figure 10: A multiscale coupling illustration showing how diffusion fields determine local concentrations per cell, which drive gene inputs, which drive phenotype and metabolism, which in turn updates reaction terms for diffusion.
+- Figure 11: Example output panel(s): time series of phenotype counts; spatial maps of hypoxia; lactate gradients; snapshots of tumour growth (2D/3D visualization).
+
+Suggested supplementary material
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Figure S3: A “node catalogue” table listing each function node used, its inputs (context keys), and its outputs (context updates).
+- Figure S4: Ablation study design: toggling individual nodes (e.g., disable diffusion or disable gene networks) and reporting qualitative regime shifts.
+
+
+7. Pseudocode (workflow execution semantics)
+-------------------------------------------
+
+The following pseudocode is intended to clarify the runtime semantics that motivate the design of reusable nodes. It abstracts away the GUI while matching the conceptual execution order:
+
+PSEUDOCODE A: Stage execution with explicit order and parameter merging
+
+for each stage in {initialization, intracellular, microenvironment, intercellular, finalization}:
+  if stage.enabled:
+    functions = stage.functions filtered by stage.execution_order and function.enabled
+    repeat stage.steps times:
+      for function_node in functions:
+        merged_params = merge(parameters from function_node.parameter_nodes, function_node.parameters)
+        repeat function_node.step_count (or merged_params.step_count) times:
+          call function_node.function_name(context, **merged_params)
+
+PSEUDOCODE B: Macrostep schedule (multiscale loop)
+
+execute initialization once
+for macrostep_index in 1..macrostep.steps:
+  for macrostep_node in macrostep.execution_order:
+    execute macrostep_node (which typically triggers a stage, e.g., intracellular_step)
+execute finalization once
+
+These semantics motivate the recommended modeling practice: isolate each subsystem in a small workflow, validate it, and then compose it into a macrostep schedule for integrated multiscale simulations.
+
+7.1 Context model (what data flows between nodes)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The workflow executor passes a mutable “context” dictionary between nodes. Nodes may both read from and write to this context. Typical keys include:
+
+- config: configuration object (YAML-derived or constructed by workflow)
+- mesh_manager: spatial mesh infrastructure
+- simulator: diffusion simulator holding substance concentration fields
+- population: cell population object
+- gene_network: gene network object (or per-cell networks in standalone testing)
+- helpers: helper functions and engine utilities
+- results: time series and summary statistics (for finalization and plotting)
+- workflow_file: absolute path of the workflow JSON (used for resolving relative resource paths)
+
+When writing academic documentation, it is useful to view this context as the “data bus” that ensures loose coupling: nodes can be reused if they respect the same input/output contracts.
+
+
+8. Practical recommendations for reusable, understandable workflows
+------------------------------------------------------------------
+
+- Prefer small, reusable parameter nodes over monolithic configurations. For example, define one parameter node per substance, one per association, and one for solver tolerances.
+- Use stable node identifiers and clear labels. A consistent naming convention improves model sharing and reduces errors during workflow refactoring.
+- Minimize hidden coupling. Make threshold values, uptake/production rates, and solver tolerances explicit and externally configurable.
+- Add one mechanism at a time. The four tutorial workflows illustrate an incremental pattern that can be reused for new case studies (e.g., therapies, mutations, nutrient perturbations).
+
+8.1 Troubleshooting checklist (implementation-aligned)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following issues commonly arise when authoring workflows; each is directly traceable to workflow execution semantics:
+
+- Execution order errors: if execution_order references a non-existent function id, workflow validation fails.
+- Missing resources (BND/custom functions/CSV): relative paths are resolved using multiple strategies. For reproducible studies, prefer explicit repository-relative paths and archive referenced resources with the workflow.
+- “Standalone mode” vs “full simulation mode” mismatch:
+  - Some nodes are designed for workflow-only testing and will refuse to create a real population when a simulator exists (in that case, use setup_population).
+  - Conversely, diffusion requires simulator/config/population to be present; ensure initialization includes the corresponding setup nodes.
+- Units and thresholds: thresholds must be interpreted in the same units as the substance concentrations used in the simulation; mixing mM/nM conventions will yield qualitatively incorrect gene input activation.
+- Diffusion solver convergence: if tolerance is too strict or max_iterations too low, fields may not converge; report these settings explicitly and include convergence diagnostics when possible.
+
+
+9. Reproducibility checklist (for the paper’s Methods / Supplementary)
+---------------------------------------------------------------------
+
+- Record the exact workflow JSON used, including all enabled/disabled nodes and parameter values.
+- Record the BND file version and any custom function module used for experiment-specific logic.
+- Provide representative outputs (plots/exports) along with the workflow JSON to support independent verification.
+
+9.1 Minimal artefacts to archive (practical recommendation)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For each published workflow-based experiment, archive:
+
+- the workflow JSON file (exact version used);
+- the YAML configuration (if used) and the copied workflow/config files in the output directory;
+- the BND file and any custom functions module referenced;
+- representative outputs (CSV checkpoints and plots) sufficient to reproduce key figures; and
+- a short “run manifest” documenting the command line invocation and software version.
+
+

@@ -8,13 +8,14 @@ import { createStaggeredLayout } from '../utils/layoutUtils';
 const useWorkflowStore = create((set, get) => ({
   // Workflow metadata
   workflow: {
-    version: '1.0',
+    version: '2.0',  // Default to new sub-workflow system
     name: 'Untitled Workflow',
     description: '',
     metadata: {
       author: '',
       created: new Date().toISOString().split('T')[0],
     },
+    // Legacy stages (v1.0)
     stages: {
 	      initialization: { enabled: true, steps: 1, functions: [], execution_order: [] },
 	      macrostep: { enabled: false, steps: 1, functions: [], execution_order: [] },
@@ -23,32 +24,61 @@ const useWorkflowStore = create((set, get) => ({
 	      intercellular: { enabled: true, steps: 1, functions: [], execution_order: [] },
 	      finalization: { enabled: true, steps: 1, functions: [], execution_order: [] },
 	    },
+    // New sub-workflows (v2.0)
+    subworkflows: {
+      main: {
+        description: 'Main workflow entry point',
+        enabled: true,
+        deletable: false,
+        controller: {
+          id: 'controller-main',
+          type: 'controller',
+          label: 'MAIN CONTROLLER',
+          position: { x: 100, y: 100 },
+          number_of_steps: 1
+        },
+        functions: [],
+        subworkflow_calls: [],
+        parameters: [],
+        execution_order: [],
+        input_parameters: []
+      }
+    }
   },
 
-  // Current active stage
-  currentStage: 'initialization',
+  // Current active stage/subworkflow
+  currentStage: 'main',  // For v2.0, this is the current sub-workflow name
 
-  // React Flow nodes and edges for each stage
+  // React Flow nodes and edges for each stage (v1.0) or subworkflow (v2.0)
   stageNodes: {
+    // Legacy stages
     initialization: [],
     macrostep: [],
     intracellular: [],
     microenvironment: [],
     intercellular: [],
     finalization: [],
+    // Default main subworkflow
+    main: []
   },
 
   stageEdges: {
+    // Legacy stages
     initialization: [],
     macrostep: [],
     intracellular: [],
     microenvironment: [],
     intercellular: [],
     finalization: [],
+    // Default main subworkflow
+    main: []
   },
 
   // Simulation logs (persistent across tab changes)
   simulationLogs: [],
+
+  // Call stack logs (for sub-workflow debugging)
+  callStackLogs: [],
 
   // Actions
   setCurrentStage: (stage) => set({ currentStage: stage }),
@@ -71,8 +101,244 @@ const useWorkflowStore = create((set, get) => ({
 
   clearSimulationLogs: () => set({ simulationLogs: [] }),
 
-  // Load workflow from JSON - LOADS ALL STAGES
+  // Call stack log actions
+  addCallStackLog: (entry) => {
+    set((state) => ({
+      callStackLogs: [...state.callStackLogs, entry],
+    }));
+  },
+
+  clearCallStackLogs: () => set({ callStackLogs: [] }),
+
+  // Sub-workflow management actions (v2.0)
+  addSubWorkflow: (name, description = '') => {
+    set((state) => {
+      if (state.workflow.version !== '2.0') {
+        console.warn('[STORE] Cannot add sub-workflow in v1.0 workflow');
+        return state;
+      }
+
+      // Check if name already exists
+      if (state.workflow.subworkflows[name]) {
+        console.warn(`[STORE] Sub-workflow '${name}' already exists`);
+        return state;
+      }
+
+      // Validate name
+      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
+        console.error(`[STORE] Invalid sub-workflow name: ${name}`);
+        return state;
+      }
+
+      return {
+        workflow: {
+          ...state.workflow,
+          subworkflows: {
+            ...state.workflow.subworkflows,
+            [name]: {
+              description,
+              enabled: true,
+              deletable: true,
+              controller: {
+                id: `controller-${name}`,
+                type: 'controller',
+                label: `${name.toUpperCase()} CONTROLLER`,
+                position: { x: 100, y: 100 },
+                number_of_steps: 1
+              },
+              functions: [],
+              subworkflow_calls: [],
+              parameters: [],
+              execution_order: [],
+              input_parameters: []
+            }
+          }
+        },
+        stageNodes: {
+          ...state.stageNodes,
+          [name]: [{
+            id: `controller-${name}`,
+            type: 'controller',
+            position: { x: 100, y: 100 },
+            data: {
+              label: `${name.toUpperCase()} CONTROLLER`,
+              number_of_steps: 1
+            }
+          }]
+        },
+        stageEdges: {
+          ...state.stageEdges,
+          [name]: []
+        }
+      };
+    });
+  },
+
+  deleteSubWorkflow: (name) => {
+    set((state) => {
+      if (state.workflow.version !== '2.0') {
+        console.warn('[STORE] Cannot delete sub-workflow in v1.0 workflow');
+        return state;
+      }
+
+      // Cannot delete main workflow
+      if (name === 'main') {
+        console.error('[STORE] Cannot delete main workflow');
+        return state;
+      }
+
+      // Check if deletable
+      const subworkflow = state.workflow.subworkflows[name];
+      if (!subworkflow || !subworkflow.deletable) {
+        console.error(`[STORE] Sub-workflow '${name}' is not deletable`);
+        return state;
+      }
+
+      // Remove from subworkflows
+      const { [name]: removed, ...remainingSubworkflows } = state.workflow.subworkflows;
+
+      // Remove from nodes and edges
+      const { [name]: removedNodes, ...remainingNodes } = state.stageNodes;
+      const { [name]: removedEdges, ...remainingEdges } = state.stageEdges;
+
+      // Switch to main if current stage is being deleted
+      const newCurrentStage = state.currentStage === name ? 'main' : state.currentStage;
+
+      return {
+        workflow: {
+          ...state.workflow,
+          subworkflows: remainingSubworkflows
+        },
+        stageNodes: remainingNodes,
+        stageEdges: remainingEdges,
+        currentStage: newCurrentStage
+      };
+    });
+  },
+
+  renameSubWorkflow: (oldName, newName) => {
+    set((state) => {
+      if (state.workflow.version !== '2.0') {
+        console.warn('[STORE] Cannot rename sub-workflow in v1.0 workflow');
+        return state;
+      }
+
+      // Cannot rename main workflow
+      if (oldName === 'main') {
+        console.error('[STORE] Cannot rename main workflow');
+        return state;
+      }
+
+      // Validate new name
+      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(newName)) {
+        console.error(`[STORE] Invalid sub-workflow name: ${newName}`);
+        return state;
+      }
+
+      // Check if new name already exists
+      if (state.workflow.subworkflows[newName]) {
+        console.error(`[STORE] Sub-workflow '${newName}' already exists`);
+        return state;
+      }
+
+      // Get the subworkflow
+      const subworkflow = state.workflow.subworkflows[oldName];
+      if (!subworkflow) {
+        console.error(`[STORE] Sub-workflow '${oldName}' not found`);
+        return state;
+      }
+
+      // Create new subworkflows object with renamed key
+      const newSubworkflows = {};
+      Object.keys(state.workflow.subworkflows).forEach(key => {
+        if (key === oldName) {
+          newSubworkflows[newName] = {
+            ...subworkflow,
+            // Update controller label
+            controller: {
+              ...subworkflow.controller,
+              id: `controller-${newName}`,
+              label: `${newName.toUpperCase()} CONTROLLER`
+            }
+          };
+        } else {
+          newSubworkflows[key] = state.workflow.subworkflows[key];
+        }
+      });
+
+      // Rename in nodes and edges
+      const newStageNodes = {};
+      const newStageEdges = {};
+      Object.keys(state.stageNodes).forEach(key => {
+        if (key === oldName) {
+          newStageNodes[newName] = state.stageNodes[key];
+        } else {
+          newStageNodes[key] = state.stageNodes[key];
+        }
+      });
+      Object.keys(state.stageEdges).forEach(key => {
+        if (key === oldName) {
+          newStageEdges[newName] = state.stageEdges[key];
+        } else {
+          newStageEdges[key] = state.stageEdges[key];
+        }
+      });
+
+      // Update current stage if needed
+      const newCurrentStage = state.currentStage === oldName ? newName : state.currentStage;
+
+      return {
+        workflow: {
+          ...state.workflow,
+          subworkflows: newSubworkflows
+        },
+        stageNodes: newStageNodes,
+        stageEdges: newStageEdges,
+        currentStage: newCurrentStage
+      };
+    });
+  },
+
+  updateSubWorkflowDescription: (name, description) => {
+    set((state) => {
+      if (state.workflow.version !== '2.0') {
+        return state;
+      }
+
+      if (!state.workflow.subworkflows[name]) {
+        return state;
+      }
+
+      return {
+        workflow: {
+          ...state.workflow,
+          subworkflows: {
+            ...state.workflow.subworkflows,
+            [name]: {
+              ...state.workflow.subworkflows[name],
+              description
+            }
+          }
+        }
+      };
+    });
+  },
+
+  // Load workflow from JSON - LOADS ALL STAGES/SUBWORKFLOWS
   loadWorkflow: (workflowJson) => {
+    const version = workflowJson.version || '1.0';
+
+    if (version === '2.0') {
+      // Load v2.0 sub-workflow format
+      get()._loadWorkflowV2(workflowJson);
+    } else {
+      // Load v1.0 stage format
+      get()._loadWorkflowV1(workflowJson);
+    }
+  },
+
+  // Load v1.0 stage-based workflow
+  _loadWorkflowV1: (workflowJson) => {
     const { stages } = workflowJson;
     const newStageNodes = {
       initialization: [],
@@ -347,6 +613,177 @@ const useWorkflowStore = create((set, get) => ({
 	      stageNodes: newStageNodes,
 	      stageEdges: newStageEdges,
 	    }));
+  },
+
+  // Load v2.0 sub-workflow-based workflow
+  _loadWorkflowV2: (workflowJson) => {
+    const { subworkflows } = workflowJson;
+    if (!subworkflows) {
+      console.error('[STORE] No subworkflows found in v2.0 workflow');
+      return;
+    }
+
+    const newStageNodes = {};
+    const newStageEdges = {};
+
+    // Process each sub-workflow
+    Object.keys(subworkflows).forEach((subworkflowName) => {
+      const subworkflow = subworkflows[subworkflowName];
+      const allEdges = [];
+      const createdParamNodeIds = new Set();
+
+      // Build execution order for layout
+      const executionOrder = subworkflow.execution_order || [];
+
+      // Create controller node
+      const controller = subworkflow.controller;
+      const controllerNode = controller ? {
+        id: controller.id,
+        type: 'controller',
+        position: controller.position || { x: 100, y: 100 },
+        data: {
+          label: controller.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
+          number_of_steps: controller.number_of_steps || 1
+        },
+        deletable: false
+      } : null;
+
+      // Create parameter nodes
+      const explicitParamNodes = (subworkflow.parameters || []).map((param) => ({
+        id: param.id,
+        type: 'parameterNode',
+        position: param.position || { x: 0, y: 0 },
+        data: {
+          label: param.label || 'Parameters',
+          parameters: param.parameters || {},
+          onEdit: () => {}
+        }
+      }));
+      explicitParamNodes.forEach(node => createdParamNodeIds.add(node.id));
+
+      // Create function nodes
+      const functionNodes = (subworkflow.functions || []).map((func) => ({
+        id: func.id,
+        type: 'workflowFunction',
+        position: func.position || { x: 0, y: 0 },
+        data: {
+          label: func.function_name,
+          functionName: func.function_name,
+          parameters: func.parameters || {},
+          enabled: func.enabled !== false,
+          description: func.description || '',
+          functionFile: func.function_file || func.parameters?.function_file || '',
+          customName: func.custom_name || '',
+          stepCount: func.step_count || 1,
+          onEdit: () => {}
+        }
+      }));
+
+      // Create sub-workflow call nodes
+      const subworkflowCallNodes = (subworkflow.subworkflow_calls || []).map((call) => ({
+        id: call.id,
+        type: 'subworkflowCall',
+        position: call.position || { x: 0, y: 0 },
+        data: {
+          label: call.subworkflow_name,
+          subworkflowName: call.subworkflow_name,
+          iterations: call.iterations || 1,
+          parameters: call.parameters || {},
+          enabled: call.enabled !== false,
+          description: call.description || '',
+          onEdit: () => {}
+        }
+      }));
+
+      // Create parameter edges
+      [...(subworkflow.functions || []), ...(subworkflow.subworkflow_calls || [])].forEach((node) => {
+        if (node.parameter_nodes && node.parameter_nodes.length > 0) {
+          node.parameter_nodes.forEach((paramNodeId) => {
+            allEdges.push({
+              id: `e-param-${paramNodeId}-${node.id}`,
+              source: paramNodeId,
+              sourceHandle: 'params',
+              target: node.id,
+              targetHandle: 'params',
+              type: 'default',
+              animated: false,
+              style: {
+                stroke: '#3b82f6',
+                strokeWidth: 2,
+                strokeDasharray: '5,5'
+              }
+            });
+          });
+        }
+      });
+
+      // Create execution flow edges based on execution order
+      if (controllerNode && executionOrder.length > 0) {
+        // Edge from controller to first node
+        allEdges.push({
+          id: `e-${controllerNode.id}-${executionOrder[0]}`,
+          source: controllerNode.id,
+          sourceHandle: 'func-out',
+          target: executionOrder[0],
+          targetHandle: 'func-in',
+          type: 'default',
+          animated: true,
+          markerEnd: {
+            type: 'arrowclosed',
+            width: 10,
+            height: 10
+          },
+          style: {
+            strokeWidth: 6
+          }
+        });
+
+        // Edges between nodes in execution order
+        for (let i = 0; i < executionOrder.length - 1; i++) {
+          allEdges.push({
+            id: `e-${executionOrder[i]}-${executionOrder[i + 1]}`,
+            source: executionOrder[i],
+            sourceHandle: 'func-out',
+            target: executionOrder[i + 1],
+            targetHandle: 'func-in',
+            type: 'default',
+            animated: true,
+            markerEnd: {
+              type: 'arrowclosed',
+              width: 10,
+              height: 10
+            },
+            style: {
+              strokeWidth: 6
+            }
+          });
+        }
+      }
+
+      // Collect all nodes
+      const allNodes = [
+        ...(controllerNode ? [controllerNode] : []),
+        ...functionNodes,
+        ...subworkflowCallNodes,
+        ...explicitParamNodes
+      ];
+
+      newStageNodes[subworkflowName] = allNodes;
+      newStageEdges[subworkflowName] = allEdges;
+    });
+
+    set((state) => ({
+      workflow: {
+        ...state.workflow,
+        ...workflowJson,
+        subworkflows: {
+          ...subworkflows
+        }
+      },
+      stageNodes: newStageNodes,
+      stageEdges: newStageEdges,
+      currentStage: 'main' // Always start with main
+    }));
   },
 
 	  // Toggle whether a whole stage is enabled (e.g. macrostep)

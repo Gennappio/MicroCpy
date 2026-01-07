@@ -191,3 +191,31 @@
   text-align: center;
 }
 
+/* Sub-workflow Item Styles */
+.function-item.subworkflow-item {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  border: 2px solid #8b5cf6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.function-item.subworkflow-item:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+}
+
+.function-item.subworkflow-item .function-item-icon {
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.function-item.subworkflow-item .function-item-name {
+  color: #6d28d9;
+}
+
+.function-item.subworkflow-item .function-item-description {
+  color: #8b5cf6;
+}
