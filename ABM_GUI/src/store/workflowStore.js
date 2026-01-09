@@ -32,7 +32,7 @@ const useWorkflowStore = create((set, get) => ({
         deletable: false,
         controller: {
           id: 'controller-main',
-          type: 'controller',
+          type: 'initNode',
           label: 'MAIN CONTROLLER',
           position: { x: 100, y: 100 },
           number_of_steps: 1
@@ -141,7 +141,7 @@ const useWorkflowStore = create((set, get) => ({
               deletable: true,
               controller: {
                 id: `controller-${name}`,
-                type: 'controller',
+                type: 'initNode',
                 label: `${name.toUpperCase()} CONTROLLER`,
                 position: { x: 100, y: 100 },
                 number_of_steps: 1
@@ -158,12 +158,13 @@ const useWorkflowStore = create((set, get) => ({
           ...state.stageNodes,
           [name]: [{
             id: `controller-${name}`,
-            type: 'controller',
+            type: 'initNode',
             position: { x: 100, y: 100 },
             data: {
               label: `${name.toUpperCase()} CONTROLLER`,
-              number_of_steps: 1
-            }
+              numberOfSteps: 1
+            },
+            deletable: false
           }]
         },
         stageEdges: {
@@ -639,11 +640,11 @@ const useWorkflowStore = create((set, get) => ({
       const controller = subworkflow.controller;
       const controllerNode = controller ? {
         id: controller.id,
-        type: 'controller',
+        type: 'initNode',
         position: controller.position || { x: 100, y: 100 },
         data: {
           label: controller.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
-          number_of_steps: controller.number_of_steps || 1
+          numberOfSteps: controller.number_of_steps || 1
         },
         deletable: false
       } : null;
