@@ -1,21 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Play, Pause, BarChart3, Plus, X, Edit2, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Upload, FileJson, BarChart3, Plus, X, Edit2 } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import SimulationRunner from './components/SimulationRunner';
 import ResultsExplorer from './components/ResultsExplorer';
+import MainTabSelector from './components/MainTabSelector';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
-
-const STAGES = [
-  { id: 'initialization', label: 'Initialization', color: '#10b981' },
-  { id: 'macrostep', label: 'Macrostep', color: '#06b6d4' },
-  { id: 'intracellular', label: 'Intracellular', color: '#3b82f6' },
-  { id: 'microenvironment', label: 'Microenvironment', color: '#8b5cf6' },
-  { id: 'intercellular', label: 'Intercellular', color: '#f59e0b' },
-  { id: 'finalization', label: 'Finalization', color: '#ef4444' },
-];
 
 const VIEWS = [
   { id: 'workflow', label: 'Workflow Designer' },
@@ -28,15 +20,14 @@ function App() {
 		  const {
         currentStage,
         setCurrentStage,
+        currentMainTab,
+        setCurrentMainTab,
         workflow,
         loadWorkflow,
         exportWorkflow,
-        toggleStageEnabled,
-        setStageSteps,
         addSubWorkflow,
         deleteSubWorkflow,
-        renameSubWorkflow,
-        updateSubWorkflowDescription
+        renameSubWorkflow
       } = useWorkflowStore();
 
   const [showNewSubWorkflowDialog, setShowNewSubWorkflowDialog] = useState(false);
@@ -51,6 +42,20 @@ function App() {
       console.error('[APP] Failed to load function registry:', error);
     });
   }, []);
+
+  // When main tab changes, switch to first available subworkflow of that kind
+  useEffect(() => {
+    const subworkflowsOfCurrentKind = Object.keys(workflow.subworkflows || {}).filter((name) => {
+      const kind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                  (name === 'main' ? 'composer' : 'subworkflow');
+      return currentMainTab === 'composers' ? kind === 'composer' : kind === 'subworkflow';
+    });
+
+    // If current stage is not in the filtered list, switch to the first one
+    if (subworkflowsOfCurrentKind.length > 0 && !subworkflowsOfCurrentKind.includes(currentStage)) {
+      setCurrentStage(subworkflowsOfCurrentKind[0]);
+    }
+  }, [currentMainTab, workflow.subworkflows, workflow.metadata, currentStage, setCurrentStage]);
 
   const handleImportWorkflow = () => {
     const input = document.createElement('input');
@@ -176,27 +181,39 @@ function App() {
       {/* Workflow Designer View */}
       {currentView === 'workflow' && (
         <>
+          {/* Main Tab Selector */}
+          <MainTabSelector
+            currentMainTab={currentMainTab}
+            onTabChange={setCurrentMainTab}
+          />
+
           {/* Stage/Sub-workflow Tabs */}
           <div className="stage-tabs">
-            {workflow.version === '2.0' ? (
-              // V2.0: Dynamic sub-workflow tabs
-              <>
-                {Object.keys(workflow.subworkflows || {}).map((subworkflowName) => {
+            {/* V2.0: Dynamic sub-workflow tabs filtered by kind */}
+            {Object.keys(workflow.subworkflows || {})
+              .filter((subworkflowName) => {
+                const kind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
+                            (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+                return currentMainTab === 'composers' ? kind === 'composer' : kind === 'subworkflow';
+              })
+              .map((subworkflowName) => {
                   const subworkflow = workflow.subworkflows[subworkflowName];
                   const isEnabled = subworkflow.enabled !== false;
                   const isDeletable = subworkflow.deletable !== false;
-                  const isMain = subworkflowName === 'main';
+                  const kind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
+                              (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+                  const isComposer = kind === 'composer';
 
                   return (
                     <button
                       key={subworkflowName}
-                      className={`stage-tab ${currentStage === subworkflowName ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}`}
+                      className={`stage-tab ${isComposer ? 'composer' : 'subworkflow'} ${currentStage === subworkflowName ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}`}
                       onClick={() => setCurrentStage(subworkflowName)}
                       style={{
-                        '--stage-color': isMain ? '#10b981' : '#8b5cf6',
+                        '--stage-color': isComposer ? '#10b981' : '#8b5cf6',
                       }}
                     >
-                      <span className="stage-indicator" style={{ background: isMain ? '#10b981' : '#8b5cf6' }} />
+                      <span className="stage-indicator" style={{ background: isComposer ? '#10b981' : '#8b5cf6' }} />
                       {renamingSubWorkflow === subworkflowName ? (
                         <input
                           type="text"
@@ -245,57 +262,17 @@ function App() {
                   );
                 })}
 
-                {/* Add Sub-workflow Button */}
-                <button
-                  className="stage-tab add-tab"
-                  onClick={() => setShowNewSubWorkflowDialog(true)}
-                  title="Add new sub-workflow"
-                >
-                  <Plus size={16} />
-                  <span className="stage-label">New Sub-workflow</span>
-                </button>
-              </>
-            ) : (
-              // V1.0: Fixed stage tabs
-              STAGES.map((stage) => {
-                const isEnabled = workflow.stages[stage.id]?.enabled !== false;
-                return (
-                  <button
-                    key={stage.id}
-                    className={`stage-tab ${currentStage === stage.id ? 'active' : ''} ${!isEnabled ? 'disabled' : ''}`}
-                    onClick={() => setCurrentStage(stage.id)}
-                    style={{
-                      '--stage-color': stage.color,
-                    }}
-                  >
-                    <span className="stage-indicator" style={{ background: stage.color }} />
-                    <span className="stage-label">{stage.label}</span>
-                    <span
-                      className="stage-toggle-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStageEnabled(stage.id);
-                      }}
-                      title={isEnabled ? 'Disable stage' : 'Enable stage'}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.stopPropagation();
-                          toggleStageEnabled(stage.id);
-                        }
-                      }}
-                    >
-                      {isEnabled ? (
-                        <Play size={14} className="stage-status enabled" />
-                      ) : (
-                        <Pause size={14} className="stage-status disabled" />
-                      )}
-                    </span>
-                  </button>
-                );
-              })
-            )}
+            {/* Add Composer/Sub-workflow Button */}
+            <button
+              className="stage-tab add-tab"
+              onClick={() => setShowNewSubWorkflowDialog(true)}
+              title={currentMainTab === 'composers' ? 'Add new composer' : 'Add new sub-workflow'}
+            >
+              <Plus size={16} />
+              <span className="stage-label">
+                {currentMainTab === 'composers' ? 'New Composer' : 'New Sub-workflow'}
+              </span>
+            </button>
           </div>
 
           {/* Main Content */}
@@ -306,15 +283,17 @@ function App() {
         </>
       )}
 
-      {/* New Sub-workflow Dialog */}
+      {/* New Composer/Sub-workflow Dialog */}
       {showNewSubWorkflowDialog && (
         <div className="dialog-overlay" onClick={() => setShowNewSubWorkflowDialog(false)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Create New Sub-workflow</h3>
+            <h3>Create New {currentMainTab === 'composers' ? 'Composer' : 'Sub-workflow'}</h3>
             <input
               type="text"
               className="dialog-input"
-              placeholder="Enter sub-workflow name (e.g., my_workflow)"
+              placeholder={currentMainTab === 'composers'
+                ? 'Enter composer name (e.g., my_experiment)'
+                : 'Enter sub-workflow name (e.g., my_workflow)'}
               value={newSubWorkflowName}
               onChange={(e) => setNewSubWorkflowName(e.target.value)}
               onKeyDown={(e) => {

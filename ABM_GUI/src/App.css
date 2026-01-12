@@ -151,6 +151,16 @@
   border-bottom-color: var(--stage-color);
 }
 
+/* Composer tabs have a subtle gradient background when active */
+.stage-tab.composer.active {
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.05), transparent);
+}
+
+/* Subworkflow tabs have a different gradient */
+.stage-tab.subworkflow.active {
+  background: linear-gradient(to bottom, rgba(139, 92, 246, 0.05), transparent);
+}
+
 .stage-indicator {
   width: 8px;
   height: 8px;
