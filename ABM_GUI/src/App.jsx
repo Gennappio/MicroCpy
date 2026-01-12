@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, BarChart3, Plus, X, Edit2 } from 'lucide-react';
+import { Download, Upload, FileJson, BarChart3, Plus, X, Edit2, Play } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import SimulationRunner from './components/SimulationRunner';
@@ -200,6 +200,7 @@ function App() {
                   const subworkflow = workflow.subworkflows[subworkflowName];
                   const isEnabled = subworkflow.enabled !== false;
                   const isDeletable = subworkflow.deletable !== false;
+                  const isMain = subworkflowName === 'main';
                   const kind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
                               (subworkflowName === 'main' ? 'composer' : 'subworkflow');
                   const isComposer = kind === 'composer';
