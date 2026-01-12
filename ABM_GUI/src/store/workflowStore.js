@@ -444,6 +444,7 @@ const useWorkflowStore = create((set, get) => ({
           enabled: call.enabled !== false,
           description: call.description || '',
           results: call.results || '',
+          contextMapping: call.context_mapping || {},
           onEdit: () => {}
         }
       }));
@@ -692,7 +693,7 @@ const useWorkflowStore = create((set, get) => ({
           position: node.position,
           description: node.data.description || '',
           parameter_nodes: parameterConnections,
-          context_mapping: {} // TODO: implement context_mapping UI
+          context_mapping: node.data.contextMapping || {}
         };
 
         // Only include results field if it's not empty

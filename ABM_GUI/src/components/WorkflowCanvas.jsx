@@ -290,6 +290,7 @@ const WorkflowCanvas = ({ stage }) => {
             enabled: true,
             description: droppedData.description || '',
             results: droppedData.results || '',
+            contextMapping: droppedData.contextMapping || {},
             onEdit: () => {
               setSelectedNode(newNode);
               setShowParameterEditor(true);
@@ -361,7 +362,7 @@ const WorkflowCanvas = ({ stage }) => {
             )
           );
         } else if (selectedNode.type === 'subworkflowCall') {
-          // For sub-workflow call nodes, update subworkflow name, iterations, description, and results
+          // For sub-workflow call nodes, update all properties
           setNodes((nds) =>
             nds.map((node) =>
               node.id === selectedNode.id
@@ -373,6 +374,7 @@ const WorkflowCanvas = ({ stage }) => {
                       iterations: customMetadata?.iterations || node.data.iterations,
                       description: customMetadata?.description || node.data.description,
                       results: customMetadata?.results !== undefined ? customMetadata.results : node.data.results,
+                      contextMapping: customMetadata?.contextMapping !== undefined ? customMetadata.contextMapping : node.data.contextMapping,
                       label: customMetadata?.subworkflowName || node.data.label,
                     },
                   }

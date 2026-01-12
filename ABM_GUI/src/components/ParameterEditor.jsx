@@ -30,6 +30,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
   const [iterations, setIterations] = useState(node.data.iterations || 1);
   const [results, setResults] = useState(node.data.results || '');
+  const [contextMapping, setContextMapping] = useState(node.data.contextMapping || {});
 
   const [showCode, setShowCode] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -183,6 +184,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setSubworkflowName(node.data.subworkflowName || '');
     setIterations(node.data.iterations || 1);
     setResults(node.data.results || '');
+    setContextMapping(node.data.contextMapping || {});
   }, [node]);
 
   useEffect(() => {
@@ -240,17 +242,56 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     });
   };
 
+  // Context mapping handlers
+  const handleAddContextMapping = () => {
+    const newKey = `context_var_${Object.keys(contextMapping).length + 1}`;
+    setContextMapping((prev) => ({
+      ...prev,
+      [newKey]: '',
+    }));
+  };
+
+  const handleRemoveContextMapping = (key) => {
+    setContextMapping((prev) => {
+      const newMapping = { ...prev };
+      delete newMapping[key];
+      return newMapping;
+    });
+  };
+
+  const handleRenameContextMappingKey = (oldKey, newKey) => {
+    if (oldKey === newKey) return;
+    if (newKey in contextMapping) {
+      alert('Context variable name already exists');
+      return;
+    }
+    setContextMapping((prev) => {
+      const newMapping = { ...prev };
+      newMapping[newKey] = newMapping[oldKey];
+      delete newMapping[oldKey];
+      return newMapping;
+    });
+  };
+
+  const handleChangeContextMappingValue = (key, value) => {
+    setContextMapping((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
   const handleSave = () => {
     if (isParameterNode) {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
     } else if (isSubWorkflowCall) {
-      // For sub-workflow calls, save subworkflow name, iterations, description, and results
+      // For sub-workflow calls, save all properties
       onSave(parameters, customName, {
         subworkflowName,
         iterations,
         description,
-        results
+        results,
+        contextMapping
       });
     } else {
       // For standard functions, save parameters, custom name, and step_count
@@ -540,6 +581,52 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                     This variable will contain the data returned by the sub-workflow
                   </div>
                 </div>
+
+                <div className="section-divider">
+                  Context Mapping
+                  <button className="btn-add-param" onClick={handleAddContextMapping}>
+                    <Plus size={14} />
+                    Add Mapping
+                  </button>
+                </div>
+
+                <div className="param-description" style={{ marginBottom: '10px' }}>
+                  Map context variables to sub-workflow parameters. Each mapping passes a value from the current context to the called sub-workflow.
+                </div>
+
+                {Object.keys(contextMapping).length === 0 ? (
+                  <div className="no-parameters">
+                    No context mappings defined. Click "Add Mapping" to add one.
+                  </div>
+                ) : (
+                  Object.keys(contextMapping).map((key) => (
+                    <div key={key} className="parameter-field">
+                      <div className="param-header">
+                        <input
+                          type="text"
+                          value={key}
+                          onChange={(e) => handleRenameContextMappingKey(key, e.target.value)}
+                          className="param-name-input"
+                          placeholder="context_variable"
+                        />
+                        <button
+                          className="btn-remove-param"
+                          onClick={() => handleRemoveContextMapping(key)}
+                          title="Remove mapping"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={contextMapping[key]}
+                        onChange={(e) => handleChangeContextMappingValue(key, e.target.value)}
+                        className="param-input"
+                        placeholder="target_parameter_name"
+                      />
+                    </div>
+                  ))
+                )}
               </>
             );
           })()}
