@@ -29,6 +29,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   // SubWorkflowCall specific state
   const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
   const [iterations, setIterations] = useState(node.data.iterations || 1);
+  const [results, setResults] = useState(node.data.results || '');
 
   const [showCode, setShowCode] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -181,6 +182,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setStepCount(node.data.stepCount || 1);
     setSubworkflowName(node.data.subworkflowName || '');
     setIterations(node.data.iterations || 1);
+    setResults(node.data.results || '');
   }, [node]);
 
   useEffect(() => {
@@ -243,11 +245,12 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
     } else if (isSubWorkflowCall) {
-      // For sub-workflow calls, save subworkflow name, iterations, and description
+      // For sub-workflow calls, save subworkflow name, iterations, description, and results
       onSave(parameters, customName, {
         subworkflowName,
         iterations,
-        description
+        description,
+        results
       });
     } else {
       // For standard functions, save parameters, custom name, and step_count
@@ -517,6 +520,25 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                     placeholder="Optional description"
                     className="param-input"
                   />
+                </div>
+
+                <div className="parameter-field">
+                  <label className="param-label">
+                    Results
+                  </label>
+                  <div className="param-description">
+                    Variable name to store the return value from this sub-workflow (e.g., "result", "output_data")
+                  </div>
+                  <input
+                    type="text"
+                    value={results}
+                    onChange={(e) => setResults(e.target.value)}
+                    placeholder="result"
+                    className="param-input"
+                  />
+                  <div className="param-hint">
+                    This variable will contain the data returned by the sub-workflow
+                  </div>
                 </div>
               </>
             );

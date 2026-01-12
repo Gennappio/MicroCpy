@@ -443,6 +443,7 @@ const useWorkflowStore = create((set, get) => ({
           parameters: call.parameters || {},
           enabled: call.enabled !== false,
           description: call.description || '',
+          results: call.results || '',
           onEdit: () => {}
         }
       }));
@@ -681,7 +682,7 @@ const useWorkflowStore = create((set, get) => ({
           .filter(e => e.target === node.id && e.targetHandle?.startsWith('params'))
           .map(e => e.source);
 
-        return {
+        const exportedCall = {
           id: node.id,
           type: 'subworkflow_call',
           subworkflow_name: node.data.subworkflowName,
@@ -693,6 +694,13 @@ const useWorkflowStore = create((set, get) => ({
           parameter_nodes: parameterConnections,
           context_mapping: {} // TODO: implement context_mapping UI
         };
+
+        // Only include results field if it's not empty
+        if (node.data.results && node.data.results.trim() !== '') {
+          exportedCall.results = node.data.results;
+        }
+
+        return exportedCall;
       });
 
       // Export ALL parameter nodes
