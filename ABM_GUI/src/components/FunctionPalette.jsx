@@ -143,27 +143,57 @@ const FunctionPalette = ({ currentStage }) => {
         </div>
 
         {/* Sub-workflows Section (v2.0 only) */}
-        {workflow.version === '2.0' && (
-          <div className="palette-category">
-            <div
-              className="category-header"
-              onClick={() => toggleCategory('subworkflows')}
-            >
-              {expandedCategories['subworkflows'] ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
-              <span>Sub-workflows</span>
-              <span className="category-count">
-                {Object.keys(workflow.subworkflows || {}).filter(name => name !== currentStage).length}
-              </span>
-            </div>
+        {workflow.version === '2.0' && (() => {
+          // Calculate available subworkflows based on call rules
+          const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                             (currentStage === 'main' ? 'composer' : 'subworkflow');
+
+          const availableSubworkflows = Object.keys(workflow.subworkflows || {}).filter(name => {
+            if (name === currentStage) return false;
+            const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                              (name === 'main' ? 'composer' : 'subworkflow');
+            if (currentKind === 'subworkflow' && targetKind === 'composer') return false;
+            return true;
+          });
+
+          return (
+            <div className="palette-category">
+              <div
+                className="category-header"
+                onClick={() => toggleCategory('subworkflows')}
+              >
+                {expandedCategories['subworkflows'] ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+                <span>Sub-workflows</span>
+                <span className="category-count">
+                  {availableSubworkflows.length}
+                </span>
+              </div>
 
             {expandedCategories['subworkflows'] && (
               <div className="category-functions">
                 {Object.keys(workflow.subworkflows || {})
-                  .filter(name => name !== currentStage) // Don't show current sub-workflow
+                  .filter(name => {
+                    // Don't show current sub-workflow
+                    if (name === currentStage) return false;
+
+                    // Get the kind of the current stage and the target
+                    const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                                       (currentStage === 'main' ? 'composer' : 'subworkflow');
+                    const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                                      (name === 'main' ? 'composer' : 'subworkflow');
+
+                    // Sub-workflows can only call other sub-workflows (not composers)
+                    if (currentKind === 'subworkflow' && targetKind === 'composer') {
+                      return false;
+                    }
+
+                    // Composers can call both composers and sub-workflows
+                    return true;
+                  })
                   .map((subworkflowName) => (
                     <div
                       key={subworkflowName}
@@ -180,13 +210,18 @@ const FunctionPalette = ({ currentStage }) => {
                       </div>
                     </div>
                   ))}
-                {Object.keys(workflow.subworkflows || {}).filter(name => name !== currentStage).length === 0 && (
-                  <div className="no-functions">No other sub-workflows available</div>
+                {availableSubworkflows.length === 0 && (
+                  <div className="no-functions">
+                    {currentKind === 'subworkflow'
+                      ? 'No sub-workflows available (sub-workflows cannot call composers)'
+                      : 'No other sub-workflows available'}
+                  </div>
                 )}
               </div>
             )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* Standard Functions Categories */}
         {categoriesToDisplay.map((category) => {

@@ -25,6 +25,7 @@ const nodeTypes = {
   parameterNode: ParameterNode,
   groupNode: GroupNode,
   initNode: InitNode,
+  controllerNode: InitNode, // Controller nodes use the same component as Init nodes
   subworkflowCall: SubWorkflowCallNode,
 };
 
@@ -70,22 +71,22 @@ const WorkflowCanvas = ({ stage }) => {
     return `${capitalizedStage} Controller`;
   };
 
-  // Ensure Init node is always present in the canvas
+  // Ensure Controller node is always present in the canvas
   React.useEffect(() => {
-    const initNodeId = `init-${stage}`;
-    const hasInitNode = nodes.some(n => n.id === initNodeId);
+    const controllerNodeId = `controller-${stage}`;
+    const hasControllerNode = nodes.some(n => n.id === controllerNodeId);
 
-    if (!hasInitNode) {
-      // Create Init node if it doesn't exist
-      const initNode = {
-        id: initNodeId,
-        type: 'initNode',
+    if (!hasControllerNode) {
+      // Create Controller node if it doesn't exist
+      const controllerNode = {
+        id: controllerNodeId,
+        type: 'controllerNode',
         position: { x: 700, y: 50 }, // Top center position
-        data: { label: getInitNodeLabel(stage) },
+        data: { label: getInitNodeLabel(stage), numberOfSteps: 1 },
         deletable: false,
       };
 
-      setNodes(prevNodes => [initNode, ...prevNodes]);
+      setNodes(prevNodes => [controllerNode, ...prevNodes]);
     }
   }, [stage, nodes, setNodes]);
 
@@ -94,20 +95,20 @@ const WorkflowCanvas = ({ stage }) => {
     isSyncingFromStore.current = true;
     const newNodes = stageNodes[stage] || [];
 
-    // Always ensure Init node is present
-    const initNodeId = `init-${stage}`;
-    const hasInitNode = newNodes.some(n => n.id === initNodeId);
+    // Always ensure Controller node is present
+    const controllerNodeId = `controller-${stage}`;
+    const hasControllerNode = newNodes.some(n => n.id === controllerNodeId);
 
-    if (!hasInitNode) {
-      // Add Init node if not present
-      const initNode = {
-        id: initNodeId,
-        type: 'initNode',
+    if (!hasControllerNode) {
+      // Add Controller node if not present
+      const controllerNode = {
+        id: controllerNodeId,
+        type: 'controllerNode',
         position: { x: 700, y: 50 },
-        data: { label: getInitNodeLabel(stage) },
+        data: { label: getInitNodeLabel(stage), numberOfSteps: 1 },
         deletable: false,
       };
-      setNodes([initNode, ...newNodes]);
+      setNodes([controllerNode, ...newNodes]);
     } else {
       setNodes(newNodes);
     }
@@ -327,8 +328,8 @@ const WorkflowCanvas = ({ stage }) => {
   }, []);
 
   const onNodeDoubleClick = useCallback((event, node) => {
-    // Open controller settings for Init nodes
-    if (node.type === 'initNode') {
+    // Open controller settings for Init/Controller nodes
+    if (node.type === 'initNode' || node.type === 'controllerNode') {
       setSelectedNode(node);
       setShowControllerSettings(true);
       return;
@@ -353,6 +354,24 @@ const WorkflowCanvas = ({ stage }) => {
                       ...node.data,
                       label: customName || node.data.label,
                       parameters,
+                    },
+                  }
+                : node
+            )
+          );
+        } else if (selectedNode.type === 'subworkflowCall') {
+          // For sub-workflow call nodes, update subworkflow name, iterations, and description
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      subworkflowName: customMetadata?.subworkflowName || node.data.subworkflowName,
+                      iterations: customMetadata?.iterations || node.data.iterations,
+                      description: customMetadata?.description || node.data.description,
+                      label: customMetadata?.subworkflowName || node.data.label,
                     },
                   }
                 : node

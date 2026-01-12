@@ -3,6 +3,7 @@ import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check } from 'lucide-r
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
+import useWorkflowStore from '../store/workflowStore';
 import './ParameterEditor.css';
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -11,14 +12,23 @@ const API_BASE_URL = 'http://localhost:5001';
  * Parameter Editor Modal - Edit function parameters or parameter node data
  */
 const ParameterEditor = ({ node, onSave, onClose }) => {
+  const workflow = useWorkflowStore((state) => state.workflow);
+  const currentStage = useWorkflowStore((state) => state.currentStage);
+
   const isParameterNode = node.type === 'parameterNode';
-  const functionMetadata = !isParameterNode ? getFunction(node.data.functionName) : null;
+  const isSubWorkflowCall = node.type === 'subworkflowCall';
+  const functionMetadata = !isParameterNode && !isSubWorkflowCall ? getFunction(node.data.functionName) : null;
+
   const [parameters, setParameters] = useState(node.data.parameters || {});
   const [customName, setCustomName] = useState(node.data.customName || node.data.label || '');
   const [functionName, setFunctionName] = useState(node.data.functionName || '');
   const [functionFile, setFunctionFile] = useState(node.data.functionFile || '');
   const [description, setDescription] = useState(node.data.description || '');
   const [stepCount, setStepCount] = useState(node.data.stepCount || 1);
+
+  // SubWorkflowCall specific state
+  const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
+  const [iterations, setIterations] = useState(node.data.iterations || 1);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -169,6 +179,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setFunctionFile(node.data.functionFile || '');
     setDescription(node.data.description || '');
     setStepCount(node.data.stepCount || 1);
+    setSubworkflowName(node.data.subworkflowName || '');
+    setIterations(node.data.iterations || 1);
   }, [node]);
 
   useEffect(() => {
@@ -230,6 +242,13 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     if (isParameterNode) {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
+    } else if (isSubWorkflowCall) {
+      // For sub-workflow calls, save subworkflow name, iterations, and description
+      onSave(parameters, customName, {
+        subworkflowName,
+        iterations,
+        description
+      });
     } else {
       // For standard functions, save parameters, custom name, and step_count
       onSave(parameters, customName, { stepCount });
@@ -313,13 +332,15 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Return null if no function metadata and not a parameter node
-  if (!functionMetadata && !isParameterNode) {
+  // Return null if no function metadata and not a parameter node or subworkflow call
+  if (!functionMetadata && !isParameterNode && !isSubWorkflowCall) {
     return null;
   }
 
   const displayName = isParameterNode
     ? (customName || 'Parameter Node')
+    : isSubWorkflowCall
+    ? 'Sub-workflow Call'
     : functionMetadata.displayName;
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
@@ -418,6 +439,88 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
               )}
             </>
           )}
+
+          {/* Sub-workflow Call Editor */}
+          {isSubWorkflowCall && (() => {
+            // Get available subworkflows based on call rules
+            const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                               (currentStage === 'main' ? 'composer' : 'subworkflow');
+
+            const availableSubworkflows = Object.keys(workflow.subworkflows || {}).filter(name => {
+              if (name === currentStage) return false;
+              const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                                (name === 'main' ? 'composer' : 'subworkflow');
+              // Sub-workflows can only call other sub-workflows (not composers)
+              if (currentKind === 'subworkflow' && targetKind === 'composer') return false;
+              return true;
+            });
+
+            return (
+              <>
+                <div className="parameter-field">
+                  <label className="param-label">
+                    <Edit2 size={14} />
+                    Target Sub-workflow
+                  </label>
+                  <div className="param-description">
+                    Select which {currentKind === 'subworkflow' ? 'sub-workflow' : 'composer or sub-workflow'} to call
+                  </div>
+                  <select
+                    value={subworkflowName}
+                    onChange={(e) => setSubworkflowName(e.target.value)}
+                    className="param-input"
+                  >
+                    {availableSubworkflows.map((name) => {
+                      const kind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                                  (name === 'main' ? 'composer' : 'subworkflow');
+                      return (
+                        <option key={name} value={name}>
+                          {name} ({kind})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {currentKind === 'subworkflow' && (
+                    <div className="param-hint">
+                      Note: Sub-workflows cannot call composers
+                    </div>
+                  )}
+                </div>
+
+                <div className="parameter-field">
+                  <label className="param-label">
+                    Iterations
+                  </label>
+                  <div className="param-description">
+                    Number of times to execute this sub-workflow
+                  </div>
+                  <input
+                    type="number"
+                    value={iterations}
+                    onChange={(e) => setIterations(parseInt(e.target.value, 10) || 1)}
+                    min={1}
+                    className="param-input"
+                  />
+                </div>
+
+                <div className="parameter-field">
+                  <label className="param-label">
+                    Description
+                  </label>
+                  <div className="param-description">
+                    Optional description for this call
+                  </div>
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional description"
+                    className="param-input"
+                  />
+                </div>
+              </>
+            );
+          })()}
 
           {/* Function Node Editor - Full interface with code viewer */}
           {!isParameterNode && showCode && (
