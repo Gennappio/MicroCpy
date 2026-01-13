@@ -362,6 +362,16 @@ class WorkflowExecutor:
                 if parameters:
                     context = {**context, **parameters}
 
+                # Set context keys for results directory (v2.0 spec Section 10.3)
+                subworkflow_kind = self._get_subworkflow_kind(subworkflow_name)
+                context['subworkflow_name'] = subworkflow_name
+                context['subworkflow_kind'] = subworkflow_kind
+                context['results_dir'] = Path('results')
+
+                # Set subworkflow_results_dir based on kind
+                kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
+                context['subworkflow_results_dir'] = Path('results') / kind_plural / subworkflow_name
+
                 # Get nodes in execution order
                 nodes_to_execute = []
                 for node_id in subworkflow.execution_order:
@@ -476,6 +486,26 @@ class WorkflowExecutor:
             import traceback
             traceback.print_exc()
             return None
+
+    def _get_subworkflow_kind(self, subworkflow_name: str) -> str:
+        """
+        Get the kind of a subworkflow (composer or subworkflow).
+
+        Args:
+            subworkflow_name: Name of the subworkflow
+
+        Returns:
+            'composer' or 'subworkflow'
+        """
+        # Check metadata for explicit kind
+        if hasattr(self.workflow, 'metadata') and self.workflow.metadata:
+            gui_metadata = self.workflow.metadata.get('gui', {})
+            subworkflow_kinds = gui_metadata.get('subworkflow_kinds', {})
+            if subworkflow_name in subworkflow_kinds:
+                return subworkflow_kinds[subworkflow_name]
+
+        # Default: 'main' is a composer, others are subworkflows
+        return 'composer' if subworkflow_name == 'main' else 'subworkflow'
 
     def get_call_stack(self) -> List[Dict[str, Any]]:
         """

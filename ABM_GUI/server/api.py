@@ -11,6 +11,7 @@ import subprocess
 import threading
 import queue
 import time
+import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
@@ -31,6 +32,54 @@ def get_microc_path():
     server_dir = Path(__file__).parent
     microc_path = server_dir.parent.parent / "microc-2.0" / "run_microc.py"
     return microc_path
+
+
+def setup_results_directories(workflow_data, microc_dir):
+    """
+    Setup nested results directory structure according to v2.0 spec.
+
+    Creates:
+    - results/composers/<name>/ for each composer
+    - results/subworkflows/<name>/ for each subworkflow
+
+    Clears existing results to implement overwrite semantics.
+
+    Args:
+        workflow_data: Workflow JSON dict
+        microc_dir: Path to microc-2.0 directory
+    """
+    results_dir = microc_dir / "results"
+
+    # Get subworkflow kinds from metadata
+    subworkflow_kinds = workflow_data.get('metadata', {}).get('gui', {}).get('subworkflow_kinds', {})
+
+    # Create base directories
+    composers_dir = results_dir / "composers"
+    subworkflows_dir = results_dir / "subworkflows"
+
+    # Clear existing results (overwrite semantics)
+    if composers_dir.exists():
+        shutil.rmtree(composers_dir)
+        log_queue.put("[INFO] Cleared existing composer results\n")
+
+    if subworkflows_dir.exists():
+        shutil.rmtree(subworkflows_dir)
+        log_queue.put("[INFO] Cleared existing subworkflow results\n")
+
+    # Create directories for each subworkflow based on its kind
+    for subworkflow_name, subworkflow_data in workflow_data.get('subworkflows', {}).items():
+        kind = subworkflow_kinds.get(subworkflow_name,
+                                     'composer' if subworkflow_name == 'main' else 'subworkflow')
+
+        if kind == 'composer':
+            subworkflow_dir = composers_dir / subworkflow_name
+        else:
+            subworkflow_dir = subworkflows_dir / subworkflow_name
+
+        subworkflow_dir.mkdir(parents=True, exist_ok=True)
+        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(microc_dir)}\n")
+
+    log_queue.put(f"[INFO] Results directory structure ready\n")
 
 
 def stream_output(process, log_queue):
@@ -181,6 +230,14 @@ def run_simulation():
         error_msg = f'Workflow validation error: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 400
+
+    # Setup nested results directory structure (v2.0 spec)
+    try:
+        setup_results_directories(workflow_data, microc_dir)
+    except Exception as e:
+        error_msg = f'Failed to setup results directories: {str(e)}'
+        log_queue.put(f"[ERROR] {error_msg}\n")
+        return jsonify({'error': error_msg}), 500
 
     # Save workflow to temporary file
     workflow_path = "/tmp/microc_workflow.json"
@@ -704,66 +761,58 @@ def upload_function_file():
 
 @app.route('/api/results/list', methods=['GET'])
 def list_results():
-    """List all simulation result folders with their plots."""
+    """
+    List results for a specific subworkflow (v2.0 nested structure).
+
+    Query params:
+        subworkflow_name: Name of the subworkflow
+        subworkflow_kind: 'composer' or 'subworkflow'
+    """
     try:
         server_dir = Path(__file__).parent
         results_dir = server_dir.parent.parent / "microc-2.0" / "results"
 
+        # Get query parameters
+        subworkflow_name = request.args.get('subworkflow_name', 'main')
+        subworkflow_kind = request.args.get('subworkflow_kind', 'composer')
+
         if not results_dir.exists():
-            return jsonify({'success': True, 'results': []})
+            return jsonify({'success': True, 'plots': []})
 
-        results = []
+        # Determine the subworkflow results directory
+        kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
+        subworkflow_dir = results_dir / kind_plural / subworkflow_name
 
-        # Iterate through all result folders (sorted by timestamp, newest first)
-        for result_folder in sorted(results_dir.iterdir(), reverse=True):
-            if not result_folder.is_dir():
-                continue
+        if not subworkflow_dir.exists():
+            return jsonify({'success': True, 'plots': []})
 
-            # Skip hidden folders and non-timestamped folders
-            if result_folder.name.startswith('.'):
-                continue
+        plots = []
 
-            # Check if this folder has a plots/ subdirectory
-            plots_dir = result_folder / "plots"
+        # Scan for all image files in the subworkflow directory
+        # Support nested categories (debug/, analysis/, etc.)
+        for category_dir in subworkflow_dir.iterdir():
+            if category_dir.is_dir():
+                # Scan category subdirectory
+                for plot_file in sorted(category_dir.glob('*.png')):
+                    plots.append({
+                        'name': plot_file.name,
+                        'path': str(plot_file.relative_to(results_dir.parent)),
+                        'category': category_dir.name
+                    })
+            elif category_dir.suffix == '.png':
+                # Direct PNG file in subworkflow directory
+                plots.append({
+                    'name': category_dir.name,
+                    'path': str(category_dir.relative_to(results_dir.parent)),
+                    'category': 'default'
+                })
 
-            if plots_dir.exists():
-                result_info = {
-                    'name': result_folder.name,
-                    'path': str(result_folder.relative_to(results_dir.parent)),
-                    'timestamp': result_folder.name,
-                    'plots': []
-                }
-
-                # Scan for plots (both in subdirectories and directly in plots/)
-                # First check for category subdirectories
-                has_categories = False
-                for category_dir in plots_dir.iterdir():
-                    if category_dir.is_dir():
-                        has_categories = True
-                        category_plots = []
-                        for plot_file in sorted(category_dir.glob('*.png')):
-                            category_plots.append({
-                                'name': plot_file.name,
-                                'path': str(plot_file.relative_to(results_dir.parent)),
-                                'category': category_dir.name
-                            })
-
-                        if category_plots:
-                            result_info['plots'].extend(category_plots)
-
-                # If no category subdirectories, check for plots directly in plots/
-                if not has_categories:
-                    for plot_file in sorted(plots_dir.glob('*.png')):
-                        result_info['plots'].append({
-                            'name': plot_file.name,
-                            'path': str(plot_file.relative_to(results_dir.parent)),
-                            'category': 'plots'
-                        })
-
-                if result_info['plots']:
-                    results.append(result_info)
-
-        return jsonify({'success': True, 'results': results})
+        return jsonify({
+            'success': True,
+            'plots': plots,
+            'subworkflow_name': subworkflow_name,
+            'subworkflow_kind': subworkflow_kind
+        })
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

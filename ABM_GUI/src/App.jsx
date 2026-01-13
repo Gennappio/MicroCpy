@@ -264,7 +264,10 @@ function App() {
               <WorkflowConsole workflowName={currentStage} />
             </div>
             <div className="grid-results">
-              <WorkflowResults workflowName={currentStage} />
+              <WorkflowResults
+                subworkflowName={currentStage}
+                subworkflowKind={workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || (currentStage === 'main' ? 'composer' : 'subworkflow')}
+              />
             </div>
           </div>
 

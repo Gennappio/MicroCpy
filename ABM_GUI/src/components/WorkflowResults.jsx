@@ -5,10 +5,9 @@ import './WorkflowResults.css';
 const API_BASE_URL = 'http://localhost:5001';
 
 /**
- * WorkflowResults - Per-workflow results viewer with integrated dropdown
+ * WorkflowResults - Per-subworkflow results viewer (v2.0 nested structure)
  */
-function WorkflowResults({ workflowName }) {
-  const [results, setResults] = useState([]);
+function WorkflowResults({ subworkflowName, subworkflowKind }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedPlot, setSelectedPlot] = useState(null);
@@ -16,40 +15,26 @@ function WorkflowResults({ workflowName }) {
 
   useEffect(() => {
     loadResults();
-  }, [workflowName]);
+  }, [subworkflowName, subworkflowKind]);
 
   const loadResults = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/results/list`);
+      // Fetch results for this specific subworkflow (v2.0 nested structure)
+      const res = await fetch(
+        `${API_BASE_URL}/api/results/list?subworkflow_name=${encodeURIComponent(subworkflowName)}&subworkflow_kind=${encodeURIComponent(subworkflowKind)}`
+      );
       const data = await res.json();
-      
+
       if (data.success) {
-        setResults(data.results);
-        
-        // Filter plots for this workflow
-        const workflowResults = data.results.filter(r => 
-          r.name.includes(workflowName) || r.name === workflowName
-        );
-        
-        // Collect all plots from workflow results
-        const plots = [];
-        workflowResults.forEach(result => {
-          result.plots.forEach(plot => {
-            plots.push({
-              ...plot,
-              resultName: result.name,
-              timestamp: result.timestamp
-            });
-          });
-        });
-        
-        setAvailablePlots(plots);
-        
+        setAvailablePlots(data.plots || []);
+
         // Auto-select the first plot
-        if (plots.length > 0) {
-          setSelectedPlot(plots[0]);
+        if (data.plots && data.plots.length > 0) {
+          setSelectedPlot(data.plots[0]);
+        } else {
+          setSelectedPlot(null);
         }
       } else {
         setError(data.error || 'Failed to load results');
