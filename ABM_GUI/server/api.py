@@ -12,6 +12,8 @@ import threading
 import queue
 import time
 import shutil
+import ast
+import inspect
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
@@ -833,6 +835,98 @@ def get_plot(plot_path):
             return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
         return send_file(full_path, mimetype='image/png')
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/library/parse', methods=['POST'])
+def parse_library():
+    """
+    Parse a Python library file and extract function definitions.
+
+    Phase 5: Function Libraries
+
+    Returns:
+        {
+            'success': True,
+            'functions': [
+                {
+                    'name': 'function_name',
+                    'signature': 'def function_name(context, **kwargs)',
+                    'docstring': 'Function description',
+                    'category': 'utility'  # extracted from decorator or default
+                }
+            ],
+            'library_name': 'filename.py'
+        }
+    """
+    try:
+        data = request.json
+        library_path = data.get('library_path')
+
+        if not library_path:
+            return jsonify({'success': False, 'error': 'No library path provided'}), 400
+
+        library_file = Path(library_path)
+
+        if not library_file.exists():
+            return jsonify({'success': False, 'error': f'Library file not found: {library_path}'}), 404
+
+        if library_file.suffix != '.py':
+            return jsonify({'success': False, 'error': 'Library must be a .py file'}), 400
+
+        # Parse the Python file
+        with open(library_file, 'r') as f:
+            source_code = f.read()
+
+        try:
+            tree = ast.parse(source_code)
+        except SyntaxError as e:
+            return jsonify({'success': False, 'error': f'Syntax error in library: {str(e)}'}), 400
+
+        functions = []
+
+        # Extract function definitions
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                # Get function name
+                func_name = node.name
+
+                # Skip private functions
+                if func_name.startswith('_'):
+                    continue
+
+                # Get function signature
+                args = [arg.arg for arg in node.args.args]
+                signature = f"def {func_name}({', '.join(args)})"
+
+                # Get docstring
+                docstring = ast.get_docstring(node) or ''
+
+                # Try to extract category from decorator
+                category = 'utility'  # default
+                for decorator in node.decorator_list:
+                    if isinstance(decorator, ast.Call):
+                        if hasattr(decorator.func, 'id') and decorator.func.id == 'workflow_function':
+                            # Look for category argument
+                            for keyword in decorator.keywords:
+                                if keyword.arg == 'category':
+                                    if isinstance(keyword.value, ast.Constant):
+                                        category = keyword.value.value
+
+                functions.append({
+                    'name': func_name,
+                    'signature': signature,
+                    'docstring': docstring.split('\n')[0] if docstring else '',  # First line only
+                    'category': category
+                })
+
+        return jsonify({
+            'success': True,
+            'functions': functions,
+            'library_name': library_file.name
+        })
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

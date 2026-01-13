@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Database, Zap } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronRight, Database, Zap, Upload } from 'lucide-react';
 import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
+import LibraryConflictDialog from './LibraryConflictDialog';
 import './FunctionPalette.css';
 
 /**
@@ -9,7 +10,9 @@ import './FunctionPalette.css';
  */
 const FunctionPalette = ({ currentStage }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
+  const addFunctionLibrary = useWorkflowStore((state) => state.addFunctionLibrary);
   const [functionsByCategory, setFunctionsByCategory] = useState({});
+  const [libraryFunctions, setLibraryFunctions] = useState({});  // Functions from imported libraries
   const [isLoading, setIsLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState({
     [FunctionCategory.INITIALIZATION]: true,
@@ -18,7 +21,10 @@ const FunctionPalette = ({ currentStage }) => {
     [FunctionCategory.INTERCELLULAR]: true,
     [FunctionCategory.FINALIZATION]: true,
     'subworkflows': true,
+    'libraries': true,
   });
+  const [conflictDialog, setConflictDialog] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Load registry on mount and when stage changes
   useEffect(() => {
@@ -116,10 +122,128 @@ const FunctionPalette = ({ currentStage }) => {
       ]
     : [currentStage];
 
+  // Handle library import
+  const handleImportLibrary = async () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Parse the library file
+      const response = await fetch('http://localhost:5001/api/library/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ library_path: file.path || file.name })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        alert(`Error parsing library: ${data.error}`);
+        return;
+      }
+
+      // Check for conflicts with existing functions
+      const allExistingFunctions = new Set();
+      Object.values(functionsByCategory).forEach(funcs => {
+        funcs.forEach(f => allExistingFunctions.add(f.name));
+      });
+      Object.values(libraryFunctions).forEach(funcs => {
+        funcs.forEach(f => allExistingFunctions.add(f.name));
+      });
+
+      const conflicts = data.functions.filter(f => allExistingFunctions.has(f.name));
+
+      if (conflicts.length > 0) {
+        // Show conflict resolution dialog
+        setConflictDialog({
+          conflicts: conflicts.map(f => ({
+            functionName: f.name,
+            existingSource: 'Built-in'  // TODO: track actual source
+          })),
+          libraryName: data.library_name,
+          libraryPath: file.path || file.name,
+          allFunctions: data.functions
+        });
+      } else {
+        // No conflicts, add all functions
+        const functionMappings = {};
+        data.functions.forEach(f => {
+          functionMappings[f.name] = 'add';
+        });
+        addFunctionLibrary(file.path || file.name, functionMappings);
+
+        // Add to library functions display
+        setLibraryFunctions(prev => ({
+          ...prev,
+          [data.library_name]: data.functions
+        }));
+      }
+    } catch (error) {
+      console.error('Error importing library:', error);
+      alert(`Error importing library: ${error.message}`);
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const handleConflictResolution = (resolutions) => {
+    const { libraryPath, libraryName, allFunctions } = conflictDialog;
+
+    // Build function mappings based on resolutions
+    const functionMappings = {};
+    allFunctions.forEach(func => {
+      const resolution = resolutions[func.name] || 'add';
+      if (resolution !== 'skip') {
+        functionMappings[func.name] = resolution;
+      }
+    });
+
+    // Add library to workflow
+    addFunctionLibrary(libraryPath, functionMappings);
+
+    // Update library functions display
+    const functionsToAdd = allFunctions.filter(f => {
+      const resolution = resolutions[f.name] || 'add';
+      return resolution !== 'skip';
+    }).map(f => ({
+      ...f,
+      variant: resolutions[f.name] === 'variant' ? libraryName : null,
+      function_file: resolutions[f.name] === 'variant' ? libraryPath : null
+    }));
+
+    setLibraryFunctions(prev => ({
+      ...prev,
+      [libraryName]: functionsToAdd
+    }));
+
+    setConflictDialog(null);
+  };
+
   return (
     <div className="function-palette">
       <div className="palette-header">
         <h3>Function Library</h3>
+        {workflow.version === '2.0' && (
+          <button
+            className="import-library-btn"
+            onClick={handleImportLibrary}
+            title="Import Function Library"
+          >
+            <Upload size={16} />
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".py"
+          style={{ display: 'none' }}
+          onChange={handleFileSelected}
+        />
       </div>
 
       <div className="palette-content">
@@ -270,6 +394,59 @@ const FunctionPalette = ({ currentStage }) => {
             </div>
           );
         })}
+
+        {/* Imported Libraries Section (v2.0 only) */}
+        {workflow.version === '2.0' && Object.keys(libraryFunctions).length > 0 && (
+          <div className="palette-category">
+            <div
+              className="category-header"
+              onClick={() => toggleCategory('libraries')}
+            >
+              {expandedCategories['libraries'] ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+              <span>Imported Libraries</span>
+              <span className="category-count">
+                {Object.values(libraryFunctions).reduce((sum, funcs) => sum + funcs.length, 0)}
+              </span>
+            </div>
+
+            {expandedCategories['libraries'] && (
+              <div className="category-content">
+                {Object.entries(libraryFunctions).map(([libraryName, functions]) => (
+                  <div key={libraryName} className="library-group">
+                    <div className="library-group-header">{libraryName}</div>
+                    {functions.map((func) => (
+                      <div
+                        key={`${libraryName}-${func.name}`}
+                        className="function-item"
+                        draggable
+                        onDragStart={(e) => onDragStart(e, {
+                          type: 'function',
+                          name: func.name,
+                          category: func.category,
+                          function_file: func.function_file || null,
+                          label: func.variant ? `${func.name} (${func.variant})` : func.name
+                        })}
+                      >
+                        <Zap size={14} />
+                        <div className="function-info">
+                          <div className="function-name">
+                            {func.name}
+                            {func.variant && <span className="variant-suffix"> ({func.variant})</span>}
+                          </div>
+                          <div className="function-desc">{func.docstring || 'No description'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="palette-footer">
@@ -277,6 +454,16 @@ const FunctionPalette = ({ currentStage }) => {
           💡 Drag functions to the canvas and customize from node settings
         </div>
       </div>
+
+      {/* Conflict Resolution Dialog */}
+      {conflictDialog && (
+        <LibraryConflictDialog
+          conflicts={conflictDialog.conflicts}
+          libraryName={conflictDialog.libraryName}
+          onResolve={handleConflictResolution}
+          onCancel={() => setConflictDialog(null)}
+        />
+      )}
     </div>
   );
 };

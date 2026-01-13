@@ -10,6 +10,10 @@
 .palette-header {
   padding: 16px;
   border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .palette-header h3 {
@@ -17,6 +21,26 @@
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
+  flex: 1;
+}
+
+.import-library-btn {
+  padding: 6px 10px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.import-library-btn:hover {
+  background: #2563eb;
 }
 
 .palette-content {
@@ -189,6 +213,27 @@
   font-size: 11px;
   color: #6b7280;
   text-align: center;
+}
+
+/* Library Group Styles */
+.library-group {
+  margin-bottom: 12px;
+}
+
+.library-group-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.variant-suffix {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: normal;
 }
 
 /* Sub-workflow Item Styles */

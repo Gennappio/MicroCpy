@@ -18,7 +18,10 @@ const useWorkflowStore = create((set, get) => ({
         // Subworkflow kind classification: 'composer' | 'subworkflow'
         subworkflow_kinds: {
           main: 'composer'  // main is always a composer
-        }
+        },
+        // Function libraries (Phase 5)
+        // Array of library objects: { path: string, functions: { [funcName]: 'overwrite' | 'variant' } }
+        function_libraries: []
       }
     },
     // V2.0 sub-workflows
@@ -905,6 +908,81 @@ const useWorkflowStore = create((set, get) => ({
         main: []
       },
     }),
+
+  // Phase 5: Function Library Management
+
+  /**
+   * Add a function library to the workflow
+   * @param {string} libraryPath - Path to the library file
+   * @param {Object} functionMappings - Map of function names to resolution mode ('overwrite' | 'variant' | 'skip')
+   */
+  addFunctionLibrary: (libraryPath, functionMappings) => {
+    set((state) => {
+      const libraries = state.workflow.metadata.gui.function_libraries || [];
+
+      // Check if library already exists
+      const existingIndex = libraries.findIndex(lib => lib.path === libraryPath);
+
+      if (existingIndex >= 0) {
+        // Update existing library
+        libraries[existingIndex] = {
+          path: libraryPath,
+          functions: functionMappings
+        };
+      } else {
+        // Add new library
+        libraries.push({
+          path: libraryPath,
+          functions: functionMappings
+        });
+      }
+
+      return {
+        workflow: {
+          ...state.workflow,
+          metadata: {
+            ...state.workflow.metadata,
+            gui: {
+              ...state.workflow.metadata.gui,
+              function_libraries: libraries
+            }
+          }
+        }
+      };
+    });
+  },
+
+  /**
+   * Remove a function library from the workflow
+   * @param {string} libraryPath - Path to the library file
+   */
+  removeFunctionLibrary: (libraryPath) => {
+    set((state) => {
+      const libraries = state.workflow.metadata.gui.function_libraries || [];
+
+      return {
+        workflow: {
+          ...state.workflow,
+          metadata: {
+            ...state.workflow.metadata,
+            gui: {
+              ...state.workflow.metadata.gui,
+              function_libraries: libraries.filter(lib => lib.path !== libraryPath)
+            }
+          }
+        }
+      };
+    });
+  },
+
+  /**
+   * Get all imported function libraries
+   * @returns {Array} Array of library objects
+   */
+  getFunctionLibraries: () => {
+    const state = get();
+    return state.workflow.metadata?.gui?.function_libraries || [];
+  },
 }));
 
 export default useWorkflowStore;
