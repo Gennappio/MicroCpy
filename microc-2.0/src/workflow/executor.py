@@ -516,18 +516,22 @@ class WorkflowExecutor:
         """
         return self.call_stack.copy()
 
-    def execute_main(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_main(self, context: Dict[str, Any], entry_subworkflow: str = "main") -> Dict[str, Any]:
         """
         Execute the main workflow (for version 2.0 sub-workflow system).
 
         Args:
             context: Initial execution context
+            entry_subworkflow: Name of the subworkflow to start from (default: "main").
+                              Section 9.2: Allows running from any composer as entry point.
 
         Returns:
-            Updated context after executing main workflow
+            Updated context after executing workflow
         """
         if self.workflow.version == "2.0":
-            return self.execute_subworkflow("main", context)
+            # Section 9.2: Support arbitrary entry point for composers
+            print(f"[WORKFLOW] Starting execution from entry subworkflow: {entry_subworkflow}")
+            return self.execute_subworkflow(entry_subworkflow, context)
         else:
             # For version 1.0, execute initialization as the entry point
             return self.execute_initialization(context)

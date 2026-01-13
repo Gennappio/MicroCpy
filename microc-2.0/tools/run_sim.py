@@ -119,6 +119,14 @@ Examples:
     )
 
     parser.add_argument(
+        '--entry-subworkflow',
+        type=str,
+        metavar='SUBWORKFLOW_NAME',
+        default='main',
+        help='Entry point subworkflow for v2.0 workflows (default: main). Section 9.2 spec.'
+    )
+
+    parser.add_argument(
         '--verbose',
         action='store_true',
         help='Enable verbose output'
@@ -1288,11 +1296,26 @@ def run_workflow_mode(args):
     # Execute workflow stages
     try:
         print(f"[WORKFLOW] Running workflow: {workflow.name}")
+        print(f"[WORKFLOW] Workflow version: {workflow.version}")
 
         # Start with context containing workflow file path (for resolving relative paths)
         context = {
             'workflow_file': str(workflow_path.absolute())
         }
+
+        # Section 9.2: For v2.0 workflows with subworkflows, use execute_main with entry point
+        if workflow.version == "2.0" and hasattr(workflow, 'subworkflows') and workflow.subworkflows:
+            entry_subworkflow = getattr(args, 'entry_subworkflow', 'main')
+            print(f"[WORKFLOW] v2.0 subworkflow system detected")
+            print(f"[WORKFLOW] Entry subworkflow: {entry_subworkflow}")
+
+            # Execute from entry point (Section 9.2)
+            context = executor.execute_main(context, entry_subworkflow=entry_subworkflow)
+            print(f"[WORKFLOW] Workflow completed successfully!")
+            return
+
+        # --- Legacy v1.0 or v2.0 without subworkflows: use stage-based execution ---
+        print(f"[WORKFLOW] Using legacy stage-based execution")
 
         # --- Initialization (optional) ---
         init_stage = workflow.get_stage("initialization")

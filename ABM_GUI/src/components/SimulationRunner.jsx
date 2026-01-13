@@ -135,13 +135,14 @@ const SimulationRunner = () => {
 
       addLog('info', '📋 Exporting workflow...');
 
-      // Prepare request body
+      // Prepare request body (Section 9.2: include entry_subworkflow)
       const requestBody = {
         workflow: workflow,
+        entry_subworkflow: 'main'  // SimulationRunner always runs from 'main'
       };
 
       // Always run in workflow-only mode from the GUI
-      addLog('info', '🚀 Starting workflow execution');
+      addLog('info', '🚀 Starting workflow execution from main');
 
       // Start simulation
       const response = await fetch(`${API_BASE_URL}/run`, {

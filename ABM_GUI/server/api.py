@@ -124,7 +124,7 @@ def stream_output(process, log_queue):
     is_running = False
 
 
-def run_simulation_async(workflow_path):
+def run_simulation_async(workflow_path, entry_subworkflow=None):
     """Run MicroC workflow in background thread (workflow-only mode)"""
     global simulation_process, is_running
 
@@ -152,7 +152,12 @@ def run_simulation_async(workflow_path):
             workflow_path,
         ]
 
-        log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
+        # Add entry_subworkflow parameter if specified (Section 9.2)
+        if entry_subworkflow:
+            cmd.extend(["--entry-subworkflow", entry_subworkflow])
+            log_queue.put(f"[START] Running workflow from entry point: {entry_subworkflow}\n")
+        else:
+            log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
 
         log_queue.put(f"[INFO] Command: {' '.join(cmd)}\n")
         log_queue.put(f"[INFO] Working directory: {microc_dir}\n")
@@ -188,7 +193,7 @@ def get_status():
 
 @app.route('/api/run', methods=['POST'])
 def run_simulation():
-    """Start a new simulation"""
+    """Start a new simulation (Section 9.2: supports entry_subworkflow parameter)"""
     global simulation_thread, is_running
 
     if is_running:
@@ -196,6 +201,7 @@ def run_simulation():
 
     data = request.json
     workflow_data = data.get('workflow')   # Workflow definition is required
+    entry_subworkflow = data.get('entry_subworkflow', 'main')  # Default to 'main'
 
     # Must have a workflow definition
     if not workflow_data:
@@ -233,6 +239,28 @@ def run_simulation():
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 400
 
+    # Validate entry_subworkflow (Section 9.2)
+    if workflow_data.get('version') == '2.0':
+        subworkflows = workflow_data.get('subworkflows', {})
+
+        # Check if entry_subworkflow exists
+        if entry_subworkflow not in subworkflows:
+            error_msg = f'Entry subworkflow "{entry_subworkflow}" not found in workflow'
+            log_queue.put(f"[ERROR] {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+
+        # Check if entry_subworkflow is a composer (Section 9.2)
+        metadata = workflow_data.get('metadata', {})
+        gui_metadata = metadata.get('gui', {})
+        subworkflow_kinds = gui_metadata.get('subworkflow_kinds', {})
+
+        if subworkflow_kinds.get(entry_subworkflow) != 'composer':
+            error_msg = f'Entry subworkflow "{entry_subworkflow}" must be a composer (found: {subworkflow_kinds.get(entry_subworkflow)})'
+            log_queue.put(f"[ERROR] {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+
+        log_queue.put(f"[INFO] Entry subworkflow: {entry_subworkflow} (composer)\n")
+
     # Setup nested results directory structure (v2.0 spec)
     try:
         setup_results_directories(workflow_data, microc_dir)
@@ -257,14 +285,15 @@ def run_simulation():
     is_running = True
     simulation_thread = threading.Thread(
         target=run_simulation_async,
-        args=(workflow_path,)
+        args=(workflow_path, entry_subworkflow)  # Pass entry_subworkflow
     )
     simulation_thread.daemon = True
     simulation_thread.start()
 
     return jsonify({
         'status': 'started',
-        'workflow': workflow_path
+        'workflow': workflow_path,
+        'entry_subworkflow': entry_subworkflow
     })
 
 

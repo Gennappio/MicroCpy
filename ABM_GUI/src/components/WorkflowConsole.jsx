@@ -102,65 +102,25 @@ const WorkflowConsole = ({ workflowName }) => {
     try {
       const fullWorkflow = exportWorkflow();
 
-      // Create a modified workflow that runs the active subworkflow as "main"
+      // Section 9.2: Send full workflow with entry_subworkflow parameter
+      // No need to rename or modify the workflow structure
       const activeSubworkflow = fullWorkflow.subworkflows[workflowName];
 
       if (!activeSubworkflow) {
         throw new Error(`Subworkflow '${workflowName}' not found`);
       }
 
-      // Collect all subworkflows that are called by the active workflow (recursively)
-      const collectCalledSubworkflows = (subworkflowName, collected = new Set()) => {
-        if (collected.has(subworkflowName)) return collected;
-
-        const subworkflow = fullWorkflow.subworkflows[subworkflowName];
-        if (!subworkflow) return collected;
-
-        collected.add(subworkflowName);
-
-        // Find all subworkflow calls in this subworkflow
-        if (subworkflow.subworkflow_calls) {
-          subworkflow.subworkflow_calls.forEach(call => {
-            if (call.subworkflow_name && call.subworkflow_name !== subworkflowName) {
-              collectCalledSubworkflows(call.subworkflow_name, collected);
-            }
-          });
-        }
-
-        return collected;
-      };
-
-      const neededSubworkflows = collectCalledSubworkflows(workflowName);
-
-      // Build the minimal workflow with only needed subworkflows
-      const minimalSubworkflows = {};
-      neededSubworkflows.forEach(name => {
-        if (name === workflowName) {
-          // The active workflow becomes "main"
-          minimalSubworkflows.main = {
-            ...fullWorkflow.subworkflows[name],
-            description: `Running ${workflowName}: ${fullWorkflow.subworkflows[name].description || ''}`
-          };
-        } else {
-          // Keep other called subworkflows with their original names
-          minimalSubworkflows[name] = fullWorkflow.subworkflows[name];
-        }
-      });
-
-      const singleWorkflow = {
-        ...fullWorkflow,
-        name: `${fullWorkflow.name} - ${workflowName}`,
-        subworkflows: minimalSubworkflows
-      };
-
-      addLog(workflowName, 'info', `🚀 Running workflow: ${workflowName}`);
+      addLog(workflowName, 'info', `🚀 Running workflow from entry point: ${workflowName}`);
 
       const response = await fetch(`${API_BASE_URL}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ workflow: singleWorkflow }),
+        body: JSON.stringify({
+          workflow: fullWorkflow,  // Send full workflow unchanged
+          entry_subworkflow: workflowName  // Specify entry point (Section 9.2)
+        }),
       });
 
       if (!response.ok) {
