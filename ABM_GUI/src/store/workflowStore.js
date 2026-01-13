@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { validateWorkflow } from '../utils/workflowValidation';
 
 /**
  * Workflow Store - Manages the entire workflow state
@@ -60,6 +61,9 @@ const useWorkflowStore = create((set, get) => ({
   // Simulation logs (persistent across tab changes)
   simulationLogs: [],
 
+  // Per-workflow logs (for integrated console)
+  workflowLogs: {},
+
   // Call stack logs (for sub-workflow debugging)
   callStackLogs: [],
 
@@ -85,6 +89,29 @@ const useWorkflowStore = create((set, get) => ({
   },
 
   clearSimulationLogs: () => set({ simulationLogs: [] }),
+
+  // Per-workflow log actions
+  addWorkflowLog: (workflowName, type, message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    set((state) => ({
+      workflowLogs: {
+        ...state.workflowLogs,
+        [workflowName]: [
+          ...(state.workflowLogs[workflowName] || []),
+          { type, message, timestamp }
+        ]
+      }
+    }));
+  },
+
+  clearWorkflowLogs: (workflowName) => {
+    set((state) => ({
+      workflowLogs: {
+        ...state.workflowLogs,
+        [workflowName]: []
+      }
+    }));
+  },
 
   // Call stack log actions
   addCallStackLog: (entry) => {
@@ -566,32 +593,12 @@ const useWorkflowStore = create((set, get) => ({
     const state = get();
     const { workflow, stageNodes, stageEdges } = state;
 
-    // Validate call hierarchy before export
-    const validationErrors = [];
-    Object.keys(workflow.subworkflows).forEach((subworkflowName) => {
-      const nodes = stageNodes[subworkflowName] || [];
-      const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
-                             (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+    // Comprehensive validation before export
+    const validationResult = validateWorkflow(workflow, stageNodes);
 
-      // Check all subworkflow call nodes
-      const callNodes = nodes.filter(n => n.type === 'subworkflowCall');
-      callNodes.forEach((callNode) => {
-        const targetName = callNode.data.subworkflowName;
-        const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[targetName] ||
-                          (targetName === 'main' ? 'composer' : 'subworkflow');
-
-        // Sub-workflows cannot call composers
-        if (subworkflowKind === 'subworkflow' && targetKind === 'composer') {
-          validationErrors.push(
-            `Invalid call in '${subworkflowName}': Sub-workflows cannot call composers (attempted to call '${targetName}')`
-          );
-        }
-      });
-    });
-
-    if (validationErrors.length > 0) {
-      const errorMessage = 'Call hierarchy validation failed:\n\n' + validationErrors.join('\n');
-      console.error('[EXPORT] Validation errors:', validationErrors);
+    if (!validationResult.valid) {
+      const errorMessage = 'Workflow validation failed:\n\n' + validationResult.errors.join('\n');
+      console.error('[EXPORT] Validation errors:', validationResult.errors);
       alert(errorMessage);
       throw new Error(errorMessage);
     }

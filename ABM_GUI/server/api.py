@@ -150,15 +150,45 @@ def run_simulation():
     if not workflow_data:
         return jsonify({'error': 'Workflow is required'}), 400
 
-    # Save workflow to temporary file if provided
-    workflow_path = None
-    if workflow_data:
-        workflow_path = "/tmp/microc_workflow.json"
-        try:
-            with open(workflow_path, 'w') as f:
-                json.dump(workflow_data, f, indent=2)
-        except Exception as e:
-            return jsonify({'error': f'Failed to save workflow: {e}'}), 500
+    # Validate workflow before running
+    try:
+        # Import workflow schema for validation
+        microc_path = get_microc_path()
+        microc_dir = microc_path.parent
+        sys.path.insert(0, str(microc_dir))
+
+        from src.workflow.schema import Workflow
+
+        # Load and validate workflow
+        workflow_obj = Workflow.from_dict(workflow_data)
+        validation_result = workflow_obj.validate()
+
+        if not validation_result['valid']:
+            error_messages = validation_result['errors']
+            error_text = '\n'.join(error_messages)
+            log_queue.put(f"[ERROR] Workflow validation failed:\n{error_text}\n")
+            return jsonify({
+                'error': 'Workflow validation failed',
+                'details': error_messages
+            }), 400
+
+        # Log warnings if any
+        if validation_result.get('warnings'):
+            for warning in validation_result['warnings']:
+                log_queue.put(f"[WARNING] {warning}\n")
+
+    except Exception as e:
+        error_msg = f'Workflow validation error: {str(e)}'
+        log_queue.put(f"[ERROR] {error_msg}\n")
+        return jsonify({'error': error_msg}), 400
+
+    # Save workflow to temporary file
+    workflow_path = "/tmp/microc_workflow.json"
+    try:
+        with open(workflow_path, 'w') as f:
+            json.dump(workflow_data, f, indent=2)
+    except Exception as e:
+        return jsonify({'error': f'Failed to save workflow: {e}'}), 500
 
     # Clear log queue
     while not log_queue.empty():

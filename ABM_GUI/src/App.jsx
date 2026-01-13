@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, BarChart3, Plus, X, Edit2, Play } from 'lucide-react';
+import { Download, Upload, FileJson, Plus, X, Edit2 } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
-import SimulationRunner from './components/SimulationRunner';
-import ResultsExplorer from './components/ResultsExplorer';
+import WorkflowConsole from './components/WorkflowConsole';
+import WorkflowResults from './components/WorkflowResults';
 import MainTabSelector from './components/MainTabSelector';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
 
-const VIEWS = [
-  { id: 'workflow', label: 'Workflow Designer' },
-  { id: 'run', label: 'Run Simulation', icon: Play },
-  { id: 'results', label: 'Results', icon: BarChart3 },
-];
-
 function App() {
-		  const [currentView, setCurrentView] = useState('workflow');
 		  const {
         currentStage,
         setCurrentStage,
@@ -164,28 +157,11 @@ function App() {
         </div>
       </header>
 
-      {/* View Tabs */}
-      <div className="view-tabs">
-        {VIEWS.map((view) => (
-          <button
-            key={view.id}
-            className={`view-tab ${currentView === view.id ? 'active' : ''}`}
-            onClick={() => setCurrentView(view.id)}
-          >
-            {view.icon && <view.icon size={16} />}
-            {view.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Workflow Designer View */}
-      {currentView === 'workflow' && (
-        <>
-          {/* Main Tab Selector */}
-          <MainTabSelector
-            currentMainTab={currentMainTab}
-            onTabChange={setCurrentMainTab}
-          />
+      {/* Main Tab Selector */}
+      <MainTabSelector
+        currentMainTab={currentMainTab}
+        onTabChange={setCurrentMainTab}
+      />
 
           {/* Stage/Sub-workflow Tabs */}
           <div className="stage-tabs">
@@ -276,13 +252,21 @@ function App() {
             </button>
           </div>
 
-          {/* Main Content */}
-          <div className="app-content">
-            <FunctionPalette currentStage={currentStage} />
-            <WorkflowCanvas key={currentStage} stage={currentStage} />
+          {/* Main Content - 4 Column Grid Layout */}
+          <div className="workflow-grid">
+            <div className="grid-palette">
+              <FunctionPalette currentStage={currentStage} />
+            </div>
+            <div className="grid-canvas">
+              <WorkflowCanvas key={currentStage} stage={currentStage} />
+            </div>
+            <div className="grid-console">
+              <WorkflowConsole workflowName={currentStage} />
+            </div>
+            <div className="grid-results">
+              <WorkflowResults workflowName={currentStage} />
+            </div>
           </div>
-        </>
-      )}
 
       {/* New Composer/Sub-workflow Dialog */}
       {showNewSubWorkflowDialog && (
@@ -315,20 +299,6 @@ function App() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Run Simulation View */}
-      {currentView === 'run' && (
-        <div className="app-content-full">
-          <SimulationRunner />
-        </div>
-      )}
-
-      {/* Results View */}
-      {currentView === 'results' && (
-        <div className="app-content-full">
-          <ResultsExplorer />
         </div>
       )}
 
