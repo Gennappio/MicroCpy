@@ -131,12 +131,31 @@ const FunctionPalette = ({ currentStage }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Phase 6: Get absolute path for library
+    // In Electron: file.path is available
+    // In browser: prompt user for absolute path
+    let libraryPath = file.path;
+    if (!libraryPath) {
+      libraryPath = prompt(
+        `Enter the absolute path to the library file:\n\n` +
+        `File name: ${file.name}\n\n` +
+        `Example: /Users/yourname/projects/libs/${file.name}\n` +
+        `or C:\\Users\\yourname\\projects\\libs\\${file.name}`,
+        ''
+      );
+
+      if (!libraryPath) {
+        alert('Library path is required for proper path handling.');
+        return;
+      }
+    }
+
     try {
       // Parse the library file
       const response = await fetch('http://localhost:5001/api/library/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ library_path: file.path || file.name })
+        body: JSON.stringify({ library_path: libraryPath })
       });
 
       const data = await response.json();
@@ -165,7 +184,7 @@ const FunctionPalette = ({ currentStage }) => {
             existingSource: 'Built-in'  // TODO: track actual source
           })),
           libraryName: data.library_name,
-          libraryPath: file.path || file.name,
+          libraryPath: libraryPath,
           allFunctions: data.functions
         });
       } else {
@@ -174,7 +193,7 @@ const FunctionPalette = ({ currentStage }) => {
         data.functions.forEach(f => {
           functionMappings[f.name] = 'add';
         });
-        addFunctionLibrary(file.path || file.name, functionMappings);
+        addFunctionLibrary(libraryPath, functionMappings);
 
         // Add to library functions display
         setLibraryFunctions(prev => ({

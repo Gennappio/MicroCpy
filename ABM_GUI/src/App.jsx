@@ -18,6 +18,7 @@ function App() {
         workflow,
         loadWorkflow,
         exportWorkflow,
+        setWorkflowFilePath,
         addSubWorkflow,
         deleteSubWorkflow,
         renameSubWorkflow
@@ -61,7 +62,10 @@ function App() {
         reader.onload = (event) => {
           try {
             const workflowData = JSON.parse(event.target.result);
-            loadWorkflow(workflowData);
+            // Pass file path for library path resolution (Phase 6)
+            // Note: file.path is only available in Electron, not in browser
+            const filePath = file.path || null;
+            loadWorkflow(workflowData, filePath);
             alert(`Workflow "${workflowData.name}" loaded successfully!`);
           } catch (error) {
             alert('Error loading workflow: ' + error.message);
@@ -74,6 +78,27 @@ function App() {
   };
 
   const handleExportWorkflow = () => {
+    // Phase 6: Prompt for workflow directory to enable relative path handling
+    // Note: In browser, we can't get the actual save path, so we ask the user
+    let workflowDir = null;
+
+    if (workflow.metadata?.gui?.function_libraries?.length > 0) {
+      workflowDir = prompt(
+        'Enter the directory where you will save this workflow file:\n' +
+        '(This is needed to make library paths relative)\n\n' +
+        'Example: /Users/yourname/projects/workflows\n' +
+        'or C:\\Users\\yourname\\projects\\workflows',
+        ''
+      );
+
+      if (workflowDir) {
+        // Store the workflow file path (directory + filename)
+        const filename = `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+        const fullPath = `${workflowDir}/${filename}`;
+        setWorkflowFilePath(fullPath);
+      }
+    }
+
     const workflowData = exportWorkflow();
     const blob = new Blob([JSON.stringify(workflowData, null, 2)], {
       type: 'application/json',
@@ -84,6 +109,14 @@ function App() {
     a.download = `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    if (workflowDir) {
+      alert(
+        'Workflow exported!\n\n' +
+        'Library paths have been made relative to the workflow directory.\n' +
+        'Make sure to save the file in the directory you specified.'
+      );
+    }
   };
 
   const handleCreateSubWorkflow = () => {

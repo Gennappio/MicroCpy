@@ -2,10 +2,103 @@ import { create } from 'zustand';
 import { validateWorkflow } from '../utils/workflowValidation';
 
 /**
+ * Path utilities for Phase 6: Path Handling
+ */
+const pathUtils = {
+  /**
+   * Make a path relative to a base directory
+   * @param {string} absolutePath - The absolute path to convert
+   * @param {string} basePath - The base directory path
+   * @returns {string} Relative path
+   */
+  makeRelative: (absolutePath, basePath) => {
+    if (!absolutePath || !basePath) return absolutePath;
+
+    // Normalize paths (remove trailing slashes)
+    const normAbsolute = absolutePath.replace(/\\/g, '/').replace(/\/$/, '');
+    const normBase = basePath.replace(/\\/g, '/').replace(/\/$/, '');
+
+    // Split into parts
+    const absoluteParts = normAbsolute.split('/');
+    const baseParts = normBase.split('/');
+
+    // Find common prefix
+    let commonLength = 0;
+    while (
+      commonLength < absoluteParts.length &&
+      commonLength < baseParts.length &&
+      absoluteParts[commonLength] === baseParts[commonLength]
+    ) {
+      commonLength++;
+    }
+
+    // Build relative path
+    const upLevels = baseParts.length - commonLength;
+    const downPath = absoluteParts.slice(commonLength);
+
+    const relativeParts = [];
+    for (let i = 0; i < upLevels; i++) {
+      relativeParts.push('..');
+    }
+    relativeParts.push(...downPath);
+
+    return relativeParts.join('/');
+  },
+
+  /**
+   * Resolve a relative path against a base directory
+   * @param {string} relativePath - The relative path to resolve
+   * @param {string} basePath - The base directory path
+   * @returns {string} Absolute path
+   */
+  resolve: (relativePath, basePath) => {
+    if (!relativePath || !basePath) return relativePath;
+
+    // If path is already absolute, return as-is
+    if (relativePath.startsWith('/') || /^[A-Za-z]:/.test(relativePath)) {
+      return relativePath;
+    }
+
+    // Normalize base path
+    const normBase = basePath.replace(/\\/g, '/').replace(/\/$/, '');
+
+    // Split paths
+    const baseParts = normBase.split('/');
+    const relativeParts = relativePath.split('/');
+
+    // Process relative parts
+    const resultParts = [...baseParts];
+    for (const part of relativeParts) {
+      if (part === '..') {
+        resultParts.pop();
+      } else if (part !== '.' && part !== '') {
+        resultParts.push(part);
+      }
+    }
+
+    return resultParts.join('/');
+  },
+
+  /**
+   * Get directory path from file path
+   * @param {string} filePath - Full file path
+   * @returns {string} Directory path
+   */
+  dirname: (filePath) => {
+    if (!filePath) return '';
+    const normalized = filePath.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    return lastSlash >= 0 ? normalized.substring(0, lastSlash) : '';
+  }
+};
+
+/**
  * Workflow Store - Manages the entire workflow state
  * Compatible with MicroC workflow JSON format
  */
 const useWorkflowStore = create((set, get) => ({
+  // Current workflow file path (for relative path resolution)
+  workflowFilePath: null,
   // Workflow metadata
   workflow: {
     version: '2.0',  // V2-only: no backward compatibility
@@ -383,7 +476,7 @@ const useWorkflowStore = create((set, get) => ({
   },
 
   // Load workflow from JSON - V2-ONLY (no backward compatibility)
-  loadWorkflow: (workflowJson) => {
+  loadWorkflow: (workflowJson, filePath = null) => {
     const version = workflowJson.version;
 
     // Strict v2-only policy
@@ -393,6 +486,21 @@ const useWorkflowStore = create((set, get) => ({
       alert(errorMsg);
       throw new Error(errorMsg);
     }
+
+    // Phase 6: Resolve library paths relative to workflow file
+    if (filePath && workflowJson.metadata?.gui?.function_libraries) {
+      const workflowDir = pathUtils.dirname(filePath);
+      console.log(`[STORE] Resolving library paths relative to: ${workflowDir}`);
+
+      workflowJson.metadata.gui.function_libraries =
+        workflowJson.metadata.gui.function_libraries.map(lib => ({
+          ...lib,
+          path: pathUtils.resolve(lib.path, workflowDir)
+        }));
+    }
+
+    // Store workflow file path for future exports
+    set({ workflowFilePath: filePath });
 
     // Load v2.0 sub-workflow format
     get()._loadWorkflowV2(workflowJson);
@@ -744,13 +852,34 @@ const useWorkflowStore = create((set, get) => ({
       };
     });
 
+    // Phase 6: Make library paths relative to workflow file
+    const exportedMetadata = { ...workflow.metadata };
+    if (state.workflowFilePath && exportedMetadata.gui?.function_libraries) {
+      const workflowDir = pathUtils.dirname(state.workflowFilePath);
+      console.log(`[EXPORT] Making library paths relative to: ${workflowDir}`);
+
+      exportedMetadata.gui.function_libraries =
+        exportedMetadata.gui.function_libraries.map(lib => ({
+          ...lib,
+          path: pathUtils.makeRelative(lib.path, workflowDir)
+        }));
+    }
+
     return {
       version: '2.0',
       name: workflow.name,
       description: workflow.description,
-      metadata: workflow.metadata,
+      metadata: exportedMetadata,
       subworkflows,
     };
+  },
+
+  /**
+   * Set the workflow file path (for relative path resolution)
+   * Phase 6: Path Handling
+   */
+  setWorkflowFilePath: (filePath) => {
+    set({ workflowFilePath: filePath });
   },
 
   // Update nodes for a stage
