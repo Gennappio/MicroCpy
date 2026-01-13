@@ -1,0 +1,153 @@
+{
+  "version": "2.0",
+  "name": "Context Mapping Test Workflow",
+  "description": "Tests context mapping and results passing between subworkflows",
+  "metadata": {
+    "author": "Test Suite",
+    "created": "2026-01-13",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "producer": "subworkflow",
+        "consumer": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - tests context mapping chain",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "node_1",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Start test",
+          "parameters": {
+            "message": "[MAIN] Starting context mapping test"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "node_4",
+          "function_name": "debug_finalization_1",
+          "enabled": true,
+          "description": "Complete",
+          "parameters": {
+            "message": "[MAIN] Context mapping chain completed successfully"
+          },
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "subworkflow_calls": [
+        {
+          "id": "node_2",
+          "subworkflow_name": "producer",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Produce data",
+          "parameters": {
+            "num_steps": 2
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "node_3",
+          "subworkflow_name": "consumer",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Consume data",
+          "parameters": {
+            "num_steps": 1
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 300}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["node_1", "node_2", "node_3", "node_4"],
+      "enabled": true
+    },
+    "producer": {
+      "description": "Produces data to be consumed by other subworkflows",
+      "deletable": true,
+      "controller": {
+        "id": "controller-producer",
+        "label": "PRODUCER CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 2
+      },
+      "functions": [
+        {
+          "id": "node_p1",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Generate data",
+          "parameters": {
+            "message": "[PRODUCER] Generating data"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "node_p2",
+          "function_name": "debug_intracellular_1",
+          "enabled": true,
+          "description": "Process data",
+          "parameters": {
+            "message": "[PRODUCER] Processing data"
+          },
+          "position": {"x": 200, "y": 200}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["node_p1", "node_p2"],
+      "enabled": true
+    },
+    "consumer": {
+      "description": "Consumes data from producer",
+      "deletable": true,
+      "controller": {
+        "id": "controller-consumer",
+        "label": "CONSUMER CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "node_c1",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Receive data",
+          "parameters": {
+            "message": "[CONSUMER] Receiving data"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "node_c2",
+          "function_name": "debug_finalization_1",
+          "enabled": true,
+          "description": "Complete",
+          "parameters": {
+            "message": "[CONSUMER] Data consumption complete"
+          },
+          "position": {"x": 200, "y": 200}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["node_c1", "node_c2"],
+      "enabled": true
+    }
+  }
+}

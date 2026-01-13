@@ -1,0 +1,136 @@
+{
+  "version": "2.0",
+  "name": "Step Parameter Test Workflow",
+  "description": "Tests that num_steps parameter is correctly passed to subworkflows",
+  "metadata": {
+    "author": "Test Suite",
+    "created": "2026-01-13",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "worker": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - tests step parameter passing",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "node_1",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Start test",
+          "parameters": {
+            "message": "[MAIN] Testing step parameter passing"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "node_3",
+          "function_name": "debug_initialization_2",
+          "enabled": true,
+          "description": "After first worker",
+          "parameters": {
+            "message": "[MAIN] Worker with 10 steps completed"
+          },
+          "position": {"x": 200, "y": 300}
+        },
+        {
+          "id": "node_5",
+          "function_name": "debug_finalization_1",
+          "enabled": true,
+          "description": "Test complete",
+          "parameters": {
+            "message": "[MAIN] Worker with 25 steps completed - Test successful!"
+          },
+          "position": {"x": 200, "y": 500}
+        }
+      ],
+      "subworkflow_calls": [
+        {
+          "id": "node_2",
+          "subworkflow_name": "worker",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Run worker with 10 steps",
+          "parameters": {
+            "num_steps": 10
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "node_4",
+          "subworkflow_name": "worker",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Run worker with 25 steps",
+          "parameters": {
+            "num_steps": 25
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["node_1", "node_2", "node_3", "node_4", "node_5"],
+      "enabled": true
+    },
+    "worker": {
+      "description": "Worker subworkflow - runs for specified number of steps",
+      "deletable": true,
+      "controller": {
+        "id": "controller-worker",
+        "label": "WORKER CONTROLLER",
+        "position": {"x": 100, "y": 100},
+        "number_of_steps": 5
+      },
+      "functions": [
+        {
+          "id": "node_w1",
+          "function_name": "debug_intracellular_1",
+          "enabled": true,
+          "description": "Intracellular processing",
+          "parameters": {
+            "message": "[WORKER] Processing intracellular"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "node_w2",
+          "function_name": "debug_microenvironment_1",
+          "enabled": true,
+          "description": "Microenvironment step",
+          "parameters": {
+            "message": "[WORKER] Running microenvironment"
+          },
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "node_w3",
+          "function_name": "debug_intercellular_1",
+          "enabled": true,
+          "description": "Intercellular processing",
+          "parameters": {
+            "message": "[WORKER] Processing intercellular"
+          },
+          "position": {"x": 200, "y": 300}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["node_w1", "node_w2", "node_w3"],
+      "enabled": true
+    }
+  }
+}
