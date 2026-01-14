@@ -5,14 +5,20 @@ import './SubWorkflowCallNode.css';
 
 /**
  * Custom node component for sub-workflow calls
- * Purple color with flash (Zap) icon
+ * Purple color for sub-workflows, orange/gold for composers
  */
 const SubWorkflowCallNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const workflow = useWorkflowStore((state) => state.workflow);
   const edges = useEdges();
   const nodes = useNodes();
 
   const { label, subworkflowName, iterations, enabled, onEdit, description } = data;
+
+  // Determine if this is calling a composer
+  const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
+                    (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+  const isComposerCall = targetKind === 'composer';
 
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
@@ -21,7 +27,7 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`subworkflow-call-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
+      className={`subworkflow-call-node ${isComposerCall ? 'composer-call' : ''} ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
       style={{ width: '350px', padding: '8px', fontSize: '13px' }}
     >
       {/* Function flow handles (top and bottom) */}

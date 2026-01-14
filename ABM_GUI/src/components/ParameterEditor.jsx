@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check } from 'lucide-react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
@@ -14,6 +14,7 @@ const API_BASE_URL = 'http://localhost:5001';
 const ParameterEditor = ({ node, onSave, onClose }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
   const currentStage = useWorkflowStore((state) => state.currentStage);
+  const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
 
   const isParameterNode = node.type === 'parameterNode';
   const isSubWorkflowCall = node.type === 'subworkflowCall';
@@ -204,6 +205,13 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       } catch (_) {}
     }
   }, [showCode, code]);
+
+  const handleGoToWorkflow = () => {
+    if (isSubWorkflowCall && node.data.subworkflowName) {
+      setCurrentStage(node.data.subworkflowName);
+      onClose(); // Close the editor after navigation
+    }
+  };
 
   const handleChange = (paramName, value) => {
     setParameters((prev) => ({
@@ -398,10 +406,16 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
-          {!isParameterNode && (
+          {!isParameterNode && !isSubWorkflowCall && (
             <button className="btn btn-secondary" onClick={handleToggleCode}>
               <Eye size={14} />
               {showCode ? 'Hide Code' : 'View Code'}
+            </button>
+          )}
+          {isSubWorkflowCall && (
+            <button className="btn btn-secondary" onClick={handleGoToWorkflow}>
+              <ExternalLink size={14} />
+              Go to Workflow
             </button>
           )}
           <button className="close-btn" onClick={onClose}>

@@ -21,10 +21,16 @@ const FunctionPalette = ({ currentStage }) => {
     [FunctionCategory.INTERCELLULAR]: true,
     [FunctionCategory.FINALIZATION]: true,
     'subworkflows': true,
+    'composers': true,
     'libraries': true,
   });
   const [conflictDialog, setConflictDialog] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Determine if current stage is a composer
+  const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                     (currentStage === 'main' ? 'composer' : 'subworkflow');
+  const isComposer = currentKind === 'composer';
 
   // Load registry on mount and when stage changes
   useEffect(() => {
@@ -247,7 +253,7 @@ const FunctionPalette = ({ currentStage }) => {
     <div className="function-palette">
       <div className="palette-header">
         <h3>Function Library</h3>
-        {workflow.version === '2.0' && (
+        {workflow.version === '2.0' && !isComposer && (
           <button
             className="import-library-btn"
             onClick={handleImportLibrary}
@@ -285,9 +291,67 @@ const FunctionPalette = ({ currentStage }) => {
           </div>
         </div>
 
+        {/* Composers Section (v2.0 only) */}
+        {workflow.version === '2.0' && (() => {
+          const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                             (currentStage === 'main' ? 'composer' : 'subworkflow');
+
+          const availableComposers = Object.keys(workflow.subworkflows || {}).filter(name => {
+            if (name === currentStage) return false;
+            const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                              (name === 'main' ? 'composer' : 'subworkflow');
+            // Only show composers
+            if (targetKind !== 'composer') return false;
+            // Sub-workflows cannot call composers
+            if (currentKind === 'subworkflow') return false;
+            return true;
+          });
+
+          if (availableComposers.length === 0) return null;
+
+          return (
+            <div className="palette-category">
+              <div
+                className="category-header"
+                onClick={() => toggleCategory('composers')}
+              >
+                {expandedCategories['composers'] ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+                <span>Composers</span>
+                <span className="category-count">
+                  {availableComposers.length}
+                </span>
+              </div>
+
+              {expandedCategories['composers'] && (
+                <div className="category-functions">
+                  {availableComposers.map((composerName) => (
+                    <div
+                      key={composerName}
+                      className="function-item subworkflow-item composer-item"
+                      draggable
+                      onDragStart={(e) => onDragStartSubWorkflow(e, composerName)}
+                    >
+                      <div className="function-item-icon">
+                        <Zap size={14} />
+                      </div>
+                      <div className="function-item-name">{composerName}</div>
+                      <div className="function-item-description">
+                        {workflow.subworkflows[composerName].description || 'Composer call'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Sub-workflows Section (v2.0 only) */}
         {workflow.version === '2.0' && (() => {
-          // Calculate available subworkflows based on call rules
           const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
                              (currentStage === 'main' ? 'composer' : 'subworkflow');
 
@@ -295,9 +359,12 @@ const FunctionPalette = ({ currentStage }) => {
             if (name === currentStage) return false;
             const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
                               (name === 'main' ? 'composer' : 'subworkflow');
-            if (currentKind === 'subworkflow' && targetKind === 'composer') return false;
+            // Only show sub-workflows (not composers)
+            if (targetKind !== 'subworkflow') return false;
             return true;
           });
+
+          if (availableSubworkflows.length === 0) return null;
 
           return (
             <div className="palette-category">
@@ -316,28 +383,9 @@ const FunctionPalette = ({ currentStage }) => {
                 </span>
               </div>
 
-            {expandedCategories['subworkflows'] && (
-              <div className="category-functions">
-                {Object.keys(workflow.subworkflows || {})
-                  .filter(name => {
-                    // Don't show current sub-workflow
-                    if (name === currentStage) return false;
-
-                    // Get the kind of the current stage and the target
-                    const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                                       (currentStage === 'main' ? 'composer' : 'subworkflow');
-                    const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
-                                      (name === 'main' ? 'composer' : 'subworkflow');
-
-                    // Sub-workflows can only call other sub-workflows (not composers)
-                    if (currentKind === 'subworkflow' && targetKind === 'composer') {
-                      return false;
-                    }
-
-                    // Composers can call both composers and sub-workflows
-                    return true;
-                  })
-                  .map((subworkflowName) => (
+              {expandedCategories['subworkflows'] && (
+                <div className="category-functions">
+                  {availableSubworkflows.map((subworkflowName) => (
                     <div
                       key={subworkflowName}
                       className="function-item subworkflow-item"
@@ -353,21 +401,14 @@ const FunctionPalette = ({ currentStage }) => {
                       </div>
                     </div>
                   ))}
-                {availableSubworkflows.length === 0 && (
-                  <div className="no-functions">
-                    {currentKind === 'subworkflow'
-                      ? 'No sub-workflows available (sub-workflows cannot call composers)'
-                      : 'No other sub-workflows available'}
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
             </div>
           );
         })()}
 
-        {/* Standard Functions Categories */}
-        {categoriesToDisplay.map((category) => {
+        {/* Standard Functions Categories - Hidden for composers */}
+        {!isComposer && categoriesToDisplay.map((category) => {
           const functions = functionsByCategory[category] || [];
           return (
             <div key={category} className="palette-category">
@@ -414,8 +455,8 @@ const FunctionPalette = ({ currentStage }) => {
           );
         })}
 
-        {/* Imported Libraries Section (v2.0 only) */}
-        {workflow.version === '2.0' && Object.keys(libraryFunctions).length > 0 && (
+        {/* Imported Libraries Section (v2.0 only) - Hidden for composers */}
+        {workflow.version === '2.0' && !isComposer && Object.keys(libraryFunctions).length > 0 && (
           <div className="palette-category">
             <div
               className="category-header"

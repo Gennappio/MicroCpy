@@ -264,3 +264,26 @@
 .function-item.subworkflow-item .function-item-description {
   color: #8b5cf6;
 }
+
+/* Composer Item Styles - Orange/Gold theme */
+.function-item.composer-item {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+}
+
+.function-item.composer-item:hover {
+  border-color: #f97316;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+.function-item.composer-item .function-item-icon {
+  color: #f97316;
+}
+
+.function-item.composer-item .function-item-name {
+  color: #ea580c;
+}
+
+.function-item.composer-item .function-item-description {
+  color: #f59e0b;
+}

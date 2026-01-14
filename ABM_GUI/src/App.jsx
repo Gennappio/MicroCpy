@@ -285,24 +285,36 @@ function App() {
             </button>
           </div>
 
-          {/* Main Content - 4 Column Grid Layout */}
-          <div className="workflow-grid">
-            <div className="grid-palette">
-              <FunctionPalette currentStage={currentStage} />
-            </div>
-            <div className="grid-canvas">
-              <WorkflowCanvas key={currentStage} stage={currentStage} />
-            </div>
-            <div className="grid-console">
-              <WorkflowConsole workflowName={currentStage} />
-            </div>
-            <div className="grid-results">
-              <WorkflowResults
-                subworkflowName={currentStage}
-                subworkflowKind={workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || (currentStage === 'main' ? 'composer' : 'subworkflow')}
-              />
-            </div>
-          </div>
+          {/* Main Content - Responsive Grid Layout */}
+          {(() => {
+            const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                               (currentStage === 'main' ? 'composer' : 'subworkflow');
+            const isComposer = currentKind === 'composer';
+
+            return (
+              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'}`}>
+                <div className="grid-palette">
+                  <FunctionPalette currentStage={currentStage} />
+                </div>
+                <div className="grid-canvas">
+                  <WorkflowCanvas key={currentStage} stage={currentStage} />
+                </div>
+                {isComposer && (
+                  <>
+                    <div className="grid-console">
+                      <WorkflowConsole workflowName={currentStage} />
+                    </div>
+                    <div className="grid-results">
+                      <WorkflowResults
+                        subworkflowName={currentStage}
+                        subworkflowKind={currentKind}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
       {/* New Composer/Sub-workflow Dialog */}
       {showNewSubWorkflowDialog && (
