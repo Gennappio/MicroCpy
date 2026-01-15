@@ -36,7 +36,7 @@ function App() {
 
   // Project store for context registry
   const {
-    projectLoaded,
+    isProjectLoaded: projectLoaded,
     projectConfig,
     openProject,
     closeProject
@@ -241,8 +241,7 @@ function App() {
           <button
             className={`btn ${showContextRegistry ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setShowContextRegistry(!showContextRegistry)}
-            title={projectLoaded ? 'Toggle Context Registry' : 'Open a project to use Context Registry'}
-            disabled={!projectLoaded}
+            title="Toggle Context Registry"
           >
             <Database size={16} />
             Context Registry
