@@ -130,8 +130,15 @@ def stream_output(process, log_queue):
     is_running = False
 
 
-def run_simulation_async(workflow_path, entry_subworkflow=None):
-    """Run workflow simulation in background thread (workflow-only mode)"""
+def run_simulation_async(workflow_path, entry_subworkflow=None, project_root=None):
+    """
+    Run workflow simulation in background thread (workflow-only mode)
+
+    Args:
+        workflow_path: Path to the workflow JSON file
+        entry_subworkflow: Name of the entry subworkflow (default: main)
+        project_root: Path to the project root directory (REQUIRED for context registry)
+    """
     global simulation_process, is_running
 
     try:
@@ -156,6 +163,11 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             workflow_path,
         ]
 
+        # Add project_root parameter (REQUIRED for context registry)
+        if project_root:
+            cmd.extend(["--project-root", project_root])
+            log_queue.put(f"[INFO] Project root: {project_root}\n")
+
         # Add entry_subworkflow parameter if specified (Section 9.2)
         if entry_subworkflow:
             cmd.extend(["--entry-subworkflow", entry_subworkflow])
@@ -177,10 +189,10 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             universal_newlines=True,
             cwd=str(simulator_dir)  # Set working directory to simulator
         )
-        
+
         # Stream output
         stream_output(simulation_process, log_queue)
-        
+
     except Exception as e:
         log_queue.put(f"[ERROR] Failed to start simulation: {e}\n")
         is_running = False
@@ -197,7 +209,19 @@ def get_status():
 
 @app.route('/api/run', methods=['POST'])
 def run_simulation():
-    """Start a new simulation (Section 9.2: supports entry_subworkflow parameter)"""
+    """
+    Start a new simulation (Section 9.2: supports entry_subworkflow parameter)
+
+    IMPORTANT: Workflow execution requires a context registry.
+    The project_root parameter is REQUIRED to locate and validate the context registry.
+
+    Request body:
+        {
+            'workflow': { ... workflow definition ... },
+            'project_root': '/path/to/project',  # REQUIRED
+            'entry_subworkflow': 'main'  # Optional, defaults to 'main'
+        }
+    """
     global simulation_thread, is_running
 
     if is_running:
@@ -205,23 +229,69 @@ def run_simulation():
 
     data = request.json
     workflow_data = data.get('workflow')   # Workflow definition is required
+    project_root = data.get('project_root')  # Project root is REQUIRED for execution
     entry_subworkflow = data.get('entry_subworkflow', 'main')  # Default to 'main'
 
     # Must have a workflow definition
     if not workflow_data:
         return jsonify({'error': 'Workflow is required'}), 400
 
-    # Validate workflow before running
-    try:
-        # Import workflow schema for validation
-        simulator_dir = get_simulator_dir()
-        sys.path.insert(0, str(simulator_dir))
+    # CONTEXT REGISTRY REQUIREMENT: project_root is required for execution
+    if not project_root:
+        error_msg = (
+            'Project root is required for workflow execution. '
+            'A context registry must be loaded to execute workflows. '
+            'Please open a project first, or provide project_root parameter.'
+        )
+        log_queue.put(f"[ERROR] {error_msg}\n")
+        return jsonify({
+            'error': error_msg,
+            'code': 'CONTEXT_REGISTRY_REQUIRED'
+        }), 400
 
+    # Validate context registry exists
+    simulator_dir = get_simulator_dir()
+    sys.path.insert(0, str(simulator_dir))
+
+    try:
+        registry_path = get_context_registry_path(project_root)
+        if not registry_path.exists():
+            error_msg = (
+                f'Context registry not found at {registry_path}. '
+                f'Cannot execute workflow without a context registry. '
+                f'Please ensure the project has a valid .microc/context_registry.json file.'
+            )
+            log_queue.put(f"[ERROR] {error_msg}\n")
+            return jsonify({
+                'error': error_msg,
+                'code': 'CONTEXT_REGISTRY_NOT_FOUND'
+            }), 400
+
+        # Load context registry for validation
+        with open(registry_path, 'r', encoding='utf-8') as f:
+            context_registry = json.load(f)
+
+        log_queue.put(f"[INFO] Context registry loaded from: {registry_path}\n")
+        log_queue.put(f"[INFO] Registry contains {len(context_registry.get('keys', []))} context keys\n")
+
+    except json.JSONDecodeError as e:
+        error_msg = f'Invalid JSON in context registry: {e}'
+        log_queue.put(f"[ERROR] {error_msg}\n")
+        return jsonify({'error': error_msg, 'code': 'INVALID_REGISTRY'}), 400
+    except Exception as e:
+        error_msg = f'Failed to load context registry: {e}'
+        log_queue.put(f"[ERROR] {error_msg}\n")
+        return jsonify({'error': error_msg}), 500
+
+    # Validate workflow structure before running
+    try:
         from src.workflow.schema import WorkflowDefinition
 
-        # Load and validate workflow
+        # Load and validate workflow structure
         workflow_obj = WorkflowDefinition.from_dict(workflow_data)
-        validation_result = workflow_obj.validate()
+
+        # Perform structural validation (does not require registry)
+        validation_result = workflow_obj.validate_structure()
 
         if not validation_result['valid']:
             error_messages = validation_result['errors']
@@ -232,10 +302,17 @@ def run_simulation():
                 'details': error_messages
             }), 400
 
-        # Log warnings if any
+        # Log structural warnings if any
         if validation_result.get('warnings'):
             for warning in validation_result['warnings']:
                 log_queue.put(f"[WARNING] {warning}\n")
+
+        # Perform semantic validation with context registry
+        semantic_result = workflow_obj.validate_with_registry(context_registry)
+
+        # Log semantic warnings
+        for warning in semantic_result.get('semantic_warnings', []):
+            log_queue.put(f"[WARNING] {warning}\n")
 
     except Exception as e:
         import traceback
@@ -283,6 +360,18 @@ def run_simulation():
     except Exception as e:
         return jsonify({'error': f'Failed to save workflow: {e}'}), 500
 
+    # Save project_root to temporary file for executor to use
+    project_info_path = "/tmp/project_info.json"
+    try:
+        with open(project_info_path, 'w') as f:
+            json.dump({
+                'project_root': project_root,
+                'registry_path': str(registry_path),
+                'enforcement_mode': context_registry.get('enforcement_mode', 'strict')
+            }, f, indent=2)
+    except Exception as e:
+        return jsonify({'error': f'Failed to save project info: {e}'}), 500
+
     # Clear log queue
     while not log_queue.empty():
         log_queue.get()
@@ -291,7 +380,7 @@ def run_simulation():
     is_running = True
     simulation_thread = threading.Thread(
         target=run_simulation_async,
-        args=(workflow_path, entry_subworkflow)  # Pass entry_subworkflow
+        args=(workflow_path, entry_subworkflow, project_root)  # Pass project_root
     )
     simulation_thread.daemon = True
     simulation_thread.start()
@@ -299,7 +388,9 @@ def run_simulation():
     return jsonify({
         'status': 'started',
         'workflow': workflow_path,
-        'entry_subworkflow': entry_subworkflow
+        'entry_subworkflow': entry_subworkflow,
+        'project_root': project_root,
+        'context_registry_loaded': True
     })
 
 

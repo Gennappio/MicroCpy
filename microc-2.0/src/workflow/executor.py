@@ -19,18 +19,42 @@ from .schema import (
     ControllerNode
 )
 from .registry import FunctionRegistry, get_default_registry
-from .validated_context import ValidatedContext, EnforcementMode, wrap_context
+from .validated_context import (
+    ValidatedContext,
+    EnforcementMode,
+    wrap_context,
+    ContextRegistryRequired,
+    load_registry
+)
 
 
 class WorkflowExecutor:
     """
     Executes workflow definitions during simulation.
-    
+
     Maps workflow functions to actual Python implementations and handles
     parameter injection, execution order, and context passing.
+
+    IMPORTANT: Workflow execution requires a context registry. You can:
+    1. Provide a project_root path (will load .microc/context_registry.json)
+    2. Provide a context_registry dict directly
+
+    Without a context registry, the executor will raise ContextRegistryRequired.
+    This ensures that all context keys are validated and type-checked at runtime.
+
+    For structural validation only (without execution), use:
+        workflow.validate_structure()  # Does not require registry
     """
-    
-    def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None):
+
+    def __init__(
+        self,
+        workflow: WorkflowDefinition,
+        custom_functions_module=None,
+        config=None,
+        project_root: Optional[str] = None,
+        context_registry: Optional[Dict] = None,
+        enforcement_mode: str = "strict"
+    ):
         """
         Initialize the workflow executor.
 
@@ -38,19 +62,31 @@ class WorkflowExecutor:
             workflow: WorkflowDefinition to execute
             custom_functions_module: Module containing custom function implementations
             config: Simulation configuration object
+            project_root: Path to project root directory (loads .microc/context_registry.json)
+            context_registry: Context registry dict (alternative to project_root)
+            enforcement_mode: Context enforcement mode ("strict", "warn", "off")
+
+        Raises:
+            ContextRegistryRequired: If neither project_root nor context_registry is provided
+            ValueError: If workflow validation fails
         """
         self.workflow = workflow
         self.custom_functions_module = custom_functions_module
         self.config = config
         self.registry = get_default_registry()
         self.function_cache: Dict[str, Callable] = {}
+        self.enforcement_mode = EnforcementMode(enforcement_mode.lower())
 
         # Call stack tracking for sub-workflows
         self.call_stack: List[Dict[str, Any]] = []
         self.max_call_depth = 100  # Prevent stack overflow
 
-        # Validate workflow
-        validation_result = workflow.validate()
+        # Load context registry (REQUIRED for execution)
+        self.context_registry = self._load_context_registry(project_root, context_registry)
+        self.project_root = project_root
+
+        # Validate workflow structure (does not require registry)
+        validation_result = workflow.validate_structure()
         if not validation_result['valid']:
             error_msg = "Invalid workflow:\n"
             error_msg += "\n".join(f"  ERROR: {e}" for e in validation_result['errors'])
@@ -58,6 +94,63 @@ class WorkflowExecutor:
                 error_msg += "\n\nWarnings:\n"
                 error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
             raise ValueError(error_msg)
+
+    def _load_context_registry(
+        self,
+        project_root: Optional[str],
+        context_registry: Optional[Dict]
+    ) -> Dict:
+        """
+        Load context registry from project_root or use provided registry.
+
+        Args:
+            project_root: Path to project root directory
+            context_registry: Pre-loaded context registry dict
+
+        Returns:
+            Context registry dict
+
+        Raises:
+            ContextRegistryRequired: If no registry is available
+        """
+        if context_registry is not None:
+            return context_registry
+
+        if project_root is not None:
+            registry_path = Path(project_root) / ".microc" / "context_registry.json"
+            registry = load_registry(str(registry_path))
+            if registry is not None:
+                return registry
+            else:
+                raise ContextRegistryRequired(
+                    f"Context registry not found at {registry_path}. "
+                    f"Please ensure the project has a valid .microc/context_registry.json file."
+                )
+
+        # Neither project_root nor context_registry provided
+        raise ContextRegistryRequired(
+            "Workflow execution requires a context registry. "
+            "Please provide either:\n"
+            "  1. project_root: Path to project directory (will load .microc/context_registry.json)\n"
+            "  2. context_registry: Pre-loaded context registry dict\n\n"
+            "To validate a workflow without executing it, use workflow.validate_structure() instead."
+        )
+
+    def create_validated_context(self, initial_data: Optional[Dict[str, Any]] = None) -> ValidatedContext:
+        """
+        Create a ValidatedContext using the loaded context registry.
+
+        Args:
+            initial_data: Initial context data (optional)
+
+        Returns:
+            ValidatedContext instance with the loaded registry
+        """
+        return ValidatedContext(
+            data=initial_data or {},
+            registry=self.context_registry,
+            mode=self.enforcement_mode
+        )
     
     def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
         """

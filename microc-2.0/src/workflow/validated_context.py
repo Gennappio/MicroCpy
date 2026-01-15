@@ -42,6 +42,23 @@ class ContextViolation(Exception):
     pass
 
 
+class ContextRegistryRequired(Exception):
+    """
+    Exception raised when workflow execution is attempted without a context registry.
+
+    Workflows can be loaded and structurally validated without a context registry,
+    but execution requires a context registry to be loaded. This ensures that:
+    1. All context keys are known and validated
+    2. Type checking is enforced
+    3. Write/delete policies are respected
+
+    To fix this error:
+    1. Open a project (which loads the context registry)
+    2. Or explicitly provide a context registry when creating the executor
+    """
+    pass
+
+
 class ValidatedContext:
     """
     A dict-like wrapper that enforces context registry policies.

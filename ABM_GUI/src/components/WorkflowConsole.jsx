@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import useProjectStore from '../store/projectStore';
 import './WorkflowConsole.css';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
 /**
  * WorkflowConsole - Per-workflow console with integrated Run/Stop button
+ *
+ * IMPORTANT: Workflow execution requires a context registry to be loaded.
+ * A project must be opened before running workflows.
  */
 const WorkflowConsole = ({ workflowName }) => {
   const [isRunning, setIsRunning] = useState(false);
@@ -21,6 +25,10 @@ const WorkflowConsole = ({ workflowName }) => {
   const addLog = useWorkflowStore((state) => state.addWorkflowLog);
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
+
+  // Get project root from project store (REQUIRED for context registry)
+  const projectRoot = useProjectStore((state) => state.projectRoot);
+  const isProjectLoaded = useProjectStore((state) => state.isProjectLoaded);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -99,17 +107,26 @@ const WorkflowConsole = ({ workflowName }) => {
     setError(null);
     clearLogs(workflowName);
 
+    // CONTEXT REGISTRY REQUIREMENT: Check if project is loaded
+    if (!isProjectLoaded || !projectRoot) {
+      const errorMsg = 'No project loaded. Please open a project first to run workflows.';
+      setError(errorMsg);
+      addLog(workflowName, 'error', '❌ ' + errorMsg);
+      addLog(workflowName, 'info', '💡 Use File → Open Project to load a project with a context registry.');
+      return;
+    }
+
     try {
       const fullWorkflow = exportWorkflow();
 
       // Section 9.2: Send full workflow with entry_subworkflow parameter
-      // No need to rename or modify the workflow structure
       const activeSubworkflow = fullWorkflow.subworkflows[workflowName];
 
       if (!activeSubworkflow) {
         throw new Error(`Subworkflow '${workflowName}' not found`);
       }
 
+      addLog(workflowName, 'info', `📁 Project: ${projectRoot}`);
       addLog(workflowName, 'info', `🚀 Running workflow from entry point: ${workflowName}`);
 
       const response = await fetch(`${API_BASE_URL}/run`, {
@@ -118,8 +135,9 @@ const WorkflowConsole = ({ workflowName }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          workflow: fullWorkflow,  // Send full workflow unchanged
-          entry_subworkflow: workflowName  // Specify entry point (Section 9.2)
+          workflow: fullWorkflow,
+          project_root: projectRoot,  // REQUIRED for context registry
+          entry_subworkflow: workflowName
         }),
       });
 

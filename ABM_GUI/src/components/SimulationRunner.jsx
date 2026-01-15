@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, Trash2 } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import useProjectStore from '../store/projectStore';
 import './SimulationRunner.css';
 
 const API_BASE_URL = 'http://localhost:5001/api';
@@ -8,6 +9,9 @@ const API_BASE_URL = 'http://localhost:5001/api';
 /**
  * SimulationRunner Component
  * Provides UI for running MicroC simulations and viewing real-time logs
+ *
+ * IMPORTANT: Workflow execution requires a context registry to be loaded.
+ * A project must be opened before running workflows.
  */
 const SimulationRunner = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -22,6 +26,10 @@ const SimulationRunner = () => {
   const addLog = useWorkflowStore((state) => state.addSimulationLog);
   const clearLogs = useWorkflowStore((state) => state.clearSimulationLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
+
+  // Get project root from project store (REQUIRED for context registry)
+  const projectRoot = useProjectStore((state) => state.projectRoot);
+  const isProjectLoaded = useProjectStore((state) => state.isProjectLoaded);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -129,16 +137,29 @@ const SimulationRunner = () => {
     setError(null);
     clearLogs();
 
+    // CONTEXT REGISTRY REQUIREMENT: Check if project is loaded
+    if (!isProjectLoaded || !projectRoot) {
+      const errorMsg = 'No project loaded. Please open a project first to run workflows.\n' +
+                       'A context registry is required for workflow execution.';
+      setError(errorMsg);
+      addLog('error', '❌ ' + errorMsg);
+      addLog('info', '💡 Use File → Open Project to load a project with a context registry.');
+      return;
+    }
+
     try {
       // Export current workflow
       const workflow = exportWorkflow();
 
       addLog('info', '📋 Exporting workflow...');
+      addLog('info', `📁 Project: ${projectRoot}`);
 
       // Prepare request body (Section 9.2: include entry_subworkflow)
+      // IMPORTANT: project_root is REQUIRED for context registry
       const requestBody = {
         workflow: workflow,
-        entry_subworkflow: 'main'  // SimulationRunner always runs from 'main'
+        project_root: projectRoot,  // REQUIRED for context registry
+        entry_subworkflow: 'main'   // SimulationRunner always runs from 'main'
       };
 
       // Always run in workflow-only mode from the GUI
@@ -155,12 +176,20 @@ const SimulationRunner = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        // Provide helpful error message for context registry issues
+        if (errorData.code === 'CONTEXT_REGISTRY_REQUIRED' || errorData.code === 'CONTEXT_REGISTRY_NOT_FOUND') {
+          addLog('error', '❌ Context registry error: ' + errorData.error);
+          addLog('info', '💡 Ensure the project has a valid .microc/context_registry.json file.');
+        }
         throw new Error(errorData.error || 'Failed to start simulation');
       }
 
       const data = await response.json();
       setIsRunning(true);
       addLog('info', `✓ Workflow execution started`);
+      if (data.context_registry_loaded) {
+        addLog('info', `✓ Context registry loaded from project`);
+      }
 
     } catch (err) {
       setError(err.message);

@@ -127,6 +127,22 @@ Examples:
     )
 
     parser.add_argument(
+        '--project-root',
+        type=str,
+        metavar='PROJECT_PATH',
+        help='Path to project root directory (REQUIRED for workflow execution). '
+             'Contains .microc/context_registry.json for context validation.'
+    )
+
+    parser.add_argument(
+        '--enforcement-mode',
+        type=str,
+        choices=['strict', 'warn', 'off'],
+        default='strict',
+        help='Context enforcement mode: strict (raise errors), warn (log warnings), off (no validation). Default: strict'
+    )
+
+    parser.add_argument(
         '--verbose',
         action='store_true',
         help='Enable verbose output'
@@ -1261,9 +1277,13 @@ def run_workflow_mode(args):
        simulation context. In this case we **do not** construct a SimulationEngine or
        touch any diffusion/FiPy code. We just execute the workflow stages directly
        via WorkflowExecutor.
+
+    IMPORTANT: Workflow execution requires a context registry. The --project-root
+    parameter must be provided to locate the .microc/context_registry.json file.
     """
     from src.workflow.loader import WorkflowLoader
     from src.workflow.executor import WorkflowExecutor
+    from src.workflow.validated_context import ContextRegistryRequired, load_registry
     from src.simulation.engine import SimulationEngine
 
     # Load workflow
@@ -1282,11 +1302,59 @@ def run_workflow_mode(args):
         traceback.print_exc()
         sys.exit(1)
 
-    # Initialize workflow executor with empty context
+    # CONTEXT REGISTRY REQUIREMENT: project_root is required for execution
+    project_root = getattr(args, 'project_root', None)
+    enforcement_mode = getattr(args, 'enforcement_mode', 'strict')
+
+    if not project_root:
+        print(f"[!] ERROR: --project-root is required for workflow execution.")
+        print(f"    Workflow execution requires a context registry to be loaded.")
+        print(f"    The context registry defines allowed context keys, types, and policies.")
+        print(f"")
+        print(f"    To fix this, provide the --project-root parameter:")
+        print(f"      python run_sim.py --workflow {args.workflow} --project-root /path/to/project")
+        print(f"")
+        print(f"    The project must contain a .microc/context_registry.json file.")
+        sys.exit(1)
+
+    # Validate context registry exists
+    project_path = Path(project_root)
+    registry_path = project_path / ".microc" / "context_registry.json"
+
+    if not registry_path.exists():
+        print(f"[!] ERROR: Context registry not found at: {registry_path}")
+        print(f"    Workflow execution requires a valid context registry.")
+        print(f"")
+        print(f"    Please ensure the project has been initialized with:")
+        print(f"      - .microc/project.json")
+        print(f"      - .microc/context_registry.json")
+        sys.exit(1)
+
+    # Load context registry for validation info
+    try:
+        context_registry = load_registry(str(registry_path))
+        num_keys = len(context_registry.get('keys', [])) if context_registry else 0
+        print(f"[+] Context registry loaded: {registry_path}")
+        print(f"    Registry contains {num_keys} context keys")
+        print(f"    Enforcement mode: {enforcement_mode}")
+    except Exception as e:
+        print(f"[!] ERROR: Failed to load context registry: {e}")
+        sys.exit(1)
+
+    # Initialize workflow executor with context registry
     # The workflow functions will populate the context
     try:
-        executor = WorkflowExecutor(workflow)
+        executor = WorkflowExecutor(
+            workflow,
+            project_root=str(project_path),
+            context_registry=context_registry,
+            enforcement_mode=enforcement_mode
+        )
         print(f"[WORKFLOW] Initialized workflow executor for: {workflow.name}")
+        print(f"[WORKFLOW] Context registry loaded from project: {project_root}")
+    except ContextRegistryRequired as e:
+        print(f"[!] ERROR: {e}")
+        sys.exit(1)
     except Exception as e:
         print(f"[WORKFLOW] Failed to initialize workflow executor: {e}")
         import traceback
@@ -1298,10 +1366,14 @@ def run_workflow_mode(args):
         print(f"[WORKFLOW] Running workflow: {workflow.name}")
         print(f"[WORKFLOW] Workflow version: {workflow.version}")
 
-        # Start with context containing workflow file path (for resolving relative paths)
-        context = {
-            'workflow_file': str(workflow_path.absolute())
+        # Create ValidatedContext from the executor (uses loaded context registry)
+        # This ensures all context operations are validated against the registry
+        initial_data = {
+            'workflow_file': str(workflow_path.absolute()),
+            'project_root': str(project_path),
         }
+        context = executor.create_validated_context(initial_data)
+        print(f"[WORKFLOW] Created ValidatedContext with enforcement mode: {enforcement_mode}")
 
         # Section 9.2: For v2.0 workflows with subworkflows, use execute_main with entry point
         if workflow.version == "2.0" and hasattr(workflow, 'subworkflows') and workflow.subworkflows:

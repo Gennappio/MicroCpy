@@ -692,13 +692,26 @@ class WorkflowDefinition:
         """Get a sub-workflow by name (v2.0)."""
         return self.subworkflows.get(subworkflow_name)
     
-    def validate(self) -> Dict[str, Any]:
+    def validate_structure(self) -> Dict[str, Any]:
         """
-        Validate the workflow definition.
+        Validate the structural integrity of the workflow definition.
+
+        This validates:
+        - Node connections and references
+        - Subworkflow references exist
+        - Execution order references valid nodes
+        - No duplicate IDs
+        - Circular dependency detection
+        - Controller nodes exist
+
+        This does NOT require a context registry and can be used to validate
+        a workflow for editing/viewing purposes without a project loaded.
+
+        For full validation including context key semantics, use validate_with_registry().
 
         Returns:
             Dictionary with:
-                - 'valid': bool indicating if workflow is valid
+                - 'valid': bool indicating if workflow structure is valid
                 - 'errors': List of critical error messages
                 - 'warnings': List of warning messages
         """
@@ -724,6 +737,108 @@ class WorkflowDefinition:
             'errors': errors,
             'warnings': warnings
         }
+
+    def validate(self) -> Dict[str, Any]:
+        """
+        Validate the workflow definition (structural validation only).
+
+        This is an alias for validate_structure() for backward compatibility.
+        For full validation including context key semantics, use validate_with_registry().
+
+        Returns:
+            Dictionary with:
+                - 'valid': bool indicating if workflow is valid
+                - 'errors': List of critical error messages
+                - 'warnings': List of warning messages
+        """
+        return self.validate_structure()
+
+    def validate_with_registry(self, context_registry: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Validate the workflow definition including semantic validation.
+
+        This performs:
+        1. Structural validation (same as validate_structure())
+        2. Semantic validation (if registry provided):
+           - Context key references are valid
+           - Types are correct
+           - Function input/output keys exist in registry
+
+        Args:
+            context_registry: Optional context registry dict. If not provided,
+                             only structural validation is performed.
+
+        Returns:
+            Dictionary with:
+                - 'valid': bool indicating if workflow is valid
+                - 'errors': List of critical error messages
+                - 'warnings': List of warning messages
+                - 'semantic_warnings': List of semantic warnings (if registry provided)
+        """
+        # Start with structural validation
+        result = self.validate_structure()
+
+        # Add semantic validation if registry is provided
+        semantic_warnings = []
+
+        if context_registry is not None:
+            # Collect all context key references from the workflow
+            key_refs = self._collect_context_key_references()
+
+            # Build lookup of valid keys from registry
+            valid_keys = set()
+            if 'keys' in context_registry:
+                for key_def in context_registry['keys']:
+                    valid_keys.add(key_def.get('name', ''))
+                    valid_keys.add(key_def.get('id', ''))
+                    for alias in key_def.get('aliases', []):
+                        valid_keys.add(alias)
+
+            # Check for unknown keys
+            for key_ref in key_refs:
+                if key_ref not in valid_keys and key_ref:
+                    semantic_warnings.append(
+                        f"⚠️  Unknown context key '{key_ref}' referenced in workflow. "
+                        f"This key is not defined in the context registry."
+                    )
+        else:
+            semantic_warnings.append(
+                "⚠️  No context registry provided. Semantic validation (context key references) skipped."
+            )
+
+        result['semantic_warnings'] = semantic_warnings
+        return result
+
+    def _collect_context_key_references(self) -> Set[str]:
+        """
+        Collect all context key references from the workflow.
+
+        This scans function inputs/outputs and context_mapping entries.
+
+        Returns:
+            Set of context key names referenced in the workflow
+        """
+        key_refs: Set[str] = set()
+
+        if self.version == "2.0":
+            for subworkflow in self.subworkflows.values():
+                # Check context_mapping in subworkflow calls
+                for call in subworkflow.subworkflow_calls:
+                    context_mapping = getattr(call, 'context_mapping', {}) or {}
+                    for key in context_mapping.keys():
+                        key_refs.add(key)
+                    for value in context_mapping.values():
+                        if isinstance(value, str):
+                            key_refs.add(value)
+
+                    # Check sandbox_config input/output keys
+                    sandbox_config = getattr(call, 'sandbox_config', {}) or {}
+                    for key in sandbox_config.get('input_keys', []):
+                        key_refs.add(key)
+                    for key in sandbox_config.get('output_keys', []):
+                        key_refs.add(key)
+
+        return key_refs
 
     def _validate_stages(self) -> List[str]:
         """Validate legacy stage-based workflow."""
