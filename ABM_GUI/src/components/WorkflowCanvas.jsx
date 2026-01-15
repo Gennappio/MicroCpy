@@ -374,7 +374,6 @@ const WorkflowCanvas = ({ stage }) => {
                       iterations: customMetadata?.iterations || node.data.iterations,
                       description: customMetadata?.description || node.data.description,
                       results: customMetadata?.results !== undefined ? customMetadata.results : node.data.results,
-                      contextMapping: customMetadata?.contextMapping !== undefined ? customMetadata.contextMapping : node.data.contextMapping,
                       label: customMetadata?.subworkflowName || node.data.label,
                     },
                   }
