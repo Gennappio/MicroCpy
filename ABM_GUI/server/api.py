@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Flask Backend API for MicroC GUI
+Flask Backend API for ABM GUI
 Provides endpoints for running simulations and streaming logs in real-time
 """
 
@@ -28,15 +28,21 @@ log_queue = queue.Queue()
 is_running = False
 
 
-def get_microc_path():
-    """Get the path to MicroC run_microc.py"""
-    # Server is in ABM_GUI/server, MicroC is in ../microc-2.0
+def get_sim_runner_path():
+    """Get the path to run_sim.py simulation runner"""
+    # Server is in ABM_GUI/server, simulator is in ../microc-2.0/tools
     server_dir = Path(__file__).parent
-    microc_path = server_dir.parent.parent / "microc-2.0" / "run_microc.py"
-    return microc_path
+    sim_path = server_dir.parent.parent / "microc-2.0" / "tools" / "run_sim.py"
+    return sim_path
 
 
-def setup_results_directories(workflow_data, microc_dir):
+def get_simulator_dir():
+    """Get the path to the simulator directory (microc-2.0)"""
+    server_dir = Path(__file__).parent
+    return server_dir.parent.parent / "microc-2.0"
+
+
+def setup_results_directories(workflow_data, simulator_dir):
     """
     Setup nested results directory structure according to v2.0 spec.
 
@@ -48,9 +54,9 @@ def setup_results_directories(workflow_data, microc_dir):
 
     Args:
         workflow_data: Workflow JSON dict
-        microc_dir: Path to microc-2.0 directory
+        simulator_dir: Path to simulator directory (microc-2.0)
     """
-    results_dir = microc_dir / "results"
+    results_dir = simulator_dir / "results"
 
     # Get subworkflow kinds from metadata
     subworkflow_kinds = workflow_data.get('metadata', {}).get('gui', {}).get('subworkflow_kinds', {})
@@ -79,7 +85,7 @@ def setup_results_directories(workflow_data, microc_dir):
             subworkflow_dir = subworkflows_dir / subworkflow_name
 
         subworkflow_dir.mkdir(parents=True, exist_ok=True)
-        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(microc_dir)}\n")
+        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(simulator_dir)}\n")
 
     log_queue.put(f"[INFO] Results directory structure ready\n")
 
@@ -125,19 +131,17 @@ def stream_output(process, log_queue):
 
 
 def run_simulation_async(workflow_path, entry_subworkflow=None):
-    """Run MicroC workflow in background thread (workflow-only mode)"""
+    """Run workflow simulation in background thread (workflow-only mode)"""
     global simulation_process, is_running
 
     try:
-        microc_path = get_microc_path()
+        sim_runner_path = get_sim_runner_path()
+        simulator_dir = get_simulator_dir()
 
-        if not microc_path.exists():
-            log_queue.put(f"[ERROR] MicroC not found at: {microc_path}\n")
+        if not sim_runner_path.exists():
+            log_queue.put(f"[ERROR] Simulation runner not found at: {sim_runner_path}\n")
             is_running = False
             return
-
-        # Get microc-2.0 directory (working directory for simulation)
-        microc_dir = microc_path.parent
 
         # Build command - GUI runs workflows only
         if not workflow_path:
@@ -147,7 +151,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
 
         cmd = [
             sys.executable,
-            str(microc_path),
+            str(sim_runner_path),
             "--workflow",
             workflow_path,
         ]
@@ -160,8 +164,8 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
 
         log_queue.put(f"[INFO] Command: {' '.join(cmd)}\n")
-        log_queue.put(f"[INFO] Working directory: {microc_dir}\n")
-        log_queue.put("[INFO] Starting MicroC simulation...\n")
+        log_queue.put(f"[INFO] Working directory: {simulator_dir}\n")
+        log_queue.put("[INFO] Starting simulation...\n")
 
         # Start subprocess with correct working directory
         simulation_process = subprocess.Popen(
@@ -171,7 +175,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             text=True,
             bufsize=1,
             universal_newlines=True,
-            cwd=str(microc_dir)  # Set working directory to microc-2.0
+            cwd=str(simulator_dir)  # Set working directory to simulator
         )
         
         # Stream output
@@ -210,14 +214,13 @@ def run_simulation():
     # Validate workflow before running
     try:
         # Import workflow schema for validation
-        microc_path = get_microc_path()
-        microc_dir = microc_path.parent
-        sys.path.insert(0, str(microc_dir))
+        simulator_dir = get_simulator_dir()
+        sys.path.insert(0, str(simulator_dir))
 
-        from src.workflow.schema import Workflow
+        from src.workflow.schema import WorkflowDefinition
 
         # Load and validate workflow
-        workflow_obj = Workflow.from_dict(workflow_data)
+        workflow_obj = WorkflowDefinition.from_dict(workflow_data)
         validation_result = workflow_obj.validate()
 
         if not validation_result['valid']:
@@ -235,8 +238,11 @@ def run_simulation():
                 log_queue.put(f"[WARNING] {warning}\n")
 
     except Exception as e:
+        import traceback
+        full_traceback = traceback.format_exc()
         error_msg = f'Workflow validation error: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
+        print(f"[VALIDATION ERROR] Full traceback:\n{full_traceback}")
         return jsonify({'error': error_msg}), 400
 
     # Validate entry_subworkflow (Section 9.2)
@@ -263,14 +269,14 @@ def run_simulation():
 
     # Setup nested results directory structure (v2.0 spec)
     try:
-        setup_results_directories(workflow_data, microc_dir)
+        setup_results_directories(workflow_data, simulator_dir)
     except Exception as e:
         error_msg = f'Failed to setup results directories: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 500
 
     # Save workflow to temporary file
-    workflow_path = "/tmp/microc_workflow.json"
+    workflow_path = "/tmp/workflow.json"
     try:
         with open(workflow_path, 'w') as f:
             json.dump(workflow_data, f, indent=2)
@@ -368,8 +374,8 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'microc_path': str(get_microc_path()),
-        'microc_exists': get_microc_path().exists()
+        'sim_runner_path': str(get_sim_runner_path()),
+        'sim_runner_exists': get_sim_runner_path().exists()
     })
 
 
@@ -400,11 +406,11 @@ def get_registry():
         }
     """
     try:
-        # Get microc-2.0 directory
-        microc_dir = get_microc_path().parent
+        # Get simulator directory
+        simulator_dir = get_simulator_dir()
 
         # Add to Python path
-        sys.path.insert(0, str(microc_dir))
+        sys.path.insert(0, str(simulator_dir))
 
         # Import registry
         from src.workflow.registry import get_default_registry
@@ -462,7 +468,7 @@ def get_function_source():
 
     Query params:
         - name: Function name (e.g., 'update_metabolism')
-        - file: Optional source file path (relative to microc-2.0)
+        - file: Optional source file path (relative to simulator directory)
 
     Returns:
         {
@@ -479,14 +485,14 @@ def get_function_source():
         if not function_name:
             return jsonify({'error': 'Missing required parameter: name'}), 400
 
-        # Get microc-2.0 directory
-        microc_dir = get_microc_path().parent
+        # Get simulator directory
+        simulator_dir = get_simulator_dir()
 
         # If source_file is provided, use it; otherwise try to find it from registry
         if not source_file:
             # Try to load from registry
             try:
-                sys.path.insert(0, str(microc_dir))
+                sys.path.insert(0, str(simulator_dir))
                 from src.workflow.registry import get_default_registry
 
                 registry = get_default_registry()
@@ -502,7 +508,7 @@ def get_function_source():
                 return jsonify({'error': f'Failed to load registry: {e}'}), 500
 
         # Resolve file path
-        file_path = microc_dir / source_file
+        file_path = simulator_dir / source_file
 
         if not file_path.exists():
             return jsonify({
@@ -560,13 +566,13 @@ def save_function_source():
         if not function_name or not source_code:
             return jsonify({'error': 'Missing required fields: name, source'}), 400
 
-        # Get microc-2.0 directory
-        microc_dir = get_microc_path().parent
+        # Get simulator directory
+        simulator_dir = get_simulator_dir()
 
         # If source_file is not provided, try to find it from registry
         if not source_file:
             try:
-                sys.path.insert(0, str(microc_dir))
+                sys.path.insert(0, str(simulator_dir))
                 from src.workflow.registry import get_default_registry
 
                 registry = get_default_registry()
@@ -582,7 +588,7 @@ def save_function_source():
                 return jsonify({'error': f'Failed to load registry: {e}'}), 500
 
         # Resolve file path
-        file_path = microc_dir / source_file
+        file_path = simulator_dir / source_file
 
         # Validate that file exists (don't create new files)
         if not file_path.exists():
@@ -735,14 +741,14 @@ def upload_function_file():
             }), 400
 
         # Determine target file path
-        microc_root = Path(__file__).parent.parent.parent / "microc-2.0"
+        simulator_dir = get_simulator_dir()
 
         if target_path:
             # Use provided target path
-            target_file = microc_root / target_path
+            target_file = simulator_dir / target_path
         else:
             # Try to find the function in registry
-            registry_path = microc_root / "src" / "workflow" / "registry.py"
+            registry_path = simulator_dir / "src" / "workflow" / "registry.py"
 
             if not registry_path.exists():
                 return jsonify({'error': 'Registry file not found'}), 404
@@ -759,7 +765,7 @@ def upload_function_file():
                 return jsonify({'error': f'Function {function_name} not found in registry'}), 404
 
             source_file_path = match.group(1)
-            target_file = microc_root / source_file_path
+            target_file = simulator_dir / source_file_path
 
         # Create backup of existing file
         if target_file.exists():
@@ -781,7 +787,7 @@ def upload_function_file():
 
         return jsonify({
             'success': True,
-            'file_path': str(target_file.relative_to(microc_root)),
+            'file_path': str(target_file.relative_to(simulator_dir)),
             'message': f'Successfully uploaded {file.filename} for {function_name}',
             'backup_path': str(backup_path.name) if backup_path else None
         })
@@ -800,8 +806,7 @@ def list_results():
         subworkflow_kind: 'composer' or 'subworkflow'
     """
     try:
-        server_dir = Path(__file__).parent
-        results_dir = server_dir.parent.parent / "microc-2.0" / "results"
+        results_dir = get_simulator_dir() / "results"
 
         # Get query parameters
         subworkflow_name = request.args.get('subworkflow_name', 'main')
@@ -853,9 +858,8 @@ def list_results():
 def get_plot(plot_path):
     """Serve a plot image file."""
     try:
-        server_dir = Path(__file__).parent
-        microc_dir = server_dir.parent.parent / "microc-2.0"
-        full_path = microc_dir / plot_path
+        simulator_dir = get_simulator_dir()
+        full_path = simulator_dir / plot_path
 
         if not full_path.exists():
             return jsonify({'success': False, 'error': 'Plot not found'}), 404
@@ -966,7 +970,7 @@ def parse_library():
 # ============================================================================
 
 PROJECT_CONFIG_FILENAME = 'project.json'
-CONTEXT_REGISTRY_DIR = '.microc'
+CONTEXT_REGISTRY_DIR = '.abm'
 CONTEXT_REGISTRY_FILENAME = 'context_registry.json'
 
 
@@ -985,12 +989,12 @@ def resolve_project_path(project_root: str) -> Path:
 
 
 def get_project_config_path(project_root: str) -> Path:
-    """Get the path to project.json (inside .microc/)"""
+    """Get the path to project.json (inside .abm/)"""
     return resolve_project_path(project_root) / CONTEXT_REGISTRY_DIR / PROJECT_CONFIG_FILENAME
 
 
 def get_context_registry_path(project_root: str) -> Path:
-    """Get the path to context_registry.json (inside .microc/)"""
+    """Get the path to context_registry.json (inside .abm/)"""
     return resolve_project_path(project_root) / CONTEXT_REGISTRY_DIR / CONTEXT_REGISTRY_FILENAME
 
 
@@ -1023,9 +1027,9 @@ def create_project():
         # Create project directory if it doesn't exist
         project_path.mkdir(parents=True, exist_ok=True)
 
-        # Create .microc directory
-        microc_dir = project_path / CONTEXT_REGISTRY_DIR
-        microc_dir.mkdir(exist_ok=True)
+        # Create .abm directory
+        config_dir = project_path / CONTEXT_REGISTRY_DIR
+        config_dir.mkdir(exist_ok=True)
 
         # Write project.json
         config_path = get_project_config_path(project_root)
@@ -1287,10 +1291,10 @@ def check_project_exists():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("MicroC Backend Server")
+    print("ABM GUI Backend Server")
     print("=" * 60)
-    print(f"MicroC path: {get_microc_path()}")
-    print(f"MicroC exists: {get_microc_path().exists()}")
+    print(f"Simulator runner: {get_sim_runner_path()}")
+    print(f"Runner exists: {get_sim_runner_path().exists()}")
     print("=" * 60)
     print("Starting server on http://localhost:5001")
     print("=" * 60)

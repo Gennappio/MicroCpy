@@ -15,6 +15,12 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
   const currentStage = useWorkflowStore((state) => state.currentStage);
   const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
+  const setCurrentMainTab = useWorkflowStore((state) => state.setCurrentMainTab);
+
+  // Safety check for node and node.data
+  if (!node || !node.data) {
+    return null;
+  }
 
   const isParameterNode = node.type === 'parameterNode';
   const isSubWorkflowCall = node.type === 'subworkflowCall';
@@ -206,7 +212,21 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 
   const handleGoToWorkflow = () => {
     if (isSubWorkflowCall && node.data.subworkflowName) {
-      setCurrentStage(node.data.subworkflowName);
+      const targetName = node.data.subworkflowName;
+
+      // Determine the kind of the target subworkflow
+      const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[targetName] ||
+                        (targetName === 'main' ? 'composer' : 'subworkflow');
+
+      // Switch to the appropriate main tab first
+      if (targetKind === 'composer') {
+        setCurrentMainTab('composers');
+      } else {
+        setCurrentMainTab('subworkflows');
+      }
+
+      // Then set the current stage
+      setCurrentStage(targetName);
       onClose(); // Close the editor after navigation
     }
   };
@@ -345,21 +365,27 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Return null if no function metadata and not a parameter node or subworkflow call
-  if (!functionMetadata && !isParameterNode && !isSubWorkflowCall) {
-    return null;
-  }
-
+  // For workflowFunction nodes without registry metadata, still show the editor
+  // This allows editing parameters for functions loaded from JSON that aren't in the current registry
   const displayName = isParameterNode
     ? (customName || 'Parameter Node')
     : isSubWorkflowCall
     ? 'Sub-workflow Call'
-    : functionMetadata.displayName;
+    : (functionMetadata?.displayName || customName || functionName || 'Unknown Function');
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
 
-  const parametersList = functionMetadata ? functionMetadata.parameters : [];
+  // Build parameters list from function metadata, or fall back to node data parameters
+  const parametersList = functionMetadata
+    ? functionMetadata.parameters
+    : Object.keys(parameters).map(key => ({
+        name: key,
+        type: typeof parameters[key] === 'number' ? 'number' :
+              typeof parameters[key] === 'boolean' ? 'boolean' : 'string',
+        required: false,
+        description: ''
+      }));
 
   return (
     <div className="parameter-editor-overlay" onClick={onClose}>

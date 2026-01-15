@@ -58,13 +58,36 @@ class ParameterNode:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ParameterNode":
-        """Create from dictionary (JSON deserialization)."""
-        return cls(
-            id=data["id"],
-            label=data.get("label", "Parameters"),
-            parameters=data.get("parameters", {}),
-            position=data.get("position", {"x": 0, "y": 0})
-        )
+        """Create from dictionary (JSON deserialization).
+
+        Supports two formats:
+        1. Standard format: {id, label, parameters: {key: value, ...}, position}
+        2. Simple format: {id, name, key, value, position} -> converts to standard
+        """
+        # Check if this is the simple format (has 'key' and 'value' fields)
+        if 'key' in data and 'value' in data:
+            # Convert simple format to standard format
+            key_path = data['key']
+            # Handle dotted keys like "params.grid_size" -> just use the last part
+            if '.' in key_path:
+                param_key = key_path.split('.')[-1]
+            else:
+                param_key = key_path
+
+            return cls(
+                id=data["id"],
+                label=data.get("name", data.get("label", "Parameters")),
+                parameters={param_key: data['value']},
+                position=data.get("position", {"x": 0, "y": 0})
+            )
+        else:
+            # Standard format
+            return cls(
+                id=data["id"],
+                label=data.get("label", "Parameters"),
+                parameters=data.get("parameters", {}),
+                position=data.get("position", {"x": 0, "y": 0})
+            )
 
 
 @dataclass
@@ -470,7 +493,7 @@ class SubWorkflow:
     def from_dict(cls, name: str, data: Dict[str, Any]) -> "SubWorkflow":
         """Create from dictionary (JSON deserialization)."""
         controller = None
-        if "controller" in data:
+        if "controller" in data and data["controller"] is not None:
             controller = ControllerNode.from_dict(data["controller"])
 
         functions = [WorkflowFunction.from_dict(f) for f in data.get("functions", [])]

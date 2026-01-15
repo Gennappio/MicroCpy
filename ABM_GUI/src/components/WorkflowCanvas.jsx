@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -431,10 +431,28 @@ const WorkflowCanvas = ({ stage }) => {
     [selectedNode, setNodes]
   );
 
+  // Inject onEdit callbacks into nodes so cog button works after loading workflow
+  const nodesWithCallbacks = useMemo(() => {
+    return nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        onEdit: () => {
+          setSelectedNode(node);
+          if (node.type === 'initNode' || node.type === 'controllerNode') {
+            setShowControllerSettings(true);
+          } else {
+            setShowParameterEditor(true);
+          }
+        }
+      }
+    }));
+  }, [nodes]);
+
   return (
     <div className="workflow-canvas" ref={reactFlowWrapper}>
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithCallbacks}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
