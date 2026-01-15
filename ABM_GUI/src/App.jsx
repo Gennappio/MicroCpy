@@ -1,32 +1,71 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Plus, X, Edit2 } from 'lucide-react';
+import { Download, Upload, FileJson, Plus, X, Edit2, Database, FolderOpen, FolderX } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import WorkflowConsole from './components/WorkflowConsole';
 import WorkflowResults from './components/WorkflowResults';
 import MainTabSelector from './components/MainTabSelector';
+import ContextRegistryPanel from './components/ContextRegistryPanel';
 import useWorkflowStore from './store/workflowStore';
+import useProjectStore from './store/projectStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
 
 function App() {
-		  const {
-        currentStage,
-        setCurrentStage,
-        currentMainTab,
-        setCurrentMainTab,
-        workflow,
-        loadWorkflow,
-        exportWorkflow,
-        setWorkflowFilePath,
-        addSubWorkflow,
-        deleteSubWorkflow,
-        renameSubWorkflow
-      } = useWorkflowStore();
+  const {
+    currentStage,
+    setCurrentStage,
+    currentMainTab,
+    setCurrentMainTab,
+    workflow,
+    loadWorkflow,
+    exportWorkflow,
+    setWorkflowFilePath,
+    addSubWorkflow,
+    deleteSubWorkflow,
+    renameSubWorkflow
+  } = useWorkflowStore();
 
   const [showNewSubWorkflowDialog, setShowNewSubWorkflowDialog] = useState(false);
   const [newSubWorkflowName, setNewSubWorkflowName] = useState('');
   const [renamingSubWorkflow, setRenamingSubWorkflow] = useState(null);
+  const [showContextRegistry, setShowContextRegistry] = useState(false);
+  const [showOpenProjectDialog, setShowOpenProjectDialog] = useState(false);
+  const [projectPath, setProjectPath] = useState('');
+  const [projectError, setProjectError] = useState(null);
+
+  // Project store for context registry
+  const {
+    projectLoaded,
+    projectConfig,
+    openProject,
+    closeProject
+  } = useProjectStore();
+
+  // Handle opening a project
+  const handleOpenProject = async () => {
+    if (!projectPath.trim()) {
+      setProjectError('Please enter a project path');
+      return;
+    }
+
+    setProjectError(null);
+    const result = await openProject(projectPath.trim());
+
+    if (result.success) {
+      setShowOpenProjectDialog(false);
+      setProjectPath('');
+      setShowContextRegistry(true); // Auto-open registry panel on project load
+    } else {
+      setProjectError(result.error || 'Failed to open project');
+    }
+  };
+
+  // Handle closing a project
+  const handleCloseProject = () => {
+    closeProject();
+    setShowContextRegistry(false);
+  };
 
   // Preload function registry on app mount
   useEffect(() => {
@@ -179,6 +218,36 @@ function App() {
         </div>
 
         <div className="header-actions">
+          {/* Project buttons */}
+          {projectLoaded ? (
+            <button
+              className="btn btn-outline-warning"
+              onClick={handleCloseProject}
+              title={`Close project: ${projectConfig?.name || 'Unknown'}`}
+            >
+              <FolderX size={16} />
+              Close Project
+            </button>
+          ) : (
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowOpenProjectDialog(true)}
+              title="Open a MicroC project"
+            >
+              <FolderOpen size={16} />
+              Open Project
+            </button>
+          )}
+          <button
+            className={`btn ${showContextRegistry ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setShowContextRegistry(!showContextRegistry)}
+            title={projectLoaded ? 'Toggle Context Registry' : 'Open a project to use Context Registry'}
+            disabled={!projectLoaded}
+          >
+            <Database size={16} />
+            Context Registry
+          </button>
+          <div className="header-divider" />
           <button className="btn btn-secondary" onClick={handleImportWorkflow}>
             <Upload size={16} />
             Import JSON
@@ -286,35 +355,94 @@ function App() {
           </div>
 
           {/* Main Content - Responsive Grid Layout */}
-          {(() => {
-            const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                               (currentStage === 'main' ? 'composer' : 'subworkflow');
-            const isComposer = currentKind === 'composer';
+          <div className="main-content-wrapper">
+            {(() => {
+              const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
+                                 (currentStage === 'main' ? 'composer' : 'subworkflow');
+              const isComposer = currentKind === 'composer';
 
-            return (
-              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'}`}>
-                <div className="grid-palette">
-                  <FunctionPalette currentStage={currentStage} />
+              return (
+                <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'}`}>
+                  <div className="grid-palette">
+                    <FunctionPalette currentStage={currentStage} />
+                  </div>
+                  <div className="grid-canvas">
+                    <WorkflowCanvas key={currentStage} stage={currentStage} />
+                  </div>
+                  {isComposer && (
+                    <>
+                      <div className="grid-console">
+                        <WorkflowConsole workflowName={currentStage} />
+                      </div>
+                      <div className="grid-results">
+                        <WorkflowResults
+                          subworkflowName={currentStage}
+                          subworkflowKind={currentKind}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="grid-canvas">
-                  <WorkflowCanvas key={currentStage} stage={currentStage} />
-                </div>
-                {isComposer && (
-                  <>
-                    <div className="grid-console">
-                      <WorkflowConsole workflowName={currentStage} />
-                    </div>
-                    <div className="grid-results">
-                      <WorkflowResults
-                        subworkflowName={currentStage}
-                        subworkflowKind={currentKind}
-                      />
-                    </div>
-                  </>
-                )}
+              );
+            })()}
+
+            {/* Context Registry Panel - Slide-out */}
+            {showContextRegistry && (
+              <div className="context-registry-sidebar">
+                <ContextRegistryPanel onClose={() => setShowContextRegistry(false)} />
               </div>
-            );
-          })()}
+            )}
+          </div>
+
+      {/* Open Project Dialog */}
+      {showOpenProjectDialog && (
+        <div className="dialog-overlay" onClick={() => setShowOpenProjectDialog(false)}>
+          <div className="dialog dialog-wide" onClick={(e) => e.stopPropagation()}>
+            <h3><FolderOpen size={20} /> Open MicroC Project</h3>
+            <p className="dialog-description">
+              Enter the path to a project folder containing <code>.microc/project.json</code>
+            </p>
+            <input
+              type="text"
+              className="dialog-input"
+              placeholder="Enter project folder path (e.g., /path/to/my_project)"
+              value={projectPath}
+              onChange={(e) => {
+                setProjectPath(e.target.value);
+                setProjectError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleOpenProject();
+                } else if (e.key === 'Escape') {
+                  setShowOpenProjectDialog(false);
+                }
+              }}
+              autoFocus
+            />
+            {projectError && (
+              <div className="dialog-error">
+                {projectError}
+              </div>
+            )}
+            <div className="dialog-hint">
+              <strong>Test project:</strong> <code>test_projects/context_test</code>
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => {
+                setShowOpenProjectDialog(false);
+                setProjectPath('');
+                setProjectError(null);
+              }}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleOpenProject}>
+                Open Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Composer/Sub-workflow Dialog */}
       {showNewSubWorkflowDialog && (

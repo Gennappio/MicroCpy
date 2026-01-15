@@ -145,6 +145,11 @@ class SubWorkflowCall:
         description: Optional description of this call
         parameter_nodes: List of parameter node IDs connected to this call
         context_mapping: Optional mapping of context variables to pass
+        sandbox: Sandbox configuration for context isolation (Phase 4)
+            - enabled: Whether to run in sandboxed context
+            - input_keys: List of context key IDs to pass to sandbox
+            - output_keys: List of context key IDs to merge back from sandbox
+        results: Optional results variable name for storing subworkflow output
     """
     id: str
     subworkflow_name: str
@@ -155,10 +160,16 @@ class SubWorkflowCall:
     description: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
     context_mapping: Dict[str, str] = field(default_factory=dict)
+    sandbox: Dict[str, Any] = field(default_factory=lambda: {
+        "enabled": False,
+        "input_keys": [],
+        "output_keys": []
+    })
+    results: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "id": self.id,
             "type": "subworkflow_call",
             "subworkflow_name": self.subworkflow_name,
@@ -170,6 +181,13 @@ class SubWorkflowCall:
             "parameter_nodes": self.parameter_nodes,
             "context_mapping": self.context_mapping
         }
+        # Only include sandbox if enabled
+        if self.sandbox.get("enabled", False):
+            result["sandbox"] = self.sandbox
+        # Only include results if set
+        if self.results:
+            result["results"] = self.results
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SubWorkflowCall":
@@ -183,7 +201,9 @@ class SubWorkflowCall:
             position=data.get("position", {"x": 0, "y": 0}),
             description=data.get("description", ""),
             parameter_nodes=data.get("parameter_nodes", []),
-            context_mapping=data.get("context_mapping", {})
+            context_mapping=data.get("context_mapping", {}),
+            sandbox=data.get("sandbox", {"enabled": False, "input_keys": [], "output_keys": []}),
+            results=data.get("results", "")
         )
 
 

@@ -1,0 +1,91 @@
+{
+  "version": "2.0",
+  "name": "Context Test Workflow",
+  "description": "A simple workflow to test context registry features",
+  "metadata": {
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "step_runner": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - initializes and runs simulation",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "initNode",
+        "label": "MAIN CONTROLLER",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 5
+      },
+      "functions": [
+        {
+          "id": "func-init",
+          "function_name": "initialize_simulation",
+          "enabled": true,
+          "position": { "x": 300, "y": 100 },
+          "parameters": {}
+        },
+        {
+          "id": "func-output",
+          "function_name": "collect_output",
+          "enabled": true,
+          "position": { "x": 700, "y": 100 },
+          "parameters": {}
+        },
+        {
+          "id": "func-save",
+          "function_name": "save_results",
+          "enabled": true,
+          "position": { "x": 900, "y": 100 },
+          "parameters": {}
+        }
+      ],
+      "subworkflow_calls": [
+        {
+          "id": "call-step-runner",
+          "subworkflow_name": "step_runner",
+          "iterations": 1,
+          "enabled": true,
+          "position": { "x": 500, "y": 100 },
+          "description": "Run simulation steps",
+          "parameters": {},
+          "results": "step_results"
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["func-init", "call-step-runner", "func-output", "func-save"],
+      "input_parameters": []
+    },
+    "step_runner": {
+      "description": "Sub-workflow for running simulation steps",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-step-runner",
+        "type": "initNode",
+        "label": "STEP CONTROLLER",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-step",
+          "function_name": "run_step",
+          "enabled": true,
+          "position": { "x": 300, "y": 100 },
+          "parameters": {}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["func-step"],
+      "input_parameters": []
+    }
+  }
+}
+

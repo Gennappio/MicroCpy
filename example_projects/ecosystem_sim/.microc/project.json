@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "project_id": "eco-sim-2026-001",
+  "name": "Predator-Prey Ecosystem Simulation",
+  "description": "An agent-based model simulating predator-prey dynamics on a 2D grid. Demonstrates MicroC workflow system with composers and sub-workflows.",
+  "context_registry_path": ".microc/context_registry.json",
+  "context_enforcement": "strict",
+  "function_libraries": [
+    "functions/ecosystem_functions.py"
+  ],
+  "created": "2026-01-15T12:00:00Z",
+  "author": "MicroC Team"
+}
+

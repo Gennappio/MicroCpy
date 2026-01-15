@@ -1,0 +1,198 @@
+{
+  "keys": [
+    {
+      "aliases": [],
+      "default_value": 1,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Simulation time step (engine-provided)",
+      "engine_provided": true,
+      "id": "engine-dt",
+      "name": "dt",
+      "type": {
+        "kind": "primitive",
+        "primitive": "float"
+      },
+      "visibility": "normal",
+      "write_policy": "read_only"
+    },
+    {
+      "aliases": [],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Path to results directory (engine-provided)",
+      "engine_provided": true,
+      "id": "engine-results-dir",
+      "name": "results_dir",
+      "type": {
+        "kind": "primitive",
+        "primitive": "string"
+      },
+      "visibility": "normal",
+      "write_policy": "read_only"
+    },
+    {
+      "aliases": [],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Current subworkflow name (engine-provided)",
+      "engine_provided": true,
+      "id": "engine-subworkflow-name",
+      "name": "subworkflow_name",
+      "type": {
+        "kind": "primitive",
+        "primitive": "string"
+      },
+      "visibility": "normal",
+      "write_policy": "read_only"
+    },
+    {
+      "aliases": [
+        "population",
+        "agents"
+      ],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "The main agent population for the simulation",
+      "engine_provided": false,
+      "id": "user-population",
+      "name": "core.population",
+      "type": {
+        "kind": "any"
+      },
+      "visibility": "normal",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [
+        "grid",
+        "environment"
+      ],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "The simulation grid/environment",
+      "engine_provided": false,
+      "id": "user-grid",
+      "name": "core.grid",
+      "type": {
+        "kind": "any"
+      },
+      "visibility": "normal",
+      "write_policy": "write_once"
+    },
+    {
+      "aliases": [
+        "step",
+        "current_step"
+      ],
+      "default_value": 0,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Current simulation step number",
+      "engine_provided": false,
+      "id": "user-step-count",
+      "name": "simulation.step_count",
+      "type": {
+        "kind": "primitive",
+        "primitive": "int"
+      },
+      "visibility": "normal",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [
+        "max_steps"
+      ],
+      "default_value": 100,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Maximum number of simulation steps",
+      "engine_provided": false,
+      "id": "user-max-steps",
+      "name": "simulation.max_steps",
+      "type": {
+        "kind": "primitive",
+        "primitive": "int"
+      },
+      "visibility": "normal",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [
+        "output_data",
+        "results_data"
+      ],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Collected output data from simulation",
+      "engine_provided": false,
+      "id": "user-output-data",
+      "name": "output.data",
+      "type": {
+        "kind": "any"
+      },
+      "visibility": "normal",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [
+        "config",
+        "params"
+      ],
+      "default_value": {},
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Configuration parameters for the simulation",
+      "engine_provided": false,
+      "id": "user-config",
+      "name": "config.parameters",
+      "type": {
+        "kind": "any"
+      },
+      "visibility": "normal",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [
+        "debug"
+      ],
+      "default_value": false,
+      "delete_policy": "forbidden",
+      "deprecated": false,
+      "description": "Enable debug mode for verbose logging",
+      "engine_provided": false,
+      "id": "user-debug-mode",
+      "name": "debug.enabled",
+      "type": {
+        "kind": "primitive",
+        "primitive": "bool"
+      },
+      "visibility": "advanced",
+      "write_policy": "read_write"
+    },
+    {
+      "aliases": [],
+      "default_value": null,
+      "delete_policy": "forbidden",
+      "deprecated": true,
+      "deprecation_message": "Use 'core.population' instead. This key will be removed in v3.0.",
+      "description": "[DEPRECATED] Use core.population instead",
+      "engine_provided": false,
+      "id": "user-legacy-agents",
+      "name": "legacy.agents",
+      "type": {
+        "kind": "any"
+      },
+      "visibility": "hidden",
+      "write_policy": "read_write"
+    }
+  ],
+  "project_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+  "revision": 2,
+  "schema_version": 1
+}

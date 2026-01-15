@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "project_id": "eco-sim-2026-001",
+  "revision": 1,
+  "keys": [
+    {
+      "id": "engine-dt",
+      "name": "dt",
+      "aliases": ["timestep"],
+      "type": {"kind": "primitive", "primitive": "float"},
+      "write_policy": "read_only",
+      "delete_policy": "forbidden",
+      "description": "Simulation timestep (engine-provided)",
+      "default_value": 1.0,
+      "engine_provided": true,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "engine-results-dir",
+      "name": "results_dir",
+      "aliases": ["output_dir"],
+      "type": {"kind": "primitive", "primitive": "string"},
+      "write_policy": "read_only",
+      "delete_policy": "forbidden",
+      "description": "Path to results directory (engine-provided)",
+      "engine_provided": true,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-grid-size",
+      "name": "params.grid_size",
+      "aliases": ["grid_size"],
+      "type": {"kind": "primitive", "primitive": "int"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Size of the simulation grid (NxN)",
+      "default_value": 50,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-initial-predators",
+      "name": "params.initial_predators",
+      "aliases": ["n_predators"],
+      "type": {"kind": "primitive", "primitive": "int"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Initial number of predator agents",
+      "default_value": 20,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-initial-prey",
+      "name": "params.initial_prey",
+      "aliases": ["n_prey"],
+      "type": {"kind": "primitive", "primitive": "int"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Initial number of prey agents",
+      "default_value": 100,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-predation-rate",
+      "name": "params.predation_rate",
+      "aliases": [],
+      "type": {"kind": "primitive", "primitive": "float"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Probability of predator catching prey when in same cell",
+      "default_value": 0.4,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-prey-reproduction",
+      "name": "params.prey_reproduction_rate",
+      "aliases": [],
+      "type": {"kind": "primitive", "primitive": "float"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Probability of prey reproducing each step",
+      "default_value": 0.05,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-predator-reproduction",
+      "name": "params.predator_reproduction_rate",
+      "aliases": [],
+      "type": {"kind": "primitive", "primitive": "float"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Probability of predator reproducing after eating",
+      "default_value": 0.3,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "param-predator-starve",
+      "name": "params.predator_starve_time",
+      "aliases": [],
+      "type": {"kind": "primitive", "primitive": "int"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Steps without food before predator dies",
+      "default_value": 10,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "state-grid",
+      "name": "state.grid",
+      "aliases": ["grid", "environment"],
+      "type": {"kind": "any"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "The 2D grid environment",
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "state-predators",
+      "name": "state.predators",
+      "aliases": ["predators"],
+      "type": {"kind": "list", "element_type": {"kind": "any"}},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "List of predator agents",
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "state-prey",
+      "name": "state.prey",
+      "aliases": ["prey"],
+      "type": {"kind": "list", "element_type": {"kind": "any"}},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "List of prey agents",
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "state-step",
+      "name": "state.current_step",
+      "aliases": ["step", "current_step"],
+      "type": {"kind": "primitive", "primitive": "int"},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Current simulation step number",
+      "default_value": 0,
+      "visibility": "normal",
+      "deprecated": false
+    },
+    {
+      "id": "output-history",
+      "name": "output.population_history",
+      "aliases": ["history", "pop_history"],
+      "type": {"kind": "list", "element_type": {"kind": "any"}},
+      "write_policy": "read_write",
+      "delete_policy": "forbidden",
+      "description": "Time series of population counts",
+      "default_value": [],
+      "visibility": "normal",
+      "deprecated": false
+    }
+  ]
+}
+

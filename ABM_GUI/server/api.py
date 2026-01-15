@@ -961,6 +961,330 @@ def parse_library():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============================================================================
+# Project Management API (Context Management v2)
+# ============================================================================
+
+PROJECT_CONFIG_FILENAME = 'project.json'
+CONTEXT_REGISTRY_DIR = '.microc'
+CONTEXT_REGISTRY_FILENAME = 'context_registry.json'
+
+
+def get_workspace_root() -> Path:
+    """Get the workspace root (parent of ABM_GUI/server)"""
+    return Path(__file__).parent.parent.parent
+
+
+def resolve_project_path(project_root: str) -> Path:
+    """Resolve project path - handles both absolute and relative paths"""
+    path = Path(project_root)
+    if path.is_absolute():
+        return path
+    # Resolve relative to workspace root
+    return get_workspace_root() / path
+
+
+def get_project_config_path(project_root: str) -> Path:
+    """Get the path to project.json (inside .microc/)"""
+    return resolve_project_path(project_root) / CONTEXT_REGISTRY_DIR / PROJECT_CONFIG_FILENAME
+
+
+def get_context_registry_path(project_root: str) -> Path:
+    """Get the path to context_registry.json (inside .microc/)"""
+    return resolve_project_path(project_root) / CONTEXT_REGISTRY_DIR / CONTEXT_REGISTRY_FILENAME
+
+
+@app.route('/api/project/create', methods=['POST'])
+def create_project():
+    """
+    Create a new project with project.json and context_registry.json
+
+    Request body:
+        {
+            'project_root': '/path/to/project',
+            'config': { ... project config ... },
+            'registry': { ... context registry ... }
+        }
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        project_root = data.get('project_root')
+        config = data.get('config')
+        registry = data.get('registry')
+
+        if not project_root or not config or not registry:
+            return jsonify({'error': 'Missing required fields: project_root, config, registry'}), 400
+
+        project_path = Path(project_root)
+
+        # Create project directory if it doesn't exist
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        # Create .microc directory
+        microc_dir = project_path / CONTEXT_REGISTRY_DIR
+        microc_dir.mkdir(exist_ok=True)
+
+        # Write project.json
+        config_path = get_project_config_path(project_root)
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+
+        # Write context_registry.json
+        registry_path = get_context_registry_path(project_root)
+        with open(registry_path, 'w', encoding='utf-8') as f:
+            json.dump(registry, f, indent=2)
+
+        return jsonify({
+            'success': True,
+            'project_root': str(project_path),
+            'config_path': str(config_path),
+            'registry_path': str(registry_path)
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to create project: {e}'}), 500
+
+
+@app.route('/api/project/open', methods=['POST'])
+def open_project():
+    """
+    Open an existing project
+
+    Request body:
+        {
+            'project_root': '/path/to/project'
+        }
+
+    Returns:
+        {
+            'config': { ... },
+            'registry': { ... }
+        }
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        project_root = data.get('project_root')
+        if not project_root:
+            return jsonify({'error': 'Missing project_root'}), 400
+
+        config_path = get_project_config_path(project_root)
+        registry_path = get_context_registry_path(project_root)
+
+        # Check if project exists
+        if not config_path.exists():
+            return jsonify({
+                'error': 'Project not found',
+                'needs_creation': True
+            }), 404
+
+        # Load project config
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        # Load or create context registry
+        if registry_path.exists():
+            with open(registry_path, 'r', encoding='utf-8') as f:
+                registry = json.load(f)
+        else:
+            # Create default registry if missing
+            registry = {
+                'schema_version': 1,
+                'project_id': config.get('project_id', ''),
+                'revision': 1,
+                'keys': []
+            }
+            # Ensure directory exists
+            registry_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(registry_path, 'w', encoding='utf-8') as f:
+                json.dump(registry, f, indent=2)
+
+        return jsonify({
+            'success': True,
+            'config': config,
+            'registry': registry
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to open project: {e}'}), 500
+
+
+@app.route('/api/project/save-config', methods=['POST'])
+def save_project_config():
+    """
+    Save project configuration
+
+    Request body:
+        {
+            'project_root': '/path/to/project',
+            'config': { ... }
+        }
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        project_root = data.get('project_root')
+        config = data.get('config')
+
+        if not project_root or not config:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        config_path = get_project_config_path(project_root)
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to save config: {e}'}), 500
+
+
+@app.route('/api/project/save-registry', methods=['POST'])
+def save_context_registry():
+    """
+    Save context registry with optimistic concurrency control
+
+    Request body:
+        {
+            'project_root': '/path/to/project',
+            'registry': { ... },
+            'expected_revision': 5
+        }
+
+    Returns:
+        {
+            'success': true,
+            'new_revision': 6
+        }
+
+    Or on conflict:
+        {
+            'revision_conflict': true,
+            'current_revision': 7,
+            'error': '...'
+        }
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        project_root = data.get('project_root')
+        registry = data.get('registry')
+        expected_revision = data.get('expected_revision')
+
+        if not project_root or not registry:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        registry_path = get_context_registry_path(project_root)
+
+        # Check current revision for optimistic concurrency
+        if registry_path.exists() and expected_revision is not None:
+            with open(registry_path, 'r', encoding='utf-8') as f:
+                current_registry = json.load(f)
+
+            current_revision = current_registry.get('revision', 1)
+
+            if current_revision != expected_revision:
+                return jsonify({
+                    'revision_conflict': True,
+                    'current_revision': current_revision,
+                    'error': 'Registry was modified by another process'
+                }), 409
+
+        # Increment revision
+        new_revision = registry.get('revision', 1) + 1
+        registry['revision'] = new_revision
+
+        # Ensure directory exists
+        registry_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write registry
+        with open(registry_path, 'w', encoding='utf-8') as f:
+            json.dump(registry, f, indent=2)
+
+        return jsonify({
+            'success': True,
+            'new_revision': new_revision
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to save registry: {e}'}), 500
+
+
+@app.route('/api/project/reload-registry', methods=['POST'])
+def reload_context_registry():
+    """
+    Reload context registry from disk
+
+    Request body:
+        {
+            'project_root': '/path/to/project'
+        }
+
+    Returns:
+        {
+            'registry': { ... }
+        }
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        project_root = data.get('project_root')
+        if not project_root:
+            return jsonify({'error': 'Missing project_root'}), 400
+
+        registry_path = get_context_registry_path(project_root)
+
+        if not registry_path.exists():
+            return jsonify({'error': 'Registry not found'}), 404
+
+        with open(registry_path, 'r', encoding='utf-8') as f:
+            registry = json.load(f)
+
+        return jsonify({
+            'success': True,
+            'registry': registry
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to reload registry: {e}'}), 500
+
+
+@app.route('/api/project/exists', methods=['GET'])
+def check_project_exists():
+    """
+    Check if a project exists at the given path
+
+    Query params:
+        project_root: Path to check
+    """
+    try:
+        project_root = request.args.get('project_root')
+        if not project_root:
+            return jsonify({'error': 'Missing project_root'}), 400
+
+        config_path = get_project_config_path(project_root)
+
+        return jsonify({
+            'exists': config_path.exists(),
+            'project_root': project_root
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("MicroC Backend Server")

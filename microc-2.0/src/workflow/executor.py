@@ -9,7 +9,7 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, List, Tuple
+from typing import Dict, Any, Optional, Callable, List, Tuple, Set
 from .schema import (
     WorkflowDefinition,
     WorkflowStage,
@@ -19,6 +19,7 @@ from .schema import (
     ControllerNode
 )
 from .registry import FunctionRegistry, get_default_registry
+from .validated_context import ValidatedContext, EnforcementMode, wrap_context
 
 
 class WorkflowExecutor:
@@ -412,13 +413,33 @@ class WorkflowExecutor:
                                 except (TypeError, ValueError):
                                     call_iterations = 1
 
-                                # Recursively execute the called sub-workflow
-                                context = self.execute_subworkflow(
-                                    node.subworkflow_name,
-                                    context,
-                                    iterations=call_iterations,
-                                    parameters=merged_params
-                                )
+                                # Phase 4: Check for sandbox configuration
+                                sandbox_config = getattr(node, 'sandbox', {})
+                                if sandbox_config.get('enabled', False):
+                                    # Execute in sandboxed context
+                                    child_context = self._execute_sandboxed_subworkflow(
+                                        node,
+                                        context,
+                                        call_iterations,
+                                        merged_params,
+                                        sandbox_config
+                                    )
+                                    # Merge results back based on output_keys
+                                    output_keys = set(sandbox_config.get('output_keys', []))
+                                    for key, value in child_context.items():
+                                        if not output_keys or key in output_keys:
+                                            context[key] = value
+                                    # Store results if configured
+                                    if node.results:
+                                        context[node.results] = child_context.copy() if hasattr(child_context, 'copy') else dict(child_context)
+                                else:
+                                    # Recursively execute the called sub-workflow (no sandbox)
+                                    context = self.execute_subworkflow(
+                                        node.subworkflow_name,
+                                        context,
+                                        iterations=call_iterations,
+                                        parameters=merged_params
+                                    )
                             except Exception as e:
                                 print(f"[WORKFLOW] Error executing sub-workflow call to '{node.subworkflow_name}': {e}")
                                 import traceback
@@ -429,6 +450,61 @@ class WorkflowExecutor:
             self.call_stack.pop()
 
         return context
+
+    def _execute_sandboxed_subworkflow(
+        self,
+        call_node: SubWorkflowCall,
+        parent_context: Dict[str, Any],
+        iterations: int,
+        parameters: Dict[str, Any],
+        sandbox_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Execute a sub-workflow in a sandboxed context.
+
+        Per CONTEXT_MANAGEMENT.md Phase 4: Fork + Merge
+
+        Args:
+            call_node: The SubWorkflowCall node
+            parent_context: Parent context to fork from
+            iterations: Number of iterations
+            parameters: Merged parameters for the call
+            sandbox_config: Sandbox configuration with input_keys and output_keys
+
+        Returns:
+            Child context after execution (to be merged back)
+        """
+        input_keys = set(sandbox_config.get('input_keys', []))
+
+        # Fork context - only include specified input keys
+        if input_keys:
+            child_data = {k: v for k, v in parent_context.items() if k in input_keys}
+        else:
+            # If no input_keys specified, copy all (but still isolated)
+            child_data = parent_context.copy() if hasattr(parent_context, 'copy') else dict(parent_context)
+
+        # Add parameters to child context
+        child_data.update(parameters)
+
+        # Create child context (use ValidatedContext if parent is one)
+        if isinstance(parent_context, ValidatedContext):
+            child_context = parent_context.fork(input_keys if input_keys else None)
+            child_context.update(parameters)
+        else:
+            child_context = child_data
+
+        print(f"[WORKFLOW] Executing sandboxed sub-workflow '{call_node.subworkflow_name}' "
+              f"(inputs: {len(input_keys) if input_keys else 'all'} keys)")
+
+        # Execute the sub-workflow with the sandboxed context
+        result_context = self.execute_subworkflow(
+            call_node.subworkflow_name,
+            child_context,
+            iterations=iterations,
+            parameters={}  # Already merged into child_context
+        )
+
+        return result_context
 
     def _execute_function_in_subworkflow(self, workflow_func: WorkflowFunction,
                                          context: Dict[str, Any],

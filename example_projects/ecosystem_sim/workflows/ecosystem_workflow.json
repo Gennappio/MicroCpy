@@ -1,0 +1,275 @@
+{
+  "version": "2.0",
+  "name": "Predator-Prey Ecosystem Simulation",
+  "description": "Agent-based predator-prey dynamics simulation with composers and sub-workflows",
+  "metadata": {
+    "author": "MicroC Team",
+    "created": "2026-01-15",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "initialize": "subworkflow",
+        "simulation_step": "subworkflow",
+        "output_results": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - orchestrates the entire ecosystem simulation",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "ECOSYSTEM SIMULATION",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call-init",
+          "subworkflow_name": "initialize",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Initialize ecosystem",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "call-simulate",
+          "subworkflow_name": "simulation_step",
+          "iterations": 50,
+          "enabled": true,
+          "description": "Run 50 simulation steps",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 250}
+        },
+        {
+          "id": "call-output",
+          "subworkflow_name": "output_results",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Save and summarize results",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "parameters": [
+        {
+          "id": "param-grid-size",
+          "name": "Grid Size",
+          "key": "params.grid_size",
+          "value": 50,
+          "position": {"x": 400, "y": 100}
+        },
+        {
+          "id": "param-n-predators",
+          "name": "Initial Predators",
+          "key": "params.initial_predators",
+          "value": 20,
+          "position": {"x": 400, "y": 160}
+        },
+        {
+          "id": "param-n-prey",
+          "name": "Initial Prey",
+          "key": "params.initial_prey",
+          "value": 100,
+          "position": {"x": 400, "y": 220}
+        },
+        {
+          "id": "param-predation",
+          "name": "Predation Rate",
+          "key": "params.predation_rate",
+          "value": 0.4,
+          "position": {"x": 400, "y": 280}
+        },
+        {
+          "id": "param-prey-repro",
+          "name": "Prey Reproduction",
+          "key": "params.prey_reproduction_rate",
+          "value": 0.05,
+          "position": {"x": 400, "y": 340}
+        },
+        {
+          "id": "param-pred-repro",
+          "name": "Predator Reproduction",
+          "key": "params.predator_reproduction_rate",
+          "value": 0.3,
+          "position": {"x": 550, "y": 100}
+        },
+        {
+          "id": "param-starve",
+          "name": "Starve Time",
+          "key": "params.predator_starve_time",
+          "value": 10,
+          "position": {"x": 550, "y": 160}
+        }
+      ],
+      "execution_order": ["call-init", "call-simulate", "call-output"],
+      "enabled": true
+    },
+    "initialize": {
+      "description": "Initialize the ecosystem - create grid and spawn agents",
+      "deletable": true,
+      "controller": {
+        "id": "controller-init",
+        "label": "INITIALIZATION",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fn-create-grid",
+          "function_name": "create_grid",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Create simulation grid",
+          "parameters": {},
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "fn-spawn-prey",
+          "function_name": "spawn_prey",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Spawn initial prey population",
+          "parameters": {},
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "fn-spawn-predators",
+          "function_name": "spawn_predators",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Spawn initial predator population",
+          "parameters": {},
+          "position": {"x": 200, "y": 300}
+        },
+        {
+          "id": "fn-init-history",
+          "function_name": "initialize_history",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Initialize population tracker",
+          "parameters": {},
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["fn-create-grid", "fn-spawn-prey", "fn-spawn-predators", "fn-init-history"],
+      "enabled": true
+    },
+    "simulation_step": {
+      "description": "Execute one simulation step - movement, predation, reproduction",
+      "deletable": true,
+      "controller": {
+        "id": "controller-step",
+        "label": "SIMULATION STEP",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fn-move",
+          "function_name": "move_all_agents",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Move all agents randomly",
+          "parameters": {},
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "fn-predation",
+          "function_name": "handle_predation",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Predators hunt prey",
+          "parameters": {},
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "fn-prey-repro",
+          "function_name": "handle_prey_reproduction",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Prey reproduce",
+          "parameters": {},
+          "position": {"x": 200, "y": 300}
+        },
+        {
+          "id": "fn-starvation",
+          "function_name": "handle_predator_starvation",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Starving predators die",
+          "parameters": {},
+          "position": {"x": 200, "y": 400}
+        },
+        {
+          "id": "fn-record",
+          "function_name": "record_population",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Record population counts",
+          "parameters": {},
+          "position": {"x": 200, "y": 500}
+        },
+        {
+          "id": "fn-increment",
+          "function_name": "increment_step",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Increment step counter",
+          "parameters": {},
+          "position": {"x": 200, "y": 600}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["fn-move", "fn-predation", "fn-prey-repro", "fn-starvation", "fn-record", "fn-increment"],
+      "enabled": true
+    },
+    "output_results": {
+      "description": "Save simulation results and print summary",
+      "deletable": true,
+      "controller": {
+        "id": "controller-output",
+        "label": "OUTPUT RESULTS",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fn-save-csv",
+          "function_name": "save_results_csv",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Save population data to CSV",
+          "parameters": {},
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "fn-summary",
+          "function_name": "print_summary",
+          "function_file": "../example_projects/ecosystem_sim/functions/ecosystem_functions.py",
+          "enabled": true,
+          "description": "Print simulation summary",
+          "parameters": {},
+          "position": {"x": 200, "y": 200}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["fn-save-csv", "fn-summary"],
+      "enabled": true
+    }
+  }
+}
+

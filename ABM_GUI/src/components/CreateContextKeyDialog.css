@@ -1,0 +1,139 @@
+.create-context-key-dialog {
+  width: 520px;
+  max-height: 85vh;
+}
+
+.create-context-key-dialog .error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.create-context-key-dialog form {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(85vh - 120px);
+}
+
+.create-context-key-dialog .form-group {
+  margin-bottom: 16px;
+}
+
+.create-context-key-dialog .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.create-context-key-dialog .form-group label .required {
+  color: #ef4444;
+}
+
+.create-context-key-dialog .form-group input,
+.create-context-key-dialog .form-group textarea,
+.create-context-key-dialog .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.create-context-key-dialog .form-group input:focus,
+.create-context-key-dialog .form-group textarea:focus,
+.create-context-key-dialog .form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.create-context-key-dialog .form-group input.invalid {
+  border-color: #ef4444;
+}
+
+.create-context-key-dialog .form-group input.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.create-context-key-dialog .form-group input[type="text"] {
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.create-context-key-dialog .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.create-context-key-dialog .form-group small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.create-context-key-dialog .form-group small.error {
+  color: #ef4444;
+}
+
+.create-context-key-dialog .form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.create-context-key-dialog .form-row .form-group {
+  flex: 1;
+}
+
+.create-context-key-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.create-context-key-dialog .btn-primary {
+  padding: 10px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.create-context-key-dialog .btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.create-context-key-dialog .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.create-context-key-dialog .btn-secondary {
+  padding: 10px 20px;
+  background: white;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.create-context-key-dialog .btn-secondary:hover {
+  background: #f3f4f6;
+}
