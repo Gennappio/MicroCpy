@@ -46,7 +46,8 @@ const WorkflowCanvas = ({ stage }) => {
     setStageEdges,
     updateFunctionParameters,
     selectedNodeByStage,
-    setSelectedNode: setSelectedNodeInStore
+    setSelectedNode: setSelectedNodeInStore,
+    openInspector,
   } = useWorkflowStore();
 
   // Get the selected node ID for this stage from the store
@@ -354,11 +355,15 @@ const WorkflowCanvas = ({ stage }) => {
     [reactFlowInstance, setNodes]
   );
 
-  const onNodeClick = useCallback((event, node) => {
+  const onNodeClick = useCallback((_event, node) => {
     setSelectedNode(node);
-  }, [setSelectedNode]);
+    // Open the inspector panel when a node is clicked (for observability)
+    if (node.type === 'workflowFunction' || node.type === 'subworkflowCall') {
+      openInspector('overview');
+    }
+  }, [setSelectedNode, openInspector]);
 
-  const onNodeDoubleClick = useCallback((event, node) => {
+  const onNodeDoubleClick = useCallback((_event, node) => {
     // Open controller settings for Init/Controller nodes
     if (node.type === 'initNode' || node.type === 'controllerNode') {
       setSelectedNode(node);

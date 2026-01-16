@@ -135,6 +135,17 @@
           "position": {"x": 200, "y": 350}
         },
         {
+          "id": "proc_generate_image",
+          "function_name": "debug_generate_image",
+          "enabled": true,
+          "description": "Generate test image with timestamp",
+          "parameters": {
+            "message": "Processing Workflow Plot",
+            "filename": "processing_plot"
+          },
+          "position": {"x": 200, "y": 450}
+        },
+        {
           "id": "proc_complete",
           "function_name": "debug_initialization_2",
           "enabled": true,
@@ -142,7 +153,7 @@
           "parameters": {
             "message": "[PROCESSING] Processing cycle completed"
           },
-          "position": {"x": 200, "y": 550}
+          "position": {"x": 200, "y": 650}
         }
       ],
       "subworkflow_calls": [
@@ -157,11 +168,11 @@
           },
           "context_mapping": {},
           "parameter_nodes": [],
-          "position": {"x": 200, "y": 450}
+          "position": {"x": 200, "y": 550}
         }
       ],
       "parameters": [],
-      "execution_order": ["proc_init", "proc_intra_1", "proc_micro_1", "proc_intra_2", "proc_call_utility", "proc_complete"],
+      "execution_order": ["proc_init", "proc_intra_1", "proc_micro_1", "proc_intra_2", "proc_generate_image", "proc_call_utility", "proc_complete"],
       "enabled": true
     },
     "utility_workflow": {

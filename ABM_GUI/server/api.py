@@ -798,6 +798,7 @@ def list_results():
     Query params:
         subworkflow_name: Name of the subworkflow
         subworkflow_kind: 'composer' or 'subworkflow'
+        include_all: If 'true', include results from all subworkflows (default for composers)
     """
     try:
         server_dir = Path(__file__).parent
@@ -806,37 +807,58 @@ def list_results():
         # Get query parameters
         subworkflow_name = request.args.get('subworkflow_name', 'main')
         subworkflow_kind = request.args.get('subworkflow_kind', 'composer')
+        include_all = request.args.get('include_all', 'true' if subworkflow_kind == 'composer' else 'false')
 
         if not results_dir.exists():
             return jsonify({'success': True, 'plots': []})
 
-        # Determine the subworkflow results directory
-        kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
-        subworkflow_dir = results_dir / kind_plural / subworkflow_name
-
-        if not subworkflow_dir.exists():
-            return jsonify({'success': True, 'plots': []})
-
         plots = []
 
-        # Scan for all image files in the subworkflow directory
-        # Support nested categories (debug/, analysis/, etc.)
-        for category_dir in subworkflow_dir.iterdir():
-            if category_dir.is_dir():
-                # Scan category subdirectory
-                for plot_file in sorted(category_dir.glob('*.png')):
-                    plots.append({
-                        'name': plot_file.name,
-                        'path': str(plot_file.relative_to(results_dir.parent)),
-                        'category': category_dir.name
+        def scan_directory(directory, category_prefix=""):
+            """Scan a directory for image files."""
+            found = []
+            if not directory.exists():
+                return found
+            for item in directory.iterdir():
+                if item.is_dir():
+                    # Scan subdirectory
+                    for plot_file in sorted(item.glob('*.png')):
+                        cat = f"{category_prefix}{item.name}" if category_prefix else item.name
+                        found.append({
+                            'name': plot_file.name,
+                            'path': str(plot_file.relative_to(results_dir.parent)),
+                            'category': cat
+                        })
+                elif item.suffix.lower() == '.png':
+                    # Direct PNG file
+                    cat = category_prefix.rstrip('/') if category_prefix else 'default'
+                    found.append({
+                        'name': item.name,
+                        'path': str(item.relative_to(results_dir.parent)),
+                        'category': cat
                     })
-            elif category_dir.suffix == '.png':
-                # Direct PNG file in subworkflow directory
-                plots.append({
-                    'name': category_dir.name,
-                    'path': str(category_dir.relative_to(results_dir.parent)),
-                    'category': 'default'
-                })
+            return found
+
+        if include_all == 'true':
+            # Scan all results directories (composers and subworkflows)
+            for kind_dir in ['composers', 'subworkflows']:
+                kind_path = results_dir / kind_dir
+                if kind_path.exists():
+                    for sw_dir in kind_path.iterdir():
+                        if sw_dir.is_dir():
+                            prefix = f"{kind_dir}/{sw_dir.name}/"
+                            plots.extend(scan_directory(sw_dir, prefix))
+
+            # Also scan root results directory for legacy images
+            plots.extend(scan_directory(results_dir, "root/"))
+        else:
+            # Only scan the specific subworkflow directory
+            kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
+            subworkflow_dir = results_dir / kind_plural / subworkflow_name
+            plots.extend(scan_directory(subworkflow_dir))
+
+        # Sort plots by category and name
+        plots.sort(key=lambda p: (p['category'], p['name']))
 
         return jsonify({
             'success': True,

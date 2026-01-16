@@ -399,6 +399,28 @@ function getFallbackRegistry() {
     source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
   },
 
+  debug_generate_image: {
+    name: 'debug_generate_image',
+    displayName: 'Debug Generate Image',
+    description: 'Generate a test image with current date/time and optional message. Useful for testing the results viewer.',
+    category: FunctionCategory.FINALIZATION,
+    parameters: [
+      {
+        name: 'message',
+        type: 'string',
+        description: 'Message to display on the image',
+        default: 'Test Image',
+      },
+      {
+        name: 'filename',
+        type: 'string',
+        description: 'Output filename (without extension)',
+        default: 'debug_plot',
+      },
+    ],
+    source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
+  },
+
   // =====================================================================
   // OUTPUT/EXPORT FUNCTIONS (CSV, VTK)
   // =====================================================================

@@ -15,22 +15,49 @@ const WorkflowConsole = ({ workflowName }) => {
 
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
+  const badgePollingRef = useRef(null);
 
   // Use store for persistent logs per workflow
   const logs = useWorkflowStore((state) => state.workflowLogs[workflowName] || []);
   const addLog = useWorkflowStore((state) => state.addWorkflowLog);
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
+  const fetchAllBadgeStats = useWorkflowStore((state) => state.fetchAllBadgeStats);
+  const clearObservabilityState = useWorkflowStore((state) => state.clearObservabilityState);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  // Poll for badge stats while running
+  useEffect(() => {
+    if (isRunning) {
+      // Start polling every 2 seconds
+      const pollInterval = setInterval(() => {
+        fetchAllBadgeStats();
+      }, 2000);
+      badgePollingRef.current = pollInterval;
+
+      return () => {
+        if (badgePollingRef.current) {
+          clearInterval(badgePollingRef.current);
+          badgePollingRef.current = null;
+        }
+      };
+    } else {
+      // Stop polling when not running
+      if (badgePollingRef.current) {
+        clearInterval(badgePollingRef.current);
+        badgePollingRef.current = null;
+      }
+    }
+  }, [isRunning, fetchAllBadgeStats]);
+
   // Connect to log stream on mount
   useEffect(() => {
     connectToLogStream();
-    
+
     return () => {
       disconnectFromLogStream();
     };
@@ -56,9 +83,13 @@ const WorkflowConsole = ({ workflowName }) => {
             addLog(workflowName, data.type, data.message);
           }
           
-          // Check for completion
+          // Check for completion - fetch final badge stats
           if (data.type === 'complete' || data.type === 'error') {
             setIsRunning(false);
+            // Fetch final badge stats after a small delay to ensure files are written
+            setTimeout(() => {
+              fetchAllBadgeStats();
+            }, 500);
           }
         } catch (err) {
           console.error('[SSE] Failed to parse message:', err);
@@ -98,6 +129,7 @@ const WorkflowConsole = ({ workflowName }) => {
 
     setError(null);
     clearLogs(workflowName);
+    clearObservabilityState();  // Clear previous run's observability data
 
     try {
       const fullWorkflow = exportWorkflow();

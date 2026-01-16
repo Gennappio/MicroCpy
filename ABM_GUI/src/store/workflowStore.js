@@ -547,6 +547,63 @@ const useWorkflowStore = create((set, get) => ({
     set({ nodeBadgeStatsByScope: {} });
   },
 
+  /**
+   * Fetch badge stats from the backend API for a specific scope
+   * @param {string} scopeKey - The scope key (e.g., "subworkflow:process_cells")
+   */
+  fetchNodeBadgeStats: async (scopeKey) => {
+    const API_BASE_URL = 'http://localhost:5001';
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/observability/nodes?scopeKey=${encodeURIComponent(scopeKey)}`);
+      const data = await res.json();
+      if (data.success && data.nodes) {
+        set((state) => ({
+          nodeBadgeStatsByScope: {
+            ...state.nodeBadgeStatsByScope,
+            [scopeKey]: data.nodes,
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('[STORE] Failed to fetch node badge stats:', err);
+    }
+  },
+
+  /**
+   * Fetch badge stats for all subworkflows in the current workflow
+   */
+  fetchAllBadgeStats: async () => {
+    const API_BASE_URL = 'http://localhost:5001';
+    const state = get();
+    const workflow = state.workflow;
+    if (!workflow?.subworkflows) return;
+
+    // Collect all scope keys
+    const scopeKeys = Object.keys(workflow.subworkflows).map((name) => {
+      const kind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
+                   (name === 'main' ? 'composer' : 'subworkflow');
+      return `${kind}:${name}`;
+    });
+
+    // Fetch stats for each scope
+    for (const scopeKey of scopeKeys) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/observability/nodes?scopeKey=${encodeURIComponent(scopeKey)}`);
+        const data = await res.json();
+        if (data.success && data.nodes) {
+          set((state) => ({
+            nodeBadgeStatsByScope: {
+              ...state.nodeBadgeStatsByScope,
+              [scopeKey]: data.nodes,
+            }
+          }));
+        }
+      } catch (err) {
+        console.error(`[STORE] Failed to fetch badge stats for ${scopeKey}:`, err);
+      }
+    }
+  },
+
   // ===== NodeObservability: Run Meta Actions =====
 
   /**
