@@ -30,6 +30,54 @@ function App() {
   const [newSubWorkflowName, setNewSubWorkflowName] = useState('');
   const [renamingSubWorkflow, setRenamingSubWorkflow] = useState(null);
 
+  // Resizable panel widths
+  const [paletteWidth, setPaletteWidth] = useState(280);
+  const [inspectorWidth, setInspectorWidth] = useState(320);
+  const [consoleWidth, setConsoleWidth] = useState(380);
+  const [isResizing, setIsResizing] = useState(null);
+
+  // Resize handlers
+  const handleMouseDown = (panel) => (e) => {
+    e.preventDefault();
+    setIsResizing(panel);
+  };
+
+  useEffect(() => {
+    if (!isResizing) {
+      document.body.classList.remove('resizing');
+      return;
+    }
+
+    document.body.classList.add('resizing');
+
+    const handleMouseMove = (e) => {
+      if (isResizing === 'palette') {
+        const newWidth = Math.max(200, Math.min(500, e.clientX));
+        setPaletteWidth(newWidth);
+      } else if (isResizing === 'inspector') {
+        const newWidth = Math.max(280, Math.min(600, window.innerWidth - e.clientX));
+        setInspectorWidth(newWidth);
+      } else if (isResizing === 'console') {
+        const newWidth = Math.max(300, Math.min(600, window.innerWidth - e.clientX));
+        setConsoleWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(null);
+      document.body.classList.remove('resizing');
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.classList.remove('resizing');
+    };
+  }, [isResizing]);
+
   // Preload function registry on app mount
   useEffect(() => {
     fetchRegistry().then(() => {
@@ -294,10 +342,23 @@ function App() {
             const isComposer = currentKind === 'composer';
             const inspectorOpen = inspector.isOpen;
 
+            // Build dynamic grid template
+            const gridStyle = {};
+            if (isComposer && inspectorOpen) {
+              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${inspectorWidth}px ${consoleWidth}px`;
+            } else if (isComposer) {
+              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${consoleWidth}px`;
+            } else if (inspectorOpen) {
+              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${inspectorWidth}px`;
+            } else {
+              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr`;
+            }
+
             return (
-              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'} ${inspectorOpen ? 'with-inspector' : ''}`}>
+              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'} ${inspectorOpen ? 'with-inspector' : ''}`} style={gridStyle}>
                 <div className="grid-palette">
                   <FunctionPalette currentStage={currentStage} />
+                  <div className="resize-handle resize-handle-right" onMouseDown={handleMouseDown('palette')} />
                 </div>
                 <div className="grid-canvas">
                   <WorkflowCanvas key={currentStage} stage={currentStage} />
@@ -305,6 +366,7 @@ function App() {
                 {isComposer && (
                   <>
                     <div className="grid-console">
+                      <div className="resize-handle resize-handle-left" onMouseDown={handleMouseDown('console')} />
                       <WorkflowConsole workflowName={currentStage} />
                     </div>
                     <div className="grid-results">
@@ -318,6 +380,7 @@ function App() {
                 {/* Node Inspector - appears when open */}
                 {inspectorOpen && (
                   <div className="grid-inspector">
+                    <div className="resize-handle resize-handle-left" onMouseDown={handleMouseDown('inspector')} />
                     <NodeInspector />
                   </div>
                 )}

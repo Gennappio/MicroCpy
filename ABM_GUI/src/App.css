@@ -169,7 +169,7 @@
 
 /* Composer Layout - 4 columns with console and results */
 .workflow-grid.composer-layout {
-  grid-template-columns: 280px 1fr 380px;
+  /* grid-template-columns set dynamically via inline style */
   grid-template-rows: 1fr 1fr;
 }
 
@@ -202,7 +202,7 @@
 
 /* Sub-workflow Layout - 2 columns, no console/results */
 .workflow-grid.subworkflow-layout {
-  grid-template-columns: 280px 1fr;
+  /* grid-template-columns set dynamically via inline style */
   grid-template-rows: 1fr;
 }
 
@@ -224,11 +224,57 @@
 /* Inspector Grid Placement */
 .grid-inspector {
   overflow: hidden;
+  position: relative;
+}
+
+.grid-palette {
+  position: relative;
+}
+
+.grid-console {
+  position: relative;
+}
+
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.resize-handle:active {
+  background-color: rgba(59, 130, 246, 0.5);
+}
+
+.resize-handle-right {
+  right: 0;
+}
+
+.resize-handle-left {
+  left: 0;
+}
+
+/* Add cursor style to body when resizing */
+body.resizing {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+body.resizing * {
+  cursor: col-resize !important;
 }
 
 /* Composer with Inspector - 4 columns */
 .workflow-grid.composer-layout.with-inspector {
-  grid-template-columns: 280px 1fr 320px 380px;
+  /* grid-template-columns set dynamically via inline style */
 }
 
 .workflow-grid.composer-layout.with-inspector .grid-inspector {
@@ -248,7 +294,7 @@
 
 /* Subworkflow with Inspector - 3 columns */
 .workflow-grid.subworkflow-layout.with-inspector {
-  grid-template-columns: 280px 1fr 320px;
+  /* grid-template-columns set dynamically via inline style */
 }
 
 .workflow-grid.subworkflow-layout.with-inspector .grid-inspector {
