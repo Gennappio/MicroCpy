@@ -313,6 +313,7 @@ def debug_generate_image(context: Optional[Dict[str, Any]] = None, message: str 
     # Generate timestamp
     now = datetime.datetime.now()
     timestamp = now.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # millisecond precision
+    timestamp_short = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]  # for filename
 
     # Create figure
     fig, ax = plt.subplots(figsize=(10, 8))
@@ -356,8 +357,10 @@ def debug_generate_image(context: Optional[Dict[str, Any]] = None, message: str 
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save with step number in filename
-    out_filename = f"{filename}_step_{step:04d}.png"
+    # Save with timestamp and step number in filename to prevent overwriting
+    # Format: {filename}_{timestamp}_step_{step}.png
+    # Example: processing_plot_20260116_151345_123_step_0000.png
+    out_filename = f"{filename}_{timestamp_short}_step_{step:04d}.png"
     filepath = output_dir / out_filename
     fig.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close(fig)
