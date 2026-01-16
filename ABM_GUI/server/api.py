@@ -214,10 +214,10 @@ def run_simulation():
         microc_dir = microc_path.parent
         sys.path.insert(0, str(microc_dir))
 
-        from src.workflow.schema import Workflow
+        from src.workflow.schema import WorkflowDefinition
 
         # Load and validate workflow
-        workflow_obj = Workflow.from_dict(workflow_data)
+        workflow_obj = WorkflowDefinition.from_dict(workflow_data)
         validation_result = workflow_obj.validate()
 
         if not validation_result['valid']:
@@ -957,6 +957,302 @@ def parse_library():
             'library_name': library_file.name
         })
 
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==============================================================================
+# OBSERVABILITY API ENDPOINTS
+# ==============================================================================
+
+def get_observability_dir():
+    """Get the observability directory path."""
+    server_dir = Path(__file__).parent
+    microc_dir = server_dir.parent.parent / "microc-2.0"
+    return microc_dir / "results" / "observability"
+
+
+@app.route('/api/observability/meta', methods=['GET'])
+def get_observability_meta():
+    """Get run metadata (startedAt, status)."""
+    try:
+        obs_dir = get_observability_dir()
+        meta_file = obs_dir / "run_meta.json"
+
+        if not meta_file.exists():
+            return jsonify({'success': False, 'error': 'No run data available'}), 404
+
+        meta = json.loads(meta_file.read_text())
+        return jsonify({
+            'success': True,
+            'startedAt': meta.get('startedAt'),
+            'status': meta.get('status'),
+            'endedAt': meta.get('endedAt'),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/nodes', methods=['GET'])
+def get_observability_nodes():
+    """Get node stats for badges (status, timing, log counts)."""
+    try:
+        obs_dir = get_observability_dir()
+        events_file = obs_dir / "events.jsonl"
+
+        if not events_file.exists():
+            return jsonify({'success': True, 'nodes': {}})
+
+        # Parse events and aggregate by node
+        node_stats = {}
+
+        with open(events_file, 'r') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    event = json.loads(line)
+                    node_id = event.get('nodeId')
+                    if not node_id:
+                        continue
+
+                    if node_id not in node_stats:
+                        node_stats[node_id] = {
+                            'status': 'idle',
+                            'lastStart': None,
+                            'lastEnd': None,
+                            'lastDurationMs': None,
+                            'logCounts': {'info': 0, 'warn': 0, 'error': 0},
+                            'writes': 0,
+                        }
+
+                    stats = node_stats[node_id]
+                    event_type = event.get('event')
+
+                    if event_type == 'node_start':
+                        stats['lastStart'] = event.get('ts')
+                        stats['status'] = 'running'
+                    elif event_type == 'node_end':
+                        stats['lastEnd'] = event.get('ts')
+                        payload = event.get('payload', {})
+                        stats['lastDurationMs'] = payload.get('durationMs')
+                        stats['status'] = payload.get('status', 'ok')
+                        stats['writes'] = len(payload.get('writtenKeys', []))
+                    elif event_type == 'log':
+                        level = event.get('level', 'INFO').lower()
+                        if level in stats['logCounts']:
+                            stats['logCounts'][level] += 1
+                        elif level == 'warning':
+                            stats['logCounts']['warn'] += 1
+                except json.JSONDecodeError:
+                    continue
+
+        return jsonify({'success': True, 'nodes': node_stats})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/events', methods=['GET'])
+def get_observability_events():
+    """Get paged events (optionally filtered by scope/node)."""
+    try:
+        obs_dir = get_observability_dir()
+        events_file = obs_dir / "events.jsonl"
+
+        scope_key = request.args.get('scopeKey')
+        node_id = request.args.get('nodeId')
+        cursor = int(request.args.get('cursor', 0))
+        limit = min(int(request.args.get('limit', 200)), 2000)
+
+        if not events_file.exists():
+            return jsonify({'success': True, 'events': [], 'nextCursor': None})
+
+        events = []
+        line_num = 0
+
+        with open(events_file, 'r') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                line_num += 1
+                if line_num <= cursor:
+                    continue
+
+                try:
+                    event = json.loads(line)
+
+                    # Filter by scope if specified
+                    if scope_key:
+                        event_scope = f"{event.get('subworkflowKind')}:{event.get('subworkflowName')}"
+                        if event_scope != scope_key:
+                            continue
+
+                    # Filter by node if specified
+                    if node_id and event.get('nodeId') != node_id:
+                        continue
+
+                    events.append(event)
+
+                    if len(events) >= limit:
+                        break
+                except json.JSONDecodeError:
+                    continue
+
+        next_cursor = line_num if len(events) >= limit else None
+        return jsonify({'success': True, 'events': events, 'nextCursor': next_cursor})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/context', methods=['GET'])
+def get_observability_context():
+    """Get a context snapshot by scope and version."""
+    try:
+        obs_dir = get_observability_dir()
+        scope_key = request.args.get('scopeKey')
+        version = request.args.get('version')
+
+        if not scope_key:
+            return jsonify({'success': False, 'error': 'scopeKey is required'}), 400
+
+        # Convert scope key to safe directory name
+        safe_key = scope_key.replace(":", "_")
+        scope_dir = obs_dir / "context" / safe_key
+
+        if not scope_dir.exists():
+            return jsonify({'success': False, 'error': f'No context data for scope: {scope_key}'}), 404
+
+        # If version not specified, get the latest
+        if not version:
+            snapshot_files = sorted(scope_dir.glob("v*.json"))
+            if not snapshot_files:
+                return jsonify({'success': False, 'error': 'No snapshots available'}), 404
+            snapshot_file = snapshot_files[-1]
+        else:
+            snapshot_file = scope_dir / f"v{int(version):06d}.json"
+
+        if not snapshot_file.exists():
+            return jsonify({'success': False, 'error': f'Snapshot version {version} not found'}), 404
+
+        snapshot = json.loads(snapshot_file.read_text())
+        return jsonify({'success': True, 'snapshot': snapshot})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/diff', methods=['GET'])
+def get_observability_diff():
+    """Get a diff between two context versions."""
+    try:
+        obs_dir = get_observability_dir()
+        scope_key = request.args.get('scopeKey')
+        from_version = request.args.get('from')
+        to_version = request.args.get('to')
+
+        if not scope_key:
+            return jsonify({'success': False, 'error': 'scopeKey is required'}), 400
+        if not from_version or not to_version:
+            return jsonify({'success': False, 'error': 'from and to versions are required'}), 400
+
+        # Convert scope key to safe directory name
+        safe_key = scope_key.replace(":", "_")
+        context_dir = obs_dir / "context" / safe_key
+        diff_dir = context_dir / "diff"
+
+        # Try pre-computed diff first
+        if diff_dir.exists():
+            diff_file = diff_dir / f"v{int(from_version):06d}_to_v{int(to_version):06d}.json"
+            if diff_file.exists():
+                diff = json.loads(diff_file.read_text())
+                return jsonify({'success': True, 'diff': diff})
+
+        # Compute diff on-the-fly from snapshots
+        from_file = context_dir / f"v{int(from_version):06d}.json"
+        to_file = context_dir / f"v{int(to_version):06d}.json"
+
+        if not from_file.exists() or not to_file.exists():
+            return jsonify({'success': False, 'error': f'Snapshots not found for versions {from_version} and/or {to_version}'}), 404
+
+        from_snapshot = json.loads(from_file.read_text())
+        to_snapshot = json.loads(to_file.read_text())
+
+        from_keys = from_snapshot.get('keys', {})
+        to_keys = to_snapshot.get('keys', {})
+
+        # Compute diff
+        diff = {'added': {}, 'removed': {}, 'changed': {}}
+
+        all_keys = set(from_keys.keys()) | set(to_keys.keys())
+        for key in all_keys:
+            if key not in from_keys:
+                diff['added'][key] = to_keys[key]
+            elif key not in to_keys:
+                diff['removed'][key] = from_keys[key]
+            elif from_keys[key] != to_keys[key]:
+                diff['changed'][key] = {'before': from_keys[key], 'after': to_keys[key]}
+
+        return jsonify({'success': True, 'diff': diff})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/artifact', methods=['GET'])
+def get_observability_artifact():
+    """Get an artifact by path (for large values)."""
+    try:
+        obs_dir = get_observability_dir()
+        artifact_path = request.args.get('path')
+
+        if not artifact_path:
+            return jsonify({'success': False, 'error': 'path is required'}), 400
+
+        # Security: ensure path doesn't escape observability directory
+        full_path = (obs_dir / "artifacts" / artifact_path).resolve()
+        if not str(full_path).startswith(str(obs_dir.resolve())):
+            return jsonify({'success': False, 'error': 'Invalid path'}), 400
+
+        if not full_path.exists():
+            return jsonify({'success': False, 'error': 'Artifact not found'}), 404
+
+        # Return file content based on type
+        if full_path.suffix in ['.json']:
+            content = json.loads(full_path.read_text())
+            return jsonify({'success': True, 'artifact': content})
+        elif full_path.suffix in ['.png', '.jpg', '.jpeg', '.gif']:
+            return send_file(full_path)
+        else:
+            # Return as text
+            return jsonify({'success': True, 'artifact': full_path.read_text()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/observability/versions', methods=['GET'])
+def get_observability_versions():
+    """Get list of available context versions for a scope."""
+    try:
+        obs_dir = get_observability_dir()
+        scope_key = request.args.get('scopeKey')
+
+        if not scope_key:
+            return jsonify({'success': False, 'error': 'scopeKey is required'}), 400
+
+        # Convert scope key to safe directory name
+        safe_key = scope_key.replace(":", "_")
+        scope_dir = obs_dir / "context" / safe_key
+
+        if not scope_dir.exists():
+            return jsonify({'success': True, 'versions': []})
+
+        versions = []
+        for f in sorted(scope_dir.glob("v*.json")):
+            try:
+                version_num = int(f.stem[1:])  # Extract number from v000001
+                versions.append(version_num)
+            except ValueError:
+                continue
+
+        return jsonify({'success': True, 'versions': versions})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

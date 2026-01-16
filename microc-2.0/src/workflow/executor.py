@@ -8,6 +8,7 @@ to actual Python implementations and managing execution order.
 import importlib
 import importlib.util
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List, Tuple
 from .schema import (
@@ -20,6 +21,13 @@ from .schema import (
 )
 from .registry import FunctionRegistry, get_default_registry
 
+# Observability imports (optional - graceful degradation if not available)
+try:
+    from .observability import NodeEventEmitter, TrackedContext, ContextSnapshotManager
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+
 
 class WorkflowExecutor:
     """
@@ -29,7 +37,8 @@ class WorkflowExecutor:
     parameter injection, execution order, and context passing.
     """
     
-    def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None):
+    def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None,
+                 observability_enabled: bool = True, results_dir: Optional[Path] = None):
         """
         Initialize the workflow executor.
 
@@ -37,6 +46,8 @@ class WorkflowExecutor:
             workflow: WorkflowDefinition to execute
             custom_functions_module: Module containing custom function implementations
             config: Simulation configuration object
+            observability_enabled: Whether to enable node observability (default True)
+            results_dir: Results directory for observability artifacts (default: Path('results'))
         """
         self.workflow = workflow
         self.custom_functions_module = custom_functions_module
@@ -48,6 +59,17 @@ class WorkflowExecutor:
         self.call_stack: List[Dict[str, Any]] = []
         self.max_call_depth = 100  # Prevent stack overflow
 
+        # Observability setup
+        self._results_dir = results_dir or Path('results')
+        self._observability_enabled = observability_enabled and OBSERVABILITY_AVAILABLE
+        self._event_emitter: Optional['NodeEventEmitter'] = None
+        self._snapshot_manager: Optional['ContextSnapshotManager'] = None
+        self._current_execution_id: Optional[str] = None
+
+        if self._observability_enabled:
+            self._event_emitter = NodeEventEmitter(self._results_dir, enabled=True)
+            self._snapshot_manager = ContextSnapshotManager(self._results_dir, enabled=True)
+
         # Validate workflow
         validation_result = workflow.validate()
         if not validation_result['valid']:
@@ -57,6 +79,18 @@ class WorkflowExecutor:
                 error_msg += "\n\nWarnings:\n"
                 error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
             raise ValueError(error_msg)
+
+    def initialize_observability(self) -> None:
+        """Initialize observability systems. Call once before execution starts."""
+        if self._event_emitter:
+            self._event_emitter.initialize()
+        if self._snapshot_manager:
+            self._snapshot_manager.initialize()
+
+    def finalize_observability(self, status: str = "completed") -> None:
+        """Finalize observability systems. Call once after execution completes."""
+        if self._event_emitter:
+            self._event_emitter.finalize(status)
     
     def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
         """
@@ -437,17 +471,25 @@ class WorkflowExecutor:
         Execute a function within a sub-workflow.
 
         Similar to _execute_function but uses SubWorkflow for parameter merging.
+        Includes observability instrumentation (events + snapshots).
         """
+        node_id = workflow_func.id
+        function_name = workflow_func.function_name
+        subworkflow_name = subworkflow.name
+        subworkflow_kind = self._get_subworkflow_kind(subworkflow_name)
+        scope_key = f"{subworkflow_kind}:{subworkflow_name}"
+        call_path = [c['name'] for c in self.call_stack]
+
         # Get function_file from top-level attribute or parameters
         function_file = workflow_func.function_file or workflow_func.parameters.get('function_file')
 
         # Get function implementation
-        func = self._get_function_implementation(workflow_func.function_name, function_file)
+        func = self._get_function_implementation(function_name, function_file)
         if func is None:
             return None
 
         # Get function metadata from registry
-        metadata = self.registry.get(workflow_func.function_name)
+        metadata = self.registry.get(function_name)
 
         # Prepare function arguments
         kwargs = {}
@@ -461,31 +503,108 @@ class WorkflowExecutor:
             if key not in metadata_fields:
                 kwargs[key] = value
 
+        # === OBSERVABILITY: Take before snapshot ===
+        before_version = None
+        if self._snapshot_manager:
+            before_version = self._snapshot_manager.take_snapshot(
+                scope_key, context, node_id=node_id
+            )
+
+        # === OBSERVABILITY: Wrap context for tracking ===
+        tracked_context = None
+        if self._observability_enabled and OBSERVABILITY_AVAILABLE:
+            tracked_context = TrackedContext(context)
+            tracked_context.start_tracking()
+        else:
+            tracked_context = context
+
         # Add context data based on function inputs
         if metadata:
             for input_name in metadata.inputs:
                 if input_name == 'context':
-                    kwargs['context'] = context
-                elif input_name in context:
-                    kwargs[input_name] = context[input_name]
+                    kwargs['context'] = tracked_context
+                elif input_name in tracked_context:
+                    kwargs[input_name] = tracked_context[input_name]
 
         # For custom functions, ensure context is first
         if function_file and 'context' not in kwargs:
-            kwargs = {'context': context, **kwargs}
+            kwargs = {'context': tracked_context, **kwargs}
 
         # Always add config if available
         if self.config is not None and not function_file and 'config' not in kwargs:
             kwargs['config'] = self.config
 
+        # === OBSERVABILITY: Emit node_start ===
+        execution_id = None
+        start_time = time.perf_counter()
+        if self._event_emitter:
+            execution_id = self._event_emitter.emit_node_start(
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_kind=subworkflow_kind,
+                subworkflow_name=subworkflow_name,
+                before_context_version=before_version,
+                call_path=call_path,
+                step_index=context.get('current_step'),
+            )
+
         # Execute function
+        status = "ok"
+        error_message = None
+        result = None
         try:
             result = func(**kwargs)
-            return {"result": result} if result is not None else None
         except TypeError as e:
-            print(f"[WORKFLOW] Function '{workflow_func.function_name}' called with wrong arguments: {e}")
+            status = "error"
+            error_message = str(e)
+            print(f"[WORKFLOW] Function '{function_name}' called with wrong arguments: {e}")
             import traceback
             traceback.print_exc()
+        except Exception as e:
+            status = "error"
+            error_message = str(e)
+            print(f"[WORKFLOW] Function '{function_name}' raised exception: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # === OBSERVABILITY: Stop tracking and get reads/writes ===
+        read_keys = []
+        written_keys = []
+        if isinstance(tracked_context, TrackedContext):
+            read_keys, written_keys = tracked_context.stop_tracking()
+            # Sync tracked context back to original context
+            context.clear()
+            context.update(tracked_context.to_dict())
+
+        # === OBSERVABILITY: Take after snapshot ===
+        after_version = None
+        if self._snapshot_manager and written_keys:
+            after_version = self._snapshot_manager.take_snapshot(
+                scope_key, context, node_id=node_id, execution_id=execution_id
+            )
+
+        # === OBSERVABILITY: Emit node_end ===
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        if self._event_emitter:
+            self._event_emitter.emit_node_end(
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_kind=subworkflow_kind,
+                subworkflow_name=subworkflow_name,
+                execution_id=execution_id or "",
+                status=status,
+                duration_ms=duration_ms,
+                after_context_version=after_version,
+                written_keys=written_keys,
+                read_keys=read_keys,
+                call_path=call_path,
+                error_message=error_message,
+            )
+
+        if status == "error":
             return None
+
+        return {"result": result} if result is not None else None
 
     def _get_subworkflow_kind(self, subworkflow_name: str) -> str:
         """
@@ -528,13 +647,25 @@ class WorkflowExecutor:
         Returns:
             Updated context after executing workflow
         """
-        if self.workflow.version == "2.0":
-            # Section 9.2: Support arbitrary entry point for composers
-            print(f"[WORKFLOW] Starting execution from entry subworkflow: {entry_subworkflow}")
-            return self.execute_subworkflow(entry_subworkflow, context)
-        else:
-            # For version 1.0, execute initialization as the entry point
-            return self.execute_initialization(context)
+        # Initialize observability at the start
+        self.initialize_observability()
+
+        status = "completed"
+        try:
+            if self.workflow.version == "2.0":
+                # Section 9.2: Support arbitrary entry point for composers
+                print(f"[WORKFLOW] Starting execution from entry subworkflow: {entry_subworkflow}")
+                result = self.execute_subworkflow(entry_subworkflow, context)
+            else:
+                # For version 1.0, execute initialization as the entry point
+                result = self.execute_initialization(context)
+            return result
+        except Exception as e:
+            status = "failed"
+            raise
+        finally:
+            # Finalize observability at the end
+            self.finalize_observability(status)
 
     def execute_initialization(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute initialization stage (legacy v1.0)."""

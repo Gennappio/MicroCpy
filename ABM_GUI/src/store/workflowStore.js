@@ -163,6 +163,49 @@ const useWorkflowStore = create((set, get) => ({
   // Call stack logs (for sub-workflow debugging)
   callStackLogs: [],
 
+  // ===== NodeObservability: Ephemeral UI State =====
+
+  /**
+   * Selected node ID per subworkflow stage (ephemeral, UI-only).
+   * Lifted from WorkflowCanvas local state so other panels can access it.
+   * Shape: { [stageName]: nodeId | null }
+   */
+  selectedNodeByStage: {},
+
+  /**
+   * Ephemeral cell selection state, keyed by scope.
+   * Scope key format: "kind:subworkflowName" or "kind:subworkflowName:nodeId"
+   * Shape: { [scopeKey]: string[] }  // array of cell IDs
+   */
+  cellSelectionByScope: {},
+
+  // ===== NodeObservability: Inspector & Badge State =====
+
+  /**
+   * Node badge stats per scope, fetched from backend.
+   * Shape: { [scopeKey]: { [nodeId]: BadgeStats } }
+   * BadgeStats: { status, lastStart, lastEnd, lastDurationMs, logCounts: {info,warn,error}, writes }
+   */
+  nodeBadgeStatsByScope: {},
+
+  /**
+   * Inspector panel state.
+   * - isOpen: whether the inspector panel is visible
+   * - tab: current active tab
+   * - pinnedNodeId: if set, inspector stays on this node even when selection changes
+   */
+  inspector: {
+    isOpen: false,
+    tab: 'overview',  // 'overview' | 'params' | 'context' | 'logs' | 'artifacts'
+    pinnedNodeId: null,
+  },
+
+  /**
+   * Metadata about the last/current run.
+   * null if no run has been executed yet.
+   */
+  lastRunMeta: null,  // { startedAt: string, status: string, endedAt?: string }
+
   // Actions
   setCurrentStage: (stage) => set({ currentStage: stage }),
 
@@ -217,6 +260,312 @@ const useWorkflowStore = create((set, get) => ({
   },
 
   clearCallStackLogs: () => set({ callStackLogs: [] }),
+
+  // ===== NodeObservability: Selected Node Actions =====
+
+  /**
+   * Set the selected node for a given stage
+   * @param {string} stage - The subworkflow stage name
+   * @param {string|null} nodeId - The node ID (or null to clear selection)
+   */
+  setSelectedNode: (stage, nodeId) => {
+    set((state) => ({
+      selectedNodeByStage: {
+        ...state.selectedNodeByStage,
+        [stage]: nodeId
+      }
+    }));
+  },
+
+  /**
+   * Get the selected node ID for a given stage
+   * @param {string} stage - The subworkflow stage name
+   * @returns {string|null} The selected node ID or null
+   */
+  getSelectedNode: (stage) => {
+    return get().selectedNodeByStage[stage] || null;
+  },
+
+  /**
+   * Clear selected node for a given stage
+   * @param {string} stage - The subworkflow stage name
+   */
+  clearSelectedNode: (stage) => {
+    set((state) => ({
+      selectedNodeByStage: {
+        ...state.selectedNodeByStage,
+        [stage]: null
+      }
+    }));
+  },
+
+  // ===== NodeObservability: Cell Selection Actions =====
+
+  /**
+   * Resolve scope key for cell selection based on subworkflow kind, name, and optionally node ID.
+   * Scope key format: "kind:subworkflowName" or "kind:subworkflowName:nodeId"
+   * @param {string} kind - 'composer' or 'subworkflow'
+   * @param {string} subworkflowName - The subworkflow name
+   * @param {string|null} nodeId - Optional node ID for node-level scoping
+   * @returns {string} The scope key
+   */
+  resolveScopeKey: (kind, subworkflowName, nodeId = null) => {
+    return nodeId
+      ? `${kind}:${subworkflowName}:${nodeId}`
+      : `${kind}:${subworkflowName}`;
+  },
+
+  /**
+   * Get the scope key for the current context (uses current stage and optionally selected node)
+   * @param {boolean} includeNode - Whether to include the selected node in the scope
+   * @returns {string} The scope key
+   */
+  getCurrentScopeKey: (includeNode = true) => {
+    const state = get();
+    const stage = state.currentStage;
+    const kind = state.workflow.metadata?.gui?.subworkflow_kinds?.[stage] || 'subworkflow';
+    const nodeId = includeNode ? state.selectedNodeByStage[stage] : null;
+    return state.resolveScopeKey(kind, stage, nodeId);
+  },
+
+  /**
+   * Set cell selection for a given scope
+   * @param {string} scopeKey - The scope key (from resolveScopeKey)
+   * @param {string[]} cellIds - Array of selected cell IDs
+   */
+  setCellSelection: (scopeKey, cellIds) => {
+    set((state) => ({
+      cellSelectionByScope: {
+        ...state.cellSelectionByScope,
+        [scopeKey]: [...cellIds]  // Clone to prevent mutations
+      }
+    }));
+  },
+
+  /**
+   * Get cell selection for a given scope
+   * @param {string} scopeKey - The scope key (from resolveScopeKey)
+   * @returns {string[]} Array of selected cell IDs (empty if none)
+   */
+  getCellSelection: (scopeKey) => {
+    return get().cellSelectionByScope[scopeKey] || [];
+  },
+
+  /**
+   * Add cell IDs to the selection for a given scope
+   * @param {string} scopeKey - The scope key
+   * @param {string[]} cellIds - Cell IDs to add
+   */
+  addToCellSelection: (scopeKey, cellIds) => {
+    set((state) => {
+      const existing = state.cellSelectionByScope[scopeKey] || [];
+      const existingSet = new Set(existing);
+      cellIds.forEach(id => existingSet.add(id));
+      return {
+        cellSelectionByScope: {
+          ...state.cellSelectionByScope,
+          [scopeKey]: Array.from(existingSet)
+        }
+      };
+    });
+  },
+
+  /**
+   * Remove cell IDs from the selection for a given scope
+   * @param {string} scopeKey - The scope key
+   * @param {string[]} cellIds - Cell IDs to remove
+   */
+  removeFromCellSelection: (scopeKey, cellIds) => {
+    set((state) => {
+      const existing = state.cellSelectionByScope[scopeKey] || [];
+      const removeSet = new Set(cellIds);
+      return {
+        cellSelectionByScope: {
+          ...state.cellSelectionByScope,
+          [scopeKey]: existing.filter(id => !removeSet.has(id))
+        }
+      };
+    });
+  },
+
+  /**
+   * Clear cell selection for a given scope
+   * @param {string} scopeKey - The scope key
+   */
+  clearCellSelection: (scopeKey) => {
+    set((state) => ({
+      cellSelectionByScope: {
+        ...state.cellSelectionByScope,
+        [scopeKey]: []
+      }
+    }));
+  },
+
+  /**
+   * Clear all cell selections (e.g., when loading a new workflow)
+   */
+  clearAllCellSelections: () => {
+    set({ cellSelectionByScope: {} });
+  },
+
+  /**
+   * Get the current cell selection (for the current scope based on current stage/node)
+   * @param {boolean} includeNode - Whether to use node-level scoping
+   * @returns {string[]} Array of selected cell IDs
+   */
+  getCurrentCellSelection: (includeNode = true) => {
+    const state = get();
+    const scopeKey = state.getCurrentScopeKey(includeNode);
+    return state.getCellSelection(scopeKey);
+  },
+
+  /**
+   * Set cell selection for the current scope
+   * @param {string[]} cellIds - Array of selected cell IDs
+   * @param {boolean} includeNode - Whether to use node-level scoping
+   */
+  setCurrentCellSelection: (cellIds, includeNode = true) => {
+    const state = get();
+    const scopeKey = state.getCurrentScopeKey(includeNode);
+    state.setCellSelection(scopeKey, cellIds);
+  },
+
+  // ===== NodeObservability: Inspector Actions =====
+
+  /**
+   * Open the inspector panel
+   * @param {string|null} tab - Optional tab to open to
+   */
+  openInspector: (tab = null) => {
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        isOpen: true,
+        ...(tab ? { tab } : {}),
+      }
+    }));
+  },
+
+  /**
+   * Close the inspector panel
+   */
+  closeInspector: () => {
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        isOpen: false,
+      }
+    }));
+  },
+
+  /**
+   * Toggle the inspector panel
+   */
+  toggleInspector: () => {
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        isOpen: !state.inspector.isOpen,
+      }
+    }));
+  },
+
+  /**
+   * Set the active inspector tab
+   * @param {string} tab - 'overview' | 'params' | 'context' | 'logs' | 'artifacts'
+   */
+  setInspectorTab: (tab) => {
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        tab,
+      }
+    }));
+  },
+
+  /**
+   * Pin the inspector to a specific node (prevents auto-switching on selection change)
+   * @param {string|null} nodeId - Node ID to pin to, or null to unpin
+   */
+  pinInspector: (nodeId) => {
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        pinnedNodeId: nodeId,
+      }
+    }));
+  },
+
+  /**
+   * Toggle inspector pin state for current node
+   */
+  toggleInspectorPin: () => {
+    const state = get();
+    const currentStage = state.currentStage;
+    const selectedNode = state.selectedNodeByStage[currentStage];
+    const isPinned = state.inspector.pinnedNodeId === selectedNode;
+
+    set((state) => ({
+      inspector: {
+        ...state.inspector,
+        pinnedNodeId: isPinned ? null : selectedNode,
+      }
+    }));
+  },
+
+  // ===== NodeObservability: Badge Stats Actions =====
+
+  /**
+   * Set badge stats for a scope (usually called after fetching from backend)
+   * @param {string} scopeKey - The scope key
+   * @param {object} nodeStats - Object mapping nodeId to BadgeStats
+   */
+  setNodeBadgeStats: (scopeKey, nodeStats) => {
+    set((state) => ({
+      nodeBadgeStatsByScope: {
+        ...state.nodeBadgeStatsByScope,
+        [scopeKey]: nodeStats,
+      }
+    }));
+  },
+
+  /**
+   * Get badge stats for a specific node
+   * @param {string} scopeKey - The scope key
+   * @param {string} nodeId - The node ID
+   * @returns {object|null} BadgeStats or null
+   */
+  getNodeBadgeStats: (scopeKey, nodeId) => {
+    const state = get();
+    return state.nodeBadgeStatsByScope[scopeKey]?.[nodeId] || null;
+  },
+
+  /**
+   * Clear all badge stats (e.g., before a new run)
+   */
+  clearNodeBadgeStats: () => {
+    set({ nodeBadgeStatsByScope: {} });
+  },
+
+  // ===== NodeObservability: Run Meta Actions =====
+
+  /**
+   * Set the last run metadata
+   * @param {object|null} meta - Run metadata or null to clear
+   */
+  setLastRunMeta: (meta) => {
+    set({ lastRunMeta: meta });
+  },
+
+  /**
+   * Clear all observability state (call before starting a new run)
+   */
+  clearObservabilityState: () => {
+    set({
+      nodeBadgeStatsByScope: {},
+      lastRunMeta: null,
+    });
+  },
 
   // Sub-workflow management actions (v2.0)
   addSubWorkflow: (name, description = '', kind = null) => {

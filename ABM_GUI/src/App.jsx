@@ -4,6 +4,7 @@ import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import WorkflowConsole from './components/WorkflowConsole';
 import WorkflowResults from './components/WorkflowResults';
+import NodeInspector from './components/NodeInspector';
 import MainTabSelector from './components/MainTabSelector';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
@@ -21,7 +22,8 @@ function App() {
         setWorkflowFilePath,
         addSubWorkflow,
         deleteSubWorkflow,
-        renameSubWorkflow
+        renameSubWorkflow,
+        inspector,
       } = useWorkflowStore();
 
   const [showNewSubWorkflowDialog, setShowNewSubWorkflowDialog] = useState(false);
@@ -290,9 +292,10 @@ function App() {
             const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
                                (currentStage === 'main' ? 'composer' : 'subworkflow');
             const isComposer = currentKind === 'composer';
+            const inspectorOpen = inspector.isOpen;
 
             return (
-              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'}`}>
+              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'} ${inspectorOpen ? 'with-inspector' : ''}`}>
                 <div className="grid-palette">
                   <FunctionPalette currentStage={currentStage} />
                 </div>
@@ -311,6 +314,12 @@ function App() {
                       />
                     </div>
                   </>
+                )}
+                {/* Node Inspector - appears when open */}
+                {inspectorOpen && (
+                  <div className="grid-inspector">
+                    <NodeInspector />
+                  </div>
                 )}
               </div>
             );

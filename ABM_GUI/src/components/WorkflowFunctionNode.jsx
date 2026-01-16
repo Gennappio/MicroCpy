@@ -1,6 +1,7 @@
 import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, FileCode } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import NodeBadge from './NodeBadge';
 import './WorkflowFunctionNode.css';
 
 /**
@@ -8,10 +9,31 @@ import './WorkflowFunctionNode.css';
  */
 const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const currentStage = useWorkflowStore((state) => state.currentStage);
+  const workflow = useWorkflowStore((state) => state.workflow);
+  const nodeBadgeStatsByScope = useWorkflowStore((state) => state.nodeBadgeStatsByScope);
+  const openInspector = useWorkflowStore((state) => state.openInspector);
+
   const edges = useEdges(); // Use reactflow's useEdges hook
   const nodes = useNodes(); // Use reactflow's useNodes hook to get parameter node labels
 
   const { label, functionName, enabled, onEdit, functionFile, parameters, customName, stepCount } = data;
+
+  // Get badge stats for this node
+  const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
+  const scopeKey = `${subworkflowKind}:${currentStage}`;
+  const badgeStats = nodeBadgeStatsByScope[scopeKey]?.[id] || null;
+
+  // Handle badge click - open inspector to appropriate tab
+  const handleBadgeClick = (badgeType) => {
+    const tabMap = {
+      status: 'overview',
+      timing: 'overview',
+      logs: 'logs',
+      context: 'context',
+    };
+    openInspector(tabMap[badgeType] || 'overview');
+  };
 
   // Get function file from data or parameters
   const filePath = functionFile || parameters?.function_file || '';
@@ -125,6 +147,9 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
           Steps: {stepCount}
         </div>
       )}
+
+      {/* Node observability badge (status, timing, log counts) */}
+      <NodeBadge stats={badgeStats} onClick={handleBadgeClick} />
 
       {/* Function flow output handle on BOTTOM only - no right-side handles */}
       <Handle type="source" position={Position.Bottom} id="func-out" className="function-handle" />

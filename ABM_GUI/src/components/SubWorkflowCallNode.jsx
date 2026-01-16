@@ -1,6 +1,7 @@
 import { Handle, Position, useEdges, useNodes } from 'reactflow';
-import { Settings, Play, Pause, Zap } from 'lucide-react';
+import { Settings, Play, Pause, Zap, ExternalLink } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import NodeBadge from './NodeBadge';
 import './SubWorkflowCallNode.css';
 
 /**
@@ -9,11 +10,31 @@ import './SubWorkflowCallNode.css';
  */
 const SubWorkflowCallNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
   const workflow = useWorkflowStore((state) => state.workflow);
+  const currentStage = useWorkflowStore((state) => state.currentStage);
+  const nodeBadgeStatsByScope = useWorkflowStore((state) => state.nodeBadgeStatsByScope);
+  const openInspector = useWorkflowStore((state) => state.openInspector);
   const edges = useEdges();
   const nodes = useNodes();
 
   const { label, subworkflowName, iterations, enabled, onEdit, description } = data;
+
+  // Get badge stats for this node
+  const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
+  const scopeKey = `${subworkflowKind}:${currentStage}`;
+  const badgeStats = nodeBadgeStatsByScope[scopeKey]?.[id] || null;
+
+  // Handle badge click - open inspector to appropriate tab
+  const handleBadgeClick = (badgeType) => {
+    const tabMap = {
+      status: 'overview',
+      timing: 'overview',
+      logs: 'logs',
+      context: 'context',
+    };
+    openInspector(tabMap[badgeType] || 'overview');
+  };
 
   // Determine if this is calling a composer
   const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
@@ -63,6 +84,16 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
             <Settings size={14} />
           </button>
         )}
+        <button
+          className="node-goto-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentStage(subworkflowName);
+          }}
+          title={`Go to ${subworkflowName}`}
+        >
+          <ExternalLink size={14} />
+        </button>
       </div>
 
       {/* Parameter handles section */}
@@ -119,6 +150,9 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
           {description.substring(0, 50)}{description.length > 50 ? '...' : ''}
         </div>
       )}
+
+      {/* Node observability badge (status, timing, log counts) */}
+      <NodeBadge stats={badgeStats} onClick={handleBadgeClick} />
 
       {/* Function flow output handle on BOTTOM */}
       <Handle type="source" position={Position.Bottom} id="func-out" className="function-handle" />

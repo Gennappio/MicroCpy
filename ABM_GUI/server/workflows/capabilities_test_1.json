@@ -1,0 +1,225 @@
+{
+  "version": "2.0",
+  "name": "Capabilities Test Workflow",
+  "description": "Comprehensive test workflow for observability: raw logs, in-node logs, iterations, composers with nested composers/workflows, workflows with nested workflows and functions",
+  "metadata": {
+    "author": "Test Suite",
+    "created": "2026-01-16",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "inner_composer": "composer",
+        "processing_workflow": "subworkflow",
+        "utility_workflow": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - tests composer-level orchestration with nested calls",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_inner_composer",
+          "subworkflow_name": "inner_composer",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Call inner composer (composer calling composer)",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "call_processing_workflow",
+          "subworkflow_name": "processing_workflow",
+          "iterations": 3,
+          "enabled": true,
+          "description": "Call processing workflow 3x (testing iterations)",
+          "parameters": {
+            "iteration_param": "from_main"
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 250}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["call_inner_composer", "call_processing_workflow"],
+      "enabled": true
+    },
+    "inner_composer": {
+      "description": "Inner composer - tests nested composer calls",
+      "deletable": true,
+      "controller": {
+        "id": "controller-inner_composer",
+        "label": "INNER COMPOSER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "inner_call_utility",
+          "subworkflow_name": "utility_workflow",
+          "iterations": 2,
+          "enabled": true,
+          "description": "Inner composer calling utility workflow 2x",
+          "parameters": {
+            "source": "inner_composer"
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 100}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["inner_call_utility"],
+      "enabled": true
+    },
+    "processing_workflow": {
+      "description": "Processing workflow - tests subworkflow with multiple function categories and nested calls",
+      "deletable": true,
+      "controller": {
+        "id": "controller-processing_workflow",
+        "label": "PROCESSING CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 2
+      },
+      "functions": [
+        {
+          "id": "proc_init",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Processing initialization",
+          "parameters": {
+            "message": "[PROCESSING] Step initialization - beginning processing cycle"
+          },
+          "position": {"x": 200, "y": 50}
+        },
+        {
+          "id": "proc_intra_1",
+          "function_name": "debug_intracellular_1",
+          "enabled": true,
+          "description": "Intracellular debug step 1",
+          "parameters": {
+            "message": "[PROCESSING] Intracellular computation step 1"
+          },
+          "position": {"x": 200, "y": 150}
+        },
+        {
+          "id": "proc_micro_1",
+          "function_name": "debug_microenvironment_1",
+          "enabled": true,
+          "description": "Microenvironment debug step",
+          "parameters": {
+            "message": "[PROCESSING] Microenvironment update"
+          },
+          "position": {"x": 200, "y": 250}
+        },
+        {
+          "id": "proc_intra_2",
+          "function_name": "debug_intracellular_2",
+          "enabled": true,
+          "description": "Intracellular debug step 2",
+          "parameters": {
+            "message": "[PROCESSING] Intracellular computation step 2"
+          },
+          "position": {"x": 200, "y": 350}
+        },
+        {
+          "id": "proc_complete",
+          "function_name": "debug_initialization_2",
+          "enabled": true,
+          "description": "Processing complete",
+          "parameters": {
+            "message": "[PROCESSING] Processing cycle completed"
+          },
+          "position": {"x": 200, "y": 550}
+        }
+      ],
+      "subworkflow_calls": [
+        {
+          "id": "proc_call_utility",
+          "subworkflow_name": "utility_workflow",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Workflow calling workflow (nested)",
+          "parameters": {
+            "source": "processing_workflow"
+          },
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 450}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["proc_init", "proc_intra_1", "proc_micro_1", "proc_intra_2", "proc_call_utility", "proc_complete"],
+      "enabled": true
+    },
+    "utility_workflow": {
+      "description": "Utility workflow - simple leaf workflow with multiple log levels",
+      "deletable": true,
+      "controller": {
+        "id": "controller-utility_workflow",
+        "label": "UTILITY CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "util_start",
+          "function_name": "debug_initialization_1",
+          "enabled": true,
+          "description": "Utility start",
+          "parameters": {
+            "message": "[UTILITY] Starting utility operations"
+          },
+          "position": {"x": 200, "y": 50}
+        },
+        {
+          "id": "util_inter_1",
+          "function_name": "debug_intercellular_1",
+          "enabled": true,
+          "description": "Intercellular debug",
+          "parameters": {
+            "message": "[UTILITY] Intercellular communication step"
+          },
+          "position": {"x": 200, "y": 150}
+        },
+        {
+          "id": "util_final_1",
+          "function_name": "debug_finalization_1",
+          "enabled": true,
+          "description": "Finalization debug",
+          "parameters": {
+            "message": "[UTILITY] Finalization step - cleanup and export"
+          },
+          "position": {"x": 200, "y": 250}
+        },
+        {
+          "id": "util_end",
+          "function_name": "debug_initialization_2",
+          "enabled": true,
+          "description": "Utility end",
+          "parameters": {
+            "message": "[UTILITY] Utility operations completed"
+          },
+          "position": {"x": 200, "y": 350}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["util_start", "util_inter_1", "util_final_1", "util_end"],
+      "enabled": true
+    }
+  }
+}
+

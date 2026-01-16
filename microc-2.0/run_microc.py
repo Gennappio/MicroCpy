@@ -63,6 +63,8 @@ Examples:
                        help='Run with config file (default pipeline if no workflow, or config setup for workflow)')
     parser.add_argument('--workflow', metavar='WORKFLOW_JSON',
                        help='Run workflow (complete user control, optionally with --sim for config setup)')
+    parser.add_argument('--entry-subworkflow', metavar='SUBWORKFLOW_NAME', default='main',
+                       help='Entry point subworkflow for v2.0 workflows (default: main)')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -129,6 +131,11 @@ Examples:
         else:
             # Workflow only: workflow must provide initialization
             sim_args = ['--workflow', args.workflow]
+
+        # Pass through entry-subworkflow for v2.0 workflows
+        entry_subworkflow = getattr(args, 'entry_subworkflow', 'main')
+        if args.workflow and entry_subworkflow:
+            sim_args.extend(['--entry-subworkflow', entry_subworkflow])
 
         if run_tool(run_sim_path, sim_args):
             success_count += 1

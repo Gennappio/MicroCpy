@@ -35,12 +35,32 @@ const nodeTypes = {
 const WorkflowCanvas = ({ stage }) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [showParameterEditor, setShowParameterEditor] = useState(false);
   const [showControllerSettings, setShowControllerSettings] = useState(false);
 
-  const { stageNodes, stageEdges, setStageNodes, setStageEdges, updateFunctionParameters } =
-    useWorkflowStore();
+  // Use store-based selectedNode (lifted from local state for cross-panel access)
+  const {
+    stageNodes,
+    stageEdges,
+    setStageNodes,
+    setStageEdges,
+    updateFunctionParameters,
+    selectedNodeByStage,
+    setSelectedNode: setSelectedNodeInStore
+  } = useWorkflowStore();
+
+  // Get the selected node ID for this stage from the store
+  const selectedNodeId = selectedNodeByStage[stage] || null;
+
+  // Derive the full node object from the nodes array
+  const selectedNode = selectedNodeId
+    ? (stageNodes[stage] || []).find(n => n.id === selectedNodeId) || null
+    : null;
+
+  // Wrapper to set selected node in store (accepts node object or null)
+  const setSelectedNode = useCallback((node) => {
+    setSelectedNodeInStore(stage, node?.id || null);
+  }, [stage, setSelectedNodeInStore]);
 
   // Initialize with current stage's nodes and edges
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(stageNodes[stage] || []);
@@ -73,11 +93,16 @@ const WorkflowCanvas = ({ stage }) => {
 
   // Ensure Controller node is always present in the canvas
   React.useEffect(() => {
-    const controllerNodeId = `controller-${stage}`;
-    const hasControllerNode = nodes.some(n => n.id === controllerNodeId);
+    // Check for any controller/init node (either by type or by id pattern)
+    const hasControllerNode = nodes.some(n =>
+      n.type === 'controllerNode' ||
+      n.type === 'initNode' ||
+      n.id.startsWith('controller-')
+    );
 
     if (!hasControllerNode) {
       // Create Controller node if it doesn't exist
+      const controllerNodeId = `controller-${stage}`;
       const controllerNode = {
         id: controllerNodeId,
         type: 'controllerNode',
@@ -95,12 +120,16 @@ const WorkflowCanvas = ({ stage }) => {
     isSyncingFromStore.current = true;
     const newNodes = stageNodes[stage] || [];
 
-    // Always ensure Controller node is present
-    const controllerNodeId = `controller-${stage}`;
-    const hasControllerNode = newNodes.some(n => n.id === controllerNodeId);
+    // Check for any controller/init node (either by type or by id pattern)
+    const hasControllerNode = newNodes.some(n =>
+      n.type === 'controllerNode' ||
+      n.type === 'initNode' ||
+      n.id.startsWith('controller-')
+    );
 
     if (!hasControllerNode) {
       // Add Controller node if not present
+      const controllerNodeId = `controller-${stage}`;
       const controllerNode = {
         id: controllerNodeId,
         type: 'controllerNode',
@@ -327,7 +356,7 @@ const WorkflowCanvas = ({ stage }) => {
 
   const onNodeClick = useCallback((event, node) => {
     setSelectedNode(node);
-  }, []);
+  }, [setSelectedNode]);
 
   const onNodeDoubleClick = useCallback((event, node) => {
     // Open controller settings for Init/Controller nodes
@@ -340,7 +369,7 @@ const WorkflowCanvas = ({ stage }) => {
     // Open parameter editor for other nodes
     setSelectedNode(node);
     setShowParameterEditor(true);
-  }, []);
+  }, [setSelectedNode]);
 
   const handleParameterSave = useCallback(
     (parameters, customName, customMetadata) => {
