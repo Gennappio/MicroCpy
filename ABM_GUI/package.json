@@ -1,7 +1,7 @@
 {
-  "name": "abm-gui",
+  "name": "biocomposer",
   "version": "1.0.0",
-  "description": "MicroC Workflow UI - Visual workflow designer for cellular simulations",
+  "description": "BioComposer - Visual workflow designer for cellular simulations",
   "private": true,
   "type": "module",
   "scripts": {

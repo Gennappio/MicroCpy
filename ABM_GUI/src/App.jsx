@@ -223,7 +223,7 @@ function App() {
         <div className="header-left">
           <FileJson size={24} className="logo-icon" />
           <div className="header-title">
-            <h1>MicroC Workflow Designer</h1>
+            <h1>BioComposer</h1>
             <p>{workflow.name}</p>
           </div>
         </div>

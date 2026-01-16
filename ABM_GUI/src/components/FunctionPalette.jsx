@@ -252,12 +252,12 @@ const FunctionPalette = ({ currentStage }) => {
   return (
     <div className="function-palette">
       <div className="palette-header">
-        <h3>Function Library</h3>
+        <h3>Library</h3>
         {workflow.version === '2.0' && !isComposer && (
           <button
             className="import-library-btn"
             onClick={handleImportLibrary}
-            title="Import Function Library"
+            title="Import Library"
           >
             <Upload size={16} />
           </button>

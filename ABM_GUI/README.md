@@ -1,13 +1,13 @@
-# MicroC Workflow Designer
+# BioComposer
 
-A visual workflow designer for MicroC cellular simulations. Design, customize, and export simulation workflows without writing code.
+A visual workflow designer for cellular simulations. Design, customize, and export simulation workflows without writing code.
 
 ## Features
 
 - 🎨 **Visual Workflow Design**: Drag-and-drop interface for building simulation workflows
-- 📊 **5 Workflow Stages**: Separate views for initialization, intracellular, diffusion, intercellular, and finalization
+- 📊 **Composers & Sub-workflows**: Hierarchical workflow composition with nested execution
 - ⚙️ **Parameter Editing**: Edit function parameters with type-safe inputs
-- 💾 **JSON Import/Export**: Load and save workflows compatible with MicroC backend
+- 💾 **JSON Import/Export**: Load and save workflows
 - 🔄 **React Flow Integration**: Professional node-based workflow editor
 - 📦 **Function Library**: Pre-built catalog of simulation functions
 

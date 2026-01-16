@@ -94,7 +94,7 @@ const pathUtils = {
 
 /**
  * Workflow Store - Manages the entire workflow state
- * Compatible with MicroC workflow JSON format
+ * Compatible with workflow JSON format
  */
 const useWorkflowStore = create((set, get) => ({
   // Current workflow file path (for relative path resolution)

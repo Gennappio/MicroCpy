@@ -7,7 +7,7 @@ const API_BASE_URL = 'http://localhost:5001/api';
 
 /**
  * SimulationRunner Component
- * Provides UI for running MicroC simulations and viewing real-time logs
+ * Provides UI for running simulations and viewing real-time logs
  */
 const SimulationRunner = () => {
   const [isRunning, setIsRunning] = useState(false);
