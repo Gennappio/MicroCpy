@@ -64,7 +64,7 @@ const NodeInspector = () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/observability/events?scopeKey=${encodeURIComponent(scopeKey)}&nodeId=${encodeURIComponent(displayNodeId)}&limit=100`
+        `${API_BASE_URL}/api/observability/events?scopeKey=${encodeURIComponent(scopeKey)}&nodeId=${encodeURIComponent(displayNodeId)}&limit=10000`
       );
       const data = await res.json();
       if (data.success) {
@@ -427,7 +427,7 @@ const LogsTab = ({ events, loading }) => {
           <span className="log-time">{new Date(event.ts).toLocaleTimeString()}</span>
           <span className="log-event">{event.event}</span>
           <span className="log-message">
-            {event.payload?.message || event.payload?.status || JSON.stringify(event.payload)?.substring(0, 100)}
+            {event.payload?.message || event.payload?.status || JSON.stringify(event.payload)}
           </span>
         </div>
       ))}
