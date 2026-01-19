@@ -1,0 +1,375 @@
+{
+  "version": "2.0",
+  "name": "Diffusion-Reaction Workflow (Observability)",
+  "description": "Domain setup with substances (production/consumption per cell), population, and steady-state FiPy diffusion. Version 2.0 with observability enabled.",
+  "metadata": {
+    "author": "MicroCpy Team",
+    "experiment": "Diffusion-Reaction Test",
+    "created": "2026-01-19",
+    "notes": "Reusable workflow for diffusion-reaction with cell metabolism. Single macrostep (steady state). v2.0 format with full observability support.",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "initialization": "subworkflow",
+        "microenvironment": "subworkflow",
+        "finalization": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer orchestrating initialization, macrostep, and finalization",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_initialization",
+          "subworkflow_name": "initialization",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Setup domain, substances, and cell population",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "call_microenvironment",
+          "subworkflow_name": "microenvironment",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Run diffusion solver to steady state",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 250}
+        },
+        {
+          "id": "call_finalization",
+          "subworkflow_name": "finalization",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Generate plots and print summary",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["call_initialization", "call_microenvironment", "call_finalization"],
+      "enabled": true
+    },
+    "initialization": {
+      "description": "Setup domain, substances with production/consumption rates, and cell population.",
+      "deletable": true,
+      "controller": {
+        "id": "controller-initialization",
+        "label": "INITIALIZATION CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_sim",
+          "function_name": "setup_simulation",
+          "enabled": true,
+          "description": "Initialize simulation infrastructure",
+          "parameters": {},
+          "parameter_nodes": ["param_sim_name", "param_sim_total_steps", "param_sim_dt", "param_sim_output_dir"],
+          "position": {"x": 200, "y": 50}
+        },
+        {
+          "id": "setup_domain_node",
+          "function_name": "setup_domain",
+          "enabled": true,
+          "description": "Define 2D spatial domain",
+          "parameters": {},
+          "parameter_nodes": ["param_domain_dimensions", "param_domain_size_x", "param_domain_size_y", "param_domain_nx", "param_domain_ny", "param_domain_cell_height"],
+          "position": {"x": 200, "y": 150}
+        },
+        {
+          "id": "add_oxygen",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Oxygen: consumed by cells",
+          "parameters": {},
+          "parameter_nodes": ["param_oxygen_name", "param_oxygen_diffusion_coeff", "param_oxygen_production_rate", "param_oxygen_uptake_rate", "param_oxygen_initial_value", "param_oxygen_boundary_value", "param_oxygen_boundary_type", "param_oxygen_unit"],
+          "position": {"x": 200, "y": 250}
+        },
+        {
+          "id": "add_glucose",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Glucose: consumed by cells",
+          "parameters": {},
+          "parameter_nodes": ["param_glucose_name", "param_glucose_diffusion_coeff", "param_glucose_production_rate", "param_glucose_uptake_rate", "param_glucose_initial_value", "param_glucose_boundary_value", "param_glucose_boundary_type", "param_glucose_unit"],
+          "position": {"x": 200, "y": 350}
+        },
+        {
+          "id": "add_lactate",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Lactate: produced by cells",
+          "parameters": {},
+          "parameter_nodes": ["param_lactate_name", "param_lactate_diffusion_coeff", "param_lactate_production_rate", "param_lactate_uptake_rate", "param_lactate_initial_value", "param_lactate_boundary_value", "param_lactate_boundary_type", "param_lactate_unit"],
+          "position": {"x": 200, "y": 450}
+        },
+        {
+          "id": "add_h",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "H+ (protons): produced by cells",
+          "parameters": {},
+          "parameter_nodes": ["param_h_name", "param_h_diffusion_coeff", "param_h_production_rate", "param_h_uptake_rate", "param_h_initial_value", "param_h_boundary_value", "param_h_boundary_type", "param_h_unit"],
+          "position": {"x": 200, "y": 550}
+        },
+        {
+          "id": "add_tgfa",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "TGFA: growth factor",
+          "parameters": {},
+          "parameter_nodes": ["param_tgfa_name", "param_tgfa_diffusion_coeff", "param_tgfa_production_rate", "param_tgfa_uptake_rate", "param_tgfa_initial_value", "param_tgfa_boundary_value", "param_tgfa_boundary_type", "param_tgfa_unit"],
+          "position": {"x": 200, "y": 650}
+        },
+        {
+          "id": "add_fgf",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "FGF: growth factor",
+          "parameters": {},
+          "parameter_nodes": ["param_fgf_name", "param_fgf_diffusion_coeff", "param_fgf_production_rate", "param_fgf_uptake_rate", "param_fgf_initial_value", "param_fgf_boundary_value", "param_fgf_boundary_type", "param_fgf_unit"],
+          "position": {"x": 200, "y": 750}
+        },
+        {
+          "id": "add_hgf",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "HGF: growth factor",
+          "parameters": {},
+          "parameter_nodes": ["param_hgf_name", "param_hgf_diffusion_coeff", "param_hgf_production_rate", "param_hgf_uptake_rate", "param_hgf_initial_value", "param_hgf_boundary_value", "param_hgf_boundary_type", "param_hgf_unit"],
+          "position": {"x": 200, "y": 850}
+        },
+        {
+          "id": "add_gi",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "GI: growth inhibitor",
+          "parameters": {},
+          "parameter_nodes": ["param_gi_name", "param_gi_diffusion_coeff", "param_gi_production_rate", "param_gi_uptake_rate", "param_gi_initial_value", "param_gi_boundary_value", "param_gi_boundary_type", "param_gi_unit"],
+          "position": {"x": 200, "y": 950}
+        },
+        {
+          "id": "finalize_subs",
+          "function_name": "finalize_substances",
+          "enabled": true,
+          "description": "Initialize simulator with all substances",
+          "parameters": {},
+          "position": {"x": 200, "y": 1050}
+        },
+        {
+          "id": "setup_pop",
+          "function_name": "setup_population",
+          "enabled": true,
+          "description": "Initialize cell population (no gene network)",
+          "parameters": {},
+          "parameter_nodes": ["param_pop_enable_gene_network"],
+          "position": {"x": 200, "y": 1150}
+        },
+        {
+          "id": "load_cells_csv",
+          "function_name": "load_cells_from_csv",
+          "enabled": true,
+          "description": "Load cells from CSV",
+          "parameters": {},
+          "parameter_nodes": ["param_load_csv_file_path"],
+          "position": {"x": 200, "y": 1250}
+        },
+        {
+          "id": "generate_initial_plots",
+          "function_name": "generate_initial_plots",
+          "enabled": true,
+          "parameters": {},
+          "position": {"x": 200, "y": 1350}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Diffusion-Reaction Test"}, "position": {"x": 400, "y": 50}},
+        {"id": "param_sim_total_steps", "label": "Total Steps", "parameters": {"total_steps": 1}, "position": {"x": 500, "y": 50}},
+        {"id": "param_sim_dt", "label": "Time Step (dt)", "parameters": {"dt": 1.0}, "position": {"x": 600, "y": 50}},
+        {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results"}, "position": {"x": 700, "y": 50}},
+
+        {"id": "param_domain_dimensions", "label": "Dimensions", "parameters": {"dimensions": 2}, "position": {"x": 400, "y": 150}},
+        {"id": "param_domain_size_x", "label": "Size X (μm)", "parameters": {"size_x": 500.0}, "position": {"x": 500, "y": 150}},
+        {"id": "param_domain_size_y", "label": "Size Y (μm)", "parameters": {"size_y": 500.0}, "position": {"x": 600, "y": 150}},
+        {"id": "param_domain_nx", "label": "Grid NX", "parameters": {"nx": 50}, "position": {"x": 700, "y": 150}},
+        {"id": "param_domain_ny", "label": "Grid NY", "parameters": {"ny": 50}, "position": {"x": 800, "y": 150}},
+        {"id": "param_domain_cell_height", "label": "Cell Height (μm)", "parameters": {"cell_height": 20.0}, "position": {"x": 900, "y": 150}},
+
+        {"id": "param_oxygen_name", "label": "Name", "parameters": {"substance_name": "Oxygen"}, "position": {"x": 400, "y": 250}},
+        {"id": "param_oxygen_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 100000.0}, "position": {"x": 500, "y": 250}},
+        {"id": "param_oxygen_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}, "position": {"x": 600, "y": 250}},
+        {"id": "param_oxygen_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 250}},
+        {"id": "param_oxygen_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.285}, "position": {"x": 800, "y": 250}},
+        {"id": "param_oxygen_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.285}, "position": {"x": 900, "y": 250}},
+        {"id": "param_oxygen_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}, "position": {"x": 1000, "y": 250}},
+        {"id": "param_oxygen_unit", "label": "Unit", "parameters": {"unit": "mM"}, "position": {"x": 1100, "y": 250}},
+
+        {"id": "param_glucose_name", "label": "Name", "parameters": {"substance_name": "Glucose"}, "position": {"x": 400, "y": 350}},
+        {"id": "param_glucose_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 18000.0}, "position": {"x": 500, "y": 350}},
+        {"id": "param_glucose_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}, "position": {"x": 600, "y": 350}},
+        {"id": "param_glucose_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 350}},
+        {"id": "param_glucose_initial_value", "label": "Initial Value", "parameters": {"initial_value": 5.0}, "position": {"x": 800, "y": 350}},
+        {"id": "param_glucose_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 5.0}, "position": {"x": 900, "y": 350}},
+        {"id": "param_glucose_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}, "position": {"x": 1000, "y": 350}},
+        {"id": "param_glucose_unit", "label": "Unit", "parameters": {"unit": "mM"}, "position": {"x": 1100, "y": 350}},
+
+        {"id": "param_lactate_name", "label": "Name", "parameters": {"substance_name": "Lactate"}, "position": {"x": 400, "y": 450}},
+        {"id": "param_lactate_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 6000.0}, "position": {"x": 500, "y": 450}},
+        {"id": "param_lactate_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.0}, "position": {"x": 600, "y": 450}},
+        {"id": "param_lactate_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 450}},
+        {"id": "param_lactate_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 450}},
+        {"id": "param_lactate_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 450}},
+        {"id": "param_lactate_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}, "position": {"x": 1000, "y": 450}},
+        {"id": "param_lactate_unit", "label": "Unit", "parameters": {"unit": "mM"}, "position": {"x": 1100, "y": 450}},
+
+        {"id": "param_h_name", "label": "Name", "parameters": {"substance_name": "H"}, "position": {"x": 400, "y": 550}},
+        {"id": "param_h_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 100000.0}, "position": {"x": 500, "y": 550}},
+        {"id": "param_h_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.1}, "position": {"x": 600, "y": 550}},
+        {"id": "param_h_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 550}},
+        {"id": "param_h_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 550}},
+        {"id": "param_h_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 550}},
+        {"id": "param_h_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "fixed"}, "position": {"x": 1000, "y": 550}},
+        {"id": "param_h_unit", "label": "Unit", "parameters": {"unit": "mM"}, "position": {"x": 1100, "y": 550}},
+
+        {"id": "param_tgfa_name", "label": "Name", "parameters": {"substance_name": "TGFA"}, "position": {"x": 400, "y": 650}},
+        {"id": "param_tgfa_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 1000.0}, "position": {"x": 500, "y": 650}},
+        {"id": "param_tgfa_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.01}, "position": {"x": 600, "y": 650}},
+        {"id": "param_tgfa_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 650}},
+        {"id": "param_tgfa_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 650}},
+        {"id": "param_tgfa_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 650}},
+        {"id": "param_tgfa_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "neumann"}, "position": {"x": 1000, "y": 650}},
+        {"id": "param_tgfa_unit", "label": "Unit", "parameters": {"unit": "nM"}, "position": {"x": 1100, "y": 650}},
+
+        {"id": "param_fgf_name", "label": "Name", "parameters": {"substance_name": "FGF"}, "position": {"x": 400, "y": 750}},
+        {"id": "param_fgf_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 1000.0}, "position": {"x": 500, "y": 750}},
+        {"id": "param_fgf_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.01}, "position": {"x": 600, "y": 750}},
+        {"id": "param_fgf_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 750}},
+        {"id": "param_fgf_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 750}},
+        {"id": "param_fgf_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 750}},
+        {"id": "param_fgf_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "neumann"}, "position": {"x": 1000, "y": 750}},
+        {"id": "param_fgf_unit", "label": "Unit", "parameters": {"unit": "nM"}, "position": {"x": 1100, "y": 750}},
+
+        {"id": "param_hgf_name", "label": "Name", "parameters": {"substance_name": "HGF"}, "position": {"x": 400, "y": 850}},
+        {"id": "param_hgf_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 1000.0}, "position": {"x": 500, "y": 850}},
+        {"id": "param_hgf_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.01}, "position": {"x": 600, "y": 850}},
+        {"id": "param_hgf_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 850}},
+        {"id": "param_hgf_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 850}},
+        {"id": "param_hgf_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 850}},
+        {"id": "param_hgf_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "neumann"}, "position": {"x": 1000, "y": 850}},
+        {"id": "param_hgf_unit", "label": "Unit", "parameters": {"unit": "nM"}, "position": {"x": 1100, "y": 850}},
+
+        {"id": "param_gi_name", "label": "Name", "parameters": {"substance_name": "GI"}, "position": {"x": 400, "y": 950}},
+        {"id": "param_gi_diffusion_coeff", "label": "Diffusion Coefficient", "parameters": {"diffusion_coeff": 1000.0}, "position": {"x": 500, "y": 950}},
+        {"id": "param_gi_production_rate", "label": "Production Rate", "parameters": {"production_rate": 0.01}, "position": {"x": 600, "y": 950}},
+        {"id": "param_gi_uptake_rate", "label": "Uptake Rate", "parameters": {"uptake_rate": 0.0}, "position": {"x": 700, "y": 950}},
+        {"id": "param_gi_initial_value", "label": "Initial Value", "parameters": {"initial_value": 0.0}, "position": {"x": 800, "y": 950}},
+        {"id": "param_gi_boundary_value", "label": "Boundary Value", "parameters": {"boundary_value": 0.0}, "position": {"x": 900, "y": 950}},
+        {"id": "param_gi_boundary_type", "label": "Boundary Type", "parameters": {"boundary_type": "neumann"}, "position": {"x": 1000, "y": 950}},
+        {"id": "param_gi_unit", "label": "Unit", "parameters": {"unit": "nM"}, "position": {"x": 1100, "y": 950}},
+
+        {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": false}, "position": {"x": 400, "y": 1150}},
+
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/simple_cells_2d.csv"}, "position": {"x": 400, "y": 1250}}
+      ],
+      "execution_order": [
+        "setup_sim",
+        "setup_domain_node",
+        "add_oxygen",
+        "add_glucose",
+        "add_lactate",
+        "add_h",
+        "add_tgfa",
+        "add_fgf",
+        "add_hgf",
+        "add_gi",
+        "finalize_subs",
+        "setup_pop",
+        "load_cells_csv",
+        "generate_initial_plots"
+      ],
+      "enabled": true
+    },
+    "microenvironment": {
+      "description": "Diffusion stage: solve steady-state diffusion with cell reactions.",
+      "deletable": true,
+      "controller": {
+        "id": "controller-microenvironment",
+        "label": "MICROENVIRONMENT CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "diffusion_solver",
+          "function_name": "run_diffusion_solver",
+          "enabled": true,
+          "description": "FiPy steady-state diffusion solver",
+          "parameters": {},
+          "parameter_nodes": ["param_diffusion_max_iter", "param_diffusion_tolerance", "param_diffusion_solver_type"],
+          "position": {"x": 200, "y": 50}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {"id": "param_diffusion_max_iter", "label": "Max Iterations", "parameters": {"max_iterations": 1000}, "position": {"x": 400, "y": 50}},
+        {"id": "param_diffusion_tolerance", "label": "Tolerance", "parameters": {"tolerance": 1e-6}, "position": {"x": 500, "y": 50}},
+        {"id": "param_diffusion_solver_type", "label": "Solver Type", "parameters": {"solver_type": "steady_state"}, "position": {"x": 600, "y": 50}}
+      ],
+      "execution_order": ["diffusion_solver"],
+      "enabled": true
+    },
+    "finalization": {
+      "description": "Generate final plots and print summary statistics.",
+      "deletable": true,
+      "controller": {
+        "id": "controller-finalization",
+        "label": "FINALIZATION CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "generate_plots",
+          "function_name": "generate_summary_plots",
+          "enabled": true,
+          "parameters": {},
+          "position": {"x": 200, "y": 50}
+        },
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "enabled": true,
+          "parameters": {},
+          "position": {"x": 200, "y": 150}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "generate_plots",
+        "print_summary"
+      ],
+      "enabled": true
+    }
+  }
+}
+
