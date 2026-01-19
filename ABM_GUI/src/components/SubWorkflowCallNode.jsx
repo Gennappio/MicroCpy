@@ -11,6 +11,7 @@ import './SubWorkflowCallNode.css';
 const SubWorkflowCallNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
   const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
+  const setCurrentMainTab = useWorkflowStore((state) => state.setCurrentMainTab);
   const workflow = useWorkflowStore((state) => state.workflow);
   const currentStage = useWorkflowStore((state) => state.currentStage);
   const nodeBadgeStatsByScope = useWorkflowStore((state) => state.nodeBadgeStatsByScope);
@@ -88,6 +89,10 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
           className="node-goto-btn"
           onClick={(e) => {
             e.stopPropagation();
+            // Switch to the appropriate main tab based on target subworkflow kind
+            const targetMainTab = isComposerCall ? 'composers' : 'subworkflows';
+            setCurrentMainTab(targetMainTab);
+            // Then navigate to the target subworkflow
             setCurrentStage(subworkflowName);
           }}
           title={`Go to ${subworkflowName}`}
