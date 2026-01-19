@@ -1039,7 +1039,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-          {!isParameterNode && (
+          {isFunctionNode && (
             <>
               <div className="section-divider">
                 Parameters
