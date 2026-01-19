@@ -1,5 +1,5 @@
 .function-palette {
-  width: 300px;
+  width: 100%;  /* Use full width of parent container */
   background: white;
   border-right: 1px solid #e5e7eb;
   display: flex;

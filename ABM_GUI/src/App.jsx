@@ -31,9 +31,9 @@ function App() {
   const [renamingSubWorkflow, setRenamingSubWorkflow] = useState(null);
 
   // Resizable panel widths
-  const [paletteWidth, setPaletteWidth] = useState(280);
+  const [paletteWidth, setPaletteWidth] = useState(308);  // Increased by 10% (280 * 1.1 = 308)
   const [inspectorWidth, setInspectorWidth] = useState(320);
-  const [consoleWidth, setConsoleWidth] = useState(380);
+  const [consoleWidth, setConsoleWidth] = useState(500);  // Increased by ~25% to shrink canvas
   const [isResizing, setIsResizing] = useState(null);
 
   // Resize handlers
@@ -52,13 +52,15 @@ function App() {
 
     const handleMouseMove = (e) => {
       if (isResizing === 'palette') {
-        const newWidth = Math.max(200, Math.min(500, e.clientX));
+        // Palette: min 250px, max matches content width (no arbitrary limit)
+        const newWidth = Math.max(250, Math.min(400, e.clientX));
         setPaletteWidth(newWidth);
       } else if (isResizing === 'inspector') {
         const newWidth = Math.max(280, Math.min(600, window.innerWidth - e.clientX));
         setInspectorWidth(newWidth);
       } else if (isResizing === 'console') {
-        const newWidth = Math.max(300, Math.min(600, window.innerWidth - e.clientX));
+        // Console/Results: min 350px, max 800px for better flexibility
+        const newWidth = Math.max(350, Math.min(800, window.innerWidth - e.clientX));
         setConsoleWidth(newWidth);
       }
     };
