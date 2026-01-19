@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink } from 'lucide-react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink, ChevronUp, ChevronDown, List, Braces } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
@@ -17,8 +17,11 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
 
   const isParameterNode = node.type === 'parameterNode';
+  const isListParameterNode = node.type === 'listParameterNode';
+  const isDictParameterNode = node.type === 'dictParameterNode';
   const isSubWorkflowCall = node.type === 'subworkflowCall';
-  const functionMetadata = !isParameterNode && !isSubWorkflowCall ? getFunction(node.data.functionName) : null;
+  const isFunctionNode = !isParameterNode && !isListParameterNode && !isDictParameterNode && !isSubWorkflowCall;
+  const functionMetadata = isFunctionNode ? getFunction(node.data.functionName) : null;
 
   const [parameters, setParameters] = useState(node.data.parameters || {});
   const [customName, setCustomName] = useState(node.data.customName || node.data.label || '');
@@ -31,6 +34,13 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
   const [iterations, setIterations] = useState(node.data.iterations || 1);
   const [results, setResults] = useState(node.data.results || '');
+
+  // List parameter node state
+  const [listItems, setListItems] = useState(node.data.items || []);
+  const [listType, setListType] = useState(node.data.listType || 'string');
+
+  // Dict parameter node state
+  const [dictEntries, setDictEntries] = useState(node.data.entries || []);
 
   const [showCode, setShowCode] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -176,7 +186,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 
   useEffect(() => {
     setParameters(node.data.parameters || {});
-    setCustomName(node.data.customName || '');
+    setCustomName(node.data.customName || node.data.label || '');
     setFunctionName(node.data.functionName || '');
     setFunctionFile(node.data.functionFile || '');
     setDescription(node.data.description || '');
@@ -184,6 +194,11 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setSubworkflowName(node.data.subworkflowName || '');
     setIterations(node.data.iterations || 1);
     setResults(node.data.results || '');
+    // List node state
+    setListItems(node.data.items || []);
+    setListType(node.data.listType || 'string');
+    // Dict node state
+    setDictEntries(node.data.entries || []);
   }, [node]);
 
   useEffect(() => {
@@ -248,12 +263,137 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     });
   };
 
+  // === List item handlers ===
+  const handleAddListItem = () => {
+    const defaultValue = listType === 'float' ? 0 : '';
+    setListItems((prev) => [...prev, defaultValue]);
+  };
 
+  const handleRemoveListItem = (index) => {
+    setListItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateListItem = (index, value) => {
+    setListItems((prev) => {
+      const newItems = [...prev];
+      // Convert to proper type
+      if (listType === 'float') {
+        newItems[index] = parseFloat(value) || 0;
+      } else {
+        newItems[index] = value;
+      }
+      return newItems;
+    });
+  };
+
+  const handleMoveListItem = (index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= listItems.length) return;
+    setListItems((prev) => {
+      const newItems = [...prev];
+      [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+      return newItems;
+    });
+  };
+
+  const handleAddNestedList = (index) => {
+    setListItems((prev) => {
+      const newItems = [...prev];
+      newItems[index] = [];
+      return newItems;
+    });
+  };
+
+  const handleAddNestedDict = (index) => {
+    setListItems((prev) => {
+      const newItems = [...prev];
+      newItems[index] = {};
+      return newItems;
+    });
+  };
+
+  // === Dict entry handlers ===
+  const handleAddDictEntry = () => {
+    const newKey = `key_${dictEntries.length + 1}`;
+    setDictEntries((prev) => [...prev, { key: newKey, value: '', valueType: 'string' }]);
+  };
+
+  const handleRemoveDictEntry = (index) => {
+    setDictEntries((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateDictKey = (index, newKey) => {
+    setDictEntries((prev) => {
+      const newEntries = [...prev];
+      newEntries[index] = { ...newEntries[index], key: newKey };
+      return newEntries;
+    });
+  };
+
+  const handleUpdateDictValue = (index, value) => {
+    setDictEntries((prev) => {
+      const newEntries = [...prev];
+      const entry = newEntries[index];
+      // Convert to proper type based on valueType
+      let convertedValue = value;
+      switch (entry.valueType) {
+        case 'float':
+          convertedValue = parseFloat(value) || 0;
+          break;
+        case 'int':
+          convertedValue = parseInt(value, 10) || 0;
+          break;
+        case 'bool':
+          convertedValue = value === 'true' || value === true;
+          break;
+        default:
+          convertedValue = value;
+      }
+      newEntries[index] = { ...entry, value: convertedValue };
+      return newEntries;
+    });
+  };
+
+  const handleUpdateDictValueType = (index, newType) => {
+    setDictEntries((prev) => {
+      const newEntries = [...prev];
+      const entry = newEntries[index];
+      // Reset value when type changes
+      let newValue;
+      switch (newType) {
+        case 'float':
+          newValue = 0;
+          break;
+        case 'int':
+          newValue = 0;
+          break;
+        case 'bool':
+          newValue = false;
+          break;
+        case 'list':
+          newValue = [];
+          break;
+        case 'dict':
+          newValue = {};
+          break;
+        default:
+          newValue = '';
+      }
+      newEntries[index] = { ...entry, valueType: newType, value: newValue };
+      return newEntries;
+    });
+  };
 
   const handleSave = () => {
     if (isParameterNode) {
       // For parameter nodes, save label and parameters
       onSave(parameters, customName);
+    } else if (isListParameterNode) {
+      // For list nodes, save items and label
+      onSave({ items: listItems, listType }, customName);
+    } else if (isDictParameterNode) {
+      // For dict nodes, save entries and label
+      onSave({ entries: dictEntries }, customName);
     } else if (isSubWorkflowCall) {
       // For sub-workflow calls, save all properties
       onSave(parameters, customName, {
@@ -345,16 +485,32 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Return null if no function metadata and not a parameter node or subworkflow call
-  if (!functionMetadata && !isParameterNode && !isSubWorkflowCall) {
-    return null;
-  }
+	  // Return null only if this is a *function* node and we couldn't find metadata.
+	  // Parameter nodes (simple, list, dict) and sub-workflow calls do not rely on
+	  // registry metadata, so they should still render the editor even when
+	  // functionMetadata is null.
+	  if (isFunctionNode && !functionMetadata) {
+	    return null;
+	  }
 
-  const displayName = isParameterNode
-    ? (customName || 'Parameter Node')
-    : isSubWorkflowCall
-    ? 'Sub-workflow Call'
-    : functionMetadata.displayName;
+	  // Determine the display name for the editor header based on node type
+	  let displayName;
+	  if (isParameterNode) {
+	    displayName = customName || 'Parameter Node';
+	  } else if (isListParameterNode) {
+	    displayName = customName || (listType === 'float' ? 'Float List' : 'String List');
+	  } else if (isDictParameterNode) {
+	    displayName = customName || 'Dictionary';
+	  } else if (isSubWorkflowCall) {
+	    displayName = 'Sub-workflow Call';
+	  } else {
+	    // Function node: by this point functionMetadata should exist, but be defensive
+	    displayName = (functionMetadata && functionMetadata.displayName) ||
+	                  node.data.customName ||
+	                  node.data.label ||
+	                  node.data.functionName ||
+	                  'Function';
+	  }
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
@@ -367,7 +523,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
-          {!isParameterNode && !isSubWorkflowCall && (
+	        {isFunctionNode && (
             <button className="btn btn-secondary" onClick={handleToggleCode}>
               <Eye size={14} />
               {showCode ? 'Hide Code' : 'View Code'}
@@ -453,6 +609,187 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                       className="param-input"
                       placeholder="value"
                     />
+                  </div>
+                ))
+              )}
+            </>
+          )}
+
+          {/* List Parameter Node Editor */}
+          {isListParameterNode && (
+            <>
+              <div className="parameter-field">
+                <label className="param-label">
+                  <List size={14} />
+                  List Name
+                </label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder={listType === 'float' ? 'Float List' : 'String List'}
+                  className="param-input"
+                />
+              </div>
+
+              <div className="section-divider">
+                Items ({listType === 'float' ? 'Float' : 'String'})
+                <button className="btn-add-param" onClick={handleAddListItem}>
+                  <Plus size={14} />
+                  Add Item
+                </button>
+              </div>
+
+              {listItems.length === 0 ? (
+                <div className="no-parameters">
+                  No items in list. Click "Add Item" to add one.
+                </div>
+              ) : (
+                listItems.map((item, index) => (
+                  <div key={index} className="list-item-field">
+                    <div className="list-item-controls">
+                      <span className="list-item-index">[{index}]</span>
+                      <button
+                        className="btn-move"
+                        onClick={() => handleMoveListItem(index, 'up')}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        className="btn-move"
+                        onClick={() => handleMoveListItem(index, 'down')}
+                        disabled={index === listItems.length - 1}
+                        title="Move down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                      <button
+                        className="btn-remove-param"
+                        onClick={() => handleRemoveListItem(index)}
+                        title="Remove item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    {Array.isArray(item) ? (
+                      <div className="nested-value">
+                        <span className="nested-label">Nested List [{item.length} items]</span>
+                      </div>
+                    ) : typeof item === 'object' && item !== null ? (
+                      <div className="nested-value">
+                        <span className="nested-label">Nested Dict [{Object.keys(item).length} keys]</span>
+                      </div>
+                    ) : (
+                      <input
+                        type={listType === 'float' ? 'number' : 'text'}
+                        value={item}
+                        onChange={(e) => handleUpdateListItem(index, e.target.value)}
+                        className="param-input list-item-input"
+                        placeholder={listType === 'float' ? '0.0' : 'value'}
+                        step={listType === 'float' ? 'any' : undefined}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </>
+          )}
+
+          {/* Dict Parameter Node Editor */}
+          {isDictParameterNode && (
+            <>
+              <div className="parameter-field">
+                <label className="param-label">
+                  <Braces size={14} />
+                  Dictionary Name
+                </label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Dictionary"
+                  className="param-input"
+                />
+              </div>
+
+              <div className="section-divider">
+                Entries
+                <button className="btn-add-param" onClick={handleAddDictEntry}>
+                  <Plus size={14} />
+                  Add Entry
+                </button>
+              </div>
+
+              {dictEntries.length === 0 ? (
+                <div className="no-parameters">
+                  No entries in dictionary. Click "Add Entry" to add one.
+                </div>
+              ) : (
+                dictEntries.map((entry, index) => (
+                  <div key={index} className="dict-entry-field">
+                    <div className="dict-entry-header">
+                      <input
+                        type="text"
+                        value={entry.key}
+                        onChange={(e) => handleUpdateDictKey(index, e.target.value)}
+                        className="dict-key-input"
+                        placeholder="key"
+                      />
+                      <select
+                        value={entry.valueType}
+                        onChange={(e) => handleUpdateDictValueType(index, e.target.value)}
+                        className="dict-type-select"
+                      >
+                        <option value="string">String</option>
+                        <option value="float">Float</option>
+                        <option value="int">Int</option>
+                        <option value="bool">Bool</option>
+                        <option value="list">List</option>
+                        <option value="dict">Dict</option>
+                      </select>
+                      <button
+                        className="btn-remove-param"
+                        onClick={() => handleRemoveDictEntry(index)}
+                        title="Remove entry"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className="dict-value-row">
+                      {entry.valueType === 'bool' ? (
+                        <select
+                          value={entry.value ? 'true' : 'false'}
+                          onChange={(e) => handleUpdateDictValue(index, e.target.value)}
+                          className="param-input"
+                        >
+                          <option value="true">true</option>
+                          <option value="false">false</option>
+                        </select>
+                      ) : entry.valueType === 'list' ? (
+                        <div className="nested-value">
+                          <span className="nested-label">
+                            List [{Array.isArray(entry.value) ? entry.value.length : 0} items]
+                          </span>
+                        </div>
+                      ) : entry.valueType === 'dict' ? (
+                        <div className="nested-value">
+                          <span className="nested-label">
+                            Dict [{typeof entry.value === 'object' && entry.value ? Object.keys(entry.value).length : 0} keys]
+                          </span>
+                        </div>
+                      ) : (
+                        <input
+                          type={entry.valueType === 'float' || entry.valueType === 'int' ? 'number' : 'text'}
+                          value={entry.value}
+                          onChange={(e) => handleUpdateDictValue(index, e.target.value)}
+                          className="param-input"
+                          placeholder="value"
+                          step={entry.valueType === 'float' ? 'any' : entry.valueType === 'int' ? '1' : undefined}
+                        />
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -560,8 +897,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             );
           })()}
 
-          {/* Function Node Editor - Full interface with code viewer */}
-          {!isParameterNode && showCode && (
+	          {/* Function Node Editor - Full interface with code viewer */}
+	          {isFunctionNode && showCode && (
             <div className="code-container">
               {codeLoading ? (
                 <div className="loading">Loading source code...</div>
@@ -679,8 +1016,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-          {/* Step Count Field for All Function Nodes */}
-          {!isParameterNode && (
+	          {/* Step Count Field for All Function Nodes */}
+	          {isFunctionNode && (
             <div className="parameter-field">
               <label className="param-label">
                 Step Count
