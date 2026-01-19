@@ -310,10 +310,13 @@ def debug_generate_image(context: Optional[Dict[str, Any]] = None, message: str 
     if isinstance(context, dict):
         step = context.get("current_step", 0)
 
-    # Generate timestamp
+    # Generate timestamp - MUST be fresh on each call
     now = datetime.datetime.now()
     timestamp = now.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # millisecond precision
     timestamp_short = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]  # for filename
+
+    # Debug: Print timestamp to verify it's updating
+    print(f"[DEBUG GENERATE IMAGE] Timestamp: {timestamp}")
 
     # Create figure
     fig, ax = plt.subplots(figsize=(10, 8))
