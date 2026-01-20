@@ -22,6 +22,7 @@ const SimulationRunner = () => {
   const addLog = useWorkflowStore((state) => state.addSimulationLog);
   const clearLogs = useWorkflowStore((state) => state.clearSimulationLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
+  const notifySimulationRunChanged = useWorkflowStore((state) => state.notifySimulationRunChanged);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -161,6 +162,9 @@ const SimulationRunner = () => {
       const data = await response.json();
       setIsRunning(true);
       addLog('info', `✓ Workflow execution started`);
+
+      // Notify that a new run started (triggers results panel refresh)
+      notifySimulationRunChanged();
 
     } catch (err) {
       setError(err.message);
