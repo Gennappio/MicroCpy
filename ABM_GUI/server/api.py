@@ -44,7 +44,7 @@ def setup_results_directories(workflow_data, microc_dir):
     - results/composers/<name>/ for each composer
     - results/subworkflows/<name>/ for each subworkflow
 
-    Clears existing results to implement overwrite semantics.
+    Clears ALL existing results to implement overwrite semantics.
 
     Args:
         workflow_data: Workflow JSON dict
@@ -55,18 +55,16 @@ def setup_results_directories(workflow_data, microc_dir):
     # Get subworkflow kinds from metadata
     subworkflow_kinds = workflow_data.get('metadata', {}).get('gui', {}).get('subworkflow_kinds', {})
 
+    # Clear the entire results directory (fresh start for each run)
+    if results_dir.exists():
+        shutil.rmtree(results_dir)
+        log_queue.put("[INFO] Cleared existing results directory\n")
+
     # Create base directories
     composers_dir = results_dir / "composers"
     subworkflows_dir = results_dir / "subworkflows"
-
-    # Clear existing results (overwrite semantics)
-    if composers_dir.exists():
-        shutil.rmtree(composers_dir)
-        log_queue.put("[INFO] Cleared existing composer results\n")
-
-    if subworkflows_dir.exists():
-        shutil.rmtree(subworkflows_dir)
-        log_queue.put("[INFO] Cleared existing subworkflow results\n")
+    composers_dir.mkdir(parents=True, exist_ok=True)
+    subworkflows_dir.mkdir(parents=True, exist_ok=True)
 
     # Create directories for each subworkflow based on its kind
     for subworkflow_name, subworkflow_data in workflow_data.get('subworkflows', {}).items():
@@ -235,8 +233,10 @@ def run_simulation():
                 log_queue.put(f"[WARNING] {warning}\n")
 
     except Exception as e:
+        import traceback
         error_msg = f'Workflow validation error: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
+        log_queue.put(f"[ERROR] Traceback:\n{traceback.format_exc()}\n")
         return jsonify({'error': error_msg}), 400
 
     # Validate entry_subworkflow (Section 9.2)
