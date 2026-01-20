@@ -104,6 +104,10 @@ def generate_summary_plots(
     Returns:
         True if successful, False otherwise
     """
+    # If marker not provided as parameter, check context (passed from subworkflow call)
+    if not marker and 'marker' in context:
+        marker = context['marker']
+
     # Determine output directory
     microc_root = Path(__file__).parent.parent.parent.parent.parent
 
