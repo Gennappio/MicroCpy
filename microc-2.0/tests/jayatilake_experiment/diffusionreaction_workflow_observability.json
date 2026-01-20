@@ -14,7 +14,8 @@
         "Setup_simulation": "subworkflow",
         "Setup_substances": "subworkflow",
         "Setup_population": "subworkflow",
-        "Generate_plots": "subworkflow",
+        "Generate_initial_plots": "subworkflow",
+        "Generate_final_plots": "subworkflow",
         "microenvironment": "subworkflow",
         "finalization": "composer",
         "Summarize_simulation": "subworkflow"
@@ -117,7 +118,7 @@
         },
         {
           "id": "call_generate_plots_init",
-          "subworkflow_name": "Generate_plots",
+          "subworkflow_name": "Generate_initial_plots",
           "iterations": 1,
           "enabled": true,
           "description": "Generate initial state plots",
@@ -173,7 +174,7 @@
       "subworkflow_calls": [
         {
           "id": "call_generate_plots_final",
-          "subworkflow_name": "Generate_plots",
+          "subworkflow_name": "Generate_final_plots",
           "iterations": 1,
           "enabled": true,
           "description": "Generate final state plots",
@@ -324,82 +325,64 @@
       "execution_order": ["setup_pop", "load_cells_csv"],
       "enabled": true
     },
-    "Generate_plots": {
-      "description": "Generate plots to custom directory and GUI results panel",
+    "Generate_initial_plots": {
+      "description": "Generate INITIAL plots to GUI results panel",
       "deletable": true,
       "controller": {
-        "id": "controller-generate-plots",
-        "label": "GENERATE PLOTS CONTROLLER",
+        "id": "controller-generate-initial-plots",
+        "label": "GENERATE INITIAL PLOTS CONTROLLER",
         "position": {"x": 50, "y": 50},
         "number_of_steps": 1
       },
       "functions": [
         {
-          "id": "generate_plots_custom",
+          "id": "generate_initial_plots",
           "function_name": "generate_summary_plots",
           "enabled": true,
-          "description": "Generate plots to custom directory",
+          "description": "Generate initial state plots with INITIAL marker",
           "parameters": {
-            "use_gui_directory": false,
-            "custom_directory": "results/plots"
-          },
-          "parameter_nodes": [
-            {
-              "id": "param_use_gui_custom",
-              "type": "parameterNode",
-              "parameter_name": "use_gui_directory",
-              "value": false,
-              "position": {"x": 50, "y": 50}
-            },
-            {
-              "id": "param_custom_dir",
-              "type": "parameterNode",
-              "parameter_name": "custom_directory",
-              "value": "results/plots",
-              "position": {"x": 50, "y": 150}
-            }
-          ],
-          "position": {"x": 300, "y": 100}
-        },
-        {
-          "id": "generate_plots_gui",
-          "function_name": "generate_summary_plots",
-          "enabled": true,
-          "description": "Generate plots to GUI results panel",
-          "parameters": {
+            "marker": "INITIAL",
             "use_gui_directory": true,
             "gui_subworkflow_name": "main",
             "gui_subworkflow_kind": "composer"
           },
-          "parameter_nodes": [
-            {
-              "id": "param_use_gui_gui",
-              "type": "parameterNode",
-              "parameter_name": "use_gui_directory",
-              "value": true,
-              "position": {"x": 50, "y": 350}
-            },
-            {
-              "id": "param_gui_name",
-              "type": "parameterNode",
-              "parameter_name": "gui_subworkflow_name",
-              "value": "main",
-              "position": {"x": 50, "y": 450}
-            },
-            {
-              "id": "param_gui_kind",
-              "type": "parameterNode",
-              "parameter_name": "gui_subworkflow_kind",
-              "value": "composer",
-              "position": {"x": 50, "y": 550}
-            }
-          ],
-          "position": {"x": 300, "y": 400}
+          "parameter_nodes": [],
+          "position": {"x": 300, "y": 100}
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
-      "execution_order": ["generate_plots_custom", "generate_plots_gui"],
+      "execution_order": ["generate_initial_plots"],
+      "enabled": true
+    },
+    "Generate_final_plots": {
+      "description": "Generate FINAL plots to GUI results panel",
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-final-plots",
+        "label": "GENERATE FINAL PLOTS CONTROLLER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "generate_final_plots",
+          "function_name": "generate_summary_plots",
+          "enabled": true,
+          "description": "Generate final state plots with FINAL marker",
+          "parameters": {
+            "marker": "FINAL",
+            "use_gui_directory": true,
+            "gui_subworkflow_name": "main",
+            "gui_subworkflow_kind": "composer"
+          },
+          "parameter_nodes": [],
+          "position": {"x": 300, "y": 100}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["generate_final_plots"],
       "enabled": true
     },
     "Summarize_simulation": {
