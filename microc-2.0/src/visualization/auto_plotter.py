@@ -845,10 +845,11 @@ Substance Initial Values:
             if time_points:
                 current_time = time_points[-1]
             else:
-                # If no time series data, estimate from current simulation state
+                # If no time series data, use simulator's current time
                 current_time = getattr(simulator, 'current_time', None)
                 if current_time is None:
-                    current_time = self.config.time.end_time
+                    # During initialization, simulation starts at 0.0
+                    current_time = 0.0
 
             for substance in all_substances:
                 if substance in simulator.state.substances:
