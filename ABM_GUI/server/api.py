@@ -36,7 +36,7 @@ def get_microc_path():
     return microc_path
 
 
-def setup_results_directories(workflow_data, microc_dir):
+def setup_results_directories(workflow_data, gui_dir):
     """
     Setup nested results directory structure according to v2.0 spec.
 
@@ -48,9 +48,9 @@ def setup_results_directories(workflow_data, microc_dir):
 
     Args:
         workflow_data: Workflow JSON dict
-        microc_dir: Path to microc-2.0 directory
+        gui_dir: Path to ABM_GUI directory (results are stored in GUI folder)
     """
-    results_dir = microc_dir / "results"
+    results_dir = gui_dir / "results"
 
     # Get subworkflow kinds from metadata
     subworkflow_kinds = workflow_data.get('metadata', {}).get('gui', {}).get('subworkflow_kinds', {})
@@ -77,7 +77,7 @@ def setup_results_directories(workflow_data, microc_dir):
             subworkflow_dir = subworkflows_dir / subworkflow_name
 
         subworkflow_dir.mkdir(parents=True, exist_ok=True)
-        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(microc_dir)}\n")
+        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(gui_dir)}\n")
 
     log_queue.put(f"[INFO] Results directory structure ready\n")
 
@@ -262,8 +262,10 @@ def run_simulation():
         log_queue.put(f"[INFO] Entry subworkflow: {entry_subworkflow} (composer)\n")
 
     # Setup nested results directory structure (v2.0 spec)
+    # Results are stored in ABM_GUI/results/, not microc-2.0/results/
     try:
-        setup_results_directories(workflow_data, microc_dir)
+        gui_dir = Path(__file__).parent.parent  # ABM_GUI directory
+        setup_results_directories(workflow_data, gui_dir)
     except Exception as e:
         error_msg = f'Failed to setup results directories: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
@@ -801,8 +803,9 @@ def list_results():
         include_all: If 'true', include results from all subworkflows (default for composers)
     """
     try:
-        server_dir = Path(__file__).parent
-        results_dir = server_dir.parent.parent / "microc-2.0" / "results"
+        # Results are stored in ABM_GUI/results/, not microc-2.0/results/
+        gui_dir = Path(__file__).parent.parent  # ABM_GUI directory
+        results_dir = gui_dir / "results"
 
         # Get query parameters
         subworkflow_name = request.args.get('subworkflow_name', 'main')
@@ -826,7 +829,7 @@ def list_results():
                         cat = f"{category_prefix}{item.name}" if category_prefix else item.name
                         found.append({
                             'name': plot_file.name,
-                            'path': str(plot_file.relative_to(results_dir.parent)),
+                            'path': str(plot_file.relative_to(gui_dir)),
                             'category': cat
                         })
                 elif item.suffix.lower() == '.png':
@@ -834,7 +837,7 @@ def list_results():
                     cat = category_prefix.rstrip('/') if category_prefix else 'default'
                     found.append({
                         'name': item.name,
-                        'path': str(item.relative_to(results_dir.parent)),
+                        'path': str(item.relative_to(gui_dir)),
                         'category': cat
                     })
             return found
@@ -875,9 +878,9 @@ def list_results():
 def get_plot(plot_path):
     """Serve a plot image file."""
     try:
-        server_dir = Path(__file__).parent
-        microc_dir = server_dir.parent.parent / "microc-2.0"
-        full_path = microc_dir / plot_path
+        # Results are stored in ABM_GUI/results/, paths are relative to ABM_GUI
+        gui_dir = Path(__file__).parent.parent  # ABM_GUI directory
+        full_path = gui_dir / plot_path
 
         if not full_path.exists():
             return jsonify({'success': False, 'error': 'Plot not found'}), 404
