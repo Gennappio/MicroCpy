@@ -944,17 +944,47 @@ const useWorkflowStore = create((set, get) => ({
         deletable: false
       } : null;
 
-      // Create parameter nodes
-      const explicitParamNodes = (subworkflow.parameters || []).map((param) => ({
-        id: param.id,
-        type: 'parameterNode',
-        position: param.position || { x: 0, y: 0 },
-        data: {
-          label: param.label || 'Parameters',
-          parameters: param.parameters || {},
-          onEdit: () => {}
+      // Create parameter nodes (supporting regular, list, and dict types)
+      const explicitParamNodes = (subworkflow.parameters || []).map((param) => {
+        const nodeType = param.type || 'parameterNode';
+
+        if (nodeType === 'listParameterNode') {
+          return {
+            id: param.id,
+            type: 'listParameterNode',
+            position: param.position || { x: 0, y: 0 },
+            data: {
+              label: param.label || 'List',
+              listType: param.listType || 'string',
+              items: param.items || [],
+              targetParam: param.targetParam || 'items',
+              onEdit: () => {}
+            }
+          };
+        } else if (nodeType === 'dictParameterNode') {
+          return {
+            id: param.id,
+            type: 'dictParameterNode',
+            position: param.position || { x: 0, y: 0 },
+            data: {
+              label: param.label || 'Dictionary',
+              entries: param.entries || [],
+              onEdit: () => {}
+            }
+          };
+        } else {
+          return {
+            id: param.id,
+            type: 'parameterNode',
+            position: param.position || { x: 0, y: 0 },
+            data: {
+              label: param.label || 'Parameters',
+              parameters: param.parameters || {},
+              onEdit: () => {}
+            }
+          };
         }
-      }));
+      });
       explicitParamNodes.forEach(node => createdParamNodeIds.add(node.id));
 
       // Create function nodes
@@ -993,15 +1023,38 @@ const useWorkflowStore = create((set, get) => ({
       }));
 
       // Create parameter edges
+      // Need to determine the source handle based on param node type
+      // and the target handle based on the targetParam for list/dict nodes
+      const paramNodeMap = new Map(explicitParamNodes.map(n => [n.id, n]));
+
       [...(subworkflow.functions || []), ...(subworkflow.subworkflow_calls || [])].forEach((node) => {
         if (node.parameter_nodes && node.parameter_nodes.length > 0) {
           node.parameter_nodes.forEach((paramNodeId) => {
+            const paramNode = paramNodeMap.get(paramNodeId);
+            // Determine source handle based on node type
+            let sourceHandle = 'params';
+            let targetHandle = 'params';
+
+            if (paramNode?.type === 'listParameterNode') {
+              sourceHandle = 'list-out';
+              // Use targetParam to determine which function parameter to connect to
+              const targetParam = paramNode.data?.targetParam || 'items';
+              targetHandle = `param-${targetParam}`;
+            } else if (paramNode?.type === 'dictParameterNode') {
+              sourceHandle = 'dict-out';
+              // Dict nodes also can have a target parameter
+              const targetParam = paramNode.data?.targetParam;
+              if (targetParam) {
+                targetHandle = `param-${targetParam}`;
+              }
+            }
+
             allEdges.push({
               id: `e-param-${paramNodeId}-${node.id}`,
               source: paramNodeId,
-              sourceHandle: 'params',
+              sourceHandle: sourceHandle,
               target: node.id,
-              targetHandle: 'params',
+              targetHandle: targetHandle,
               type: 'default',
               animated: false,
               style: {
@@ -1124,9 +1177,12 @@ const useWorkflowStore = create((set, get) => ({
      * Returns an ordered array of node IDs (functions and subworkflow calls) based on BFS traversal
      */
     const findReachableNodes = (nodes, edges, subworkflowName) => {
-      const controllerNodeId = `controller-${subworkflowName}`;
-      const controllerNode = nodes.find(n => n.id === controllerNodeId);
+      // Find controller node by type (initNode) rather than by ID pattern
+      // This handles cases where controller ID doesn't match `controller-${subworkflowName}` exactly
+      const controllerNode = nodes.find(n => n.type === 'initNode') ||
+                             nodes.find(n => n.id === `controller-${subworkflowName}`);
       if (!controllerNode) return [];
+      const controllerNodeId = controllerNode.id;
 
       // Build adjacency list from edges (following func-out -> func-in connections)
       const adjacency = {};
@@ -1176,13 +1232,20 @@ const useWorkflowStore = create((set, get) => ({
       const functionNodes = nodes.filter(n => n.type === 'workflowFunction');
       const subworkflowCallNodes = nodes.filter(n => n.type === 'subworkflowCall');
       const parameterNodes = nodes.filter(n => n.type === 'parameterNode');
-      const controllerNode = nodes.find(n => n.id === `controller-${subworkflowName}`);
+      const listParameterNodes = nodes.filter(n => n.type === 'listParameterNode');
+      const dictParameterNodes = nodes.filter(n => n.type === 'dictParameterNode');
+      // Find controller node by type (initNode) rather than by ID pattern
+      // This handles cases where controller ID doesn't match `controller-${subworkflowName}` exactly
+      const controllerNode = nodes.find(n => n.type === 'initNode') ||
+                             nodes.find(n => n.id === `controller-${subworkflowName}`);
 
       // Export ALL function nodes
       const functions = functionNodes.map((node) => {
         // Find parameter connections for this function
+        // Include both 'params' (regular parameter nodes) and 'param-' (list/dict parameter nodes)
         const parameterConnections = edges
-          .filter(e => e.target === node.id && e.targetHandle?.startsWith('params'))
+          .filter(e => e.target === node.id &&
+                       (e.targetHandle?.startsWith('params') || e.targetHandle?.startsWith('param-')))
           .map(e => e.source);
 
         return {
@@ -1202,8 +1265,10 @@ const useWorkflowStore = create((set, get) => ({
       // Export ALL subworkflow call nodes
       const subworkflow_calls = subworkflowCallNodes.map((node) => {
         // Find parameter connections for this call
+        // Include both 'params' (regular parameter nodes) and 'param-' (list/dict parameter nodes)
         const parameterConnections = edges
-          .filter(e => e.target === node.id && e.targetHandle?.startsWith('params'))
+          .filter(e => e.target === node.id &&
+                       (e.targetHandle?.startsWith('params') || e.targetHandle?.startsWith('param-')))
           .map(e => e.source);
 
         const exportedCall = {
@@ -1226,13 +1291,34 @@ const useWorkflowStore = create((set, get) => ({
         return exportedCall;
       });
 
-      // Export ALL parameter nodes
-      const parameters = parameterNodes.map((node) => ({
-        id: node.id,
-        label: node.data.label || 'Parameters',
-        parameters: node.data.parameters || {},
-        position: node.position,
-      }));
+      // Export ALL parameter nodes (regular, list, and dict types)
+      const parameters = [
+        // Regular parameter nodes
+        ...parameterNodes.map((node) => ({
+          id: node.id,
+          label: node.data.label || 'Parameters',
+          parameters: node.data.parameters || {},
+          position: node.position,
+        })),
+        // List parameter nodes
+        ...listParameterNodes.map((node) => ({
+          id: node.id,
+          type: 'listParameterNode',
+          label: node.data.label || 'List',
+          listType: node.data.listType || 'string',
+          items: node.data.items || [],
+          targetParam: node.data.targetParam || 'items',
+          position: node.position,
+        })),
+        // Dict parameter nodes
+        ...dictParameterNodes.map((node) => ({
+          id: node.id,
+          type: 'dictParameterNode',
+          label: node.data.label || 'Dictionary',
+          entries: node.data.entries || [],
+          position: node.position,
+        })),
+      ];
 
       // Export controller
       const controller = controllerNode ? {
