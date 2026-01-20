@@ -206,6 +206,12 @@ const useWorkflowStore = create((set, get) => ({
    */
   lastRunMeta: null,  // { startedAt: string, status: string, endedAt?: string }
 
+  /**
+   * Counter that increments each time a simulation run completes.
+   * Used to trigger result refreshes in components that display results.
+   */
+  simulationRunCounter: 0,
+
   // Actions
   setCurrentStage: (stage) => set({ currentStage: stage }),
 
@@ -228,6 +234,12 @@ const useWorkflowStore = create((set, get) => ({
   },
 
   clearSimulationLogs: () => set({ simulationLogs: [] }),
+
+  // Signal that a simulation run has completed (or started fresh)
+  // This increments a counter that components can watch to trigger refreshes
+  notifySimulationRunChanged: () => set((state) => ({
+    simulationRunCounter: state.simulationRunCounter + 1,
+  })),
 
   // Per-workflow log actions
   addWorkflowLog: (workflowName, type, message) => {
