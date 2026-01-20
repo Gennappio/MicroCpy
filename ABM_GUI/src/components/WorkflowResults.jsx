@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Image, RefreshCw, ChevronDown } from 'lucide-react';
+import useWorkflowStore from '../store/workflowStore';
 import './WorkflowResults.css';
 
 const API_BASE_URL = 'http://localhost:5001';
@@ -13,9 +14,12 @@ function WorkflowResults({ subworkflowName, subworkflowKind }) {
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [availablePlots, setAvailablePlots] = useState([]);
 
+  // Subscribe to simulation run counter to auto-refresh when a new run starts
+  const simulationRunCounter = useWorkflowStore((state) => state.simulationRunCounter);
+
   useEffect(() => {
     loadResults();
-  }, [subworkflowName, subworkflowKind]);
+  }, [subworkflowName, subworkflowKind, simulationRunCounter]);
 
   const loadResults = async () => {
     setLoading(true);
