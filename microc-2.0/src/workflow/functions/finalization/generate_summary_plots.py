@@ -2,7 +2,7 @@
 Generate summary plots workflow function.
 
 This function generates all automatic plots (substance heatmaps, cell distributions, etc.)
-at the end of the simulation.
+at the end of the simulation. Supports both custom directory output and GUI-compatible output.
 """
 
 from typing import Dict, Any
@@ -10,53 +10,107 @@ from pathlib import Path
 from src.workflow.decorators import register_function
 
 
+def _generate_plots_to_directory(
+    context: Dict[str, Any],
+    output_dir: Path,
+) -> int:
+    """
+    Internal helper to generate plots to a specific directory.
+
+    Args:
+        context: Workflow context containing population, simulator, config, etc.
+        output_dir: Directory to write plots to
+
+    Returns:
+        Number of plots generated
+    """
+    import sys
+    visualization_dir = Path(__file__).parent.parent.parent.parent / "visualization"
+    if str(visualization_dir) not in sys.path:
+        sys.path.insert(0, str(visualization_dir.parent))
+
+    from visualization.auto_plotter import AutoPlotter
+
+    population = context['population']
+    simulator = context['simulator']
+    config = context['config']
+    results = context.get('results', {})
+
+    # Create output directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Always clean the directory before writing new plots
+    for file in output_dir.iterdir():
+        if file.is_file() and file.suffix in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf']:
+            file.unlink()
+
+    # Create plotter with the specified output directory
+    plotter = AutoPlotter(config, output_dir)
+
+    # Generate all plots
+    generated_plots = plotter.generate_all_plots(results, simulator, population)
+
+    return len(generated_plots)
+
+
 @register_function(
     display_name="Generate Summary Plots",
-    description="Generate summary plots (substance heatmaps, cell distributions)",
+    description="Generate summary plots to custom directory or GUI results directory. Directory is always cleaned before writing.",
     category="FINALIZATION",
+    parameters=[
+        {"name": "use_gui_directory", "type": "BOOL", "description": "If true, write to GUI results directory; if false, use custom_directory", "default": False},
+        {"name": "custom_directory", "type": "STRING", "description": "Custom directory path (used when use_gui_directory=false)", "default": "results/plots"},
+        {"name": "gui_subworkflow_name", "type": "STRING", "description": "GUI subworkflow name (used when use_gui_directory=true)", "default": "main"},
+        {"name": "gui_subworkflow_kind", "type": "STRING", "description": "GUI subworkflow kind: 'composer' or 'subworkflow' (used when use_gui_directory=true)", "default": "composer"},
+    ],
+    inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=True
 )
 def generate_summary_plots(
     context: Dict[str, Any],
+    use_gui_directory: bool = False,
+    custom_directory: str = "results/plots",
+    gui_subworkflow_name: str = "main",
+    gui_subworkflow_kind: str = "composer",
     **kwargs
 ) -> bool:
     """
     Generate summary plots in finalization stage.
 
     This function generates all automatic plots (substance heatmaps, etc.)
-    that would normally be generated automatically in non-workflow mode.
+    and can write to either a custom directory or the GUI results directory.
+    The target directory is always cleaned before writing new plots.
 
     Args:
         context: Workflow context containing population, simulator, config, etc.
+        use_gui_directory: If True, write to GUI results directory; if False, use custom_directory
+        custom_directory: Custom directory path (relative to microc-2.0 or absolute)
+        gui_subworkflow_name: Subworkflow name for GUI directory (e.g., "main")
+        gui_subworkflow_kind: Either "composer" or "subworkflow"
         **kwargs: Additional parameters (ignored)
 
     Returns:
         True if successful, False otherwise
     """
-    print("[WORKFLOW] Generating summary plots...")
+    # Determine output directory
+    microc_root = Path(__file__).parent.parent.parent.parent.parent
+
+    if use_gui_directory:
+        # Use GUI results directory structure
+        kind_plural = "composers" if gui_subworkflow_kind == "composer" else "subworkflows"
+        output_path = microc_root / "results" / kind_plural / gui_subworkflow_name
+        print(f"[WORKFLOW] Generating plots to GUI directory: {output_path}")
+    else:
+        # Use custom directory
+        output_path = Path(custom_directory)
+        if not output_path.is_absolute():
+            output_path = microc_root / custom_directory
+        print(f"[WORKFLOW] Generating plots to custom directory: {output_path}")
 
     try:
-        # Import AutoPlotter
-        import sys
-        visualization_dir = Path(__file__).parent.parent.parent.parent / "visualization"
-        if str(visualization_dir) not in sys.path:
-            sys.path.insert(0, str(visualization_dir.parent))
-
-        from visualization.auto_plotter import AutoPlotter
-
-        population = context['population']
-        simulator = context['simulator']
-        config = context['config']
-        results = context.get('results', {})
-
-        # Create plotter
-        plotter = AutoPlotter(config, config.plots_dir)
-
-        # Generate all plots
-        generated_plots = plotter.generate_all_plots(results, simulator, population)
-
-        print(f"[WORKFLOW] Generated {len(generated_plots)} plots")
+        count = _generate_plots_to_directory(context, output_path)
+        print(f"[WORKFLOW] Generated {count} plots to {output_path}")
         return True
 
     except ImportError as e:
