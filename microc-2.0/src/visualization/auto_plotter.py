@@ -73,8 +73,13 @@ class AutoPlotter:
     def plot_substance_heatmap(self, substance_name: str, concentrations: np.ndarray,
                               cell_positions: List[Tuple[int, int]], time_point: float,
                               config_name: str = "unknown", population=None, title_suffix: str = "",
-                              is_initial: bool = False, is_final: bool = False, quiet: bool = False):
-        """Plot concentration heatmap for a single substance with detailed debugging"""
+                              is_initial: bool = False, is_final: bool = False, quiet: bool = False,
+                              marker: str = ""):
+        """Plot concentration heatmap for a single substance with detailed debugging
+
+        Args:
+            marker: String to append to filename (e.g., "INITIAL", "FINAL"). Takes precedence over is_initial/is_final.
+        """
 
         # Handle 3D data by taking a middle slice
         if len(concentrations.shape) == 3:
@@ -393,7 +398,10 @@ class AutoPlotter:
                 facecolor="white", alpha=0.9))
 
         # Save plot with unique filename to avoid overwriting
-        if is_initial:
+        # marker parameter takes precedence over is_initial/is_final for backwards compatibility
+        if marker:
+            filename = f"{substance_name}_heatmap_t{time_point:.3f}_{marker}.png"
+        elif is_initial:
             filename = f"{substance_name}_heatmap_t{time_point:.3f}_INITIAL.png"
         elif is_final:
             filename = f"{substance_name}_heatmap_t{time_point:.3f}_FINAL.png"
@@ -786,10 +794,18 @@ Substance Initial Values:
 
             print(f"   ✅ {substance_name} initial heatmap: {plot_path.name}")
 
-    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None):
-        """Generate all plots automatically"""
+    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None, marker: str = ""):
+        """Generate all plots automatically
 
-        print(f"[PLOT] Generating plots...")
+        Args:
+            results: Results dictionary with time series data
+            simulator: Simulator instance for current state
+            population: Population instance for cell positions
+            marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+        """
+
+        marker_info = f" with marker '{marker}'" if marker else ""
+        print(f"[PLOT] Generating plots{marker_info}...")
         generated_plots = []
 
         time_points = results.get('time', [])
@@ -825,38 +841,25 @@ Substance Initial Values:
             # Plot ALL substances (not just key ones)
             all_substances = list(self.config.substances.keys())
 
-            # SKIP initial state plots here - they were already created by generate_initial_plots()
-            # Creating them again would overwrite the true initial state with final state data
-            print(f"   [SKIP] Skipping initial state plots (already created before simulation)")
-
-            # Note: Initial plots are created by generate_initial_plots() before simulation starts
-            # This prevents overwriting true initial state with final state data
-
-            # Plot final state - use current time from simulator or estimate from config
+            # Determine current time for heatmaps
             if time_points:
-                final_time = time_points[-1]
+                current_time = time_points[-1]
             else:
-                # If no time series data, estimate final time from current simulation state
-                # This happens when save_data_interval is larger than total steps
-                final_time = getattr(simulator, 'current_time', None)
-                if final_time is None:
-                    # Calculate final time from config if simulator doesn't have current_time
-                    final_time = self.config.time.end_time
+                # If no time series data, estimate from current simulation state
+                current_time = getattr(simulator, 'current_time', None)
+                if current_time is None:
+                    current_time = self.config.time.end_time
 
             for substance in all_substances:
                 if substance in simulator.state.substances:
                     concentrations = simulator.state.substances[substance].concentrations
 
                     plot_path = self.plot_substance_heatmap(
-                        substance, concentrations, cell_positions, final_time, config_name, population,
-                        is_final=True
+                        substance, concentrations, cell_positions, current_time, config_name, population,
+                        marker=marker
                     )
                     generated_plots.append(plot_path)
-                    print(f"   [OK] {substance} final heatmap: {plot_path.name}")
-        
-        # 3. SKIP initial state summary plot - already created by generate_initial_plots()
-        # Creating it again would overwrite the true initial state with final state data
-        print(f"   [SKIP] Skipping initial state summary (already created before simulation)")
+                    print(f"   [OK] {substance} heatmap: {plot_path.name}")
 
         # 4. Final simulation summary plot
         if substance_stats and time_points:
