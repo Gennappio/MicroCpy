@@ -420,6 +420,16 @@ class WorkflowExecutor:
                         nodes_to_execute.append(('subworkflow_call', call))
                         continue
 
+                # Fallback: if execution_order is empty but functions/calls exist, execute them in definition order
+                # This handles workflows where execution_order wasn't properly computed (e.g., controller ID mismatch)
+                if not nodes_to_execute:
+                    if subworkflow.functions or subworkflow.subworkflow_calls:
+                        print(f"[WORKFLOW] Warning: Sub-workflow '{subworkflow_name}' has empty execution_order but contains nodes. Using definition order.")
+                        for func in subworkflow.functions:
+                            nodes_to_execute.append(('function', func))
+                        for call in subworkflow.subworkflow_calls:
+                            nodes_to_execute.append(('subworkflow_call', call))
+
                 # Execute each node in order
                 for node_type, node in nodes_to_execute:
                     if node_type == 'function':
