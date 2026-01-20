@@ -13,6 +13,8 @@ from src.workflow.decorators import register_function
 def _generate_plots_to_directory(
     context: Dict[str, Any],
     output_dir: Path,
+    marker: str = "",
+    clean_directory: bool = True,
 ) -> int:
     """
     Internal helper to generate plots to a specific directory.
@@ -20,6 +22,8 @@ def _generate_plots_to_directory(
     Args:
         context: Workflow context containing population, simulator, config, etc.
         output_dir: Directory to write plots to
+        marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+        clean_directory: If True, clean image files before writing new plots
 
     Returns:
         Number of plots generated
@@ -39,25 +43,28 @@ def _generate_plots_to_directory(
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Always clean the directory before writing new plots
-    for file in output_dir.iterdir():
-        if file.is_file() and file.suffix in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf']:
-            file.unlink()
+    # Optionally clean the directory before writing new plots
+    if clean_directory:
+        for file in output_dir.iterdir():
+            if file.is_file() and file.suffix in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf']:
+                file.unlink()
 
     # Create plotter with the specified output directory
     plotter = AutoPlotter(config, output_dir)
 
-    # Generate all plots
-    generated_plots = plotter.generate_all_plots(results, simulator, population)
+    # Generate all plots with marker
+    generated_plots = plotter.generate_all_plots(results, simulator, population, marker=marker)
 
     return len(generated_plots)
 
 
 @register_function(
     display_name="Generate Summary Plots",
-    description="Generate summary plots to custom directory or GUI results directory. Directory is always cleaned before writing.",
+    description="Generate summary plots to custom directory or GUI results directory. Use marker to distinguish plot sets (e.g., INITIAL, FINAL).",
     category="FINALIZATION",
     parameters=[
+        {"name": "marker", "type": "STRING", "description": "String to append to filenames (e.g., 'INITIAL', 'FINAL'). Leave empty for no marker.", "default": ""},
+        {"name": "clean_directory", "type": "BOOL", "description": "If true, remove existing plots before writing new ones", "default": False},
         {"name": "use_gui_directory", "type": "BOOL", "description": "If true, write to GUI results directory; if false, use custom_directory", "default": False},
         {"name": "custom_directory", "type": "STRING", "description": "Custom directory path (used when use_gui_directory=false)", "default": "results/plots"},
         {"name": "gui_subworkflow_name", "type": "STRING", "description": "GUI subworkflow name (used when use_gui_directory=true)", "default": "main"},
@@ -69,6 +76,8 @@ def _generate_plots_to_directory(
 )
 def generate_summary_plots(
     context: Dict[str, Any],
+    marker: str = "",
+    clean_directory: bool = False,
     use_gui_directory: bool = False,
     custom_directory: str = "results/plots",
     gui_subworkflow_name: str = "main",
@@ -80,10 +89,12 @@ def generate_summary_plots(
 
     This function generates all automatic plots (substance heatmaps, etc.)
     and can write to either a custom directory or the GUI results directory.
-    The target directory is always cleaned before writing new plots.
+    Use marker to distinguish different plot sets (e.g., INITIAL vs FINAL).
 
     Args:
         context: Workflow context containing population, simulator, config, etc.
+        marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+        clean_directory: If True, remove existing plots before writing new ones
         use_gui_directory: If True, write to GUI results directory; if False, use custom_directory
         custom_directory: Custom directory path (relative to microc-2.0 or absolute)
         gui_subworkflow_name: Subworkflow name for GUI directory (e.g., "main")
@@ -97,9 +108,10 @@ def generate_summary_plots(
     microc_root = Path(__file__).parent.parent.parent.parent.parent
 
     if use_gui_directory:
-        # Use GUI results directory structure
+        # Use GUI results directory structure (in ABM_GUI folder, not microc-2.0)
+        gui_root = microc_root.parent / "ABM_GUI"
         kind_plural = "composers" if gui_subworkflow_kind == "composer" else "subworkflows"
-        output_path = microc_root / "results" / kind_plural / gui_subworkflow_name
+        output_path = gui_root / "results" / kind_plural / gui_subworkflow_name
         print(f"[WORKFLOW] Generating plots to GUI directory: {output_path}")
     else:
         # Use custom directory
@@ -108,8 +120,11 @@ def generate_summary_plots(
             output_path = microc_root / custom_directory
         print(f"[WORKFLOW] Generating plots to custom directory: {output_path}")
 
+    marker_info = f" with marker '{marker}'" if marker else ""
+    print(f"[WORKFLOW] Generating plots{marker_info}...")
+
     try:
-        count = _generate_plots_to_directory(context, output_path)
+        count = _generate_plots_to_directory(context, output_path, marker=marker, clean_directory=clean_directory)
         print(f"[WORKFLOW] Generated {count} plots to {output_path}")
         return True
 
