@@ -30,6 +30,7 @@ from src.workflow.decorators import register_function
         {"name": "necrosis_threshold_glucose", "type": "FLOAT", "description": "Glucose threshold for necrosis", "default": 0.23},
         {"name": "base_migration_rate", "type": "FLOAT", "description": "Base migration probability", "default": 0.0},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )

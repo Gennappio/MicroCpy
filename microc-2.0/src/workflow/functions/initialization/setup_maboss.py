@@ -21,6 +21,7 @@ from src.workflow.decorators import register_function
         {"name": "time_tick", "type": "FLOAT", "description": "Time step for MaBoSS simulation", "default": 0.1},
         {"name": "sample_count", "type": "INT", "description": "Number of stochastic samples", "default": 1000},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )

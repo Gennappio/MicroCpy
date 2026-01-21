@@ -23,6 +23,7 @@ from src.workflow.decorators import register_function
         {"name": "boundary_type", "type": "STRING", "description": "Boundary type: fixed or neumann", "default": "fixed"},
         {"name": "unit", "type": "STRING", "description": "Concentration unit (mM, uM, etc.)", "default": "mM"},
     ],
+    inputs=["context"],
     outputs=["substance"],
     cloneable=True
 )

@@ -14,6 +14,7 @@ from src.workflow.decorators import register_function
     description="Initialize simulator with all configured substances (call after all add_substance)",
     category="INITIALIZATION",
     parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )

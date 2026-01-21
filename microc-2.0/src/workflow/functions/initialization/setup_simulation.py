@@ -19,6 +19,7 @@ from src.workflow.decorators import register_function
         {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
     ],
+    inputs=["context"],
     outputs=["config"],
     cloneable=False
 )

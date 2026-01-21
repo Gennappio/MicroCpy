@@ -4,29 +4,63 @@ Setup substances and diffusion simulator.
 This function initializes substances and creates the diffusion simulator.
 """
 
-from typing import Dict, Any, List
+import json
+from typing import Dict, Any, List, Union
 from src.workflow.decorators import register_function
+
+
+def _parse_substances(substances: List[Union[str, Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    """
+    Parse substances list, handling both JSON strings and dict objects.
+
+    Args:
+        substances: List of substance definitions, either as:
+            - JSON strings: '{"name":"Oxygen","diffusion_coeff":100000.0,...}'
+            - Dict objects: {"name": "Oxygen", "diffusion_coeff": 100000.0, ...}
+
+    Returns:
+        List of substance dictionaries
+    """
+    parsed = []
+    for i, substance in enumerate(substances):
+        if isinstance(substance, str):
+            try:
+                parsed.append(json.loads(substance))
+            except json.JSONDecodeError as e:
+                print(f"[ERROR] Failed to parse substance {i} as JSON: {e}")
+                print(f"        Value: {substance[:100]}...")
+                raise
+        elif isinstance(substance, dict):
+            parsed.append(substance)
+        else:
+            raise ValueError(f"Substance {i} must be a JSON string or dict, got {type(substance)}")
+    return parsed
 
 
 @register_function(
     display_name="Setup Substances",
     description="Initialize substances and diffusion simulator",
     category="INITIALIZATION",
+    inputs=["context"],
     outputs=["simulator"],
     cloneable=False
 )
 def setup_substances(
     context: Dict[str, Any],
-    substances: List[Dict[str, Any]] = None,
+    substances: List[Union[str, Dict[str, Any]]] = None,
     associations: Dict[str, str] = None,
     **kwargs
 ) -> bool:
     """
     Setup substances and diffusion simulator.
-    
+
     Args:
         context: Workflow context (must contain config and mesh_manager)
-        substances: List of substance definitions, each with:
+        substances: List of substance definitions. Each item can be either:
+            - A JSON string: '{"name":"Oxygen","diffusion_coeff":100000.0,...}'
+            - A dict object: {"name": "Oxygen", "diffusion_coeff": 100000.0, ...}
+
+            Each substance should have these fields:
             - name: Substance name
             - diffusion_coeff: Diffusion coefficient
             - production_rate: Production rate
@@ -37,7 +71,7 @@ def setup_substances(
             - unit: Concentration unit (e.g., "mM", "uM")
         associations: Dict mapping substance names to gene network inputs
         **kwargs: Additional parameters
-        
+
     Returns:
         True if successful
     """
@@ -48,6 +82,9 @@ def setup_substances(
 
     if associations is None:
         associations = {}
+
+    # Parse JSON strings if needed
+    substances = _parse_substances(substances)
     
     try:
         import sys

@@ -17,6 +17,7 @@ from src.workflow.decorators import register_function
         {"name": "gene_input", "type": "STRING", "description": "Gene network input node name", "default": "Oxygen_supply"},
         {"name": "threshold", "type": "FLOAT", "description": "Activation threshold for this association", "default": 0.022},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=True
 )

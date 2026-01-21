@@ -26,6 +26,7 @@ from src.workflow.decorators import register_function
             "default": "src/config/custom_functions.py"
         }
     ],
+    inputs=["context"],
     outputs=["population", "gene_network"],
     cloneable=False
 )

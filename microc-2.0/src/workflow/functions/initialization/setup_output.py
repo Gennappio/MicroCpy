@@ -20,6 +20,7 @@ from src.workflow.decorators import register_function
         {"name": "status_print_interval", "type": "INT", "description": "Print status every N steps", "default": 10},
         {"name": "save_cellstate_interval", "type": "INT", "description": "Save cell states every N steps (0=disabled)", "default": 0},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )

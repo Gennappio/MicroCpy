@@ -22,6 +22,7 @@ from src.workflow.decorators import register_function
         {"name": "nz", "type": "INT", "description": "Mesh cells in Z direction (3D only)", "default": 25},
         {"name": "cell_height", "type": "FLOAT", "description": "Biological cell height (micrometers)", "default": 20.0},
     ],
+    inputs=["context"],
     outputs=["domain", "mesh"],
     cloneable=False
 )

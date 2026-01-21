@@ -18,6 +18,7 @@ from src.workflow.decorators import register_function
         {"name": "propagation_steps", "type": "INT", "description": "Number of propagation steps", "default": 500},
         {"name": "random_initialization", "type": "BOOL", "description": "Use random initialization", "default": True},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )

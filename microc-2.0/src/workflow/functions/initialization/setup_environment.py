@@ -15,6 +15,7 @@ from src.workflow.decorators import register_function
     parameters=[
         {"name": "ph", "type": "FLOAT", "description": "Environment pH value", "default": 7.4},
     ],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
