@@ -5,6 +5,11 @@ This function checks each cell's phenotype and removes cells that have
 entered Apoptosis or Necrosis states from the population.
 
 Users can customize this to implement different cell death criteria.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -15,15 +20,13 @@ from src.workflow.decorators import register_function
     display_name="Remove Dead Cells",
     description="Remove cells with ATP below death threshold",
     category="INTRACELLULAR",
+    parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def remove_dead_cells(
-    population,
-    simulator,
-    gene_network,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -33,20 +36,28 @@ def remove_dead_cells(
     - 'Apoptosis': Programmed cell death
     - 'Necrosis': Uncontrolled cell death
 
-    This function modifies the population by removing dead cells from
-    the cells dictionary.
-
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        helpers: Dictionary of helper functions from the engine
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - config: Configuration object
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    config = context.get('config')
+
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[remove_dead_cells] No population in context - skipping")
+        return
+
     # Get death phenotypes from config (with defaults)
     death_phenotypes = _get_death_phenotypes(config)
 

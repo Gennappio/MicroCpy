@@ -5,6 +5,11 @@ This function determines each cell's phenotype (Proliferation, Quiescence, Apopt
 Necrosis) based on gene network states and environmental conditions.
 
 Users can customize this to implement different phenotype determination logic.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -15,15 +20,13 @@ from src.workflow.decorators import register_function
     display_name="Update Phenotypes",
     description="Update cell phenotypes based on gene network states",
     category="INTRACELLULAR",
+    parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def update_phenotypes(
-    population,
-    simulator,
-    gene_network,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -42,19 +45,44 @@ def update_phenotypes(
     - Quiescence: Default state
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        helpers: Dictionary of helper functions from the engine
-        **kwargs: Additional parameters (ignored)
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - simulator: Diffusion simulator (OPTIONAL)
+            - config: Configuration object
+        **kwargs: Additional user parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
-    # Get current substance concentrations
-    substance_concentrations = simulator.get_substance_concentrations()
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config = context.get('config')
 
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[update_phenotypes] No population in context - skipping")
+        return
+
+    # =========================================================================
+    # GET SUBSTANCE CONCENTRATIONS (optional)
+    # =========================================================================
+    if simulator is not None:
+        try:
+            substance_concentrations = simulator.get_substance_concentrations()
+        except Exception as e:
+            print(f"[update_phenotypes] Failed to get substance concentrations: {e}")
+            substance_concentrations = {}
+    else:
+        substance_concentrations = {}
+
+    # =========================================================================
+    # UPDATE EACH CELL'S PHENOTYPE
+    # =========================================================================
     updated_cells = {}
 
     for cell_id, cell in population.state.cells.items():

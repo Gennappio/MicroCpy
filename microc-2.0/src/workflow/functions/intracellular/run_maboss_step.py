@@ -3,6 +3,11 @@ Run one MaBoSS simulation step.
 
 This function runs pyMaBoSS stochastic Boolean network simulation for one time step.
 It updates input node states based on environment, runs MaBoSS, and updates cell gene states.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -13,15 +18,13 @@ from src.workflow.decorators import register_function
     display_name="Run MaBoSS Step",
     description="Run one step of MaBoSS stochastic Boolean network simulation",
     category="INTRACELLULAR",
-    inputs=["population", "simulator", "config", "helpers"],
+    parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def run_maboss_step(
-    population,
-    simulator,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -34,15 +37,29 @@ def run_maboss_step(
     4. Update cell gene states based on MaBoSS results
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        config: Configuration object with simulation parameters
-        helpers: Dictionary of helper functions from the engine
-        **kwargs: Additional parameters (includes context)
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - simulator: Diffusion simulator (OPTIONAL)
+            - config: Configuration object
+        **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config = context.get('config')
+
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[run_maboss_step] No population in context - skipping")
+        return
+
     # Get MaBoSS simulation object from the setup_maboss module
     # This is stored there during initialization for cross-stage access
     try:
@@ -57,8 +74,15 @@ def run_maboss_step(
         print("[WARNING] MaBoSS not initialized. Call setup_maboss first.")
         return
 
-    # Get current substance concentrations
-    substance_concentrations = simulator.get_substance_concentrations()
+    # Get current substance concentrations (optional)
+    if simulator is not None:
+        try:
+            substance_concentrations = simulator.get_substance_concentrations()
+        except Exception as e:
+            print(f"[run_maboss_step] Failed to get substance concentrations: {e}")
+            substance_concentrations = {}
+    else:
+        substance_concentrations = {}
 
     # Get associations and thresholds from config
     associations = config.associations if hasattr(config, 'associations') else {}

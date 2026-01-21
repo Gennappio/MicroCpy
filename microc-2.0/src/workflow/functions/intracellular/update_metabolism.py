@@ -5,6 +5,28 @@ This granular function updates ATP, metabolite concentrations, and other
 intracellular state variables for each cell using Michaelis-Menten kinetics.
 
 Users can customize this function to implement their own metabolic models.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+================================================================================
+
+All workflow functions follow this pattern:
+
+    def function_name(context: Dict[str, Any], user_param1=default1, ...):
+        '''
+        Args:
+            context: The workflow execution context
+            user_param1, ...: User-configurable parameters (shown in GUI)
+        '''
+
+CORE CONTEXT (read-mostly):
+    population, simulator, config, dt, step, time, helpers, substances
+
+USER CONTEXT (mutable):
+    results, simulation_params, custom keys
+
+Functions pull what they need from context and handle None gracefully.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -15,16 +37,15 @@ from src.workflow.decorators import register_function
     display_name="Update Metabolism",
     description="Update intracellular metabolism (ATP, metabolites)",
     category="INTRACELLULAR",
+    # Only user-configurable parameters are listed
+    parameters=[],
+    # Explicitly specify inputs - only 'context'
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def update_metabolism(
-    population,
-    simulator,
-    gene_network,
-    config,
-    dt: float,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -35,21 +56,48 @@ def update_metabolism(
     lactate production based on gene network states and local environment.
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        dt: Time step (hours)
-        helpers: Dictionary of helper functions from the engine
-        **kwargs: Additional parameters (ignored)
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - simulator: Diffusion simulator (OPTIONAL - uses empty env if None)
+            - config: Configuration object
+            - dt: Time step
+        **kwargs: Additional user parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
-    # Get current substance concentrations from the simulator
-    substance_concentrations = simulator.get_substance_concentrations()
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config = context.get('config')
+    dt = context.get('dt', 0.1)
 
-    # Update each cell's metabolic state
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[update_metabolism] No population in context - skipping")
+        return
+
+    # =========================================================================
+    # GET SUBSTANCE CONCENTRATIONS (optional)
+    # If no simulator, use empty environment
+    # =========================================================================
+    if simulator is not None:
+        try:
+            substance_concentrations = simulator.get_substance_concentrations()
+        except Exception as e:
+            print(f"[update_metabolism] Failed to get substance concentrations: {e}")
+            substance_concentrations = {}
+    else:
+        print("[update_metabolism] No simulator - using empty environment")
+        substance_concentrations = {}
+
+    # =========================================================================
+    # UPDATE EACH CELL'S METABOLIC STATE
+    # =========================================================================
     updated_cells = {}
 
     for cell_id, cell in population.state.cells.items():
@@ -223,6 +271,23 @@ def _calculate_cell_metabolism(local_environment: Dict[str, float], cell_state: 
 
     # Store ATP rate
     reactions['atp_rate'] = atp_rate
+
+    # FALLBACK: If no ATP pathway is active, use SubstanceConfig rates as defaults
+    # This allows basic diffusion to work even without gene network initialization
+    if not mito_atp and not glyco_atp:
+        # Use uptake_rate from SubstanceConfig as fallback for each substance
+        if config and hasattr(config, 'substances'):
+            substances = config.substances
+            if isinstance(substances, dict):
+                for substance_name, substance_cfg in substances.items():
+                    if hasattr(substance_cfg, 'uptake_rate') and substance_cfg.uptake_rate:
+                        # Negative because uptake is consumption
+                        reactions[substance_name] = -float(substance_cfg.uptake_rate)
+                    if hasattr(substance_cfg, 'production_rate') and substance_cfg.production_rate:
+                        # Positive because production adds to concentration
+                        if substance_name not in reactions:
+                            reactions[substance_name] = 0.0
+                        reactions[substance_name] += float(substance_cfg.production_rate)
 
     return reactions
 

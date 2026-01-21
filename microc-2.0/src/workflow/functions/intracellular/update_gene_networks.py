@@ -6,6 +6,11 @@ conditions (oxygen, glucose, lactate, etc.) and propagates the Boolean network
 to determine gene states (mitoATP, glycoATP, Proliferation, Apoptosis, etc.).
 
 Users can customize this to implement different gene regulatory models.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -19,16 +24,13 @@ from src.workflow.decorators import register_function
     parameters=[
         {"name": "propagation_steps", "type": "INT", "description": "Number of gene network propagation steps", "default": 500},
     ],
-    inputs=["population", "simulator", "gene_network", "config", "helpers"],
+    # Only context needed - user params are defined above
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def update_gene_networks(
-    population,
-    simulator,
-    gene_network,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     propagation_steps: int = None,
     **kwargs
 ) -> None:
@@ -42,30 +44,55 @@ def update_gene_networks(
     4. Cache gene states for phenotype update
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        helpers: Dictionary of helper functions from the engine
-        propagation_steps: Number of gene network propagation steps (overrides config)
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - simulator: Diffusion simulator (OPTIONAL)
+            - config: Configuration with associations/thresholds
+        propagation_steps: Number of gene network propagation steps (user parameter)
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
-    # Get current substance concentrations
-    substance_concentrations = simulator.get_substance_concentrations()
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config = context.get('config')
+
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[update_gene_networks] No population in context - skipping")
+        return
+
+    # =========================================================================
+    # GET SUBSTANCE CONCENTRATIONS (optional)
+    # =========================================================================
+    if simulator is not None:
+        try:
+            substance_concentrations = simulator.get_substance_concentrations()
+        except Exception as e:
+            print(f"[update_gene_networks] Failed to get substance concentrations: {e}")
+            substance_concentrations = {}
+    else:
+        substance_concentrations = {}
 
     # Get gene network configuration
-    associations = config.associations if hasattr(config, 'associations') else {}
-    thresholds = config.thresholds if hasattr(config, 'thresholds') else {}
+    associations = config.associations if config and hasattr(config, 'associations') else {}
+    thresholds = config.thresholds if config and hasattr(config, 'thresholds') else {}
 
     # Use explicit parameter if provided, otherwise fallback to config
     if propagation_steps is None:
         propagation_steps = 500
-        if hasattr(config, 'gene_network') and config.gene_network is not None:
+        if config and hasattr(config, 'gene_network') and config.gene_network is not None:
             propagation_steps = getattr(config.gene_network, 'propagation_steps', 500)
 
+    # =========================================================================
+    # UPDATE EACH CELL'S GENE NETWORK
+    # =========================================================================
     updated_cells = {}
 
     for cell_id, cell in population.state.cells.items():
