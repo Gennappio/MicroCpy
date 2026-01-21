@@ -28,6 +28,8 @@ class NodeType(Enum):
     WORKFLOW_FUNCTION = "workflowFunction"  # Regular function node
     SUBWORKFLOW_CALL = "subworkflow_call"  # Call to another sub-workflow
     PARAMETER_NODE = "parameterNode"  # Parameter storage node
+    LIST_PARAMETER_NODE = "listParameterNode"  # List parameter storage node
+    DICT_PARAMETER_NODE = "dictParameterNode"  # Dictionary parameter storage node
     GROUP_NODE = "groupNode"  # Visual grouping node
 
 
@@ -63,6 +65,129 @@ class ParameterNode:
             id=data["id"],
             label=data.get("label", "Parameters"),
             parameters=data.get("parameters", {}),
+            position=data.get("position", {"x": 0, "y": 0})
+        )
+
+
+@dataclass
+class ListParameterNode:
+    """
+    Represents a list parameter storage node in the visual workflow.
+
+    Attributes:
+        id: Unique identifier for this list parameter node
+        label: Display name for this list parameter node
+        list_type: Type of items in the list ('string' or 'float')
+        items: List of items stored in this node
+        target_param: Name of the function parameter this list maps to
+        position: UI position for visual editor (x, y coordinates)
+    """
+    id: str
+    label: str = "List"
+    list_type: str = "string"  # 'string' or 'float'
+    items: List[Any] = field(default_factory=list)
+    target_param: str = "items"  # Default target parameter name
+    position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        result = {
+            "id": self.id,
+            "type": "listParameterNode",
+            "label": self.label,
+            "listType": self.list_type,
+            "items": self.items,
+            "position": self.position
+        }
+        if self.target_param != "items":
+            result["targetParam"] = self.target_param
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ListParameterNode":
+        """Create from dictionary (JSON deserialization)."""
+        return cls(
+            id=data["id"],
+            label=data.get("label", "List"),
+            list_type=data.get("listType", data.get("list_type", "string")),
+            items=data.get("items", []),
+            target_param=data.get("targetParam", data.get("target_param", "items")),
+            position=data.get("position", {"x": 0, "y": 0})
+        )
+
+
+@dataclass
+class DictEntry:
+    """
+    Represents a single entry in a dictionary parameter node.
+
+    Attributes:
+        key: The key for this entry
+        value: The value for this entry
+        value_type: Type of the value ('string', 'float', 'int', 'bool', 'list', 'dict')
+    """
+    key: str
+    value: Any
+    value_type: str = "string"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "key": self.key,
+            "value": self.value,
+            "valueType": self.value_type
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DictEntry":
+        """Create from dictionary (JSON deserialization)."""
+        if data is None:
+            return cls(key="", value="", value_type="string")
+        return cls(
+            key=data.get("key", ""),
+            value=data.get("value", ""),
+            value_type=data.get("valueType", data.get("value_type", "string"))
+        )
+
+
+@dataclass
+class DictParameterNode:
+    """
+    Represents a dictionary parameter storage node in the visual workflow.
+
+    Attributes:
+        id: Unique identifier for this dict parameter node
+        label: Display name for this dict parameter node
+        entries: List of DictEntry objects stored in this node
+        position: UI position for visual editor (x, y coordinates)
+    """
+    id: str
+    label: str = "Dictionary"
+    entries: List[DictEntry] = field(default_factory=list)
+    position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "type": "dictParameterNode",
+            "label": self.label,
+            "entries": [e.to_dict() if isinstance(e, DictEntry) else e for e in self.entries],
+            "position": self.position
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DictParameterNode":
+        """Create from dictionary (JSON deserialization)."""
+        entries_data = data.get("entries", [])
+        entries = [
+            DictEntry.from_dict(e) if isinstance(e, dict) else e
+            for e in entries_data
+        ]
+        return cls(
+            id=data["id"],
+            label=data.get("label", "Dictionary"),
+            entries=entries,
             position=data.get("position", {"x": 0, "y": 0})
         )
 
@@ -385,7 +510,7 @@ class SubWorkflow:
     from other sub-workflows. Each sub-workflow has:
     - A controller node (entry point)
     - Functions and sub-workflow calls
-    - Parameter nodes
+    - Parameter nodes (regular, list, and dict types)
     - Input parameter definitions
     - Execution order
 
@@ -395,7 +520,9 @@ class SubWorkflow:
         controller: Controller node (entry point)
         functions: List of function nodes
         subworkflow_calls: List of calls to other sub-workflows
-        parameters: List of parameter nodes
+        parameters: List of regular parameter nodes
+        list_parameters: List of list parameter nodes
+        dict_parameters: List of dict parameter nodes
         execution_order: Ordered list of node IDs defining execution sequence
         input_parameters: List of input parameter definitions
         enabled: Whether this sub-workflow is enabled
@@ -407,6 +534,8 @@ class SubWorkflow:
     functions: List[WorkflowFunction] = field(default_factory=list)
     subworkflow_calls: List[SubWorkflowCall] = field(default_factory=list)
     parameters: List[ParameterNode] = field(default_factory=list)
+    list_parameters: List[ListParameterNode] = field(default_factory=list)
+    dict_parameters: List[DictParameterNode] = field(default_factory=list)
     execution_order: List[str] = field(default_factory=list)
     input_parameters: List[InputParameter] = field(default_factory=list)
     enabled: bool = True
@@ -438,8 +567,13 @@ class SubWorkflow:
         if self.subworkflow_calls:
             result["subworkflow_calls"] = [s.to_dict() for s in self.subworkflow_calls]
 
-        if self.parameters:
-            result["parameters"] = [p.to_dict() for p in self.parameters]
+        # Combine all parameter node types into a single list
+        all_parameters = []
+        all_parameters.extend([p.to_dict() for p in self.parameters])
+        all_parameters.extend([p.to_dict() for p in self.list_parameters])
+        all_parameters.extend([p.to_dict() for p in self.dict_parameters])
+        if all_parameters:
+            result["parameters"] = all_parameters
 
         if self.input_parameters:
             result["input_parameters"] = [ip.to_dict() for ip in self.input_parameters]
@@ -450,13 +584,27 @@ class SubWorkflow:
     def from_dict(cls, name: str, data: Dict[str, Any]) -> "SubWorkflow":
         """Create from dictionary (JSON deserialization)."""
         controller = None
-        if "controller" in data:
+        if "controller" in data and data["controller"] is not None:
             controller = ControllerNode.from_dict(data["controller"])
 
         functions = [WorkflowFunction.from_dict(f) for f in data.get("functions", [])]
         subworkflow_calls = [SubWorkflowCall.from_dict(s) for s in data.get("subworkflow_calls", [])]
-        parameters = [ParameterNode.from_dict(p) for p in data.get("parameters", [])]
         input_parameters = [InputParameter.from_dict(ip) for ip in data.get("input_parameters", [])]
+
+        # Parse parameter nodes based on type
+        parameters = []
+        list_parameters = []
+        dict_parameters = []
+        for p in data.get("parameters", []):
+            if p is None:
+                continue
+            node_type = p.get("type", "parameterNode")
+            if node_type == "listParameterNode":
+                list_parameters.append(ListParameterNode.from_dict(p))
+            elif node_type == "dictParameterNode":
+                dict_parameters.append(DictParameterNode.from_dict(p))
+            else:
+                parameters.append(ParameterNode.from_dict(p))
 
         return cls(
             name=name,
@@ -465,6 +613,8 @@ class SubWorkflow:
             functions=functions,
             subworkflow_calls=subworkflow_calls,
             parameters=parameters,
+            list_parameters=list_parameters,
+            dict_parameters=dict_parameters,
             execution_order=data.get("execution_order", []),
             input_parameters=input_parameters,
             enabled=data.get("enabled", True),
@@ -486,11 +636,35 @@ class SubWorkflow:
         return None
 
     def get_parameter_node_by_id(self, param_id: str) -> Optional[ParameterNode]:
-        """Get a parameter node by its ID."""
+        """Get a regular parameter node by its ID."""
         for param in self.parameters:
             if param.id == param_id:
                 return param
         return None
+
+    def get_list_parameter_node_by_id(self, param_id: str) -> Optional[ListParameterNode]:
+        """Get a list parameter node by its ID."""
+        for param in self.list_parameters:
+            if param.id == param_id:
+                return param
+        return None
+
+    def get_dict_parameter_node_by_id(self, param_id: str) -> Optional[DictParameterNode]:
+        """Get a dict parameter node by its ID."""
+        for param in self.dict_parameters:
+            if param.id == param_id:
+                return param
+        return None
+
+    def get_any_parameter_node_by_id(self, param_id: str):
+        """Get any parameter node (regular, list, or dict) by its ID."""
+        node = self.get_parameter_node_by_id(param_id)
+        if node:
+            return node
+        node = self.get_list_parameter_node_by_id(param_id)
+        if node:
+            return node
+        return self.get_dict_parameter_node_by_id(param_id)
 
     def get_all_nodes(self) -> List[Any]:
         """Get all nodes (functions, sub-workflow calls, parameters)."""
@@ -500,23 +674,50 @@ class SubWorkflow:
         nodes.extend(self.functions)
         nodes.extend(self.subworkflow_calls)
         nodes.extend(self.parameters)
+        nodes.extend(self.list_parameters)
+        nodes.extend(self.dict_parameters)
         return nodes
 
     def merge_parameters_for_function(self, func: WorkflowFunction) -> Dict[str, Any]:
         """
         Merge parameters from connected parameter nodes with function's own parameters.
-        Same logic as WorkflowStage.
+
+        Handles three types of parameter nodes:
+        - ParameterNode: Regular key-value parameters (merged as dict)
+        - ListParameterNode: List of items, mapped to targetParam (e.g., substances)
+        - DictParameterNode: Dictionary entries (merged as dict)
+
+        Special handling for substance definitions:
+        - If a regular parameter node has 'name' and 'diffusion_coeff' keys,
+          it's treated as a substance definition and collected into 'substances' list.
         """
         merged = {}
         substances = []
 
         for param_node_id in func.parameter_nodes:
+            # Check regular parameter nodes
             param_node = self.get_parameter_node_by_id(param_node_id)
             if param_node:
                 if 'name' in param_node.parameters and 'diffusion_coeff' in param_node.parameters:
                     substances.append(param_node.parameters)
                 else:
                     merged.update(param_node.parameters)
+                continue
+
+            # Check list parameter nodes
+            list_node = self.get_list_parameter_node_by_id(param_node_id)
+            if list_node:
+                # Map list items to the target parameter name
+                target_param = getattr(list_node, 'target_param', None) or 'substances'
+                merged[target_param] = list_node.items
+                continue
+
+            # Check dict parameter nodes
+            dict_node = self.get_dict_parameter_node_by_id(param_node_id)
+            if dict_node:
+                # Convert entries to a dictionary
+                for entry in dict_node.entries:
+                    merged[entry.key] = entry.value
 
         if substances:
             merged['substances'] = substances

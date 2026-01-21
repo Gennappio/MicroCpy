@@ -42,6 +42,7 @@ from src.workflow.functions.intercellular import (
 )
 from src.workflow.functions.finalization import (
     generate_initial_plots,
+    generate_summary_plots,
 )
 
 from src.workflow.functions.debug.debug_dummy_functions import (
@@ -825,65 +826,6 @@ def export_final_state(
     # For now, just a placeholder showing the pattern
     # In the future, this could call helpers['export_final_state']()
     pass
-
-
-@register_function(
-    display_name="Generate Summary Plots",
-    description="Generate summary plots (substance heatmaps, cell distributions)",
-    category="FINALIZATION",
-    outputs=[],
-    cloneable=False
-)
-def generate_summary_plots(
-    context: Dict[str, Any],
-    **kwargs
-) -> bool:
-    """
-    Generate summary plots in finalization stage.
-
-    This function generates all automatic plots (substance heatmaps, etc.)
-    that would normally be generated automatically in non-workflow mode.
-
-    Args:
-        context: Workflow context containing population, simulator, config, etc.
-        **kwargs: Additional parameters (ignored)
-
-    Returns:
-        True if successful, False otherwise
-    """
-    print("[WORKFLOW] Generating summary plots...")
-
-    try:
-        # Import AutoPlotter
-        import sys
-        visualization_dir = Path(__file__).parent.parent / "visualization"
-        if str(visualization_dir) not in sys.path:
-            sys.path.insert(0, str(visualization_dir.parent))
-
-        from visualization.auto_plotter import AutoPlotter
-
-        population = context['population']
-        simulator = context['simulator']
-        config = context['config']
-        results = context.get('results', {})
-
-        # Create plotter
-        plotter = AutoPlotter(config, config.plots_dir)
-
-        # Generate all plots
-        generated_plots = plotter.generate_all_plots(results, simulator, population)
-
-        print(f"[WORKFLOW] Generated {len(generated_plots)} plots")
-        return True
-
-    except ImportError:
-        print("[WORKFLOW] AutoPlotter not available, skipping plots")
-        return False
-    except Exception as e:
-        print(f"[WORKFLOW] Error generating plots: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
 
 def save_simulation_data(
