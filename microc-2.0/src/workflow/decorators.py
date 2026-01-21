@@ -3,6 +3,53 @@ Decorator-based function registration system for MicroC workflow.
 
 This module provides decorators that allow functions to be defined and registered
 in the same place, eliminating the need for manual registration in registry.py.
+
+================================================================================
+CONTEXT-BASED FUNCTION ARCHITECTURE
+================================================================================
+
+All workflow functions follow a unified context-based pattern:
+
+1. SIGNATURE: Functions receive a single `context: Dict[str, Any]` parameter
+   plus any function-specific parameters and **kwargs.
+
+2. DECORATOR: Functions must declare `inputs=["context"]` in @register_function
+   to receive the workflow context.
+
+3. CONTEXT CONTENTS: The context dictionary contains:
+   - population: Cell population object (mutable)
+   - simulator: Diffusion simulator object (mutable)
+   - config: Configuration object
+   - dt: Time step (hours)
+   - current_step: Current simulation step number
+   - _executor: Reference to workflow executor (for macrostep functions)
+   - Custom keys added by other functions
+
+4. VALIDATION: Functions should validate required context items and handle
+   missing items gracefully (skip with warning, not crash).
+
+5. MODIFICATION: Functions modify context items in-place. The context is
+   shared across all functions in a workflow execution.
+
+Example:
+    @register_function(
+        display_name="My Function",
+        description="Does something useful",
+        category="INTRACELLULAR",
+        parameters=[{"name": "threshold", "type": "FLOAT", "default": 0.5}],
+        inputs=["context"],
+        outputs=[],
+        cloneable=True
+    )
+    def my_function(context: Dict[str, Any], threshold: float = 0.5, **kwargs) -> None:
+        population = context.get('population')
+        if population is None:
+            print("[my_function] No population in context - skipping")
+            return
+        # ... function logic ...
+
+See run_diffusion_solver.py for the canonical reference implementation.
+================================================================================
 """
 
 import inspect
