@@ -71,9 +71,6 @@ from src.workflow.functions.output.export_csv import (
 from src.workflow.functions.output.export_vtk import (
     export_vtk_checkpoint,
 )
-from src.workflow.functions.macrostep.intracellular_step import intracellular_step
-from src.workflow.functions.macrostep.microenvironment_step import microenvironment_step
-from src.workflow.functions.macrostep.intercellular_step import intercellular_step
 
 
 # ============================================================================
