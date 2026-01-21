@@ -409,3 +409,123 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+/* List Parameter Node Styles */
+.list-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.list-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-item-index {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  color: #64748b;
+  min-width: 32px;
+}
+
+.list-item-input {
+  flex: 1;
+}
+
+.btn-move {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-move:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-move:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Dict Parameter Node Styles */
+.dict-entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #fdf4ff;
+  border: 1px solid #f0abfc;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.dict-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dict-key-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  background: white;
+}
+
+.dict-key-input:focus {
+  outline: none;
+  border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.dict-type-select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.dict-type-select:focus {
+  outline: none;
+  border-color: #ec4899;
+}
+
+.dict-value-row {
+  padding-left: 8px;
+}
+
+.nested-value {
+  padding: 10px 12px;
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+}
+
+.nested-label {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}

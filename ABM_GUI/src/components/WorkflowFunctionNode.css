@@ -172,15 +172,58 @@
 }
 
 .parameter-row.disconnected .parameter-label {
-  color: #94a3b8;
+  color: #64748b;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
+}
+
+.parameter-row.connected .parameter-label {
+  color: #059669;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
 }
 
 .required-indicator {
   color: #ef4444;
   margin-left: 2px;
   font-weight: bold;
+}
+
+.type-indicator {
+  font-size: 9px;
+  font-weight: 600;
+  margin-left: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: lowercase;
+}
+
+.type-indicator.type-list {
+  color: #7c3aed;
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+}
+
+.type-indicator.type-dict {
+  color: #db2777;
+  background: #fce7f3;
+  border: 1px solid #f9a8d4;
+}
+
+.parameter-value {
+  font-size: 9px;
+  color: #6b7280;
+  font-family: monospace;
+  margin-left: 4px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parameter-row.connected .parameter-value {
+  color: #059669;
+  font-weight: 500;
 }
 
 .node-outputs {
