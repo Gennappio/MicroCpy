@@ -7,6 +7,11 @@ This function checks which cells should divide based on:
 - Phenotype is 'Proliferation'
 
 Users can customize this to implement different division criteria.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -18,15 +23,13 @@ from src.workflow.decorators import register_function
     display_name="Update Cell Division",
     description="Handle cell division based on ATP and cell cycle",
     category="INTERCELLULAR",
+    parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def update_cell_division(
-    population,
-    simulator,
-    gene_network,
-    config,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -44,16 +47,27 @@ def update_cell_division(
     - Phenotype is 'Proliferation'
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        helpers: Dictionary of helper functions from the engine
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - config: Configuration object
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    config = context.get('config')
+
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[update_cell_division] No population in context - skipping")
+        return
+
     # Get division parameters from config
     atp_threshold = _get_config_param(config, 'atp_threshold', 0.8)
     max_atp_rate = _get_config_param(config, 'max_atp_rate', 30.0)

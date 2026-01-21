@@ -7,6 +7,11 @@ This function handles cell movement based on:
 - Collision avoidance: Prevent cells from overlapping
 
 Users can customize this to implement different migration strategies.
+
+================================================================================
+ARCHITECTURE: Context-Based Function Pattern
+See run_diffusion_solver.py for full documentation.
+================================================================================
 """
 
 from typing import Dict, Any
@@ -19,16 +24,13 @@ from src.workflow.decorators import register_function
     display_name="Update Cell Migration",
     description="Handle cell migration with chemotaxis and random walk",
     category="INTERCELLULAR",
+    parameters=[],
+    inputs=["context"],
     outputs=[],
     cloneable=False
 )
 def update_cell_migration(
-    population,
-    simulator,
-    gene_network,
-    config,
-    dt: float,
-    helpers: Dict[str, Any],
+    context: Dict[str, Any],
     **kwargs
 ) -> None:
     """
@@ -43,17 +45,31 @@ def update_cell_migration(
     Migration is only active for cells with 'Proliferation' phenotype.
 
     Args:
-        population: Population object containing all cells
-        simulator: Diffusion simulator for substance concentrations
-        gene_network: Gene network object for gene regulation
-        config: Configuration object with simulation parameters
-        dt: Time step (hours)
-        helpers: Dictionary of helper functions from the engine
+        context: Workflow execution context containing:
+            - population: Cell population (REQUIRED)
+            - simulator: Diffusion simulator (OPTIONAL)
+            - config: Configuration object
+            - dt: Time step
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
+    # =========================================================================
+    # EXTRACT CORE CONTEXT ITEMS
+    # =========================================================================
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config = context.get('config')
+    dt = context.get('dt', 0.1)
+
+    # =========================================================================
+    # VALIDATE REQUIRED CORE ITEMS
+    # =========================================================================
+    if population is None:
+        print("[update_cell_migration] No population in context - skipping")
+        return
+
     # Get migration parameters from config
     migration_speed = _get_config_param(config, 'migration_speed', 0.0)
     chemotaxis_strength = _get_config_param(config, 'chemotaxis_strength', 0.0)
@@ -64,8 +80,15 @@ def update_cell_migration(
     if migration_speed == 0.0:
         return
 
-    # Get current substance concentrations
-    substance_concentrations = simulator.get_substance_concentrations()
+    # Get current substance concentrations (optional)
+    if simulator is not None:
+        try:
+            substance_concentrations = simulator.get_substance_concentrations()
+        except Exception as e:
+            print(f"[update_cell_migration] Failed to get substance concentrations: {e}")
+            substance_concentrations = {}
+    else:
+        substance_concentrations = {}
 
     # Update each cell's position
     updated_cells = {}
