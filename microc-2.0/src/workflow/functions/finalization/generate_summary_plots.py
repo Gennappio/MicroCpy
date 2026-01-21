@@ -15,6 +15,7 @@ def _generate_plots_to_directory(
     output_dir: Path,
     marker: str = "",
     clean_directory: bool = True,
+    add_timestamp: bool = False,
 ) -> int:
     """
     Internal helper to generate plots to a specific directory.
@@ -24,11 +25,13 @@ def _generate_plots_to_directory(
         output_dir: Directory to write plots to
         marker: String to append to filenames (e.g., "INITIAL", "FINAL")
         clean_directory: If True, clean image files before writing new plots
+        add_timestamp: If True, append timestamp to filenames for debugging
 
     Returns:
         Number of plots generated
     """
     import sys
+    from datetime import datetime
     visualization_dir = Path(__file__).parent.parent.parent.parent / "visualization"
     if str(visualization_dir) not in sys.path:
         sys.path.insert(0, str(visualization_dir.parent))
@@ -49,6 +52,11 @@ def _generate_plots_to_directory(
             if file.is_file() and file.suffix in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf']:
                 file.unlink()
 
+    # Add timestamp to marker if requested
+    if add_timestamp:
+        timestamp = datetime.now().strftime("%H%M%S")
+        marker = f"{marker}_{timestamp}" if marker else timestamp
+
     # Create plotter with the specified output directory
     plotter = AutoPlotter(config, output_dir)
 
@@ -65,6 +73,7 @@ def _generate_plots_to_directory(
     parameters=[
         {"name": "marker", "type": "STRING", "description": "String to append to filenames (e.g., 'INITIAL', 'FINAL'). Leave empty for no marker.", "default": ""},
         {"name": "clean_directory", "type": "BOOL", "description": "If true, remove existing plots before writing new ones", "default": False},
+        {"name": "add_timestamp", "type": "BOOL", "description": "If true, append timestamp (HHMMSS) to filenames for debugging", "default": False},
         {"name": "use_gui_directory", "type": "BOOL", "description": "If true, write to GUI results directory; if false, use custom_directory", "default": False},
         {"name": "custom_directory", "type": "STRING", "description": "Custom directory path (used when use_gui_directory=false)", "default": "results/plots"},
         {"name": "gui_subworkflow_name", "type": "STRING", "description": "GUI subworkflow name (used when use_gui_directory=true)", "default": "main"},
@@ -78,6 +87,7 @@ def generate_summary_plots(
     context: Dict[str, Any],
     marker: str = "",
     clean_directory: bool = False,
+    add_timestamp: bool = False,
     use_gui_directory: bool = False,
     custom_directory: str = "results/plots",
     gui_subworkflow_name: str = "main",
@@ -95,6 +105,7 @@ def generate_summary_plots(
         context: Workflow context containing population, simulator, config, etc.
         marker: String to append to filenames (e.g., "INITIAL", "FINAL")
         clean_directory: If True, remove existing plots before writing new ones
+        add_timestamp: If True, append timestamp (HHMMSS) to filenames for debugging
         use_gui_directory: If True, write to GUI results directory; if False, use custom_directory
         custom_directory: Custom directory path (relative to microc-2.0 or absolute)
         gui_subworkflow_name: Subworkflow name for GUI directory (e.g., "main")
@@ -125,10 +136,11 @@ def generate_summary_plots(
         print(f"[WORKFLOW] Generating plots to custom directory: {output_path}")
 
     marker_info = f" with marker '{marker}'" if marker else ""
-    print(f"[WORKFLOW] Generating plots{marker_info}...")
+    timestamp_info = " with timestamp" if add_timestamp else ""
+    print(f"[WORKFLOW] Generating plots{marker_info}{timestamp_info}...")
 
     try:
-        count = _generate_plots_to_directory(context, output_path, marker=marker, clean_directory=clean_directory)
+        count = _generate_plots_to_directory(context, output_path, marker=marker, clean_directory=clean_directory, add_timestamp=add_timestamp)
         print(f"[WORKFLOW] Generated {count} plots to {output_path}")
         return True
 
