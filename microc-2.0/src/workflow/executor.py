@@ -23,10 +23,11 @@ from .registry import FunctionRegistry, get_default_registry
 
 # Observability imports (optional - graceful degradation if not available)
 try:
-    from .observability import NodeEventEmitter, TrackedContext, ContextSnapshotManager
+    from .observability import NodeEventEmitter, TrackedContext, ValidatedContext, ContextSnapshotManager
     OBSERVABILITY_AVAILABLE = True
 except ImportError:
     OBSERVABILITY_AVAILABLE = False
+    ValidatedContext = None  # Fallback for type hints
 
 
 class WorkflowExecutor:
@@ -38,7 +39,8 @@ class WorkflowExecutor:
     """
     
     def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None,
-                 observability_enabled: bool = True, results_dir: Optional[Path] = None):
+                 observability_enabled: bool = True, results_dir: Optional[Path] = None,
+                 context_enforcement: str = "warn"):
         """
         Initialize the workflow executor.
 
@@ -48,6 +50,10 @@ class WorkflowExecutor:
             config: Simulation configuration object
             observability_enabled: Whether to enable node observability (default True)
             results_dir: Results directory for observability artifacts (default: Path('results'))
+            context_enforcement: Write policy enforcement level - "strict", "warn", or "off"
+                - "strict": Raise ContextWriteError on policy violations
+                - "warn": Log warning but allow the write (default)
+                - "off": No enforcement, all writes allowed
         """
         self.workflow = workflow
         self.custom_functions_module = custom_functions_module
@@ -62,6 +68,7 @@ class WorkflowExecutor:
         # Observability setup
         self._results_dir = results_dir or Path('results')
         self._observability_enabled = observability_enabled and OBSERVABILITY_AVAILABLE
+        self._context_enforcement = context_enforcement
         self._event_emitter: Optional['NodeEventEmitter'] = None
         self._snapshot_manager: Optional['ContextSnapshotManager'] = None
         self._current_execution_id: Optional[str] = None
@@ -520,10 +527,13 @@ class WorkflowExecutor:
                 scope_key, context, node_id=node_id
             )
 
-        # === OBSERVABILITY: Wrap context for tracking ===
+        # === OBSERVABILITY: Wrap context for tracking and validation ===
         tracked_context = None
         if self._observability_enabled and OBSERVABILITY_AVAILABLE:
-            tracked_context = TrackedContext(context)
+            # Use ValidatedContext for write policy enforcement
+            tracked_context = ValidatedContext(context, enforcement=self._context_enforcement)
+            # Lock core keys to prevent overwriting (but allow modification of objects)
+            tracked_context.lock_core_keys()
             tracked_context.start_tracking()
         else:
             tracked_context = context
