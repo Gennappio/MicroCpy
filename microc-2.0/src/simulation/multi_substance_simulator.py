@@ -560,19 +560,56 @@ class MultiSubstanceSimulator:
         # print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
         # print(f"   Grid spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
 
+        # Log first few positions for debugging
+        positions_logged = 0
         for position, reactions in substance_reactions.items():
+            if positions_logged < 3:
+                print(f"[DIFFUSION] Position: {position}, Reactions: {reactions}")
+                positions_logged += 1
+
             # Handle both 2D and 3D positions
             if len(position) == 2:
                 x_pos, y_pos = position
 
-                # Convert physical coordinates (meters) to grid indices
-                # Physical coordinates are in meters, need to convert to grid indices
-                dx = self.config.domain.size_x.meters / nx
-                dy = self.config.domain.size_y.meters / ny
+                # Detect position unit and convert to FiPy grid indices
+                # Positions can be in: meters, micrometers, or biological grid indices
+                domain_x_m = self.config.domain.size_x.meters  # e.g., 0.0005m = 500um
+                domain_y_m = self.config.domain.size_y.meters
 
-                x = int(x_pos / dx)
-                y = int(y_pos / dy)
+                # Calculate biological grid size (cells with ~20um spacing on 500um domain)
+                # Biological grid is typically half the FiPy grid resolution
+                bio_grid_nx = nx // 2  # e.g., 50 -> 25
+                bio_grid_ny = ny // 2
+
+                # Heuristic to detect position unit:
+                # - If position < bio_grid_size (e.g., 25), it's a biological grid index
+                # - If position < fipy_grid_size (e.g., 50), it's a FiPy grid index
+                # - If position < domain_um (e.g., 500), it's in micrometers
+                # - Otherwise, it's in meters
+
+                if x_pos < bio_grid_nx and y_pos < bio_grid_ny:
+                    # Biological grid indices - scale to FiPy grid (2x finer)
+                    x = int(x_pos * 2)
+                    y = int(y_pos * 2)
+                elif x_pos < nx and y_pos < ny:
+                    # FiPy grid indices - use directly
+                    x = int(x_pos)
+                    y = int(y_pos)
+                elif x_pos < domain_x_m * 1e6 and y_pos < domain_y_m * 1e6:
+                    # Positions in micrometers - convert to grid indices
+                    x = int(x_pos / (domain_x_m * 1e6 / nx))
+                    y = int(y_pos / (domain_y_m * 1e6 / ny))
+                else:
+                    # Positions in meters - convert to grid indices
+                    dx = domain_x_m / nx
+                    dy = domain_y_m / ny
+                    x = int(x_pos / dx)
+                    y = int(y_pos / dy)
+
                 z = 0  # Default for 2D
+
+                if positions_logged <= 3:
+                    print(f"[DIFFUSION]   -> Grid: ({x}, {y}), bio_grid={bio_grid_nx}x{bio_grid_ny}, fipy_grid={nx}x{ny}")
 
                 if 0 <= x < nx and 0 <= y < ny:
                     # Convert to FiPy index - use correct formula for 3D mesh even with 2D position
@@ -628,6 +665,12 @@ class MultiSubstanceSimulator:
             #     print(f"   final_rate (to FiPy): {final_rate:.2e} mM/s")
             #     print(f"   fipy_idx: {fipy_idx}")
 
+        # Log source field summary
+        non_zero_count = np.count_nonzero(source_field)
+        if non_zero_count > 0:
+            print(f"[DIFFUSION] {substance_name} source field: {non_zero_count} non-zero cells, range [{np.min(source_field[source_field != 0]):.2e}, {np.max(source_field):.2e}] mM/s")
+        else:
+            print(f"[DIFFUSION] {substance_name} source field: ALL ZEROS!")
 
         return source_field
 
