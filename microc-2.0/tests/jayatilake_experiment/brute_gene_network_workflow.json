@@ -1,114 +1,175 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "name": "Brute Force Gene Network Benchmark",
-  "description": "REUSABLE workflow for gene network testing. Uses: Initialize Population -> Initialize Gene Networks -> Set Input States -> Update Gene Networks.",
+  "description": "Run gene network update function multiple times and collect results. No legacy microc code.",
   "metadata": {
     "author": "MicroCpy Team",
     "experiment": "Gene Network Benchmark",
-    "created": "2026-01-05",
-    "notes": "Number of cells = number of runs. Input nodes stay FIXED during propagation (they are excluded from updates)."
+    "created": "2026-01-21",
+    "notes": "Composers contain ONLY subworkflow calls, no functions. Input nodes stay FIXED during propagation.",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "initialization": "subworkflow",
+        "loop": "subworkflow",
+        "analysis": "subworkflow"
+      }
+    }
   },
-  "stages": {
+  "subworkflows": {
+    "main": {
+      "description": "Main composer - orchestrates initialization, loop, and analysis workflows",
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN COMPOSER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_initialization",
+          "subworkflow_name": "initialization",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Initialize population and gene networks",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "call_loop",
+          "subworkflow_name": "loop",
+          "iterations": 10,
+          "enabled": true,
+          "description": "Run gene network updates multiple times",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "call_analysis",
+          "subworkflow_name": "analysis",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Analyze and print results",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 300}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["call_initialization", "call_loop", "call_analysis"],
+      "enabled": true
+    },
     "initialization": {
-      "enabled": true,
       "description": "Initialize population, attach gene networks, set input states",
+      "deletable": true,
+      "controller": {
+        "id": "controller-initialization",
+        "label": "INITIALIZATION",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
       "functions": [
         {
           "id": "init_population",
           "function_name": "initialize_population",
           "enabled": true,
-          "description": "Create N cells (without gene networks yet)",
-          "parameters": {},
-          "parameter_nodes": ["param_num_cells"]
+          "description": "Create N cells (number of cells = number of parallel runs)",
+          "parameters": {
+            "num_cells": 100
+          },
+          "position": {"x": 200, "y": 100}
         },
         {
           "id": "init_gene_networks",
           "function_name": "initialize_gene_networks",
           "enabled": true,
           "description": "Attach gene networks to all cells",
-          "parameters": {},
-          "parameter_nodes": ["param_bnd_file", "param_random_init"]
+          "parameters": {
+            "bnd_file": "jaya_microc.bnd",
+            "random_initialization": true
+          },
+          "position": {"x": 200, "y": 200}
         },
         {
           "id": "set_inputs",
           "function_name": "set_gene_network_inputs",
           "enabled": true,
           "description": "Set input node states (stay FIXED during propagation)",
-          "parameters": {},
-          "parameter_nodes": ["param_oxygen_supply", "param_glucose_supply", "param_mct1", "param_proton", "param_fgfr", "param_egfr", "param_cmet", "param_growth_inhibitor", "param_dna_damage", "param_tgfbr"]
+          "parameters": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false,
+            "Proton_level": false,
+            "FGFR_stimulus": false,
+            "EGFR_stimulus": false,
+            "cMET_stimulus": false,
+            "Growth_Inhibitor": false,
+            "DNA_damage": false,
+            "TGFBR_stimulus": false
+          },
+          "position": {"x": 200, "y": 300}
         }
       ],
+      "subworkflow_calls": [],
+      "parameters": [],
       "execution_order": ["init_population", "init_gene_networks", "set_inputs"],
-      "parameters": [
-        {"id": "param_bnd_file", "label": "BND File Path", "parameters": {"bnd_file": "jaya_microc.bnd"}},
-        {"id": "param_random_init", "label": "Random Initialization", "parameters": {"random_initialization": true}},
-        {"id": "param_num_cells", "label": "Number of Cells (= runs)", "parameters": {"num_cells": 100}},
-        {"id": "param_oxygen_supply", "label": "Oxygen Supply", "parameters": {"Oxygen_supply": true}},
-        {"id": "param_glucose_supply", "label": "Glucose Supply", "parameters": {"Glucose_supply": true}},
-        {"id": "param_mct1", "label": "MCT1 Stimulus", "parameters": {"MCT1_stimulus": false}},
-        {"id": "param_proton", "label": "Proton Level", "parameters": {"Proton_level": false}},
-        {"id": "param_fgfr", "label": "FGFR Stimulus", "parameters": {"FGFR_stimulus": false}},
-        {"id": "param_egfr", "label": "EGFR Stimulus", "parameters": {"EGFR_stimulus": false}},
-        {"id": "param_cmet", "label": "cMET Stimulus", "parameters": {"cMET_stimulus": false}},
-        {"id": "param_growth_inhibitor", "label": "Growth Inhibitor", "parameters": {"Growth_Inhibitor": false}},
-        {"id": "param_dna_damage", "label": "DNA Damage", "parameters": {"DNA_damage": false}},
-        {"id": "param_tgfbr", "label": "TGFBR Stimulus", "parameters": {"TGFBR_stimulus": false}}
-      ]
+      "enabled": true
     },
-    "intracellular": {
-      "enabled": true,
-      "description": "Update gene networks (propagate signals) - input nodes stay FIXED",
+    "loop": {
+      "description": "Single gene network propagation step (called multiple times via iterations)",
+      "deletable": true,
+      "controller": {
+        "id": "controller-loop",
+        "label": "LOOP",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
       "functions": [
         {
-          "id": "update_gene_networks_node",
+          "id": "update_gene_networks",
           "function_name": "update_gene_networks_standalone",
           "enabled": true,
           "description": "Propagate gene network for N steps (input nodes stay FIXED)",
-          "parameters": {},
-          "parameter_nodes": ["param_propagation_steps"]
+          "parameters": {
+            "propagation_steps": 500
+          },
+          "position": {"x": 200, "y": 100}
         }
       ],
-      "execution_order": ["update_gene_networks_node"],
-      "parameters": [
-        {"id": "param_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}}
-      ]
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["update_gene_networks"],
+      "enabled": true
     },
-    "macrostep": {
-      "enabled": true,
-      "description": "Run intracellular step",
-      "steps": 1,
-      "functions": [
-        {
-          "id": "intracellular_step_node",
-          "function_name": "intracellular_step",
-          "enabled": true,
-          "description": "Execute intracellular stage",
-          "parameters": {},
-          "step_count": 1,
-          "parameter_nodes": []
-        }
-      ],
-      "execution_order": ["intracellular_step_node"],
-      "parameters": []
-    },
-    "finalization": {
-      "enabled": true,
-      "description": "Print results",
+    "analysis": {
+      "description": "Analyze and print gene network results",
+      "deletable": true,
+      "controller": {
+        "id": "controller-analysis",
+        "label": "ANALYSIS",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
       "functions": [
         {
           "id": "print_results",
           "function_name": "print_gene_network_states",
           "enabled": true,
           "description": "Print gene network statistics",
-          "parameters": {},
-          "parameter_nodes": ["param_show_per_cell"]
+          "parameters": {
+            "show_per_cell": false
+          },
+          "position": {"x": 200, "y": 100}
         }
       ],
+      "subworkflow_calls": [],
+      "parameters": [],
       "execution_order": ["print_results"],
-      "parameters": [
-        {"id": "param_show_per_cell", "label": "Show Per-Cell Results", "parameters": {"show_per_cell": false}}
-      ]
+      "enabled": true
     }
-  },
-  "parameters": []
+  }
 }
