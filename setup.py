@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Setup script for MicroC 2.0
+Setup script for OpenCellComms
 """
 
 from setuptools import setup, find_packages
 
 setup(
-    name="microc-2.0",
+    name="opencellcomms",
     version="2.0.0",
-    description="MicroC 2.0 - Biological Simulation Framework",
-    author="MicroC Team",
+    description="OpenCellComms - Biological Simulation Framework",
+    author="OpenCellComms Team",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     python_requires=">=3.8",
