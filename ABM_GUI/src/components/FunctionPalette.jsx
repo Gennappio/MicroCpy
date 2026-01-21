@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronRight, Database, Zap, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Database, Zap, Upload, List, Braces } from 'lucide-react';
 import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import LibraryConflictDialog from './LibraryConflictDialog';
@@ -103,6 +103,27 @@ const FunctionPalette = ({ currentStage }) => {
       parameters: {},
     };
     event.dataTransfer.setData('application/reactflow', JSON.stringify(subworkflowCallData));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragStartList = (event, listType) => {
+    const listNodeData = {
+      type: 'listParameterNode',
+      label: `${listType === 'float' ? 'Float' : 'String'} List`,
+      listType: listType,
+      items: [],
+    };
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(listNodeData));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragStartDict = (event) => {
+    const dictNodeData = {
+      type: 'dictParameterNode',
+      label: 'Dictionary',
+      entries: [],
+    };
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(dictNodeData));
     event.dataTransfer.effectAllowed = 'move';
   };
 
@@ -272,12 +293,14 @@ const FunctionPalette = ({ currentStage }) => {
       </div>
 
       <div className="palette-content">
-        {/* Parameter Node Section */}
+        {/* Parameters Section - All parameter node types */}
         <div className="parameter-node-section">
           <div className="parameter-node-header">
             <Database size={16} />
-            <span>Parameter Nodes</span>
+            <span>Parameters</span>
           </div>
+
+          {/* Key-Value Parameters */}
           <div
             className="parameter-node-draggable"
             draggable
@@ -285,8 +308,47 @@ const FunctionPalette = ({ currentStage }) => {
           >
             <Database size={14} />
             <div className="parameter-node-info">
-              <div className="parameter-node-name">Parameters</div>
-              <div className="parameter-node-desc">Drag to add parameter storage</div>
+              <div className="parameter-node-name">Key-Value</div>
+              <div className="parameter-node-desc">Simple parameter storage</div>
+            </div>
+          </div>
+
+          {/* String List */}
+          <div
+            className="parameter-node-draggable list-string"
+            draggable
+            onDragStart={(e) => onDragStartList(e, 'string')}
+          >
+            <List size={14} />
+            <div className="parameter-node-info">
+              <div className="parameter-node-name">List [String]</div>
+              <div className="parameter-node-desc">List of string values</div>
+            </div>
+          </div>
+
+          {/* Float List */}
+          <div
+            className="parameter-node-draggable list-float"
+            draggable
+            onDragStart={(e) => onDragStartList(e, 'float')}
+          >
+            <List size={14} />
+            <div className="parameter-node-info">
+              <div className="parameter-node-name">List [Float]</div>
+              <div className="parameter-node-desc">List of numeric values</div>
+            </div>
+          </div>
+
+          {/* Dictionary */}
+          <div
+            className="parameter-node-draggable dict"
+            draggable
+            onDragStart={onDragStartDict}
+          >
+            <Braces size={14} />
+            <div className="parameter-node-info">
+              <div className="parameter-node-name">Dictionary</div>
+              <div className="parameter-node-desc">Key-value pairs with typed values</div>
             </div>
           </div>
         </div>
