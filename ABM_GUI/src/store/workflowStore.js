@@ -1059,6 +1059,19 @@ const useWorkflowStore = create((set, get) => ({
               if (targetParam) {
                 targetHandle = `param-${targetParam}`;
               }
+            } else {
+              // Regular parameter node - infer target from the first parameter key
+              const params = paramNode?.data?.parameters || {};
+              const paramKeys = Object.keys(params);
+              if (paramKeys.length === 1) {
+                // Single parameter - connect to that specific handle
+                targetHandle = `param-${paramKeys[0]}`;
+              } else if (paramKeys.length > 1) {
+                // Multiple parameters - use first key as target
+                // (In practice, each param node should have one parameter)
+                targetHandle = `param-${paramKeys[0]}`;
+              }
+              // If no params, targetHandle stays as 'params' (will show warning but won't break)
             }
 
             allEdges.push({
