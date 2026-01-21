@@ -14,7 +14,7 @@ from src.workflow.decorators import register_function
     description="Configure gene network parameters (propagation steps, BND file, etc.)",
     category="INITIALIZATION",
     parameters=[
-        {"name": "bnd_file", "type": "STRING", "description": "Path to BND file (relative to workflow)", "default": "jaya.bnd"},
+        {"name": "bnd_file", "type": "STRING", "description": "Path to BND file (relative to workflow)", "default": "gene_network.bnd"},
         {"name": "propagation_steps", "type": "INT", "description": "Number of propagation steps", "default": 500},
         {"name": "random_initialization", "type": "BOOL", "description": "Use random initialization", "default": True},
     ],
@@ -24,7 +24,7 @@ from src.workflow.decorators import register_function
 )
 def setup_gene_network(
     context: Dict[str, Any],
-    bnd_file: str = "jaya.bnd",
+    bnd_file: str = "gene_network.bnd",
     propagation_steps: int = 500,
     random_initialization: bool = True,
     **kwargs

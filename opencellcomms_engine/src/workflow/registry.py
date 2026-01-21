@@ -125,7 +125,6 @@ def get_default_registry() -> FunctionRegistry:
     """
     # Import all modules with decorated functions to trigger registration
     import src.workflow.standard_functions
-    import tests.jayatilake_experiment.jayatilake_experiment_cell_functions
 
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss

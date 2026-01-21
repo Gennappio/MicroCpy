@@ -1,98 +1,86 @@
-# MicroC 2.0 - Multi-Scale Biological Simulation
+# OpenCellComms v3.0 - Multi-Scale Biological Simulation Engine
 
-A Python-based cellular simulation system modeling gene regulatory networks and substance diffusion.
+A Python-based cellular simulation platform for modeling gene regulatory networks, substance diffusion, and cell behavior in biological systems.
+
+## Overview
+
+OpenCellComms provides a flexible, workflow-based simulation engine for:
+- **Gene Regulatory Networks** - Boolean network models for cell fate decisions
+- **Substance Diffusion** - FiPy-based PDE solvers for chemical gradients
+- **Cell Populations** - Agent-based modeling of cell behavior, division, migration
+- **Multi-scale Integration** - Coupling intracellular, intercellular, and microenvironment dynamics
 
 ## Quick Start
 
-### 1. Generate Initial Cell Population
+### Run a Workflow
 ```bash
-python run_microc.py --generate-csv --pattern spheroid --count 50 \
-  --genes tests/jayatilake_experiment/jaya_microc.bnd \
-  --output initial_cells.csv
+python run_workflow.py --workflow path/to/your_workflow.json
 ```
 
-### 2. Run Simulation
+### Run with Config File
 ```bash
-python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml
+python run_workflow.py --sim path/to/your_config.yaml
 ```
 
-### 3. Generate Visualizations
-```bash
-python run_microc.py --plot-csv --cells-dir results/csv_cells \
-  --plot-output plots --snapshots
+## Architecture
+
+OpenCellComms uses a **workflow-based** architecture where simulations are defined as JSON workflows with:
+- **Subworkflows** - Modular, reusable workflow components
+- **Functions** - Registered Python functions for each simulation step
+- **Context** - Shared state passed between functions
+
+### Workflow Structure (v2.0 format)
+```json
+{
+  "version": "2.0",
+  "name": "My Simulation",
+  "subworkflows": {
+    "main": {
+      "controller": { "number_of_steps": 100 },
+      "subworkflow_calls": [
+        { "subworkflow_name": "initialization", "iterations": 1 },
+        { "subworkflow_name": "simulation_step", "iterations": 100 }
+      ]
+    },
+    "initialization": { "functions": [...] },
+    "simulation_step": { "functions": [...] }
+  }
+}
 ```
 
-## Master Runner Commands
-
-### Cell Generation
-- `--generate-csv`: Create initial cell population
-- `--pattern`: Cell arrangement (spheroid, random, grid)
-- `--count`: Number of cells
-- `--genes`: Gene network file (.bnd format)
-- `--output`: Output CSV file
-
-### Simulation
-- `--sim`: Run simulation with config file
-- Config files define domain, substances, and parameters
-
-### Visualization
-- `--plot-csv`: Generate plots from CSV results
-- `--cells-dir`: Directory with cell state files
-- `--plot-output`: Output directory for plots
-- `--snapshots`: Generate snapshot plots
-- `--animation`: Create time-lapse animation
-- `--statistics`: Plot population statistics
-
-## Examples
-
-**2D Tumor Growth Simulation:**
-```bash
-# Generate spheroid
-python run_microc.py --generate-csv --pattern spheroid --count 100 \
-  --genes tests/jayatilake_experiment/jaya_microc.bnd --output tumor.csv
-
-# Run simulation
-python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_2d_csv_config.yaml
-
-# Visualize results
-python run_microc.py --plot-csv --cells-dir results/csv_cells \
-  --plot-output tumor_plots --snapshots --statistics
+## Directory Structure
 ```
-
-**3D Simulation:**
-```bash
-python run_microc.py --sim tests/jayatilake_experiment/jayatilake_experiment_config.yaml
-```
-
-## File Structure
-```
-microc-2.0/
-├── run_microc.py          # Master Runner
-├── src/                   # Core simulation code
-├── tools/                 # Utilities (CSV export, plotting)
-├── tests/                 # Example configurations
-│   ├── jayatilake_experiment/  # Main tumor model
-│   └── csv_export_test/        # 2D CSV workflow
-├── benchmarks/            # Validation and performance testing
-└── README.md
+opencellcomms_engine/
+├── run_workflow.py        # Main entry point
+├── src/
+│   ├── workflow/          # Workflow engine (loader, executor, registry)
+│   ├── biology/           # Cell, Population, GeneNetwork models
+│   ├── simulation/        # Substance simulators, orchestrator
+│   ├── config/            # Configuration handling
+│   ├── visualization/     # Plotting and export
+│   └── io/                # File I/O (VTK, CSV, H5)
+├── tools/                 # Utility scripts
+├── tests/                 # Test suites
+└── benchmarks/            # Performance validation
 ```
 
 ## Requirements
+
 - Python 3.8+
-- FiPy, NumPy, Matplotlib, PyYAML
+- Core: NumPy, SciPy, Matplotlib, PyYAML
+- Diffusion: FiPy
+- Gene Networks: MaBoss (optional)
 
-## Validation and Benchmarks
+## Installation
 
-Run validation tests to ensure accuracy:
 ```bash
-# Standalone FiPy validation
-python benchmarks/standalone_steadystate_fipy_3D.py
-
-# Gene network comparison
-python benchmarks/gene_network_standalone.py
+pip install -e .
 ```
 
-## Help
-```bash
-python run_microc.py --help
-```
+## GUI
+
+The OpenCellComms GUI (`opencellcomms_gui/`) provides a visual workflow editor for designing and running simulations. See `opencellcomms_gui/README.md` for details.
+
+## License
+
+MIT License

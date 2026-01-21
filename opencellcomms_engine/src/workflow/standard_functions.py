@@ -963,21 +963,5 @@ def print_simulation_summary(
 # =============================================================================
 # Import modules that contain decorated functions to trigger decorator execution
 # This ensures decorator-based registrations are added to the registry
-try:
-    # Import jayatilake experiment functions to register decorated functions
-    import sys
-    import os
-
-    # Add tests directory to path if not already there
-    tests_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'tests', 'jayatilake_experiment')
-    tests_dir = os.path.abspath(tests_dir)
-    if os.path.exists(tests_dir) and tests_dir not in sys.path:
-        sys.path.insert(0, tests_dir)
-
-    # Import the module to trigger decorator execution
-    import jayatilake_experiment_cell_functions
-
-    print("[WORKFLOW] Imported decorated functions from jayatilake_experiment_cell_functions")
-except ImportError as e:
-    print(f"[WORKFLOW] Warning: Could not import decorated functions: {e}")
+# Custom experiment functions can be imported here or via workflow configuration
 

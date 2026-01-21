@@ -29,13 +29,13 @@ def read_requirements():
 
 setup(
     name="opencellcomms",
-    version="2.0.0",
+    version="3.0.0",
     description="Multi-scale cellular simulation platform with gene networks and spatial dynamics",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     author="OpenCellComms Development Team",
     author_email="opencellcomms@example.com",
-    url="https://github.com/microc/microc",
+    url="https://github.com/opencellcomms/opencellcomms",
     
     # Package configuration
     packages=find_packages(where="src"),
@@ -112,8 +112,8 @@ setup(
     
     # Project URLs
     project_urls={
-        "Bug Reports": "https://github.com/microc/microc/issues",
-        "Source": "https://github.com/microc/microc",
+        "Bug Reports": "https://github.com/opencellcomms/opencellcomms/issues",
+        "Source": "https://github.com/opencellcomms/opencellcomms",
         "Documentation": "https://opencellcomms.readthedocs.io/",
     },
 )

@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="opencellcomms",
-    version="2.0.0",
+    version="3.0.0",
     description="OpenCellComms - Biological Simulation Framework",
     author="OpenCellComms Team",
     package_dir={"": "src"},

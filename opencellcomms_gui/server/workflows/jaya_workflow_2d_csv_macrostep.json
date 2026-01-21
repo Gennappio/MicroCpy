@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "name": "Jayatilake Metabolic Symbiosis Workflow - 2D CSV (macrostep)",
-  "description": "Workflow with all parameters exposed in GUI - no YAML config file dependency.",
+  "name": "Example Workflow - 2D CSV (macrostep)",
+  "description": "Template workflow with all parameters exposed in GUI - no YAML config file dependency.",
   "metadata": {
     "author": "OpenCellComms Team",
-    "experiment": "Jayatilake Metabolic Symbiosis - 2D CSV",
+    "experiment": "Example 2D CSV Workflow",
     "created": "2025-12-18",
     "notes": "All parameters are configurable from the GUI via parameter nodes."
   },
@@ -289,7 +289,7 @@
         "generate_initial_plots"
       ],
       "parameters": [
-        {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Jayatilake 2D CSV"}},
+        {"id": "param_sim_name", "label": "Simulation Name", "parameters": {"name": "Example 2D CSV"}},
         {"id": "param_sim_total_steps", "label": "Total Steps", "parameters": {"total_steps": 5}},
         {"id": "param_sim_dt", "label": "Time Step (dt)", "parameters": {"dt": 0.1}},
         {"id": "param_sim_output_dir", "label": "Output Directory", "parameters": {"output_dir": "results"}},
@@ -383,7 +383,7 @@
         {"id": "param_gene_net_random_init", "label": "Random Init", "parameters": {"random_initialization": true}},
 
         {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": true}},
-        {"id": "param_pop_custom_functions_module", "label": "Custom Functions Module", "parameters": {"custom_functions_module": "jayatilake_experiment_cell_functions.py"}},
+        {"id": "param_pop_custom_functions_module", "label": "Custom Functions Module", "parameters": {"custom_functions_module": "custom_functions.py"}},
 
         {"id": "param_out_save_data_interval", "label": "Save Data Interval", "parameters": {"save_data_interval": 1}},
         {"id": "param_out_save_plots_interval", "label": "Save Plots Interval", "parameters": {"save_plots_interval": 1}},
@@ -392,7 +392,7 @@
         {"id": "param_out_status_print_interval", "label": "Status Print Interval", "parameters": {"status_print_interval": 1}},
         {"id": "param_out_save_cellstate_interval", "label": "Save Cell State Interval", "parameters": {"save_cellstate_interval": 1}},
 
-        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/example_2d_cells.csv"}}
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "cells.csv"}}
       ]
     },
     "macrostep": {

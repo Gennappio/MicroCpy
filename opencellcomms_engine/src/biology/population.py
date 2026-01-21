@@ -120,16 +120,10 @@ class PhenotypeLogger:
 
                     # Try to get division parameters from config
                     try:
-                        # Import the function dynamically
-                        import importlib.util
-                        spec = importlib.util.spec_from_file_location("custom_functions",
-                            "tests/jayatilake_experiment/jayatilake_experiment_custom_functions.py")
-                        custom_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(custom_module)
-
-                        atp_threshold = custom_module.get_parameter_from_config(config, 'atp_threshold', 0.8)
-                        max_atp = custom_module.get_parameter_from_config(config, 'max_atp', 30)
-                        cell_cycle_time = custom_module.get_parameter_from_config(config, 'cell_cycle_time', 240)
+                        # Get parameters from config if available
+                        atp_threshold = config.get('custom_parameters', {}).get('atp_threshold', 0.8) if config else 0.8
+                        max_atp = config.get('custom_parameters', {}).get('max_atp', 30) if config else 30
+                        cell_cycle_time = config.get('custom_parameters', {}).get('cell_cycle_time', 240) if config else 240
 
                         f.write(f"    Required Age: {cell_cycle_time}\n")
                         f.write(f"    ATP Threshold: {atp_threshold}\n")

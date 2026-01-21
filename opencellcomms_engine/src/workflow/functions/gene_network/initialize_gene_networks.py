@@ -15,7 +15,7 @@ from src.workflow.decorators import register_function
     description="Create and attach gene networks to all cells in population",
     category="INITIALIZATION",
     parameters=[
-        {"name": "bnd_file", "type": "STRING", "description": "Path to BND file", "default": "jaya.bnd"},
+        {"name": "bnd_file", "type": "STRING", "description": "Path to BND file", "default": "gene_network.bnd"},
         {"name": "random_initialization", "type": "BOOL", "description": "Use random initialization for non-input nodes", "default": True},
     ],
     outputs=["gene_network"],
@@ -23,7 +23,7 @@ from src.workflow.decorators import register_function
 )
 def initialize_gene_networks(
     context: Dict[str, Any],
-    bnd_file: str = "jaya.bnd",
+    bnd_file: str = "gene_network.bnd",
     random_initialization: bool = True,
     **kwargs
 ) -> bool:
@@ -55,7 +55,8 @@ def initialize_gene_networks(
         # Find the BND file
         bnd_path = Path(bnd_file)
         if not bnd_path.exists():
-            bnd_path = Path("tests/jayatilake_experiment") / bnd_file
+            # Try tests directory as fallback
+            bnd_path = Path("tests") / bnd_file
 
         if not bnd_path.exists():
             print(f"[ERROR] BND file not found: {bnd_file}")
