@@ -259,13 +259,13 @@
           "function_name": "generate_summary_plots",
           "enabled": true,
           "description": "Generate initial state plots with INITIAL marker",
-          "parameters": {},
-          "parameter_nodes": [
-            "param_init_plots_marker",
-            "param_init_plots_use_gui_dir",
-            "param_init_plots_gui_subworkflow_name",
-            "param_init_plots_gui_subworkflow_kind"
-          ]
+          "parameters": {
+            "marker": "INITIAL",
+            "use_gui_directory": true,
+            "gui_subworkflow_name": "main",
+            "gui_subworkflow_kind": "composer"
+          },
+          "parameter_nodes": []
         }
       ],
       "execution_order": [
@@ -392,12 +392,7 @@
         {"id": "param_out_status_print_interval", "label": "Status Print Interval", "parameters": {"status_print_interval": 1}},
         {"id": "param_out_save_cellstate_interval", "label": "Save Cell State Interval", "parameters": {"save_cellstate_interval": 1}},
 
-        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/example_2d_cells.csv"}},
-
-        {"id": "param_init_plots_marker", "label": "Plot Marker", "parameters": {"marker": "INITIAL"}},
-        {"id": "param_init_plots_use_gui_dir", "label": "Use GUI Directory", "parameters": {"use_gui_directory": true}},
-        {"id": "param_init_plots_gui_subworkflow_name", "label": "GUI Subworkflow Name", "parameters": {"gui_subworkflow_name": "main"}},
-        {"id": "param_init_plots_gui_subworkflow_kind", "label": "GUI Subworkflow Kind", "parameters": {"gui_subworkflow_kind": "composer"}}
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/example_2d_cells.csv"}}
       ]
     },
     "macrostep": {
@@ -495,13 +490,13 @@
           "function_name": "generate_summary_plots",
           "enabled": true,
           "description": "Generate final state plots with FINAL marker",
-          "parameters": {},
-          "parameter_nodes": [
-            "param_final_plots_marker",
-            "param_final_plots_use_gui_dir",
-            "param_final_plots_gui_subworkflow_name",
-            "param_final_plots_gui_subworkflow_kind"
-          ]
+          "parameters": {
+            "marker": "FINAL",
+            "use_gui_directory": true,
+            "gui_subworkflow_name": "main",
+            "gui_subworkflow_kind": "composer"
+          },
+          "parameter_nodes": []
         },
         {
           "id": "print_summary",
@@ -514,12 +509,7 @@
         "generate_final_plots",
         "print_summary"
       ],
-      "parameters": [
-        {"id": "param_final_plots_marker", "label": "Plot Marker", "parameters": {"marker": "FINAL"}},
-        {"id": "param_final_plots_use_gui_dir", "label": "Use GUI Directory", "parameters": {"use_gui_directory": true}},
-        {"id": "param_final_plots_gui_subworkflow_name", "label": "GUI Subworkflow Name", "parameters": {"gui_subworkflow_name": "main"}},
-        {"id": "param_final_plots_gui_subworkflow_kind", "label": "GUI Subworkflow Kind", "parameters": {"gui_subworkflow_kind": "composer"}}
-      ]
+      "parameters": []
     }
   }
 }
