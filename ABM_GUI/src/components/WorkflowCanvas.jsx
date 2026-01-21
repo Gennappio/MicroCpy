@@ -11,6 +11,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import WorkflowFunctionNode from './WorkflowFunctionNode';
 import ParameterNode from './ParameterNode';
+import ListParameterNode from './ListParameterNode';
+import DictParameterNode from './DictParameterNode';
 import GroupNode from './GroupNode';
 import InitNode from './InitNode';
 import SubWorkflowCallNode from './SubWorkflowCallNode';
@@ -23,6 +25,8 @@ import './WorkflowCanvas.css';
 const nodeTypes = {
   workflowFunction: WorkflowFunctionNode,
   parameterNode: ParameterNode,
+  listParameterNode: ListParameterNode,
+  dictParameterNode: DictParameterNode,
   groupNode: GroupNode,
   initNode: InitNode,
   controllerNode: InitNode, // Controller nodes use the same component as Init nodes
@@ -50,12 +54,18 @@ const WorkflowCanvas = ({ stage }) => {
     openInspector,
   } = useWorkflowStore();
 
+
+  // Initialize with current stage's nodes and edges
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(stageNodes[stage] || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(stageEdges[stage] || []);
+
   // Get the selected node ID for this stage from the store
   const selectedNodeId = selectedNodeByStage[stage] || null;
 
-  // Derive the full node object from the nodes array
+  // Derive the full node object from the *local* ReactFlow nodes first.
+  // This avoids cases where the store's stageNodes sync lags behind local state.
   const selectedNode = selectedNodeId
-    ? (stageNodes[stage] || []).find(n => n.id === selectedNodeId) || null
+    ? (nodes.find(n => n.id === selectedNodeId) || (stageNodes[stage] || []).find(n => n.id === selectedNodeId) || null)
     : null;
 
   // Wrapper to set selected node in store (accepts node object or null)
@@ -63,9 +73,15 @@ const WorkflowCanvas = ({ stage }) => {
     setSelectedNodeInStore(stage, node?.id || null);
   }, [stage, setSelectedNodeInStore]);
 
-  // Initialize with current stage's nodes and edges
-  const [nodes, setNodes, onNodesChangeBase] = useNodesState(stageNodes[stage] || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(stageEdges[stage] || []);
+  // Helper to create onEdit callback that selects the node and opens the editor
+  const createOnEditCallback = useCallback((nodeId) => {
+    return () => {
+      // Don't close over a node object; just select by id and let `selectedNode`
+      // be derived from the current `nodes` state.
+      setSelectedNodeInStore(stage, nodeId);
+      setShowParameterEditor(true);
+    };
+  }, [stage, setSelectedNodeInStore]);
 
   // Wrap onNodesChange to prevent deletion of Init node
   const onNodesChange = useCallback((changes) => {
@@ -217,7 +233,11 @@ const WorkflowCanvas = ({ stage }) => {
   const onConnect = useCallback(
     (params) => {
       // Determine connection type
-      const isParameterConnection = params.sourceHandle === 'params' || params.targetHandle?.startsWith('params');
+      const isParameterConnection = params.sourceHandle === 'params' ||
+                                     params.sourceHandle === 'list-out' ||
+                                     params.sourceHandle === 'dict-out' ||
+                                     params.targetHandle?.startsWith('params') ||
+                                     params.targetHandle?.startsWith('param-');
       const isInitConnection = params.sourceHandle === 'init-out';
       const isStepsParameterConnection = params.targetHandle === 'steps-param';
 
@@ -298,10 +318,36 @@ const WorkflowCanvas = ({ stage }) => {
           data: {
             label: droppedData.label || 'New Parameters',
             parameters: droppedData.parameters || {},
-            onEdit: () => {
-              setSelectedNode(newNode);
-              setShowParameterEditor(true);
-            },
+            onEdit: createOnEditCallback(newId),
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      } else if (droppedData.type === 'listParameterNode') {
+        // It's a list parameter node
+        const newId = `list_${droppedData.listType}_${Date.now()}`;
+        const newNode = {
+          id: newId,
+          type: 'listParameterNode',
+          position,
+          data: {
+            label: droppedData.label || `${droppedData.listType === 'float' ? 'Float' : 'String'} List`,
+            listType: droppedData.listType || 'string',
+            items: droppedData.items || [],
+            onEdit: createOnEditCallback(newId),
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      } else if (droppedData.type === 'dictParameterNode') {
+        // It's a dictionary parameter node
+        const newId = `dict_${Date.now()}`;
+        const newNode = {
+          id: newId,
+          type: 'dictParameterNode',
+          position,
+          data: {
+            label: droppedData.label || 'Dictionary',
+            entries: droppedData.entries || [],
+            onEdit: createOnEditCallback(newId),
           },
         };
         setNodes((nds) => nds.concat(newNode));
@@ -390,6 +436,39 @@ const WorkflowCanvas = ({ stage }) => {
                       ...node.data,
                       label: customName || node.data.label,
                       parameters,
+                    },
+                  }
+                : node
+            )
+          );
+        } else if (selectedNode.type === 'listParameterNode') {
+          // For list parameter nodes, update items and label
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      label: customName || node.data.label,
+                      items: parameters.items || [],
+                      listType: parameters.listType || node.data.listType,
+                    },
+                  }
+                : node
+            )
+          );
+        } else if (selectedNode.type === 'dictParameterNode') {
+          // For dict parameter nodes, update entries and label
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      label: customName || node.data.label,
+                      entries: parameters.entries || [],
                     },
                   }
                 : node
