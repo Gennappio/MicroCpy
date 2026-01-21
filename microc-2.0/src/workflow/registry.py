@@ -132,8 +132,13 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.initialization.setup_maboss
     import src.workflow.functions.intracellular.run_maboss_step
 
-    # Import standalone gene network functions
-    import src.workflow.functions.gene_network.standalone_gene_network
+    # Import gene network functions (1 file per function)
+    import src.workflow.functions.gene_network.initialize_population
+    import src.workflow.functions.gene_network.initialize_gene_networks
+    import src.workflow.functions.gene_network.set_gene_network_inputs
+    import src.workflow.functions.gene_network.apply_associations_to_inputs
+    import src.workflow.functions.gene_network.update_gene_networks_standalone
+    import src.workflow.functions.gene_network.print_gene_network_states
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
