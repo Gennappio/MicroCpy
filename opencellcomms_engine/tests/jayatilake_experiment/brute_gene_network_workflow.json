@@ -6,7 +6,7 @@
     "author": "OpenCellComms Team",
     "experiment": "Gene Network Benchmark",
     "created": "2026-01-21",
-    "notes": "Composers contain ONLY subworkflow calls, no functions. Input nodes stay FIXED during propagation.",
+    "notes": "Composers contain ONLY subworkflow calls, no functions. Input nodes stay FIXED during propagation. Uses Clean Architecture with context['resolve_path'] for file resolution.",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -87,9 +87,9 @@
           "id": "init_gene_networks",
           "function_name": "initialize_gene_networks",
           "enabled": true,
-          "description": "Attach gene networks to all cells",
+          "description": "Attach gene networks to all cells (path resolved via context['resolve_path'])",
           "parameters": {
-            "bnd_file": "jaya.bnd",
+            "bnd_file": "tests/jayatilake_experiment/jaya.bnd",
             "random_initialization": true
           },
           "position": {"x": 200, "y": 200}

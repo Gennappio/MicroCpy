@@ -6,7 +6,7 @@
     "author": "OpenCellComms Team",
     "experiment": "Diffusion-Reaction Test",
     "created": "2026-01-06",
-    "notes": "Reusable workflow for diffusion-reaction with cell metabolism. Single macrostep (steady state)."
+    "notes": "Reusable workflow for diffusion-reaction with cell metabolism. Single macrostep (steady state). Plot functions use context['plots_dir'] via Clean Architecture."
   },
   "stages": {
     "initialization": {
@@ -226,7 +226,7 @@
 
         {"id": "param_pop_enable_gene_network", "label": "Enable Gene Network", "parameters": {"enable_gene_network": false}},
 
-        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/jayatilake_experiment/simple_cells_2d.csv"}}
+        {"id": "param_load_csv_file_path", "label": "CSV File Path", "parameters": {"file_path": "tests/maboss_example/simple_cells.csv"}}
       ]
     },
     "macrostep": {
