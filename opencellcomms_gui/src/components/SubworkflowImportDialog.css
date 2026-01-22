@@ -1,0 +1,204 @@
+.subworkflow-import-dialog {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.subworkflow-import-dialog .dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subworkflow-import-dialog .dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.subworkflow-import-dialog .close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.subworkflow-import-dialog .close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.subworkflow-import-dialog .dialog-description {
+  padding: 12px 20px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subworkflow-import-dialog .subworkflow-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subworkflow-import-dialog .subworkflow-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+}
+
+.subworkflow-import-dialog .subworkflow-item:hover {
+  border-color: var(--accent-color);
+}
+
+.subworkflow-import-dialog .subworkflow-item.selected {
+  border-color: var(--accent-color);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.subworkflow-import-dialog .subworkflow-item.has-conflict {
+  border-color: #f59e0b;
+}
+
+.subworkflow-import-dialog .item-checkbox {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.subworkflow-import-dialog .item-checkbox input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.subworkflow-import-dialog .item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subworkflow-import-dialog .item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subworkflow-import-dialog .kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.subworkflow-import-dialog .kind-badge.composer {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.subworkflow-import-dialog .kind-badge.subworkflow {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.subworkflow-import-dialog .item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.subworkflow-import-dialog .conflict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.subworkflow-import-dialog .item-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.subworkflow-import-dialog .item-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.subworkflow-import-dialog .item-stats .dependencies {
+  color: #8b5cf6;
+}
+
+.subworkflow-import-dialog .rename-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.subworkflow-import-dialog .rename-section label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.subworkflow-import-dialog .rename-section input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.subworkflow-import-dialog .rename-section input.has-error {
+  border-color: #f59e0b;
+}
+
+.subworkflow-import-dialog .rename-section .ok-icon {
+  color: #10b981;
+}
+
+.subworkflow-import-dialog .dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.subworkflow-import-dialog .selection-count {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+

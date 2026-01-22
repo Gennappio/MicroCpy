@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronRight, Database, Zap, Upload, List, Braces } from 'lucide-react';
+import { ChevronDown, ChevronRight, Database, Zap, Upload, Download, List, Braces } from 'lucide-react';
 import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import LibraryConflictDialog from './LibraryConflictDialog';
+import SubworkflowImportDialog from './SubworkflowImportDialog';
 import './FunctionPalette.css';
 
 /**
@@ -11,6 +12,8 @@ import './FunctionPalette.css';
 const FunctionPalette = ({ currentStage }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
   const addFunctionLibrary = useWorkflowStore((state) => state.addFunctionLibrary);
+  const exportSingleSubworkflow = useWorkflowStore((state) => state.exportSingleSubworkflow);
+  const importSubworkflowsFromWorkflow = useWorkflowStore((state) => state.importSubworkflowsFromWorkflow);
   const [functionsByCategory, setFunctionsByCategory] = useState({});
   const [libraryFunctions, setLibraryFunctions] = useState({});  // Functions from imported libraries
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +28,9 @@ const FunctionPalette = ({ currentStage }) => {
     'libraries': true,
   });
   const [conflictDialog, setConflictDialog] = useState(null);
+  const [importDialog, setImportDialog] = useState(null);  // For subworkflow import dialog
   const fileInputRef = useRef(null);
+  const subworkflowImportRef = useRef(null);  // For subworkflow import file input
 
   // Determine if current stage is a composer
   const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
@@ -270,25 +275,143 @@ const FunctionPalette = ({ currentStage }) => {
     setConflictDialog(null);
   };
 
+  // Handle importing subworkflows from a workflow file
+  const handleImportSubworkflows = () => {
+    subworkflowImportRef.current?.click();
+  };
+
+  const handleSubworkflowFileSelected = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const workflowData = JSON.parse(e.target.result);
+
+        // Validate it's a workflow file
+        if (!workflowData.subworkflows) {
+          // Check if it's a standalone subworkflow format
+          if (workflowData.format === 'subworkflow') {
+            // Import single subworkflow directly
+            const name = workflowData.name;
+            const kind = workflowData.kind || 'subworkflow';
+            const success = importSubworkflowsFromWorkflow(
+              { subworkflows: { [name]: workflowData.subworkflow }, metadata: { gui: { subworkflow_kinds: { [name]: kind } } } },
+              [name],
+              {}
+            );
+            if (success.success.length > 0) {
+              alert(`Imported subworkflow: ${name}`);
+            } else {
+              alert(`Failed to import: ${success.failed.map(f => f.error).join(', ')}`);
+            }
+          } else {
+            alert('Invalid file format. Please select a workflow or subworkflow JSON file.');
+          }
+          return;
+        }
+
+        // Show the import dialog for selecting subworkflows
+        setImportDialog(workflowData);
+      } catch (error) {
+        console.error('Error parsing workflow file:', error);
+        alert('Error reading file: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const handleImportDialogConfirm = (selectedNames, renameMap) => {
+    const workflowData = importDialog;
+    const results = importSubworkflowsFromWorkflow(workflowData, selectedNames, { renameMap });
+
+    if (results.success.length > 0) {
+      const imported = results.success.map(s => s.imported).join(', ');
+      let message = `Successfully imported: ${imported}`;
+
+      if (results.warnings.length > 0) {
+        message += '\n\nWarnings:\n' + results.warnings.map(w => `- ${w.name}: ${w.warning}`).join('\n');
+      }
+
+      alert(message);
+    }
+
+    if (results.failed.length > 0) {
+      alert('Failed to import:\n' + results.failed.map(f => `- ${f.name}: ${f.error}`).join('\n'));
+    }
+
+    setImportDialog(null);
+  };
+
+  // Handle exporting the current subworkflow
+  const handleExportCurrentSubworkflow = () => {
+    const exportData = exportSingleSubworkflow(currentStage);
+
+    if (!exportData) {
+      alert('Failed to export subworkflow');
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentStage}.subworkflow.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="function-palette">
       <div className="palette-header">
         <h3>Library</h3>
-        {workflow.version === '2.0' && !isComposer && (
+        <div className="palette-header-actions">
+          {/* Import Subworkflow Button */}
           <button
-            className="import-library-btn"
-            onClick={handleImportLibrary}
-            title="Import Library"
+            className="palette-action-btn"
+            onClick={handleImportSubworkflows}
+            title="Import subworkflow/composer from file"
           >
             <Upload size={16} />
           </button>
-        )}
+          {/* Export Current Subworkflow Button */}
+          <button
+            className="palette-action-btn"
+            onClick={handleExportCurrentSubworkflow}
+            title={`Export ${isComposer ? 'composer' : 'subworkflow'}: ${currentStage}`}
+          >
+            <Download size={16} />
+          </button>
+          {/* Import Library Button (only for subworkflows) */}
+          {workflow.version === '2.0' && !isComposer && (
+            <button
+              className="palette-action-btn library-btn"
+              onClick={handleImportLibrary}
+              title="Import Python library"
+            >
+              <Zap size={16} />
+            </button>
+          )}
+        </div>
         <input
           ref={fileInputRef}
           type="file"
           accept=".py"
           style={{ display: 'none' }}
           onChange={handleFileSelected}
+        />
+        <input
+          ref={subworkflowImportRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleSubworkflowFileSelected}
         />
       </div>
 
@@ -584,6 +707,15 @@ const FunctionPalette = ({ currentStage }) => {
           libraryName={conflictDialog.libraryName}
           onResolve={handleConflictResolution}
           onCancel={() => setConflictDialog(null)}
+        />
+      )}
+
+      {/* Subworkflow Import Dialog */}
+      {importDialog && (
+        <SubworkflowImportDialog
+          workflowData={importDialog}
+          onImport={handleImportDialogConfirm}
+          onCancel={() => setImportDialog(null)}
         />
       )}
     </div>

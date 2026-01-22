@@ -1627,6 +1627,444 @@ const useWorkflowStore = create((set, get) => ({
     const state = get();
     return state.workflow.metadata?.gui?.function_libraries || [];
   },
+
+  // ===== Granular Import/Export Methods =====
+
+  /**
+   * Export a single subworkflow to standalone format
+   * @param {string} subworkflowName - Name of the subworkflow to export
+   * @returns {Object} Standalone subworkflow data with metadata
+   */
+  exportSingleSubworkflow: (subworkflowName) => {
+    const state = get();
+    const { workflow, stageNodes, stageEdges } = state;
+
+    if (!workflow.subworkflows[subworkflowName]) {
+      console.error(`[STORE] Subworkflow '${subworkflowName}' not found`);
+      return null;
+    }
+
+    const subworkflow = workflow.subworkflows[subworkflowName];
+    const nodes = stageNodes[subworkflowName] || [];
+    const edges = stageEdges[subworkflowName] || [];
+    const kind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
+                (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+
+    // Build functions array from nodes
+    const functions = nodes
+      .filter(node => node.type === 'workflowFunction')
+      .map(node => ({
+        id: node.id,
+        function_name: node.data.functionName,
+        parameters: node.data.parameters || {},
+        enabled: node.data.enabled !== false,
+        position: node.position,
+        description: node.data.description || '',
+        custom_name: node.data.customName || '',
+        parameter_nodes: node.data.parameterNodes || [],
+        step_count: node.data.stepCount || 1,
+        ...(node.data.functionFile ? { function_file: node.data.functionFile } : {})
+      }));
+
+    // Build subworkflow_calls array from nodes
+    const subworkflow_calls = nodes
+      .filter(node => node.type === 'subworkflowCall')
+      .map(node => ({
+        id: node.id,
+        subworkflow_name: node.data.subworkflowName,
+        iterations: node.data.iterations || 1,
+        enabled: node.data.enabled !== false,
+        description: node.data.description || '',
+        parameters: node.data.parameters || {},
+        context_mapping: node.data.contextMapping || {},
+        parameter_nodes: node.data.parameterNodes || [],
+        position: node.position
+      }));
+
+    // Build parameters array from nodes
+    const parameters = nodes
+      .filter(node => ['parameterNode', 'listParameterNode', 'dictParameterNode'].includes(node.type))
+      .map(node => {
+        const baseParam = {
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          label: node.data.label || 'Parameters'
+        };
+        if (node.type === 'parameterNode') {
+          return { ...baseParam, parameters: node.data.parameters || {} };
+        } else if (node.type === 'listParameterNode') {
+          return { ...baseParam, listType: node.data.listType, items: node.data.items || [] };
+        } else {
+          return { ...baseParam, entries: node.data.entries || [] };
+        }
+      });
+
+    // Build execution_order from edges (topological sort)
+    const execution_order = [];
+    const controllerNode = nodes.find(n => n.type === 'initNode');
+    if (controllerNode) {
+      // Follow edges from controller to build order
+      const visited = new Set();
+      const queue = [controllerNode.id];
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+
+        // Find outgoing edges
+        const outEdges = edges.filter(e => e.source === currentId);
+        for (const edge of outEdges) {
+          const targetNode = nodes.find(n => n.id === edge.target);
+          if (targetNode && (targetNode.type === 'workflowFunction' || targetNode.type === 'subworkflowCall')) {
+            if (!execution_order.includes(edge.target)) {
+              execution_order.push(edge.target);
+            }
+            queue.push(edge.target);
+          }
+        }
+      }
+    }
+
+    // Collect dependencies
+    const subworkflows_referenced = [...new Set(subworkflow_calls.map(c => c.subworkflow_name))];
+    const functions_required = [...new Set(functions.map(f => f.function_name))];
+
+    // Export controller
+    const controller = controllerNode ? {
+      id: controllerNode.id,
+      label: controllerNode.data.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
+      position: controllerNode.position,
+      number_of_steps: controllerNode.data.numberOfSteps || 1
+    } : null;
+
+    return {
+      format: 'subworkflow',
+      version: '1.0',
+      name: subworkflowName,
+      kind: kind,
+      description: subworkflow.description || '',
+      exported_from: workflow.name,
+      exported_at: new Date().toISOString(),
+      subworkflow: {
+        description: subworkflow.description || '',
+        enabled: subworkflow.enabled !== false,
+        deletable: subworkflow.deletable !== false,
+        controller,
+        functions,
+        subworkflow_calls,
+        parameters,
+        execution_order,
+        input_parameters: subworkflow.input_parameters || []
+      },
+      dependencies: {
+        subworkflows_referenced,
+        functions_required
+      }
+    };
+  },
+
+  /**
+   * Import a single subworkflow into the current workflow
+   * @param {string} name - Name for the imported subworkflow
+   * @param {Object} subworkflowData - The subworkflow data (from exportSingleSubworkflow or full workflow)
+   * @param {string} kind - 'composer' or 'subworkflow'
+   * @param {Object} options - Import options { rename: string, overwrite: boolean }
+   * @returns {boolean} Success status
+   */
+  importSubworkflow: (name, subworkflowData, kind, options = {}) => {
+    const state = get();
+
+    // Handle name conflicts
+    if (state.workflow.subworkflows[name] && !options.overwrite) {
+      console.error(`[STORE] Subworkflow '${name}' already exists. Use overwrite option or rename.`);
+      return false;
+    }
+
+    // Validate name
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
+      console.error(`[STORE] Invalid subworkflow name: ${name}`);
+      return false;
+    }
+
+    // Cannot overwrite main
+    if (name === 'main' && options.overwrite) {
+      console.error(`[STORE] Cannot overwrite main workflow`);
+      return false;
+    }
+
+    // Extract subworkflow content - handle both standalone format and raw subworkflow
+    const swData = subworkflowData.format === 'subworkflow'
+      ? subworkflowData.subworkflow
+      : subworkflowData;
+
+    // Build nodes from subworkflow data
+    const nodes = [];
+
+    // Add controller node
+    if (swData.controller) {
+      nodes.push({
+        id: swData.controller.id || `controller-${name}`,
+        type: 'initNode',
+        position: swData.controller.position || { x: 100, y: 100 },
+        data: {
+          label: swData.controller.label || `${name.toUpperCase()} CONTROLLER`,
+          numberOfSteps: swData.controller.number_of_steps || 1
+        },
+        deletable: false
+      });
+    } else {
+      // Create default controller
+      nodes.push({
+        id: `controller-${name}`,
+        type: 'initNode',
+        position: { x: 100, y: 100 },
+        data: {
+          label: `${name.toUpperCase()} CONTROLLER`,
+          numberOfSteps: 1
+        },
+        deletable: false
+      });
+    }
+
+    // Add function nodes
+    (swData.functions || []).forEach(func => {
+      nodes.push({
+        id: func.id,
+        type: 'workflowFunction',
+        position: func.position || { x: 200, y: 100 + nodes.length * 120 },
+        data: {
+          label: func.custom_name || func.function_name,
+          functionName: func.function_name,
+          parameters: func.parameters || {},
+          enabled: func.enabled !== false,
+          description: func.description || '',
+          customName: func.custom_name || '',
+          parameterNodes: func.parameter_nodes || [],
+          stepCount: func.step_count || 1,
+          ...(func.function_file ? { functionFile: func.function_file } : {})
+        }
+      });
+    });
+
+    // Add subworkflow call nodes
+    (swData.subworkflow_calls || []).forEach(call => {
+      nodes.push({
+        id: call.id,
+        type: 'subworkflowCall',
+        position: call.position || { x: 200, y: 100 + nodes.length * 120 },
+        data: {
+          label: call.subworkflow_name,
+          subworkflowName: call.subworkflow_name,
+          iterations: call.iterations || 1,
+          enabled: call.enabled !== false,
+          description: call.description || '',
+          parameters: call.parameters || {},
+          contextMapping: call.context_mapping || {},
+          parameterNodes: call.parameter_nodes || []
+        }
+      });
+    });
+
+    // Add parameter nodes
+    (swData.parameters || []).forEach(param => {
+      const nodeData = {
+        id: param.id,
+        type: param.type || 'parameterNode',
+        position: param.position || { x: 400, y: 100 + nodes.length * 120 },
+        data: {
+          label: param.label || 'Parameters'
+        }
+      };
+
+      if (param.type === 'listParameterNode') {
+        nodeData.data.listType = param.listType || 'string';
+        nodeData.data.items = param.items || [];
+      } else if (param.type === 'dictParameterNode') {
+        nodeData.data.entries = param.entries || [];
+      } else {
+        nodeData.data.parameters = param.parameters || {};
+      }
+
+      nodes.push(nodeData);
+    });
+
+    // Build edges from execution_order
+    const edges = [];
+    const execution_order = swData.execution_order || [];
+    const controllerId = nodes.find(n => n.type === 'initNode')?.id;
+
+    if (controllerId && execution_order.length > 0) {
+      // Edge from controller to first node
+      edges.push({
+        id: `edge-${controllerId}-${execution_order[0]}`,
+        source: controllerId,
+        target: execution_order[0],
+        type: 'smoothstep'
+      });
+
+      // Edges between sequential nodes
+      for (let i = 0; i < execution_order.length - 1; i++) {
+        edges.push({
+          id: `edge-${execution_order[i]}-${execution_order[i + 1]}`,
+          source: execution_order[i],
+          target: execution_order[i + 1],
+          type: 'smoothstep'
+        });
+      }
+    }
+
+    // Update state
+    set((state) => ({
+      workflow: {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            subworkflow_kinds: {
+              ...state.workflow.metadata.gui.subworkflow_kinds,
+              [name]: kind
+            }
+          }
+        },
+        subworkflows: {
+          ...state.workflow.subworkflows,
+          [name]: {
+            description: swData.description || '',
+            enabled: swData.enabled !== false,
+            deletable: swData.deletable !== false,
+            controller: swData.controller || {
+              id: `controller-${name}`,
+              type: 'controller',
+              label: `${name.toUpperCase()} CONTROLLER`,
+              position: { x: 100, y: 100 },
+              number_of_steps: 1
+            },
+            functions: swData.functions || [],
+            subworkflow_calls: swData.subworkflow_calls || [],
+            parameters: swData.parameters || [],
+            execution_order: execution_order,
+            input_parameters: swData.input_parameters || []
+          }
+        }
+      },
+      stageNodes: {
+        ...state.stageNodes,
+        [name]: nodes
+      },
+      stageEdges: {
+        ...state.stageEdges,
+        [name]: edges
+      }
+    }));
+
+    console.log(`[STORE] Imported subworkflow '${name}' as ${kind}`);
+    return true;
+  },
+
+  /**
+   * Import multiple subworkflows from a full workflow file
+   * @param {Object} workflowData - The full workflow JSON data
+   * @param {Array<string>} subworkflowNames - Names of subworkflows to import
+   * @param {Object} options - Import options { renameMap: { oldName: newName }, overwrite: boolean }
+   * @returns {Object} Result with success status and any errors
+   */
+  importSubworkflowsFromWorkflow: (workflowData, subworkflowNames, options = {}) => {
+    const results = {
+      success: [],
+      failed: [],
+      warnings: []
+    };
+
+    const renameMap = options.renameMap || {};
+
+    for (const originalName of subworkflowNames) {
+      if (!workflowData.subworkflows[originalName]) {
+        results.failed.push({ name: originalName, error: 'Subworkflow not found in source' });
+        continue;
+      }
+
+      const targetName = renameMap[originalName] || originalName;
+      const kind = workflowData.metadata?.gui?.subworkflow_kinds?.[originalName] ||
+                  (originalName === 'main' ? 'composer' : 'subworkflow');
+
+      // Skip importing 'main' as that would conflict
+      if (originalName === 'main' && !renameMap[originalName]) {
+        results.warnings.push({
+          name: originalName,
+          warning: "Skipped 'main' - use renameMap to import with different name"
+        });
+        continue;
+      }
+
+      const subworkflowData = workflowData.subworkflows[originalName];
+
+      const success = get().importSubworkflow(targetName, subworkflowData, kind, {
+        overwrite: options.overwrite
+      });
+
+      if (success) {
+        results.success.push({ original: originalName, imported: targetName, kind });
+      } else {
+        results.failed.push({ name: originalName, error: 'Import failed - possibly name conflict' });
+      }
+    }
+
+    // Check for missing dependencies
+    const state = get();
+    const allSubworkflowNames = Object.keys(state.workflow.subworkflows);
+
+    for (const imported of results.success) {
+      const subworkflow = state.workflow.subworkflows[imported.imported];
+      const calls = subworkflow.subworkflow_calls || [];
+
+      for (const call of calls) {
+        if (!allSubworkflowNames.includes(call.subworkflow_name)) {
+          results.warnings.push({
+            name: imported.imported,
+            warning: `References subworkflow '${call.subworkflow_name}' which doesn't exist in project`
+          });
+        }
+      }
+    }
+
+    console.log('[STORE] Import results:', results);
+    return results;
+  },
+
+  /**
+   * Get list of subworkflows from a workflow file for selection
+   * @param {Object} workflowData - The workflow JSON data
+   * @returns {Array} List of subworkflow info objects
+   */
+  getSubworkflowsFromWorkflowData: (workflowData) => {
+    if (!workflowData?.subworkflows) {
+      return [];
+    }
+
+    return Object.entries(workflowData.subworkflows).map(([name, sw]) => {
+      const kind = workflowData.metadata?.gui?.subworkflow_kinds?.[name] ||
+                  (name === 'main' ? 'composer' : 'subworkflow');
+
+      // Count contents
+      const functionCount = (sw.functions || []).length;
+      const callCount = (sw.subworkflow_calls || []).length;
+
+      // Get dependencies
+      const dependencies = (sw.subworkflow_calls || []).map(c => c.subworkflow_name);
+
+      return {
+        name,
+        kind,
+        description: sw.description || '',
+        functionCount,
+        callCount,
+        dependencies,
+        enabled: sw.enabled !== false
+      };
+    });
+  },
 }));
 
 export default useWorkflowStore;

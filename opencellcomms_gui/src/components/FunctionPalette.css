@@ -24,6 +24,42 @@
   flex: 1;
 }
 
+.palette-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.palette-action-btn {
+  padding: 6px 8px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.palette-action-btn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.palette-action-btn.library-btn {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+.palette-action-btn.library-btn:hover {
+  background: #bfdbfe;
+  border-color: #60a5fa;
+}
+
 .import-library-btn {
   padding: 6px 10px;
   background: #3b82f6;

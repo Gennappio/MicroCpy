@@ -233,11 +233,11 @@ function App() {
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleImportWorkflow}>
             <Upload size={16} />
-            Import JSON
+            Import Project
           </button>
           <button className="btn btn-primary" onClick={handleExportWorkflow}>
             <Download size={16} />
-            Export JSON
+            Export Project
           </button>
         </div>
       </header>
