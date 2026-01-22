@@ -33,34 +33,41 @@ def generate_initial_plots(
         True if successful, False otherwise
     """
     print("[WORKFLOW] Generating initial state plots...")
-    
+
     try:
-        # Import AutoPlotter
-        import sys
-        visualization_dir = Path(__file__).parent.parent.parent / "visualization"
-        if str(visualization_dir) not in sys.path:
-            sys.path.insert(0, str(visualization_dir.parent))
-        
+        # Import AutoPlotter (uses context['engine_root'] if available)
         from visualization.auto_plotter import AutoPlotter
-        
+
         population = context['population']
         simulator = context['simulator']
         config = context['config']
 
-        # Create plotter
-        plotter = AutoPlotter(config, config.plots_dir)
-        
+        # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
+        if 'plots_dir' in context:
+            plots_dir = Path(context['plots_dir'])
+        else:
+            # Fallback for legacy contexts
+            plots_dir = Path(config.plots_dir) if hasattr(config, 'plots_dir') else Path('results/plots')
+
+        plots_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create plotter with context-provided path
+        plotter = AutoPlotter(config, plots_dir)
+
         # Generate initial state summary (includes heatmaps for all substances)
         initial_plot = plotter.plot_initial_state_summary(population, simulator)
-        
-        print(f"[WORKFLOW] Generated initial state plots")
+
+        running_from_gui = context.get('running_from_gui', False)
+        mode = "GUI" if running_from_gui else "CLI"
+        print(f"[WORKFLOW] Generated initial state plots ({mode} mode)")
         print(f"   [+] Initial state summary: {initial_plot.name}")
         print(f"   [+] Individual heatmaps for {len(config.substances)} substances")
-        
+        print(f"   [+] Output directory: {plots_dir}")
+
         return True
-        
-    except ImportError:
-        print("[WORKFLOW] AutoPlotter not available, skipping initial plots")
+
+    except ImportError as e:
+        print(f"[WORKFLOW] AutoPlotter not available, skipping initial plots: {e}")
         return False
     except Exception as e:
         print(f"[WORKFLOW] Error generating initial plots: {e}")

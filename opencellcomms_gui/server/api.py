@@ -143,11 +143,18 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             is_running = False
             return
 
+        # === CLEAN ARCHITECTURE: Pass GUI results directory to engine ===
+        # The engine will set context['gui_results_dir'] and context['running_from_gui']
+        gui_dir = Path(__file__).parent.parent
+        gui_results_dir = gui_dir / "results"
+
         cmd = [
             sys.executable,
             str(engine_path),
             "--workflow",
             workflow_path,
+            "--gui-results-dir",
+            str(gui_results_dir.absolute()),
         ]
 
         # Add entry_subworkflow parameter if specified (Section 9.2)

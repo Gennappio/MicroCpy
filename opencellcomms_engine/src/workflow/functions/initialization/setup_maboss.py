@@ -64,9 +64,15 @@ def setup_maboss(
             print("        Or with conda: conda install -c colomoto pymaboss")
             return False
 
-        # Resolve file paths
-        bnd_path = _resolve_file_path(bnd_file, context)
-        cfg_path = _resolve_file_path(cfg_file, context)
+        # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
+        if 'resolve_path' in context:
+            resolve_path = context['resolve_path']
+            bnd_path = resolve_path(bnd_file)
+            cfg_path = resolve_path(cfg_file)
+        else:
+            # Fallback to local resolver for legacy contexts
+            bnd_path = _resolve_file_path(bnd_file, context)
+            cfg_path = _resolve_file_path(cfg_file, context)
 
         if not bnd_path or not bnd_path.exists():
             print(f"[ERROR] BND file not found: {bnd_file}")

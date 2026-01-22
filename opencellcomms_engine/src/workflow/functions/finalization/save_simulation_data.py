@@ -69,7 +69,13 @@ def save_simulation_data(
         config = context['config']
         results = context.get('results', {})
 
-        output_dir = Path(config.output_dir)
+        # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
+        if 'output_dir' in context:
+            output_dir = Path(context['output_dir'])
+        else:
+            # Fallback for legacy contexts
+            output_dir = Path(config.output_dir) if hasattr(config, 'output_dir') else Path('results')
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Save configuration

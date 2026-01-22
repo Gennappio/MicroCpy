@@ -68,16 +68,12 @@ def _generate_plots_to_directory(
 
 @register_function(
     display_name="Generate Summary Plots",
-    description="Generate summary plots to custom directory or GUI results directory. Use marker to distinguish plot sets (e.g., INITIAL, FINAL).",
+    description="Generate summary plots. Uses context['plots_dir'] automatically (set by executor based on GUI/CLI mode).",
     category="FINALIZATION",
     parameters=[
         {"name": "marker", "type": "STRING", "description": "String to append to filenames (e.g., 'INITIAL', 'FINAL'). Leave empty for no marker.", "default": ""},
         {"name": "clean_directory", "type": "BOOL", "description": "If true, remove existing plots before writing new ones", "default": False},
         {"name": "add_timestamp", "type": "BOOL", "description": "If true, append timestamp (HHMMSS) to filenames for debugging", "default": False},
-        {"name": "use_gui_directory", "type": "BOOL", "description": "If true, write to GUI results directory; if false, use custom_directory", "default": False},
-        {"name": "custom_directory", "type": "STRING", "description": "Custom directory path (used when use_gui_directory=false)", "default": "results/plots"},
-        {"name": "gui_subworkflow_name", "type": "STRING", "description": "GUI subworkflow name (used when use_gui_directory=true)", "default": "main"},
-        {"name": "gui_subworkflow_kind", "type": "STRING", "description": "GUI subworkflow kind: 'composer' or 'subworkflow' (used when use_gui_directory=true)", "default": "composer"},
     ],
     inputs=["context"],
     outputs=[],
@@ -88,28 +84,20 @@ def generate_summary_plots(
     marker: str = "",
     clean_directory: bool = False,
     add_timestamp: bool = False,
-    use_gui_directory: bool = False,
-    custom_directory: str = "results/plots",
-    gui_subworkflow_name: str = "main",
-    gui_subworkflow_kind: str = "composer",
     **kwargs
 ) -> bool:
     """
     Generate summary plots in finalization stage.
 
     This function generates all automatic plots (substance heatmaps, etc.)
-    and can write to either a custom directory or the GUI results directory.
-    Use marker to distinguish different plot sets (e.g., INITIAL vs FINAL).
+    Uses context['plots_dir'] which is automatically set by the executor
+    based on whether running from GUI or CLI.
 
     Args:
         context: Workflow context containing population, simulator, config, etc.
         marker: String to append to filenames (e.g., "INITIAL", "FINAL")
         clean_directory: If True, remove existing plots before writing new ones
         add_timestamp: If True, append timestamp (HHMMSS) to filenames for debugging
-        use_gui_directory: If True, write to GUI results directory; if False, use custom_directory
-        custom_directory: Custom directory path (relative to project root or absolute)
-        gui_subworkflow_name: Subworkflow name for GUI directory (e.g., "main")
-        gui_subworkflow_kind: Either "composer" or "subworkflow"
         **kwargs: Additional parameters (ignored)
 
     Returns:
@@ -119,21 +107,21 @@ def generate_summary_plots(
     if not marker and 'marker' in context:
         marker = context['marker']
 
-    # Determine output directory
-    project_root = Path(__file__).parent.parent.parent.parent.parent
-
-    if use_gui_directory:
-        # Use GUI results directory structure (in opencellcomms_gui folder, not opencellcomms_engine)
-        gui_root = project_root.parent / "opencellcomms_gui"
-        kind_plural = "composers" if gui_subworkflow_kind == "composer" else "subworkflows"
-        output_path = gui_root / "results" / kind_plural / gui_subworkflow_name
-        print(f"[WORKFLOW] Generating plots to GUI directory: {output_path}")
+    # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
+    # The executor sets plots_dir based on GUI/CLI mode automatically
+    if 'plots_dir' in context:
+        output_path = Path(context['plots_dir'])
     else:
-        # Use custom directory
-        output_path = Path(custom_directory)
-        if not output_path.is_absolute():
-            output_path = project_root / custom_directory
-        print(f"[WORKFLOW] Generating plots to custom directory: {output_path}")
+        # Fallback for legacy contexts without plots_dir
+        config = context.get('config')
+        if config and hasattr(config, 'plots_dir'):
+            output_path = Path(config.plots_dir)
+        else:
+            output_path = Path('results/plots')
+
+    running_from_gui = context.get('running_from_gui', False)
+    mode = "GUI" if running_from_gui else "CLI"
+    print(f"[WORKFLOW] Generating plots ({mode} mode) to: {output_path}")
 
     marker_info = f" with marker '{marker}'" if marker else ""
     timestamp_info = " with timestamp" if add_timestamp else ""

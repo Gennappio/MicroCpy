@@ -144,6 +144,13 @@ Examples:
         help='Disable automatic plot generation (default pipeline only)'
     )
 
+    parser.add_argument(
+        '--gui-results-dir',
+        type=str,
+        metavar='DIR',
+        help='GUI results directory (sets context paths for GUI mode - Clean Architecture)'
+    )
+
     return parser.parse_args()
 
 def validate_configuration(config, config_path, verbose=True):
@@ -1284,9 +1291,19 @@ def run_workflow_mode(args):
 
     # Initialize workflow executor with empty context
     # The workflow functions will populate the context
+    # === CLEAN ARCHITECTURE: Pass GUI results directory if running from GUI ===
+    gui_results_dir = getattr(args, 'gui_results_dir', None)
     try:
-        executor = WorkflowExecutor(workflow)
-        print(f"[WORKFLOW] Initialized workflow executor for: {workflow.name}")
+        executor = WorkflowExecutor(
+            workflow,
+            gui_results_dir=Path(gui_results_dir) if gui_results_dir else None,
+            workflow_file=workflow_path
+        )
+        if gui_results_dir:
+            print(f"[WORKFLOW] Initialized workflow executor (GUI mode)")
+            print(f"[WORKFLOW] GUI results directory: {gui_results_dir}")
+        else:
+            print(f"[WORKFLOW] Initialized workflow executor for: {workflow.name}")
     except Exception as e:
         print(f"[WORKFLOW] Failed to initialize workflow executor: {e}")
         import traceback

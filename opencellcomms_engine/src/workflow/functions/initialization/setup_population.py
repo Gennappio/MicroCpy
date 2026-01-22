@@ -62,50 +62,57 @@ def setup_population(
             return False
 
         # Store custom functions path in config and context
-        # Resolve path relative to workflow file directory (if relative path given)
         from pathlib import Path
-        custom_functions_path = Path(custom_functions_module)
 
-        # If path is relative, try multiple resolution strategies
-        if not custom_functions_path.is_absolute() and not custom_functions_path.exists():
-            resolved = False
-            # This file is at: src/workflow/functions/initialization/setup_population.py
-            # So we need to go up 5 levels to get to project root
-            project_root = Path(__file__).parent.parent.parent.parent.parent
+        # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
+        if 'resolve_path' in context:
+            resolve_path = context['resolve_path']
+            custom_functions_path = resolve_path(custom_functions_module)
+            if custom_functions_path.exists():
+                print(f"   [+] Resolved custom functions path: {custom_functions_path}")
+            else:
+                print(f"   [!] WARNING: Custom functions file not found: {custom_functions_module}")
+        else:
+            # Fallback to local resolution for legacy contexts
+            custom_functions_path = Path(custom_functions_module)
 
-            # Strategy 1: Relative to workflow file directory
-            workflow_file = context.get('workflow_file')
-            if workflow_file:
-                workflow_dir = Path(workflow_file).parent
-                resolved_path = workflow_dir / custom_functions_module
-                if resolved_path.exists():
-                    custom_functions_path = resolved_path
-                    resolved = True
-                    print(f"   [+] Resolved custom functions path (workflow-relative): {custom_functions_path}")
+            # If path is relative, try multiple resolution strategies
+            if not custom_functions_path.is_absolute() and not custom_functions_path.exists():
+                resolved = False
+                project_root = Path(__file__).parent.parent.parent.parent.parent
 
-            # Strategy 2: Relative to project root directory
-            if not resolved:
-                resolved_path = project_root / custom_functions_module
-                if resolved_path.exists():
-                    custom_functions_path = resolved_path
-                    resolved = True
-                    print(f"   [+] Resolved custom functions path (project-root-relative): {custom_functions_path}")
+                # Strategy 1: Relative to workflow file directory
+                workflow_file = context.get('workflow_file')
+                if workflow_file:
+                    workflow_dir = Path(workflow_file).parent
+                    resolved_path = workflow_dir / custom_functions_module
+                    if resolved_path.exists():
+                        custom_functions_path = resolved_path
+                        resolved = True
+                        print(f"   [+] Resolved custom functions path (workflow-relative): {custom_functions_path}")
 
-            # Strategy 3: Search in tests/ directory and subdirectories
-            if not resolved:
-                tests_dir = project_root / "tests"
-                if tests_dir.exists():
-                    # Search for the file in tests/ and all subdirectories
-                    for found_path in tests_dir.rglob(custom_functions_module):
-                        if found_path.is_file():
-                            custom_functions_path = found_path
-                            resolved = True
-                            print(f"   [+] Resolved custom functions path (found in tests/): {custom_functions_path}")
-                            break
+                # Strategy 2: Relative to project root directory
+                if not resolved:
+                    resolved_path = project_root / custom_functions_module
+                    if resolved_path.exists():
+                        custom_functions_path = resolved_path
+                        resolved = True
+                        print(f"   [+] Resolved custom functions path (project-root-relative): {custom_functions_path}")
 
-            if not resolved:
-                print(f"   [!] WARNING: Custom functions file not found at any location")
-                print(f"       Tried: workflow-relative, project-root-relative, tests/**/{custom_functions_module}")
+                # Strategy 3: Search in tests/ directory and subdirectories
+                if not resolved:
+                    tests_dir = project_root / "tests"
+                    if tests_dir.exists():
+                        for found_path in tests_dir.rglob(custom_functions_module):
+                            if found_path.is_file():
+                                custom_functions_path = found_path
+                                resolved = True
+                                print(f"   [+] Resolved custom functions path (found in tests/): {custom_functions_path}")
+                                break
+
+                if not resolved:
+                    print(f"   [!] WARNING: Custom functions file not found at any location")
+                    print(f"       Tried: workflow-relative, project-root-relative, tests/**/{custom_functions_module}")
 
         # Verify the path exists
         if not custom_functions_path.exists():

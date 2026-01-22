@@ -54,12 +54,16 @@ def load_cells_from_vtk(
 
     print(f"[WORKFLOW] Loading cells from VTK: {file_path}")
 
-    # Resolve file path
-    vtk_path = Path(file_path)
-    if not vtk_path.is_absolute():
-        # Try relative to project root
-        project_root = Path(__file__).parent.parent.parent.parent.parent
-        vtk_path = project_root / file_path
+    # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
+    if 'resolve_path' in context:
+        resolve_path = context['resolve_path']
+        vtk_path = resolve_path(file_path)
+    else:
+        # Fallback to local resolution for legacy contexts
+        vtk_path = Path(file_path)
+        if not vtk_path.is_absolute():
+            project_root = Path(__file__).parent.parent.parent.parent.parent
+            vtk_path = project_root / file_path
 
     if not vtk_path.exists():
         print(f"[ERROR] VTK file not found: {vtk_path}")

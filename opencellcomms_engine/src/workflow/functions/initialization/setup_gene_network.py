@@ -51,43 +51,52 @@ def setup_gene_network(
             print("[ERROR] Config must be set up before gene network")
             return False
 
-        # Resolve BND file path relative to workflow file
-        bnd_path = Path(bnd_file)
-        if not bnd_path.is_absolute() and not bnd_path.exists():
-            resolved = False
-            project_root = Path(__file__).parent.parent.parent.parent.parent
-
-            # Strategy 1: Relative to workflow file directory
-            workflow_file = context.get('workflow_file')
-            if workflow_file:
-                workflow_dir = Path(workflow_file).parent
-                resolved_path = workflow_dir / bnd_file
-                if resolved_path.exists():
-                    bnd_path = resolved_path
-                    resolved = True
-                    print(f"   [+] Resolved BND file (workflow-relative): {bnd_path}")
-
-            # Strategy 2: Relative to project root
-            if not resolved:
-                resolved_path = project_root / bnd_file
-                if resolved_path.exists():
-                    bnd_path = resolved_path
-                    resolved = True
-                    print(f"   [+] Resolved BND file (project-root-relative): {bnd_path}")
-
-            # Strategy 3: Search in tests/ directory
-            if not resolved:
-                tests_dir = project_root / "tests"
-                if tests_dir.exists():
-                    for found_path in tests_dir.rglob(bnd_file):
-                        if found_path.is_file():
-                            bnd_path = found_path
-                            resolved = True
-                            print(f"   [+] Resolved BND file (found in tests/): {bnd_path}")
-                            break
-
-            if not resolved:
+        # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
+        if 'resolve_path' in context:
+            resolve_path = context['resolve_path']
+            bnd_path = resolve_path(bnd_file)
+            if bnd_path.exists():
+                print(f"   [+] Resolved BND file: {bnd_path}")
+            else:
                 print(f"   [!] WARNING: BND file not found: {bnd_file}")
+        else:
+            # Fallback to local resolution for legacy contexts
+            bnd_path = Path(bnd_file)
+            if not bnd_path.is_absolute() and not bnd_path.exists():
+                resolved = False
+                project_root = Path(__file__).parent.parent.parent.parent.parent
+
+                # Strategy 1: Relative to workflow file directory
+                workflow_file = context.get('workflow_file')
+                if workflow_file:
+                    workflow_dir = Path(workflow_file).parent
+                    resolved_path = workflow_dir / bnd_file
+                    if resolved_path.exists():
+                        bnd_path = resolved_path
+                        resolved = True
+                        print(f"   [+] Resolved BND file (workflow-relative): {bnd_path}")
+
+                # Strategy 2: Relative to project root
+                if not resolved:
+                    resolved_path = project_root / bnd_file
+                    if resolved_path.exists():
+                        bnd_path = resolved_path
+                        resolved = True
+                        print(f"   [+] Resolved BND file (project-root-relative): {bnd_path}")
+
+                # Strategy 3: Search in tests/ directory
+                if not resolved:
+                    tests_dir = project_root / "tests"
+                    if tests_dir.exists():
+                        for found_path in tests_dir.rglob(bnd_file):
+                            if found_path.is_file():
+                                bnd_path = found_path
+                                resolved = True
+                                print(f"   [+] Resolved BND file (found in tests/): {bnd_path}")
+                                break
+
+                if not resolved:
+                    print(f"   [!] WARNING: BND file not found: {bnd_file}")
 
         # Create gene network config object
         class GeneNetworkConfig:

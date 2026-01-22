@@ -54,9 +54,19 @@ def save_maboss_results(
             print("[WARNING] Missing population or config in context")
             return False
 
-        # Get output directory
-        output_dir = Path(config.output_dir)
-        plots_dir = output_dir / "plots"
+        # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
+        if 'output_dir' in context:
+            output_dir = Path(context['output_dir'])
+        else:
+            # Fallback for legacy contexts
+            output_dir = Path(config.output_dir) if hasattr(config, 'output_dir') else Path('results')
+
+        if 'plots_dir' in context:
+            plots_dir = Path(context['plots_dir'])
+        else:
+            plots_dir = output_dir / "plots"
+
+        output_dir.mkdir(parents=True, exist_ok=True)
         plots_dir.mkdir(parents=True, exist_ok=True)
 
         # Get MaBoSS config from module

@@ -30,6 +30,67 @@ except ImportError:
     ValidatedContext = None  # Fallback for type hints
 
 
+def create_path_resolver(engine_root: Path, workflow_dir: Optional[Path] = None):
+    """
+    Create a path resolver function that resolves relative paths.
+
+    Resolution strategy (in order):
+    1. If path is absolute and exists, return as-is
+    2. Try relative to workflow_dir (if provided)
+    3. Try relative to engine_root
+    4. Try common subdirectories (tests/, maboss_example/)
+    5. Return the path as-is (may not exist)
+
+    Args:
+        engine_root: Absolute path to opencellcomms_engine/
+        workflow_dir: Directory containing the workflow JSON file
+
+    Returns:
+        A callable that resolves paths
+    """
+    def resolve_path(file_path: str) -> Path:
+        """Resolve a relative file path to an absolute path."""
+        path = Path(file_path)
+
+        # Strategy 1: Already absolute and exists
+        if path.is_absolute() and path.exists():
+            return path
+
+        # Strategy 2: Relative to workflow directory
+        if workflow_dir:
+            resolved = workflow_dir / file_path
+            if resolved.exists():
+                return resolved
+
+        # Strategy 3: Relative to engine root
+        resolved = engine_root / file_path
+        if resolved.exists():
+            return resolved
+
+        # Strategy 4: Common subdirectories
+        for subdir in ['tests', 'tests/maboss_example']:
+            resolved = engine_root / subdir / Path(file_path).name
+            if resolved.exists():
+                return resolved
+
+        # Strategy 5: Check in GUI workflows directory (for MaBoss files etc.)
+        gui_workflows = engine_root.parent / "opencellcomms_gui" / "server" / "workflows"
+        if gui_workflows.exists():
+            # Try maboss_example
+            resolved = gui_workflows / "maboss_example" / Path(file_path).name
+            if resolved.exists():
+                return resolved
+            # Try direct
+            resolved = gui_workflows / file_path
+            if resolved.exists():
+                return resolved
+
+        # Return as-is (caller should handle non-existence)
+        return path
+
+    return resolve_path
+
+
 class WorkflowExecutor:
     """
     Executes workflow definitions during simulation.
@@ -40,7 +101,9 @@ class WorkflowExecutor:
     
     def __init__(self, workflow: WorkflowDefinition, custom_functions_module=None, config=None,
                  observability_enabled: bool = True, results_dir: Optional[Path] = None,
-                 context_enforcement: str = "warn"):
+                 context_enforcement: str = "warn",
+                 gui_results_dir: Optional[Path] = None,
+                 workflow_file: Optional[Path] = None):
         """
         Initialize the workflow executor.
 
@@ -54,6 +117,8 @@ class WorkflowExecutor:
                 - "strict": Raise ContextWriteError on policy violations
                 - "warn": Log warning but allow the write (default)
                 - "off": No enforcement, all writes allowed
+            gui_results_dir: Absolute path to GUI results directory (when running from GUI)
+            workflow_file: Path to the workflow JSON file (for path resolution)
         """
         self.workflow = workflow
         self.custom_functions_module = custom_functions_module
@@ -64,6 +129,15 @@ class WorkflowExecutor:
         # Call stack tracking for sub-workflows
         self.call_stack: List[Dict[str, Any]] = []
         self.max_call_depth = 100  # Prevent stack overflow
+
+        # Path configuration (Clean Architecture)
+        # engine_root: opencellcomms_engine/
+        self._engine_root = Path(__file__).parent.parent.parent.absolute()
+        self._project_root = self._engine_root.parent  # MicroCpy/
+        self._workflow_file = Path(workflow_file).absolute() if workflow_file else None
+        self._workflow_dir = self._workflow_file.parent if self._workflow_file else None
+        self._gui_results_dir = Path(gui_results_dir).absolute() if gui_results_dir else None
+        self._running_from_gui = gui_results_dir is not None
 
         # Observability setup
         self._results_dir = results_dir or Path('results')
@@ -98,7 +172,70 @@ class WorkflowExecutor:
         """Finalize observability systems. Call once after execution completes."""
         if self._event_emitter:
             self._event_emitter.finalize(status)
-    
+
+    def setup_context_paths(self, context: Dict[str, Any], subworkflow_name: str = "main") -> None:
+        """
+        Set up all path-related context keys (Clean Architecture).
+
+        This centralizes path configuration so individual functions don't need
+        to calculate paths themselves. Functions should use these context keys
+        instead of hardcoding paths or extracting from config.
+
+        Context keys set:
+            - engine_root: Absolute path to opencellcomms_engine/
+            - project_root: Absolute path to MicroCpy/
+            - workflow_file: Absolute path to workflow JSON file
+            - workflow_dir: Directory containing workflow JSON
+            - resolve_path: Callable to resolve relative file paths
+            - running_from_gui: Boolean indicating if running from GUI
+            - gui_root: Absolute path to opencellcomms_gui/ (if running from GUI)
+            - gui_results_dir: Absolute path to GUI results for current subworkflow
+            - output_dir: Absolute path for output files (data, exports)
+            - plots_dir: Absolute path for plot files
+            - data_dir: Absolute path for raw data files (.npy, etc.)
+        """
+        subworkflow_kind = self._get_subworkflow_kind(subworkflow_name)
+        kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
+
+        # === INFRASTRUCTURE PATHS ===
+        context['engine_root'] = self._engine_root
+        context['project_root'] = self._project_root
+        context['workflow_file'] = str(self._workflow_file) if self._workflow_file else None
+        context['workflow_dir'] = self._workflow_dir
+
+        # Path resolver helper
+        context['resolve_path'] = create_path_resolver(self._engine_root, self._workflow_dir)
+
+        # === GUI INTEGRATION ===
+        context['running_from_gui'] = self._running_from_gui
+
+        if self._running_from_gui and self._gui_results_dir:
+            # GUI mode: use GUI results directory structure
+            # self._gui_results_dir is the base GUI results directory (e.g., opencellcomms_gui/results)
+            # We need to create subworkflow-specific subdirectories
+            context['gui_root'] = self._gui_results_dir.parent  # opencellcomms_gui/
+            # Set subworkflow-specific GUI results directory
+            subworkflow_results = self._gui_results_dir / kind_plural / subworkflow_name
+            context['gui_results_dir'] = subworkflow_results
+            # Primary output dirs point to GUI results
+            context['output_dir'] = subworkflow_results
+            context['plots_dir'] = subworkflow_results
+            context['data_dir'] = subworkflow_results / 'data'
+        else:
+            # CLI mode: use engine results directory
+            context['gui_root'] = None
+            context['gui_results_dir'] = None
+            # Primary output dirs point to engine results
+            base_results = self._engine_root / 'results' / kind_plural / subworkflow_name
+            context['output_dir'] = base_results
+            context['plots_dir'] = base_results / 'plots'
+            context['data_dir'] = base_results / 'data'
+
+        # Ensure output directories exist
+        context['output_dir'].mkdir(parents=True, exist_ok=True)
+        context['plots_dir'].mkdir(parents=True, exist_ok=True)
+        context['data_dir'].mkdir(parents=True, exist_ok=True)
+
     def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
         """
         Dynamically load a function from a Python file.
@@ -409,9 +546,12 @@ class WorkflowExecutor:
                 context['subworkflow_kind'] = subworkflow_kind
                 context['results_dir'] = Path('results')
 
-                # Set subworkflow_results_dir based on kind
+                # Set subworkflow_results_dir based on kind (legacy, kept for compatibility)
                 kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
                 context['subworkflow_results_dir'] = Path('results') / kind_plural / subworkflow_name
+
+                # === CLEAN ARCHITECTURE: Set up all path-related context keys ===
+                self.setup_context_paths(context, subworkflow_name)
 
                 # Get nodes in execution order
                 nodes_to_execute = []

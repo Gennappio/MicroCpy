@@ -65,6 +65,8 @@ Examples:
                        help='Run workflow (complete user control, optionally with --sim for config setup)')
     parser.add_argument('--entry-subworkflow', metavar='SUBWORKFLOW_NAME', default='main',
                        help='Entry point subworkflow for v2.0 workflows (default: main)')
+    parser.add_argument('--gui-results-dir', metavar='DIR',
+                       help='GUI results directory (sets context paths for GUI mode)')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -136,6 +138,11 @@ Examples:
         entry_subworkflow = getattr(args, 'entry_subworkflow', 'main')
         if args.workflow and entry_subworkflow:
             sim_args.extend(['--entry-subworkflow', entry_subworkflow])
+
+        # Pass through gui-results-dir for GUI mode (Clean Architecture)
+        gui_results_dir = getattr(args, 'gui_results_dir', None)
+        if gui_results_dir:
+            sim_args.extend(['--gui-results-dir', gui_results_dir])
 
         if run_tool(run_sim_path, sim_args):
             success_count += 1
