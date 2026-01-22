@@ -29,13 +29,12 @@ WRITE_POLICY_MUTABLE = "mutable"
 # Default core keys and their write policies
 # These are keys provided by the simulation engine that should be protected
 DEFAULT_CORE_KEYS: Dict[str, str] = {
-    # Read-only keys (provided by engine, never overwritten)
-    'step': WRITE_POLICY_READ_ONLY,
-    'dt': WRITE_POLICY_READ_ONLY,
-    'time': WRITE_POLICY_READ_ONLY,
-    'current_step': WRITE_POLICY_READ_ONLY,
-
     # Write-once keys (initialized once, then protected)
+    # These can be set by setup_simulation or by SimulationEngine, but not changed after
+    'step': WRITE_POLICY_WRITE_ONCE,
+    'dt': WRITE_POLICY_WRITE_ONCE,
+    'time': WRITE_POLICY_WRITE_ONCE,
+    'current_step': WRITE_POLICY_WRITE_ONCE,
     'population': WRITE_POLICY_WRITE_ONCE,
     'simulator': WRITE_POLICY_WRITE_ONCE,
     'gene_network': WRITE_POLICY_WRITE_ONCE,
@@ -47,6 +46,7 @@ DEFAULT_CORE_KEYS: Dict[str, str] = {
     'substance_concentrations': WRITE_POLICY_MUTABLE,
     'results': WRITE_POLICY_MUTABLE,
     'substances': WRITE_POLICY_MUTABLE,
+    'simulation_params': WRITE_POLICY_MUTABLE,  # Updated by setup functions
 }
 
 
@@ -201,8 +201,8 @@ class ValidatedContext(TrackedContext):
     def __setitem__(self, key: str, value: Any) -> None:
         if self._validate_write(key):
             super().__setitem__(key, value)
-            if not self._locked:
-                self._initialized_keys.add(key)
+            # Track initialized keys (for write_once protection after first write)
+            self._initialized_keys.add(key)
 
     def __delitem__(self, key: str) -> None:
         if self._validate_delete(key):
