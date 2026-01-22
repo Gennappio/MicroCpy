@@ -170,9 +170,12 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
                   {param.required && <span className="required-indicator">*</span>}
                   {getTypeIndicator(param.type)}
                 </span>
-                <span className="parameter-value">
-                  {formatDefault(currentValue)}
-                </span>
+                {/* Only show value when NOT connected */}
+                {!isConnected && (
+                  <span className="parameter-value">
+                    {formatDefault(currentValue)}
+                  </span>
+                )}
               </div>
             );
           })}
