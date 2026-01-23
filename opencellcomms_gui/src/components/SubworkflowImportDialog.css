@@ -1,5 +1,5 @@
 .subworkflow-import-dialog {
-  background: var(--bg-primary);
+  background: #ffffff;
   border-radius: 12px;
   width: 600px;
   max-width: 90vw;
@@ -7,6 +7,7 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border: 1px solid #e5e7eb;
 }
 
 .subworkflow-import-dialog .dialog-header {
@@ -14,35 +15,51 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
 }
 
 .subworkflow-import-dialog .dialog-header h3 {
   margin: 0;
   font-size: 18px;
-  color: var(--text-primary);
+  color: #111827;
+  font-weight: 600;
 }
 
 .subworkflow-import-dialog .close-btn {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #6b7280;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
 }
 
 .subworkflow-import-dialog .close-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: #e5e7eb;
+  color: #111827;
 }
 
 .subworkflow-import-dialog .dialog-description {
   padding: 12px 20px;
   margin: 0;
   font-size: 13px;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subworkflow-import-dialog .auto-deps-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #7c3aed;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .subworkflow-import-dialog .subworkflow-list {
@@ -59,18 +76,31 @@
   gap: 12px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
   transition: all 0.15s ease;
 }
 
 .subworkflow-import-dialog .subworkflow-item:hover {
-  border-color: var(--accent-color);
+  border-color: #3b82f6;
+  background: #f3f4f6;
 }
 
 .subworkflow-import-dialog .subworkflow-item.selected {
-  border-color: var(--accent-color);
-  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.subworkflow-import-dialog .subworkflow-item.auto-dependency {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  border-style: dashed;
+}
+
+.subworkflow-import-dialog .subworkflow-item.will-skip {
+  opacity: 0.6;
+  border-color: #9ca3af;
+  background: #f3f4f6;
 }
 
 .subworkflow-import-dialog .subworkflow-item.has-conflict {
@@ -125,7 +155,7 @@
 
 .subworkflow-import-dialog .item-name {
   font-weight: 600;
-  color: var(--text-primary);
+  color: #111827;
 }
 
 .subworkflow-import-dialog .conflict-badge {
@@ -135,20 +165,42 @@
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 11px;
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.subworkflow-import-dialog .auto-dep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.subworkflow-import-dialog .skip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .subworkflow-import-dialog .item-description {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #6b7280;
 }
 
 .subworkflow-import-dialog .item-stats {
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: #9ca3af;
 }
 
 .subworkflow-import-dialog .item-stats .dependencies {
@@ -161,12 +213,12 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #e5e7eb;
 }
 
 .subworkflow-import-dialog .rename-section label {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #6b7280;
   white-space: nowrap;
 }
 
@@ -174,9 +226,9 @@
   flex: 1;
   padding: 6px 10px;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
   font-size: 13px;
 }
 
@@ -193,12 +245,22 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
 }
 
 .subworkflow-import-dialog .selection-count {
   flex: 1;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #6b7280;
 }
 
+.subworkflow-import-dialog .selection-count .auto-deps-count {
+  color: #7c3aed;
+}
+
+.subworkflow-import-dialog .selection-count .total-count {
+  font-weight: 600;
+  color: #111827;
+}

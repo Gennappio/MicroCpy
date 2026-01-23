@@ -1964,22 +1964,160 @@ const useWorkflowStore = create((set, get) => ({
   },
 
   /**
+   * Recursively collect all transitive dependencies for a set of subworkflows
+   * This includes all subworkflows called by the selected ones, their dependencies, etc.
+   * @param {Object} workflowData - The source workflow data
+   * @param {Array<string>} selectedNames - Initially selected subworkflow names
+   * @returns {Object} {
+   *   allSubworkflows: Set<string>, - All subworkflows to import (including dependencies)
+   *   directSelections: Set<string>, - Originally selected subworkflows
+   *   dependencies: Map<string, Set<string>>, - Map of subworkflow -> its direct dependencies
+   *   functionLibraries: Set<string>, - All function library files referenced
+   *   missingDependencies: Set<string> - Dependencies not found in source workflow
+   * }
+   */
+  collectAllDependencies: (workflowData, selectedNames) => {
+    const directSelections = new Set(selectedNames);
+    const allSubworkflows = new Set(selectedNames);
+    const visited = new Set();
+    const queue = [...selectedNames];
+    const functionLibraries = new Set();
+    const missingDependencies = new Set();
+    const dependencies = new Map(); // Map: subworkflow -> Set of its direct dependencies
+
+    while (queue.length > 0) {
+      const name = queue.shift();
+      if (visited.has(name)) continue;
+      visited.add(name);
+
+      const subworkflow = workflowData.subworkflows?.[name];
+      if (!subworkflow) {
+        // This dependency is not in the source workflow
+        if (!directSelections.has(name)) {
+          missingDependencies.add(name);
+        }
+        continue;
+      }
+
+      const directDeps = new Set();
+
+      // Collect referenced subworkflows from subworkflow_calls
+      for (const call of subworkflow.subworkflow_calls || []) {
+        const refName = call.subworkflow_name;
+        directDeps.add(refName);
+
+        if (!allSubworkflows.has(refName)) {
+          if (workflowData.subworkflows?.[refName]) {
+            allSubworkflows.add(refName);
+            queue.push(refName);
+          } else {
+            missingDependencies.add(refName);
+          }
+        }
+      }
+
+      dependencies.set(name, directDeps);
+
+      // Collect function libraries
+      for (const func of subworkflow.functions || []) {
+        if (func.function_file) {
+          functionLibraries.add(func.function_file);
+        }
+      }
+    }
+
+    console.log('[STORE] Collected dependencies:', {
+      selected: [...directSelections],
+      allSubworkflows: [...allSubworkflows],
+      functionLibraries: [...functionLibraries],
+      missingDependencies: [...missingDependencies]
+    });
+
+    return {
+      allSubworkflows,
+      directSelections,
+      dependencies,
+      functionLibraries,
+      missingDependencies
+    };
+  },
+
+  /**
    * Import multiple subworkflows from a full workflow file
+   * Automatically includes all transitive dependencies
    * @param {Object} workflowData - The full workflow JSON data
    * @param {Array<string>} subworkflowNames - Names of subworkflows to import
-   * @param {Object} options - Import options { renameMap: { oldName: newName }, overwrite: boolean }
+   * @param {Object} options - Import options { renameMap: { oldName: newName }, overwrite: boolean, skipDependencies: boolean }
    * @returns {Object} Result with success status and any errors
    */
   importSubworkflowsFromWorkflow: (workflowData, subworkflowNames, options = {}) => {
     const results = {
       success: [],
       failed: [],
-      warnings: []
+      warnings: [],
+      autoDependencies: [] // Track which were auto-imported as dependencies
     };
 
     const renameMap = options.renameMap || {};
+    const skipDependencies = options.skipDependencies || false;
 
-    for (const originalName of subworkflowNames) {
+    // Collect all transitive dependencies unless explicitly skipped
+    let namesToImport = [...subworkflowNames];
+    let dependencyInfo = null;
+
+    if (!skipDependencies) {
+      dependencyInfo = get().collectAllDependencies(workflowData, subworkflowNames);
+
+      // Add auto-dependencies to the import list
+      namesToImport = [...dependencyInfo.allSubworkflows];
+
+      // Track which are auto-dependencies (not directly selected)
+      for (const name of namesToImport) {
+        if (!dependencyInfo.directSelections.has(name)) {
+          results.autoDependencies.push(name);
+        }
+      }
+
+      // Warn about missing dependencies from source
+      for (const missing of dependencyInfo.missingDependencies) {
+        results.warnings.push({
+          name: missing,
+          warning: `Dependency '${missing}' not found in source workflow`
+        });
+      }
+    }
+
+    // Sort to import dependencies first (leaves before parents)
+    // Build import order using topological sort
+    const importOrder = [];
+    const imported = new Set();
+
+    const addWithDeps = (name) => {
+      if (imported.has(name)) return;
+      if (!workflowData.subworkflows?.[name]) return;
+
+      // First import all dependencies
+      const sw = workflowData.subworkflows[name];
+      for (const call of sw.subworkflow_calls || []) {
+        const depName = call.subworkflow_name;
+        if (namesToImport.includes(depName) && !imported.has(depName)) {
+          addWithDeps(depName);
+        }
+      }
+
+      // Then add this one
+      if (!imported.has(name)) {
+        importOrder.push(name);
+        imported.add(name);
+      }
+    };
+
+    for (const name of namesToImport) {
+      addWithDeps(name);
+    }
+
+    // Now import in the correct order
+    for (const originalName of importOrder) {
       if (!workflowData.subworkflows[originalName]) {
         results.failed.push({ name: originalName, error: 'Subworkflow not found in source' });
         continue;
@@ -1998,6 +2136,19 @@ const useWorkflowStore = create((set, get) => ({
         continue;
       }
 
+      // Check if this subworkflow already exists in the current project
+      const state = get();
+      if (state.workflow.subworkflows[targetName] && !options.overwrite) {
+        // Skip if already exists and not overwriting (common for auto-dependencies)
+        if (results.autoDependencies.includes(originalName)) {
+          // It's an auto-dependency that already exists - just skip silently
+          console.log(`[STORE] Skipping auto-dependency '${originalName}' - already exists`);
+          continue;
+        }
+        results.failed.push({ name: originalName, error: 'Already exists - use rename or overwrite' });
+        continue;
+      }
+
       const subworkflowData = workflowData.subworkflows[originalName];
 
       const success = get().importSubworkflow(targetName, subworkflowData, kind, {
@@ -2005,19 +2156,25 @@ const useWorkflowStore = create((set, get) => ({
       });
 
       if (success) {
-        results.success.push({ original: originalName, imported: targetName, kind });
+        const isAutoDep = results.autoDependencies.includes(originalName);
+        results.success.push({
+          original: originalName,
+          imported: targetName,
+          kind,
+          isAutoDependency: isAutoDep
+        });
       } else {
         results.failed.push({ name: originalName, error: 'Import failed - possibly name conflict' });
       }
     }
 
-    // Check for missing dependencies
-    const state = get();
-    const allSubworkflowNames = Object.keys(state.workflow.subworkflows);
+    // Final check for any missing dependencies in the target project
+    const finalState = get();
+    const allSubworkflowNames = Object.keys(finalState.workflow.subworkflows);
 
     for (const imported of results.success) {
-      const subworkflow = state.workflow.subworkflows[imported.imported];
-      const calls = subworkflow.subworkflow_calls || [];
+      const subworkflow = finalState.workflow.subworkflows[imported.imported];
+      const calls = subworkflow?.subworkflow_calls || [];
 
       for (const call of calls) {
         if (!allSubworkflowNames.includes(call.subworkflow_name)) {
