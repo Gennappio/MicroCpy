@@ -1158,7 +1158,11 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                     )}
                     {renderParameterInput(param)}
                     {param.default !== undefined && (
-                      <div className="param-default">Default: {param.default}</div>
+                      <div className="param-default">
+                        Default: {typeof param.default === 'object' && param.default !== null
+                          ? JSON.stringify(param.default)
+                          : String(param.default)}
+                      </div>
                     )}
                   </div>
                 ))
