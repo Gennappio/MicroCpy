@@ -500,32 +500,32 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-	  // Return null only if this is a *function* node and we couldn't find metadata.
-	  // Parameter nodes (simple, list, dict) and sub-workflow calls do not rely on
-	  // registry metadata, so they should still render the editor even when
-	  // functionMetadata is null.
-	  if (isFunctionNode && !functionMetadata) {
-	    return null;
-	  }
+  // Return null only if this is a *function* node and we couldn't find metadata.
+  // Parameter nodes (simple, list, dict) and sub-workflow calls do not rely on
+  // registry metadata, so they should still render the editor even when
+  // functionMetadata is null.
+  if (isFunctionNode && !functionMetadata) {
+    return null;
+  }
 
-	  // Determine the display name for the editor header based on node type
-	  let displayName;
-	  if (isParameterNode) {
-	    displayName = customName || 'Parameter Node';
-	  } else if (isListParameterNode) {
-	    displayName = customName || (listType === 'float' ? 'Float List' : 'String List');
-	  } else if (isDictParameterNode) {
-	    displayName = customName || 'Dictionary';
-	  } else if (isSubWorkflowCall) {
-	    displayName = 'Sub-workflow Call';
-	  } else {
-	    // Function node: by this point functionMetadata should exist, but be defensive
-	    displayName = (functionMetadata && functionMetadata.displayName) ||
-	                  node.data.customName ||
-	                  node.data.label ||
-	                  node.data.functionName ||
-	                  'Function';
-	  }
+  // Determine the display name for the editor header based on node type
+  let displayName;
+  if (isParameterNode) {
+    displayName = customName || 'Parameter Node';
+  } else if (isListParameterNode) {
+    displayName = customName || (listType === 'float' ? 'Float List' : 'String List');
+  } else if (isDictParameterNode) {
+    displayName = customName || 'Dictionary';
+  } else if (isSubWorkflowCall) {
+    displayName = 'Sub-workflow Call';
+  } else {
+    // Function node: by this point functionMetadata should exist, but be defensive
+    displayName = (functionMetadata && functionMetadata.displayName) ||
+                  node.data.customName ||
+                  node.data.label ||
+                  node.data.functionName ||
+                  'Function';
+  }
 
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
@@ -538,7 +538,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
-	        {isFunctionNode && (
+          {isFunctionNode && (
             <button className="btn btn-secondary" onClick={handleToggleCode}>
               <Eye size={14} />
               {showCode ? 'Hide Code' : 'View Code'}
@@ -992,8 +992,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             );
           })()}
 
-	          {/* Function Node Editor - Full interface with code viewer */}
-	          {isFunctionNode && showCode && (
+          {/* Function Node Editor - Full interface with code viewer */}
+          {isFunctionNode && showCode && (
             <div className="code-container">
               {codeLoading ? (
                 <div className="loading">Loading source code...</div>
@@ -1111,8 +1111,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
             </div>
           )}
 
-	          {/* Step Count Field for All Function Nodes */}
-	          {isFunctionNode && (
+          {/* Step Count Field for All Function Nodes */}
+          {isFunctionNode && (
             <div className="parameter-field">
               <label className="param-label">
                 Step Count
