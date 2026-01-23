@@ -1,0 +1,14 @@
+# OpenCellComms - Root Level Requirements
+# This file installs both the engine and server dependencies
+
+# Install the engine package in editable mode
+-e ./opencellcomms_engine
+
+# Flask server for GUI backend
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Optional: Development tools
+# Uncomment to install development dependencies
+# -e ./opencellcomms_engine[dev]
+
