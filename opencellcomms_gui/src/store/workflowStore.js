@@ -981,6 +981,7 @@ const useWorkflowStore = create((set, get) => ({
             data: {
               label: param.label || 'Dictionary',
               entries: param.entries || [],
+              targetParam: param.targetParam,
               onEdit: () => {}
             }
           };

@@ -604,8 +604,21 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                     </div>
                     <input
                       type="text"
-                      value={parameters[paramName]}
-                      onChange={(e) => handleChange(paramName, e.target.value)}
+                      value={typeof parameters[paramName] === 'object' && parameters[paramName] !== null
+                        ? JSON.stringify(parameters[paramName])
+                        : (parameters[paramName] ?? '')}
+                      onChange={(e) => {
+                        let newValue = e.target.value;
+                        // Try to parse as JSON if it looks like JSON
+                        if (newValue.startsWith('{') || newValue.startsWith('[')) {
+                          try {
+                            newValue = JSON.parse(newValue);
+                          } catch {
+                            // Keep as string if invalid JSON
+                          }
+                        }
+                        handleChange(paramName, newValue);
+                      }}
                       className="param-input"
                       placeholder="value"
                     />
