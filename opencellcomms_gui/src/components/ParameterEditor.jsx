@@ -777,30 +777,47 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                         <div className="nested-dict-editor">
                           {/* Render each key-value pair in the nested dict */}
                           {typeof entry.value === 'object' && entry.value && Object.keys(entry.value).length > 0 ? (
-                            Object.entries(entry.value).map(([nestedKey, nestedValue]) => (
-                              <div key={nestedKey} className="nested-dict-row">
-                                <span className="nested-dict-key">{nestedKey}:</span>
-                                <input
-                                  type={typeof nestedValue === 'number' ? 'number' : 'text'}
-                                  value={nestedValue}
-                                  onChange={(e) => {
-                                    const newNestedValue = typeof nestedValue === 'number'
-                                      ? parseFloat(e.target.value) || 0
-                                      : e.target.value;
-                                    setDictEntries((prev) => {
-                                      const newEntries = [...prev];
-                                      newEntries[index] = {
-                                        ...newEntries[index],
-                                        value: { ...newEntries[index].value, [nestedKey]: newNestedValue }
-                                      };
-                                      return newEntries;
-                                    });
-                                  }}
-                                  className="param-input nested-dict-value-input"
-                                  step={typeof nestedValue === 'number' ? 'any' : undefined}
-                                />
-                              </div>
-                            ))
+                            Object.entries(entry.value).map(([nestedKey, nestedValue]) => {
+                              // Handle nested objects/arrays by showing them as JSON
+                              const isComplexValue = typeof nestedValue === 'object' && nestedValue !== null;
+                              const displayValue = isComplexValue ? JSON.stringify(nestedValue) : nestedValue;
+
+                              return (
+                                <div key={nestedKey} className="nested-dict-row">
+                                  <span className="nested-dict-key">{nestedKey}:</span>
+                                  <input
+                                    type={typeof nestedValue === 'number' ? 'number' : 'text'}
+                                    value={displayValue}
+                                    onChange={(e) => {
+                                      let newNestedValue;
+                                      if (isComplexValue) {
+                                        // Try to parse JSON for complex values
+                                        try {
+                                          newNestedValue = JSON.parse(e.target.value);
+                                        } catch {
+                                          newNestedValue = e.target.value; // Keep as string if invalid JSON
+                                        }
+                                      } else if (typeof nestedValue === 'number') {
+                                        newNestedValue = parseFloat(e.target.value) || 0;
+                                      } else {
+                                        newNestedValue = e.target.value;
+                                      }
+
+                                      setDictEntries((prev) => {
+                                        const newEntries = [...prev];
+                                        newEntries[index] = {
+                                          ...newEntries[index],
+                                          value: { ...newEntries[index].value, [nestedKey]: newNestedValue }
+                                        };
+                                        return newEntries;
+                                      });
+                                    }}
+                                    className="param-input nested-dict-value-input"
+                                    step={typeof nestedValue === 'number' ? 'any' : undefined}
+                                  />
+                                </div>
+                              );
+                            })
                           ) : (
                             <div className="nested-dict-empty">
                               <span className="nested-label">Empty dict - add keys in JSON format</span>
