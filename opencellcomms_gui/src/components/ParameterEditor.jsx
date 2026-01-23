@@ -774,10 +774,56 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                           </span>
                         </div>
                       ) : entry.valueType === 'dict' ? (
-                        <div className="nested-value">
-                          <span className="nested-label">
-                            Dict [{typeof entry.value === 'object' && entry.value ? Object.keys(entry.value).length : 0} keys]
-                          </span>
+                        <div className="nested-dict-editor">
+                          {/* Render each key-value pair in the nested dict */}
+                          {typeof entry.value === 'object' && entry.value && Object.keys(entry.value).length > 0 ? (
+                            Object.entries(entry.value).map(([nestedKey, nestedValue]) => (
+                              <div key={nestedKey} className="nested-dict-row">
+                                <span className="nested-dict-key">{nestedKey}:</span>
+                                <input
+                                  type={typeof nestedValue === 'number' ? 'number' : 'text'}
+                                  value={nestedValue}
+                                  onChange={(e) => {
+                                    const newNestedValue = typeof nestedValue === 'number'
+                                      ? parseFloat(e.target.value) || 0
+                                      : e.target.value;
+                                    setDictEntries((prev) => {
+                                      const newEntries = [...prev];
+                                      newEntries[index] = {
+                                        ...newEntries[index],
+                                        value: { ...newEntries[index].value, [nestedKey]: newNestedValue }
+                                      };
+                                      return newEntries;
+                                    });
+                                  }}
+                                  className="param-input nested-dict-value-input"
+                                  step={typeof nestedValue === 'number' ? 'any' : undefined}
+                                />
+                              </div>
+                            ))
+                          ) : (
+                            <div className="nested-dict-empty">
+                              <span className="nested-label">Empty dict - add keys in JSON format</span>
+                            </div>
+                          )}
+                          {/* Add new key button */}
+                          <button
+                            className="btn-add-nested-key"
+                            onClick={() => {
+                              const newKey = `key_${Object.keys(entry.value || {}).length + 1}`;
+                              setDictEntries((prev) => {
+                                const newEntries = [...prev];
+                                newEntries[index] = {
+                                  ...newEntries[index],
+                                  value: { ...(newEntries[index].value || {}), [newKey]: '' }
+                                };
+                                return newEntries;
+                              });
+                            }}
+                            title="Add key to nested dict"
+                          >
+                            <Plus size={12} /> Add Key
+                          </button>
                         </div>
                       ) : (
                         <input

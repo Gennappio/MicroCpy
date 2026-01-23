@@ -19,6 +19,8 @@ from .diffusion.run_diffusion_solver import run_diffusion_solver
 # Import granular intercellular functions
 from .intercellular.update_cell_division import update_cell_division
 from .intercellular.update_cell_migration import update_cell_migration
+from .intercellular.remove_apoptotic_cells import remove_apoptotic_cells
+from .intercellular.remove_necrotic_cells import remove_necrotic_cells
 
 # Import granular finalization functions
 from .finalization.generate_initial_plots import generate_initial_plots
@@ -39,6 +41,8 @@ __all__ = [
     # Intercellular
     'update_cell_division',
     'update_cell_migration',
+    'remove_apoptotic_cells',
+    'remove_necrotic_cells',
     # Finalization
     'generate_initial_plots',
     'generate_summary_plots',
