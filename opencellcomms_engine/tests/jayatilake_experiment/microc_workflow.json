@@ -22,6 +22,7 @@
         "microenvironment": "subworkflow",
         "intracellular": "subworkflow",
         "intercellular": "subworkflow",
+        "Checkpoint": "subworkflow",
         "Generate_final_plots": "subworkflow",
         "Summarize_simulation": "subworkflow"
       }
@@ -202,10 +203,21 @@
           "context_mapping": {},
           "parameter_nodes": [],
           "position": {"x": 200, "y": 400}
+        },
+        {
+          "id": "call_checkpoint",
+          "subworkflow_name": "Checkpoint",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Stage 4: Save checkpoints (gene networks, substances)",
+          "parameters": {},
+          "context_mapping": {},
+          "parameter_nodes": [],
+          "position": {"x": 200, "y": 550}
         }
       ],
       "parameters": [],
-      "execution_order": ["call_microenvironment", "call_intracellular", "call_intercellular"],
+      "execution_order": ["call_microenvironment", "call_intracellular", "call_intercellular", "call_checkpoint"],
       "enabled": true
     },
     "finalization": {
@@ -579,6 +591,55 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": ["cell_division", "remove_apoptotic", "remove_necrotic"],
+      "enabled": true
+    },
+    "Checkpoint": {
+      "description": "Save simulation checkpoints (gene networks and substances)",
+      "deletable": true,
+      "controller": {
+        "id": "controller-checkpoint",
+        "label": "CHECKPOINT",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "save_gene_checkpoint",
+          "function_name": "save_gene_network_checkpoint",
+          "enabled": true,
+          "description": "Save gene network states to JSON",
+          "parameters": {},
+          "parameter_nodes": ["param_gene_checkpoint_interval"],
+          "position": {"x": 300, "y": 100}
+        },
+        {
+          "id": "save_substance_checkpoint",
+          "function_name": "save_substance_checkpoint",
+          "enabled": true,
+          "description": "Save substance concentration fields",
+          "parameters": {},
+          "parameter_nodes": ["param_substance_checkpoint_interval"],
+          "position": {"x": 300, "y": 250}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_gene_checkpoint_interval",
+          "type": "parameterNode",
+          "label": "Gene Checkpoint Interval",
+          "parameters": {"interval": 10},
+          "position": {"x": 50, "y": 100}
+        },
+        {
+          "id": "param_substance_checkpoint_interval",
+          "type": "parameterNode",
+          "label": "Substance Checkpoint Interval",
+          "parameters": {"interval": 10},
+          "position": {"x": 50, "y": 250}
+        }
+      ],
+      "execution_order": ["save_gene_checkpoint", "save_substance_checkpoint"],
       "enabled": true
     },
     "Generate_final_plots": {
