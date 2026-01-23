@@ -409,14 +409,17 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   };
 
   const renderParameterInput = (param) => {
-    const value = parameters[param.name] ?? param.default;
+    const rawValue = parameters[param.name] ?? param.default;
+    // Normalize value: convert objects to JSON strings for display in text inputs
+    const isObjectValue = typeof rawValue === 'object' && rawValue !== null;
+    const value = isObjectValue ? JSON.stringify(rawValue) : rawValue;
 
     switch (param.type) {
       case 'integer':
         return (
           <input
             type="number"
-            value={value}
+            value={isObjectValue ? '' : (value ?? '')}
             onChange={(e) => handleChange(param.name, parseInt(e.target.value, 10))}
             min={param.min}
             max={param.max}
@@ -429,7 +432,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         return (
           <input
             type="number"
-            value={value}
+            value={isObjectValue ? '' : (value ?? '')}
             onChange={(e) => handleChange(param.name, parseFloat(e.target.value))}
             min={param.min}
             max={param.max}
@@ -442,7 +445,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         if (param.options) {
           return (
             <select
-              value={value}
+              value={value ?? ''}
               onChange={(e) => handleChange(param.name, e.target.value)}
               className="param-input"
             >
@@ -457,7 +460,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         return (
           <input
             type="text"
-            value={value}
+            value={value ?? ''}
             onChange={(e) => handleChange(param.name, e.target.value)}
             className="param-input"
           />
@@ -467,18 +470,30 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         return (
           <input
             type="checkbox"
-            checked={value}
+            checked={!!rawValue}
             onChange={(e) => handleChange(param.name, e.target.checked)}
             className="param-checkbox"
           />
         );
 
       default:
+        // value is already normalized to JSON string if it was an object
         return (
           <input
             type="text"
-            value={value}
-            onChange={(e) => handleChange(param.name, e.target.value)}
+            value={value ?? ''}
+            onChange={(e) => {
+              let newVal = e.target.value;
+              // Try to parse JSON if it looks like an object/array
+              if (newVal.startsWith('{') || newVal.startsWith('[')) {
+                try {
+                  newVal = JSON.parse(newVal);
+                } catch {
+                  // Keep as string if invalid JSON
+                }
+              }
+              handleChange(param.name, newVal);
+            }}
             className="param-input"
           />
         );
@@ -860,7 +875,9 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                       ) : (
                         <input
                           type={entry.valueType === 'float' || entry.valueType === 'int' ? 'number' : 'text'}
-                          value={entry.value}
+                          value={typeof entry.value === 'object' && entry.value !== null
+                            ? JSON.stringify(entry.value)
+                            : (entry.value ?? '')}
                           onChange={(e) => handleUpdateDictValue(index, e.target.value)}
                           className="param-input"
                           placeholder="value"
