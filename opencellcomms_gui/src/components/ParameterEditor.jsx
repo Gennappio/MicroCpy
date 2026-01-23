@@ -793,14 +793,16 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                             Object.entries(entry.value).map(([nestedKey, nestedValue]) => {
                               // Handle nested objects/arrays by showing them as JSON
                               const isComplexValue = typeof nestedValue === 'object' && nestedValue !== null;
-                              const displayValue = isComplexValue ? JSON.stringify(nestedValue) : nestedValue;
+                              const displayValue = isComplexValue
+                                ? JSON.stringify(nestedValue)
+                                : (nestedValue ?? '');
 
                               return (
                                 <div key={nestedKey} className="nested-dict-row">
                                   <span className="nested-dict-key">{nestedKey}:</span>
                                   <input
                                     type={typeof nestedValue === 'number' ? 'number' : 'text'}
-                                    value={displayValue}
+                                    value={String(displayValue)}
                                     onChange={(e) => {
                                       let newNestedValue;
                                       if (isComplexValue) {
