@@ -32,13 +32,15 @@ from src.workflow.functions.initialization import (
 from src.workflow.functions.intracellular import (
     update_metabolism,
     update_gene_networks,
-    update_phenotypes,
-    remove_dead_cells,
 )
 from src.workflow.functions.diffusion import run_diffusion_solver
 from src.workflow.functions.intercellular import (
     update_cell_division,
     update_cell_migration,
+    mark_necrotic_cells,
+    mark_growth_arrest_cells,
+    mark_apoptotic_cells,
+    mark_proliferating_cells,
 )
 from src.workflow.functions.finalization import (
     generate_initial_plots,
@@ -503,11 +505,12 @@ def standard_intracellular_update(
     # Update gene networks based on current environment
     helpers['update_gene_networks']()
 
-    # Update phenotypes based on gene states
-    helpers['update_phenotypes']()
-
-    # Remove dead cells
-    helpers['remove_dead_cells']()
+    # NOTE: Phenotype marking is now handled by separate marking functions:
+    # - mark_necrotic_cells (based on O2/glucose thresholds)
+    # - mark_growth_arrest_cells (based on gene network + counter)
+    # - mark_apoptotic_cells (based on gene network)
+    # - mark_proliferating_cells (based on gene network)
+    # These should be called in the intercellular stage, not here.
 
 
 # ============================================================================
@@ -617,14 +620,15 @@ def custom_intracellular_with_logging(
     # Run standard intracellular update
     helpers['update_intracellular']()
     helpers['update_gene_networks']()
-    helpers['update_phenotypes']()
-    helpers['remove_dead_cells']()
+
+    # NOTE: Phenotype marking now handled by separate functions in intercellular stage
+    # Cells are no longer removed - they remain in population but become inactive
 
     # Get cell count after
     cell_count_after = len(population.cells)
 
     if cell_count_after < cell_count_before:
-        print(f"[CUSTOM] {cell_count_before - cell_count_after} cells died")
+        print(f"[CUSTOM] {cell_count_before - cell_count_after} cells changed state")
 
 
 def custom_diffusion_with_validation(
@@ -676,8 +680,7 @@ def minimal_intracellular(
     # Only run metabolism, skip phenotype updates
     helpers['update_intracellular']()
     helpers['update_gene_networks']()
-    # Deliberately skip: helpers['update_phenotypes']()
-    helpers['remove_dead_cells']()
+    # NOTE: Phenotype marking now handled by separate functions in intercellular stage
 
 
 @register_function(
@@ -698,8 +701,7 @@ def no_death_intracellular(
     """
     helpers['update_intracellular']()
     helpers['update_gene_networks']()
-    helpers['update_phenotypes']()
-    # Deliberately skip: helpers['remove_dead_cells']()
+    # NOTE: Cells are no longer removed - they remain in population but become inactive
 
 
 def intracellular_with_analysis(
@@ -717,8 +719,7 @@ def intracellular_with_analysis(
     # Run standard updates
     helpers['update_intracellular']()
     helpers['update_gene_networks']()
-    helpers['update_phenotypes']()
-    helpers['remove_dead_cells']()
+    # NOTE: Phenotype marking now handled by separate functions in intercellular stage
 
     # Custom analysis
     if step % 10 == 0:  # Every 10 steps

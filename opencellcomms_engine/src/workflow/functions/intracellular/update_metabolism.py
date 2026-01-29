@@ -102,10 +102,11 @@ def update_metabolism(
     skipped_inactive = 0
 
     # Phenotypes that should not have metabolism updates
-    inactive_phenotypes = {'Necrosis', 'Apoptosis', 'Growth_Arrest'}
+    # Note: Apoptotic cells are removed, so we only skip Necrosis and Growth_Arrest
+    inactive_phenotypes = {'Necrosis', 'Growth_Arrest'}
 
     for cell_id, cell in population.state.cells.items():
-        # Skip cells in inactive states (Necrosis, Apoptosis, Growth_Arrest)
+        # Skip cells in inactive states (Necrosis, Growth_Arrest)
         if cell.state.phenotype in inactive_phenotypes:
             skipped_inactive += 1
             updated_cells[cell_id] = cell
@@ -131,7 +132,7 @@ def update_metabolism(
 
     # Log if cells were skipped
     if skipped_inactive > 0:
-        print(f"[METABOLISM] Skipped {skipped_inactive} inactive cells (Necrosis/Apoptosis/Growth_Arrest)")
+        print(f"[METABOLISM] Skipped {skipped_inactive} inactive cells (Necrosis/Growth_Arrest)")
 
 
 def _get_local_environment(position, substance_concentrations):

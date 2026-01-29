@@ -68,10 +68,11 @@ def mark_proliferating_cells(
     skipped_count = 0
 
     # Phenotypes that should not be changed by this function
-    inactive_phenotypes = {'Necrosis', 'Apoptosis', 'Growth_Arrest'}
+    # Note: Apoptotic cells are removed, so we only skip Necrosis and Growth_Arrest
+    inactive_phenotypes = {'Necrosis', 'Growth_Arrest'}
 
     for cell_id, cell in population.state.cells.items():
-        # Skip cells in inactive states (Necrosis, Apoptosis, Growth_Arrest)
+        # Skip cells in inactive states (Necrosis, Growth_Arrest)
         if cell.state.phenotype in inactive_phenotypes:
             skipped_count += 1
             updated_cells[cell_id] = cell

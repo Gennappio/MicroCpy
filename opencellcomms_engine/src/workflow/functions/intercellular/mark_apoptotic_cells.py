@@ -1,11 +1,11 @@
 """
-Mark cells as apoptotic based on gene network Apoptosis output.
+Mark and remove apoptotic cells based on gene network Apoptosis output.
 
-This function checks each cell's gene network state and marks cells
-as Apoptotic if the Apoptosis gene is ON.
+This function checks each cell's gene network state and removes cells
+where the Apoptosis gene is ON.
 
-Apoptotic cells remain in the population but do nothing (no metabolism,
-no gene network updates, no phenotype changes).
+Apoptotic cells are REMOVED from the population (programmed cell death
+with clearance), unlike necrotic cells which remain as debris.
 
 ================================================================================
 ARCHITECTURE: Context-Based Function Pattern
@@ -18,8 +18,8 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
-    display_name="Mark Apoptotic Cells",
-    description="Mark cells as apoptotic based on gene network Apoptosis output",
+    display_name="Mark and Remove Apoptotic Cells",
+    description="Mark and remove cells with Apoptosis gene ON (programmed cell death)",
     category="INTERCELLULAR",
     parameters=[],
     inputs=["context"],
@@ -31,12 +31,12 @@ def mark_apoptotic_cells(
     **kwargs
 ) -> None:
     """
-    Mark cells as apoptotic based on gene network Apoptosis output.
+    Mark and remove apoptotic cells based on gene network Apoptosis output.
 
     For each cell:
     1. Check if Apoptosis gene is ON in gene_states
-    2. If yes, mark cell phenotype as 'Apoptosis'
-    3. Apoptotic cells stay in population but are inactive
+    2. If yes, REMOVE the cell from population
+    3. Apoptotic cells are cleared (unlike necrotic cells which remain)
 
     Args:
         context: Workflow execution context containing:
@@ -59,41 +59,35 @@ def mark_apoptotic_cells(
         return
 
     # =========================================================================
-    # MARK APOPTOTIC CELLS
+    # REMOVE APOPTOTIC CELLS
     # =========================================================================
     updated_cells = {}
-    newly_apoptotic = 0
-    already_apoptotic = 0
+    removed_count = 0
 
     for cell_id, cell in population.state.cells.items():
-        # Skip cells already marked as Apoptosis or Necrosis
-        if cell.state.phenotype in ('Apoptosis', 'Necrosis'):
-            if cell.state.phenotype == 'Apoptosis':
-                already_apoptotic += 1
-            updated_cells[cell_id] = cell
-            continue
-
         # Check gene network state for Apoptosis
         gene_states = cell.state.gene_states
         if gene_states.get('Apoptosis', False):
-            # Mark as apoptotic
-            cell.state = cell.state.with_updates(phenotype='Apoptosis')
-            newly_apoptotic += 1
+            # Remove apoptotic cell (don't add to updated_cells)
+            removed_count += 1
+            continue
 
+        # Keep non-apoptotic cells
         updated_cells[cell_id] = cell
 
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
-    if newly_apoptotic > 0:
-        print(f"[APOPTOSIS] Marked {newly_apoptotic} cells as apoptotic "
-              f"(Apoptosis gene ON). Already apoptotic: {already_apoptotic}")
+    if removed_count > 0:
+        remaining = len(updated_cells)
+        print(f"[APOPTOSIS] Removed {removed_count} apoptotic cells "
+              f"(Apoptosis gene ON). Remaining: {remaining}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
     context['changes']['apoptosis'] = {
-        'newly_marked': newly_apoptotic,
-        'already_apoptotic': already_apoptotic
+        'removed': removed_count,
+        'remaining': len(updated_cells)
     }
 

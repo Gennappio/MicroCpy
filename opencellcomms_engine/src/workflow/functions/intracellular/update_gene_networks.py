@@ -99,10 +99,11 @@ def update_gene_networks(
     skipped_inactive = 0
 
     # Phenotypes that should not have gene network updates
-    inactive_phenotypes = {'Necrosis', 'Apoptosis', 'Growth_Arrest'}
+    # Note: Apoptotic cells are removed, so we only skip Necrosis and Growth_Arrest
+    inactive_phenotypes = {'Necrosis', 'Growth_Arrest'}
 
     for cell_id, cell in population.state.cells.items():
-        # Skip cells in inactive states (Necrosis, Apoptosis, Growth_Arrest)
+        # Skip cells in inactive states (Necrosis, Growth_Arrest)
         if cell.state.phenotype in inactive_phenotypes:
             skipped_inactive += 1
             updated_cells[cell_id] = cell
@@ -158,7 +159,7 @@ def update_gene_networks(
     total_cells = len(population.state.cells)
     print(f"[GENE_NETWORK] Updated {cells_with_gn}/{total_cells} cells "
           f"(skipped {cells_without_gn} without gene network, "
-          f"{skipped_inactive} inactive - Necrosis/Apoptosis/Growth_Arrest)")
+          f"{skipped_inactive} inactive - Necrosis/Growth_Arrest)")
 
     # Collect output state statistics for context changes
     output_stats = {}
