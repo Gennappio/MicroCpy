@@ -446,7 +446,7 @@
       ],
       "subworkflow_calls": [],
       "parameters": [
-        {"id": "param_csv_file", "label": "Cells CSV File", "parameters": {"file_path": "opencellcomms_engine/tests/jayatilake_experiment/initial_cells_100_center.csv"}, "position": {"x": 400, "y": 200}}
+        {"id": "param_csv_file", "label": "Cells CSV File", "parameters": {"file_path": "tests/jayatilake_experiment/initial_cells_100_center.csv"}, "position": {"x": 400, "y": 200}}
       ],
       "execution_order": ["setup_pop", "load_cells"],
       "enabled": true
