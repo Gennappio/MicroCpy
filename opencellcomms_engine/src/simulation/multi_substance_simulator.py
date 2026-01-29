@@ -573,32 +573,34 @@ class MultiSubstanceSimulator:
 
                 # Detect position unit and convert to FiPy grid indices
                 # Positions can be in: meters, micrometers, or biological grid indices
-                domain_x_m = self.config.domain.size_x.meters  # e.g., 0.0005m = 500um
+                domain_x_m = self.config.domain.size_x.meters  # e.g., 0.0015m = 1500um
                 domain_y_m = self.config.domain.size_y.meters
+                domain_x_um = self.config.domain.size_x.micrometers
+                domain_y_um = self.config.domain.size_y.micrometers
 
-                # Calculate biological grid size (cells with ~20um spacing on 500um domain)
-                # Biological grid is typically half the FiPy grid resolution
-                bio_grid_nx = nx // 2  # e.g., 50 -> 25
-                bio_grid_ny = ny // 2
+                # Calculate ACTUAL biological grid size from config (domain_size / cell_height)
+                # This is the grid used by CellPopulation for cell positions
+                cell_height_um = self.config.domain.cell_height.micrometers
+                bio_grid_nx = int(domain_x_um / cell_height_um)  # e.g., 1500/20 = 75
+                bio_grid_ny = int(domain_y_um / cell_height_um)
+
+                # Calculate scale factors from biological grid to FiPy grid
+                scale_x = nx / bio_grid_nx  # e.g., 50/75 = 0.667
+                scale_y = ny / bio_grid_ny
 
                 # Heuristic to detect position unit:
-                # - If position < bio_grid_size (e.g., 25), it's a biological grid index
-                # - If position < fipy_grid_size (e.g., 50), it's a FiPy grid index
-                # - If position < domain_um (e.g., 500), it's in micrometers
+                # - If position < bio_grid_size (e.g., 75), it's a biological grid index
+                # - If position < domain_um (e.g., 1500), it's in micrometers
                 # - Otherwise, it's in meters
 
                 if x_pos < bio_grid_nx and y_pos < bio_grid_ny:
-                    # Biological grid indices - scale to FiPy grid (2x finer)
-                    x = int(x_pos * 2)
-                    y = int(y_pos * 2)
-                elif x_pos < nx and y_pos < ny:
-                    # FiPy grid indices - use directly
-                    x = int(x_pos)
-                    y = int(y_pos)
-                elif x_pos < domain_x_m * 1e6 and y_pos < domain_y_m * 1e6:
+                    # Biological grid indices - scale to FiPy grid
+                    x = int(x_pos * scale_x)
+                    y = int(y_pos * scale_y)
+                elif x_pos < domain_x_um and y_pos < domain_y_um:
                     # Positions in micrometers - convert to grid indices
-                    x = int(x_pos / (domain_x_m * 1e6 / nx))
-                    y = int(y_pos / (domain_y_m * 1e6 / ny))
+                    x = int(x_pos / (domain_x_um / nx))
+                    y = int(y_pos / (domain_y_um / ny))
                 else:
                     # Positions in meters - convert to grid indices
                     dx = domain_x_m / nx
