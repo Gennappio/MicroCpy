@@ -849,7 +849,7 @@
       "input_parameters": []
     },
     "microenvironment": {
-      "description": "Stage 1: Solve diffusion-reaction PDEs for all substances",
+      "description": "Stage 1: Update metabolism then solve diffusion-reaction PDEs",
       "enabled": true,
       "deletable": true,
       "controller": {
@@ -864,6 +864,21 @@
       },
       "functions": [
         {
+          "id": "update_metab",
+          "function_name": "update_metabolism",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Bridge 2: Gene states (glycoATP, mitoATP) -> metabolism coefficients",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
           "id": "run_diffusion",
           "function_name": "run_diffusion_solver",
           "function_file": "",
@@ -871,7 +886,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 100
+            "y": 200
           },
           "description": "Solve diffusion-reaction equations for all substances",
           "custom_name": "",
@@ -893,7 +908,7 @@
           },
           "position": {
             "x": 400,
-            "y": 100
+            "y": 200
           }
         },
         {
@@ -904,7 +919,7 @@
           },
           "position": {
             "x": 550,
-            "y": 100
+            "y": 200
           }
         },
         {
@@ -915,17 +930,18 @@
           },
           "position": {
             "x": 700,
-            "y": 100
+            "y": 200
           }
         }
       ],
       "execution_order": [
+        "update_metab",
         "run_diffusion"
       ],
       "input_parameters": []
     },
     "intracellular": {
-      "description": "Stage 2: Gene network update + metabolism (Bridge 1 & 2)",
+      "description": "Stage 2: Gene network update (Bridge 1)",
       "enabled": true,
       "deletable": true,
       "controller": {
@@ -955,21 +971,6 @@
           "parameter_nodes": [
             "param_gene_propagation_steps"
           ]
-        },
-        {
-          "id": "update_metab",
-          "function_name": "update_metabolism",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 200,
-            "y": 200
-          },
-          "description": "Bridge 2: Gene states (glycoATP, mitoATP) -> metabolism coefficients",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
@@ -987,8 +988,7 @@
         }
       ],
       "execution_order": [
-        "update_genes",
-        "update_metab"
+        "update_genes"
       ],
       "input_parameters": []
     },
