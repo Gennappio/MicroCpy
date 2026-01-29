@@ -192,3 +192,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Simulation results and outputs (generated at runtime)
+opencellcomms_engine/results/
+opencellcomms_gui/results/
+
+# Legacy/duplicate directories (if present)
+microc-2.0/
