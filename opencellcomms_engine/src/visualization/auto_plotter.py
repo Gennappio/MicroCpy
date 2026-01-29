@@ -359,14 +359,14 @@ class AutoPlotter:
                 # Add the interior legend to the plot
                 ax.add_artist(interior_legend)
 
-            # Create border legend (phenotypes)
+            # Create border legend (phenotypes) - positioned at top right
             if border_items:
                 border_elements = [Patch(facecolor='white', label=state.replace('Border: ', ''),
                                        edgecolor=color, linewidth=2)
                                  for state, color in sorted(border_items.items())]
 
-                border_legend = ax.legend(handles=border_elements, loc='upper left',
-                                        bbox_to_anchor=(0, 0.7),
+                border_legend = ax.legend(handles=border_elements, loc='upper right',
+                                        bbox_to_anchor=(1, 1),
                                         title='◉ Phenotypes (Border)', fontsize=9,
                                         title_fontsize=10, frameon=True, fancybox=True,
                                         shadow=True, facecolor='white', edgecolor='black',
