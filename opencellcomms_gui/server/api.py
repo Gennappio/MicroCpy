@@ -883,7 +883,7 @@ def list_results():
 
 @app.route('/api/results/plot/<path:plot_path>', methods=['GET'])
 def get_plot(plot_path):
-    """Serve a plot image file."""
+    """Serve a plot image file with cache-busting headers."""
     try:
         # Results are stored in ABM_GUI/results/, paths are relative to ABM_GUI
         gui_dir = Path(__file__).parent.parent  # ABM_GUI directory
@@ -895,7 +895,12 @@ def get_plot(plot_path):
         if not full_path.suffix == '.png':
             return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
-        return send_file(full_path, mimetype='image/png')
+        # Send file with cache-busting headers to prevent browser caching
+        response = send_file(full_path, mimetype='image/png')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

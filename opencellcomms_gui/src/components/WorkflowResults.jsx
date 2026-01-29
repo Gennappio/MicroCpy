@@ -121,10 +121,11 @@ function WorkflowResults({ subworkflowName, subworkflowKind }) {
           </div>
         ) : selectedPlot ? (
           <div className="plot-display">
-            <img 
-              src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}`}
+            <img
+              src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${Date.now()}`}
               alt={selectedPlot.name}
               className="plot-image"
+              key={`${selectedPlot.path}-${Date.now()}`}
             />
           </div>
         ) : (

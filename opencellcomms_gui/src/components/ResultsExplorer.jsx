@@ -172,10 +172,11 @@ function ResultsExplorer() {
               <span className="plot-category-badge">{selectedPlot.category}</span>
             </div>
             <div className="viewer-content">
-              <img 
-                src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}`}
+              <img
+                src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${Date.now()}`}
                 alt={selectedPlot.name}
                 className="plot-image"
+                key={`${selectedPlot.path}-${Date.now()}`}
               />
             </div>
           </>
