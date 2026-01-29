@@ -793,7 +793,7 @@
           "id": "param_csv_file",
           "label": "Cells CSV File",
           "parameters": {
-            "file_path": "opencellcomms_engine/tests/jayatilake_experiment/initial_cells_100_center.csv"
+            "file_path": "opencellcomms_engine/tests/jayatilake_experiment/initial_cells_100_center_1500.csv"
           },
           "position": {
             "x": 400,
