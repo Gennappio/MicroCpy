@@ -160,21 +160,26 @@ class DictParameterNode:
         label: Display name for this dict parameter node
         entries: List of DictEntry objects stored in this node
         position: UI position for visual editor (x, y coordinates)
+        target_param: Name of the function parameter to map this dict to (e.g., 'associations')
     """
     id: str
     label: str = "Dictionary"
     entries: List[DictEntry] = field(default_factory=list)
     position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
+    target_param: Optional[str] = None  # Parameter name to map all entries to as a single dict
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "id": self.id,
             "type": "dictParameterNode",
             "label": self.label,
             "entries": [e.to_dict() if isinstance(e, DictEntry) else e for e in self.entries],
             "position": self.position
         }
+        if self.target_param:
+            result["target_param"] = self.target_param
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DictParameterNode":
@@ -188,7 +193,8 @@ class DictParameterNode:
             id=data["id"],
             label=data.get("label", "Dictionary"),
             entries=entries,
-            position=data.get("position", {"x": 0, "y": 0})
+            position=data.get("position", {"x": 0, "y": 0}),
+            target_param=data.get("target_param") or data.get("targetParam")  # Support both formats
         )
 
 
@@ -716,8 +722,16 @@ class SubWorkflow:
             dict_node = self.get_dict_parameter_node_by_id(param_node_id)
             if dict_node:
                 # Convert entries to a dictionary
+                dict_value = {}
                 for entry in dict_node.entries:
-                    merged[entry.key] = entry.value
+                    dict_value[entry.key] = entry.value
+
+                # If target_param is set, package all entries into that single parameter
+                # Otherwise, expand entries as individual parameters (legacy behavior)
+                if dict_node.target_param:
+                    merged[dict_node.target_param] = dict_value
+                else:
+                    merged.update(dict_value)
 
         if substances:
             merged['substances'] = substances

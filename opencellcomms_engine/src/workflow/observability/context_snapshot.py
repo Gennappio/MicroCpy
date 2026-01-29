@@ -141,18 +141,39 @@ def summarize_value(value: Any, max_preview_len: int = 200) -> ValueSummary:
         return ValueSummary(type(value).__name__, "<unrepresentable>", truncated=True)
 
 
-def _simple_preview(value: Any) -> Any:
-    """Get a simple preview of a value (for nested structures)."""
+def _simple_preview(value: Any, depth: int = 0, max_depth: int = 3) -> Any:
+    """Get a preview of a value, recursively expanding nested structures."""
     if value is None:
         return None
     if isinstance(value, (bool, int, float)):
         return value
     if isinstance(value, str):
-        return value[:50] + "..." if len(value) > 50 else value
+        return value[:100] + "..." if len(value) > 100 else value
+
+    # Stop recursion at max depth
+    if depth >= max_depth:
+        if isinstance(value, (list, tuple)):
+            return f"[{len(value)} items]"
+        if isinstance(value, dict):
+            return f"{{{len(value)} keys}}"
+        return f"<{type(value).__name__}>"
+
+    # Recursively expand lists (up to 10 items)
     if isinstance(value, (list, tuple)):
-        return f"[{len(value)} items]"
+        if len(value) <= 10:
+            return [_simple_preview(v, depth + 1, max_depth) for v in value]
+        preview = [_simple_preview(v, depth + 1, max_depth) for v in value[:10]]
+        preview.append(f"... ({len(value) - 10} more)")
+        return preview
+
+    # Recursively expand dicts (up to 20 keys)
     if isinstance(value, dict):
-        return f"{{{len(value)} keys}}"
+        if len(value) <= 20:
+            return {k: _simple_preview(v, depth + 1, max_depth) for k, v in value.items()}
+        preview = {k: _simple_preview(v, depth + 1, max_depth) for k, v in list(value.items())[:20]}
+        preview["..."] = f"({len(value) - 20} more keys)"
+        return preview
+
     return f"<{type(value).__name__}>"
 
 
@@ -179,11 +200,17 @@ class ContextSnapshotManager:
         self._initialized = False
 
     def initialize(self) -> None:
-        """Initialize the snapshot directories."""
+        """Initialize the snapshot directories, clearing old snapshots."""
         if not self.enabled:
             return
 
         context_dir = self.results_dir / "observability" / "context"
+
+        # Clear old snapshots from previous runs
+        if context_dir.exists():
+            import shutil
+            shutil.rmtree(context_dir)
+
         context_dir.mkdir(parents=True, exist_ok=True)
         self._versions.clear()
         self._initialized = True

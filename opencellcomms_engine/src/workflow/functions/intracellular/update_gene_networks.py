@@ -94,6 +94,8 @@ def update_gene_networks(
     # UPDATE EACH CELL'S GENE NETWORK
     # =========================================================================
     updated_cells = {}
+    cells_with_gn = 0
+    cells_without_gn = 0
 
     for cell_id, cell in population.state.cells.items():
         # Get local environment
@@ -104,7 +106,10 @@ def update_gene_networks(
 
         # Skip if this cell has no gene network attached
         if cell_gene_network is None:
+            cells_without_gn += 1
             continue
+
+        cells_with_gn += 1
 
         # Build input states dict based on local environment
         input_states: Dict[str, bool] = {}
@@ -137,6 +142,46 @@ def update_gene_networks(
 
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
+
+    # Log summary
+    total_cells = len(population.state.cells)
+    print(f"[GENE_NETWORK] Updated {cells_with_gn}/{total_cells} cells (skipped {cells_without_gn} without gene network)")
+
+    # Collect output state statistics for context changes
+    output_stats = {}
+    sample_outputs = {}
+
+    if cells_with_gn > 0:
+        print(f"[GENE_NETWORK] Propagation steps: {propagation_steps}, associations: {len(associations)}")
+
+        # Collect statistics on output node states across all cells
+        for cell_id, cell in updated_cells.items():
+            cell_gn = cell.state.gene_network
+            if cell_gn:
+                output_states = cell_gn.get_output_states()
+                for node_name, state in output_states.items():
+                    if node_name not in output_stats:
+                        output_stats[node_name] = {'True': 0, 'False': 0}
+                    output_stats[node_name]['True' if state else 'False'] += 1
+
+        # Sample output: show fate gene states for first cell
+        if updated_cells:
+            sample_cell = next(iter(updated_cells.values()))
+            sample_gn = sample_cell.state.gene_network
+            if sample_gn:
+                sample_outputs = sample_gn.get_output_states()
+                print(f"[GENE_NETWORK] Sample cell outputs: {sample_outputs}")
+
+    # Store changes in context for GUI display
+    context['changes'] = context.get('changes', {})
+    context['changes']['gene_network'] = {
+        'cells_updated': cells_with_gn,
+        'cells_skipped': cells_without_gn,
+        'propagation_steps': propagation_steps,
+        'associations_count': len(associations),
+        'output_stats': output_stats,
+        'sample_outputs': sample_outputs
+    }
 
 
 def _get_local_environment(position, substance_concentrations):

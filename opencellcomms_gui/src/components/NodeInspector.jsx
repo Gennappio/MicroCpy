@@ -368,11 +368,11 @@ const ContextTab = ({ context, loading }) => {
                       <div className="diff-values">
                         <div className="diff-before">
                           <span className="diff-label">Before:</span>
-                          <span className="diff-value">{typeof before.preview === 'string' ? before.preview.substring(0, 30) : JSON.stringify(before.preview)?.substring(0, 30)}</span>
+                          <span className="diff-value">{typeof before.preview === 'string' ? before.preview : JSON.stringify(before.preview, null, 2)}</span>
                         </div>
                         <div className="diff-after">
                           <span className="diff-label">After:</span>
-                          <span className="diff-value">{typeof after.preview === 'string' ? after.preview.substring(0, 30) : JSON.stringify(after.preview)?.substring(0, 30)}</span>
+                          <span className="diff-value">{typeof after.preview === 'string' ? after.preview : JSON.stringify(after.preview, null, 2)}</span>
                         </div>
                       </div>
                     </div>

@@ -125,8 +125,8 @@ class BooleanNetwork(IGeneNetwork):
         """Parse MaBoSS format .bnd file"""
         nodes_created = 0
 
-        # Split into node blocks
-        node_blocks = re.split(r'node\s+(\w+)\s*{', content)[1:]  # Skip first empty element
+        # Split into node blocks (case-insensitive: Node or node)
+        node_blocks = re.split(r'[Nn]ode\s+(\w+)\s*{', content)[1:]  # Skip first empty element
 
         for i in range(0, len(node_blocks), 2):
             if i + 1 >= len(node_blocks):
@@ -205,8 +205,8 @@ class BooleanNetwork(IGeneNetwork):
                 self.output_nodes.add(node_name)
                 node.is_output = True
 
-        # print(f"[+] Identified {len(self.input_nodes)} input nodes: {sorted(self.input_nodes)}")
-        # print(f"[+] Identified {len(self.output_nodes)} output nodes: {sorted(self.output_nodes)}")
+        # Debug: only print when output nodes are identified
+        # print(f"[GENE_NETWORK] Identified {len(self.input_nodes)} input nodes, {len(self.output_nodes)} output nodes")
 
     def _load_from_config(self, gene_network_config):
         """Load network from configuration object"""
@@ -274,13 +274,13 @@ class BooleanNetwork(IGeneNetwork):
             if node.is_output:
                 self.output_nodes.add(node_name)
 
-        # If no explicit input/output nodes from config, use the ones identified from .bnd structure
-        if not self.input_nodes and not self.output_nodes:
+        # If no explicit output nodes from config, identify them from .bnd structure
+        # (output nodes are leaf nodes that are not used as inputs to other nodes)
+        if not self.output_nodes:
             self._identify_input_output_nodes()
 
-        # print(f"[+] Loaded gene network from config: {len(self.nodes)} nodes")
-        # print(f"[+] Input nodes: {sorted(self.input_nodes)}")
-        # print(f"[+] Output nodes: {sorted(self.output_nodes)}")
+        # Print only on initial load (not for every cell copy)
+        # print(f"[GENE_NETWORK] Loaded {len(self.nodes)} nodes, {len(self.input_nodes)} inputs, {len(self.output_nodes)} outputs")
 
     def _create_minimal_network(self):
         """Create minimal network - only essential nodes for basic functionality"""

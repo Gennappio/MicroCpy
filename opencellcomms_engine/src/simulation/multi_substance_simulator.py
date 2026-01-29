@@ -335,13 +335,17 @@ class MultiSubstanceSimulator:
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
         """Update using FiPy diffusion solver - steady state solution"""
 
-        # DEBUG: Show which substances are being processed
-        # substance_names = list(self.state.substances.keys())
-        # print(f"[DIFF] DIFFUSION UPDATE: Processing {len(substance_names)} substances: {substance_names}")
+        # Progress logging: show which substances are being processed
+        substance_names = list(self.state.substances.keys())
+        total_substances = len(substance_names)
+        print(f"[DIFFUSION] Solving {total_substances} substances: {', '.join(substance_names)}")
 
-        for name, substance_state in self.state.substances.items():
+        for idx, (name, substance_state) in enumerate(self.state.substances.items(), 1):
             if name not in self.fipy_variables:
                 continue
+
+            # Progress indicator for each substance
+            print(f"   [{idx}/{total_substances}] Solving {name}...", end=" ", flush=True)
 
             var = self.fipy_variables[name]
             config = substance_state.config
@@ -467,27 +471,13 @@ class MultiSubstanceSimulator:
 
             try:
                 res = equation.solve(var=var, solver=solver)
-                # DEBUG: Show solver results for Oxygen (disabled by default)
-                # if name == 'Oxygen':
-                #     if res is not None:
-                #         print(f"   [OK] {name} solver finished. Final residual: {res:.2e}")
-                #     else:
-                #         print(f"   [OK] {name} solver finished.")
-                #
-                #     # Check final concentrations
-                #     final_min = float(np.min(var.value))
-                #     final_max = float(np.max(var.value))
-                #     final_mean = float(np.mean(var.value))
-                #     final_range = final_max - final_min
-                #     print(f"   Final concentrations: min={final_min:.6f}, max={final_max:.6f}, mean={final_mean:.6f} mM")
-                #     print(f"   Concentration range: {final_range:.6f} mM ({final_range/final_mean*100:.4f}% variation)")
-                #
-                #     # Compare with expected behavior
-                #     if final_range < 0.0001:
-                #         print(f"   🎯 PROBLEM: Nearly uniform concentrations despite source terms!")
-                #     else:
-                #         print(f"   ✅ SUCCESS: Concentration gradients detected!")
+                # Print completion with residual if available
+                if res is not None:
+                    print(f"done (residual: {res:.2e})")
+                else:
+                    print("done")
             except Exception as e:
+                print(f"FAILED!")
                 print(f"[ERROR] Error during {name} solve: {e}")
 
             # DEBUG: Show solver results for lactate
@@ -560,13 +550,8 @@ class MultiSubstanceSimulator:
         # print(f"   Expected volume (μm³): {mesh_cell_volume * 1e18:.1f}")
         # print(f"   Grid spacing: {dx*1e6:.1f} × {dy*1e6:.1f} μm")
 
-        # Log first few positions for debugging
-        positions_logged = 0
+        # Process positions (minimal logging to avoid output flooding)
         for position, reactions in substance_reactions.items():
-            if positions_logged < 3:
-                print(f"[DIFFUSION] Position: {position}, Reactions: {reactions}")
-                positions_logged += 1
-
             # Handle both 2D and 3D positions
             if len(position) == 2:
                 x_pos, y_pos = position
@@ -609,9 +594,6 @@ class MultiSubstanceSimulator:
                     y = int(y_pos / dy)
 
                 z = 0  # Default for 2D
-
-                if positions_logged <= 3:
-                    print(f"[DIFFUSION]   -> Grid: ({x}, {y}), bio_grid={bio_grid_nx}x{bio_grid_ny}, fipy_grid={nx}x{ny}")
 
                 if 0 <= x < nx and 0 <= y < ny:
                     # Convert to FiPy index - use correct formula for 3D mesh even with 2D position

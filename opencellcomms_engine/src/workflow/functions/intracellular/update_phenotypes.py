@@ -84,6 +84,8 @@ def update_phenotypes(
     # UPDATE EACH CELL'S PHENOTYPE
     # =========================================================================
     updated_cells = {}
+    phenotype_counts = {}
+    phenotype_changes = {}
 
     for cell_id, cell in population.state.cells.items():
         # Get cached gene states from gene network update
@@ -94,8 +96,19 @@ def update_phenotypes(
         if not local_env:
             local_env = _get_local_environment(cell.state.position, substance_concentrations)
 
+        # Track old phenotype
+        old_phenotype = cell.state.phenotype
+
         # Determine phenotype based on gene states
         phenotype = _determine_phenotype(gene_states, local_env, config)
+
+        # Track phenotype counts
+        phenotype_counts[phenotype] = phenotype_counts.get(phenotype, 0) + 1
+
+        # Track phenotype changes
+        if old_phenotype != phenotype:
+            change_key = f"{old_phenotype} -> {phenotype}"
+            phenotype_changes[change_key] = phenotype_changes.get(change_key, 0) + 1
 
         # Update cell's phenotype
         cell.state = cell.state.with_updates(phenotype=phenotype)
@@ -104,6 +117,20 @@ def update_phenotypes(
 
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
+
+    # Log phenotype summary
+    total_cells = len(updated_cells)
+    print(f"[PHENOTYPE] Updated {total_cells} cells: {phenotype_counts}")
+    if phenotype_changes:
+        print(f"[PHENOTYPE] Changes: {phenotype_changes}")
+
+    # Store changes in context for GUI display
+    context['changes'] = context.get('changes', {})
+    context['changes']['phenotypes'] = {
+        'total_cells': total_cells,
+        'phenotype_counts': phenotype_counts,
+        'phenotype_changes': phenotype_changes
+    }
 
 
 def _get_local_environment(position, substance_concentrations):

@@ -249,15 +249,15 @@ class SimulationPlotter:
                                           title='Metabolic States (Interior)')
                 ax.add_artist(interior_legend)
 
-            # Create border legend (phenotypes)
+            # Create border legend (phenotypes) - positioned at bottom right to avoid overlap
             if border_items:
                 border_elements = [
                     plt.scatter([], [], c='white', s=100, edgecolors=color, linewidth=2,
                               label=state.replace('Border: ', '').capitalize())
                     for state, color in sorted(border_items.items())
                 ]
-                ax.legend(handles=border_elements, loc='upper right',
-                         bbox_to_anchor=(1.15, 0.7),
+                ax.legend(handles=border_elements, loc='lower right',
+                         bbox_to_anchor=(1.15, 0),
                          title='Phenotypes (Border)')
         
         # Formatting

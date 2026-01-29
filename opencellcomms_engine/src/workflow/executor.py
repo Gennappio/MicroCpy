@@ -528,11 +528,19 @@ class WorkflowExecutor:
 
         try:
             # Execute the sub-workflow 'iterations' times
+            iteration_start_time = None
             for iteration in range(iterations):
                 call_info['iteration'] = iteration + 1
 
+                # Log timing for previous iteration if this is not the first
+                if iteration > 0 and iteration_start_time is not None:
+                    elapsed = time.time() - iteration_start_time
+                    print(f"[WORKFLOW] Iteration {iteration}/{iterations} completed in {elapsed:.1f}s")
+
+                iteration_start_time = time.time()
+
                 if iterations > 1:
-                    print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}' (iteration {iteration + 1}/{iterations})")
+                    print(f"\n[WORKFLOW] ========== Iteration {iteration + 1}/{iterations}: '{subworkflow_name}' ==========")
                 else:
                     print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}'")
 
@@ -614,6 +622,12 @@ class WorkflowExecutor:
                                 print(f"[WORKFLOW] Error executing sub-workflow call to '{node.subworkflow_name}': {e}")
                                 import traceback
                                 traceback.print_exc()
+
+            # Log timing for final iteration
+            if iterations > 1 and iteration_start_time is not None:
+                elapsed = time.time() - iteration_start_time
+                print(f"[WORKFLOW] Iteration {iterations}/{iterations} completed in {elapsed:.1f}s")
+                print(f"[WORKFLOW] ========== All {iterations} iterations of '{subworkflow_name}' complete ==========\n")
 
         finally:
             # Remove from call stack
