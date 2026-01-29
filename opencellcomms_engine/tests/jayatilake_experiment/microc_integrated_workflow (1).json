@@ -970,21 +970,6 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
-        },
-        {
-          "id": "update_pheno",
-          "function_name": "update_phenotypes",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 200,
-            "y": 300
-          },
-          "description": "Determine cell phenotype from gene network output states",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
@@ -1003,13 +988,12 @@
       ],
       "execution_order": [
         "update_genes",
-        "update_metab",
-        "update_pheno"
+        "update_metab"
       ],
       "input_parameters": []
     },
     "intercellular": {
-      "description": "Stage 3: Cell division, apoptosis, necrosis (NO migration)",
+      "description": "Stage 3: Mark cell phenotypes and handle cell division",
       "enabled": true,
       "deletable": true,
       "controller": {
@@ -1024,8 +1008,8 @@
       },
       "functions": [
         {
-          "id": "cell_division",
-          "function_name": "update_cell_division",
+          "id": "mark_necrotic",
+          "function_name": "mark_necrotic_cells",
           "function_file": "",
           "parameters": {},
           "enabled": true,
@@ -1033,14 +1017,17 @@
             "x": 200,
             "y": 100
           },
-          "description": "Handle cell division for proliferating cells",
+          "description": "Mark cells as necrotic based on oxygen/glucose thresholds",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [
+            "param_oxygen_threshold",
+            "param_glucose_threshold"
+          ]
         },
         {
-          "id": "remove_apoptotic",
-          "function_name": "remove_apoptotic_cells",
+          "id": "mark_growth_arrest",
+          "function_name": "mark_growth_arrest_cells",
           "function_file": "",
           "parameters": {},
           "enabled": true,
@@ -1048,14 +1035,16 @@
             "x": 200,
             "y": 200
           },
-          "description": "Remove cells with Apoptosis phenotype (programmed cell death)",
+          "description": "Track cells in Growth_Arrest state with time limit",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [
+            "param_max_growth_arrest_steps"
+          ]
         },
         {
-          "id": "remove_necrotic",
-          "function_name": "remove_necrotic_cells",
+          "id": "mark_apoptotic",
+          "function_name": "mark_apoptotic_cells",
           "function_file": "",
           "parameters": {},
           "enabled": true,
@@ -1063,18 +1052,84 @@
             "x": 200,
             "y": 300
           },
-          "description": "Remove cells with Necrosis phenotype (uncontrolled cell death)",
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "mark_proliferating",
+          "function_name": "mark_proliferating_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "Mark cells as Proliferation or Quiescence based on gene network",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "cell_division",
+          "function_name": "update_cell_division",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 500
+          },
+          "description": "Handle cell division for proliferating cells",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "param_oxygen_threshold",
+          "label": "Oxygen Threshold",
+          "parameters": {
+            "oxygen_threshold": 0.022
+          },
+          "position": {
+            "x": 400,
+            "y": 100
+          }
+        },
+        {
+          "id": "param_glucose_threshold",
+          "label": "Glucose Threshold",
+          "parameters": {
+            "glucose_threshold": 0.23
+          },
+          "position": {
+            "x": 550,
+            "y": 100
+          }
+        },
+        {
+          "id": "param_max_growth_arrest_steps",
+          "label": "Max Growth Arrest Steps",
+          "parameters": {
+            "max_growth_arrest_steps": 100
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
+        }
+      ],
       "execution_order": [
-        "cell_division",
-        "remove_apoptotic",
-        "remove_necrotic"
+        "mark_necrotic",
+        "mark_growth_arrest",
+        "mark_apoptotic",
+        "mark_proliferating",
+        "cell_division"
       ],
       "input_parameters": []
     },

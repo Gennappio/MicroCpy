@@ -10,8 +10,6 @@ For backward compatibility, all functions are re-exported from this module.
 # Import granular intracellular functions
 from .intracellular.update_metabolism import update_metabolism
 from .intracellular.update_gene_networks import update_gene_networks
-from .intracellular.update_phenotypes import update_phenotypes
-from .intracellular.remove_dead_cells import remove_dead_cells
 
 # Import granular diffusion functions
 from .diffusion.run_diffusion_solver import run_diffusion_solver
@@ -19,8 +17,10 @@ from .diffusion.run_diffusion_solver import run_diffusion_solver
 # Import granular intercellular functions
 from .intercellular.update_cell_division import update_cell_division
 from .intercellular.update_cell_migration import update_cell_migration
-from .intercellular.remove_apoptotic_cells import remove_apoptotic_cells
-from .intercellular.remove_necrotic_cells import remove_necrotic_cells
+from .intercellular.mark_necrotic_cells import mark_necrotic_cells
+from .intercellular.mark_growth_arrest_cells import mark_growth_arrest_cells
+from .intercellular.mark_apoptotic_cells import mark_apoptotic_cells
+from .intercellular.mark_proliferating_cells import mark_proliferating_cells
 
 # Import granular finalization functions
 from .finalization.generate_initial_plots import generate_initial_plots
@@ -34,15 +34,15 @@ __all__ = [
     # Intracellular
     'update_metabolism',
     'update_gene_networks',
-    'update_phenotypes',
-    'remove_dead_cells',
     # Diffusion
     'run_diffusion_solver',
     # Intercellular
     'update_cell_division',
     'update_cell_migration',
-    'remove_apoptotic_cells',
-    'remove_necrotic_cells',
+    'mark_necrotic_cells',
+    'mark_growth_arrest_cells',
+    'mark_apoptotic_cells',
+    'mark_proliferating_cells',
     # Finalization
     'generate_initial_plots',
     'generate_summary_plots',

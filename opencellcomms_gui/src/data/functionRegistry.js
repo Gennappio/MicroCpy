@@ -107,24 +107,6 @@ function getFallbackRegistry() {
     source_file: 'src/workflow/functions/intracellular/update_gene_networks.py',
   },
 
-  update_phenotypes: {
-    name: 'update_phenotypes',
-    displayName: 'Update Phenotypes',
-    description: 'Update cell phenotypes based on gene expression',
-    category: FunctionCategory.INTRACELLULAR,
-    parameters: [],
-    source_file: 'src/workflow/functions/intracellular/update_phenotypes.py',
-  },
-
-  remove_dead_cells: {
-    name: 'remove_dead_cells',
-    displayName: 'Remove Dead Cells',
-    description: 'Remove cells that have died from the population',
-    category: FunctionCategory.INTRACELLULAR,
-    parameters: [],
-    source_file: 'src/workflow/functions/intracellular/remove_dead_cells.py',
-  },
-
   // DIFFUSION FUNCTIONS
   run_diffusion_solver: {
     name: 'run_diffusion_solver',

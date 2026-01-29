@@ -96,8 +96,18 @@ def update_gene_networks(
     updated_cells = {}
     cells_with_gn = 0
     cells_without_gn = 0
+    skipped_inactive = 0
+
+    # Phenotypes that should not have gene network updates
+    inactive_phenotypes = {'Necrosis', 'Apoptosis', 'Growth_Arrest'}
 
     for cell_id, cell in population.state.cells.items():
+        # Skip cells in inactive states (Necrosis, Apoptosis, Growth_Arrest)
+        if cell.state.phenotype in inactive_phenotypes:
+            skipped_inactive += 1
+            updated_cells[cell_id] = cell
+            continue
+
         # Get local environment
         local_env = _get_local_environment(cell.state.position, substance_concentrations)
 
@@ -107,6 +117,7 @@ def update_gene_networks(
         # Skip if this cell has no gene network attached
         if cell_gene_network is None:
             cells_without_gn += 1
+            updated_cells[cell_id] = cell
             continue
 
         cells_with_gn += 1
@@ -145,7 +156,9 @@ def update_gene_networks(
 
     # Log summary
     total_cells = len(population.state.cells)
-    print(f"[GENE_NETWORK] Updated {cells_with_gn}/{total_cells} cells (skipped {cells_without_gn} without gene network)")
+    print(f"[GENE_NETWORK] Updated {cells_with_gn}/{total_cells} cells "
+          f"(skipped {cells_without_gn} without gene network, "
+          f"{skipped_inactive} inactive - Necrosis/Apoptosis/Growth_Arrest)")
 
     # Collect output state statistics for context changes
     output_stats = {}

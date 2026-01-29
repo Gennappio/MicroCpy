@@ -511,14 +511,6 @@ class MultiSubstanceSimulator:
                     (self.config.domain.ny, self.config.domain.nx), order='F'
                 )
 
-            # Clamp concentrations to non-negative values (physical constraint)
-            # Negative values are unphysical and can occur due to numerical errors
-            negative_count = np.sum(substance_state.concentrations < 0)
-            if negative_count > 0:
-                min_val = np.min(substance_state.concentrations)
-                print(f"   [CLAMP] {name}: {negative_count} negative values detected (min={min_val:.6f} mM), clamping to zero")
-                substance_state.concentrations = np.maximum(substance_state.concentrations, 0.0)
-
             # CRITICAL: Update the FiPy variable so CSV export gets the correct values
             # The CSV export reads from self.fipy_variables[name], not from substance_state.concentrations
             self.fipy_variables[name].setValue(substance_state.concentrations.flatten(order='F'))
