@@ -46,19 +46,19 @@ const NodeInspector = () => {
   // Get badge stats
   const badgeStats = nodeBadgeStatsByScope[scopeKey]?.[displayNodeId];
   
-  // Fetch events when tab changes to logs
+  // Fetch events when tab changes to logs or when badge stats update (new execution)
   useEffect(() => {
     if (inspector.isOpen && inspector.tab === 'logs' && displayNodeId) {
       fetchEvents();
     }
-  }, [inspector.isOpen, inspector.tab, displayNodeId, scopeKey]);
+  }, [inspector.isOpen, inspector.tab, displayNodeId, scopeKey, badgeStats]);
   
-  // Fetch context when tab changes to context
+  // Fetch context when tab changes to context or when badge stats update (new execution)
   useEffect(() => {
     if (inspector.isOpen && inspector.tab === 'context' && displayNodeId) {
       fetchContext();
     }
-  }, [inspector.isOpen, inspector.tab, displayNodeId, scopeKey]);
+  }, [inspector.isOpen, inspector.tab, displayNodeId, scopeKey, badgeStats]);
   
   const fetchEvents = async () => {
     setLoading(true);
@@ -282,11 +282,16 @@ const ContextTab = ({ context, loading }) => {
     }
   };
 
+  // Reset diff when context changes (new version available)
+  React.useEffect(() => {
+    setDiff(null);
+  }, [context?.version]);
+
   React.useEffect(() => {
     if (viewMode === 'diff' && context && !diff) {
       fetchDiff();
     }
-  }, [viewMode, context]);
+  }, [viewMode, context, diff]);
 
   if (loading) {
     return <div className="tab-loading"><Loader size={24} className="spinning" /><p>Loading context...</p></div>;
