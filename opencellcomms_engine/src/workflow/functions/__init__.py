@@ -10,6 +10,7 @@ For backward compatibility, all functions are re-exported from this module.
 # Import granular intracellular functions
 from .intracellular.update_metabolism import update_metabolism
 from .intracellular.update_gene_networks import update_gene_networks
+from .intracellular.update_gene_networks_v2 import update_gene_networks_v2
 
 # Import granular diffusion functions
 from .diffusion.run_diffusion_solver import run_diffusion_solver
@@ -36,6 +37,7 @@ __all__ = [
     # Intracellular
     'update_metabolism',
     'update_gene_networks',
+    'update_gene_networks_v2',
     # Diffusion
     'run_diffusion_solver',
     'run_diffusion_solver_clamped',

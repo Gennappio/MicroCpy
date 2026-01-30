@@ -192,18 +192,32 @@ class AutoPlotter:
                 interior_color = 'lightgray'  # default interior
                 border_color = 'gray'  # default border
                 try:
+                    # DEBUG: Log first cell lookup attempt
+                    if not hasattr(self, '_plot_debug_count'):
+                        self._plot_debug_count = 0
+
                     # Try to get the actual cell object to get gene states
+                    # Handle both 2D and 3D positions - try 2D first, then 3D with z=0
                     cell = population.get_cell_at_position((x, y))
+                    if cell is None:
+                        cell = population.get_cell_at_position((x, y, 0))
+                    if cell is None:
+                        # Try looking up by position from the original tuple
+                        cell = population.get_cell_at_position(position)
+
+                    # DEBUG: Log why we're not getting into the color block
+                    if self._plot_debug_count < 5:
+                        has_cf = hasattr(population, 'custom_functions')
+                        cf_exists = population.custom_functions if has_cf else None
+                        has_gcc = hasattr(cf_exists, 'get_cell_color') if cf_exists else False
+                        print(f"[PLOT DEBUG] cell={cell is not None}, has_custom_functions={has_cf}, cf_exists={cf_exists is not None}, has_get_cell_color={has_gcc}")
+                        if cell:
+                            print(f"[PLOT DEBUG] Cell position={cell.state.position}, gene_states={cell.state.gene_states}")
+                        self._plot_debug_count += 1
+
                     if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
                         gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
 
-                        # DEBUG: Log gene states for first few cells
-                        if not hasattr(self, '_plot_debug_count'):
-                            self._plot_debug_count = 0
-                        if self._plot_debug_count < 3:
-                            print(f"[PLOT DEBUG] Cell at ({x},{y}): gene_states={gene_states}")
-                            print(f"   glycoATP={gene_states.get('glycoATP', 'MISSING')}, mitoATP={gene_states.get('mitoATP', 'MISSING')}")
-                            self._plot_debug_count += 1
                         custom_color = population.custom_functions.get_cell_color(
                             cell=cell,
                             gene_states=gene_states,

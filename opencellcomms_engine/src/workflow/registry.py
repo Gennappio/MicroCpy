@@ -130,6 +130,10 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.initialization.setup_maboss
     import src.workflow.functions.intracellular.run_maboss_step
 
+    # Import intracellular functions
+    import src.workflow.functions.intracellular.update_gene_networks
+    import src.workflow.functions.intracellular.update_gene_networks_v2
+
     # Import gene network functions (1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks

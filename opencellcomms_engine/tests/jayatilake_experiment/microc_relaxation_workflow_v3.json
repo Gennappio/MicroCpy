@@ -758,7 +758,8 @@
           "function_name": "setup_population",
           "function_file": "",
           "parameters": {
-            "enable_gene_network": true
+            "enable_gene_network": true,
+            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
           },
           "enabled": true,
           "position": {
@@ -1048,16 +1049,33 @@
           "function_name": "update_gene_networks",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 100
           },
-          "description": "Bridge 1: Read concentrations, set gene inputs, propagate network",
+          "description": "OLD VERSION - DISABLED. Bridge 1: Read concentrations, set gene inputs, propagate network",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
             "param_gene_propagation_steps"
+          ]
+        },
+        {
+          "id": "update_genes_v2",
+          "function_name": "update_gene_networks_v2",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "FIXED V2: Properly propagates gene networks using NetLogo-style updates. Logs mitoATP/glycoATP.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_gene_propagation_steps_v2"
           ]
         }
       ],
@@ -1065,7 +1083,7 @@
       "parameters": [
         {
           "id": "param_gene_propagation_steps",
-          "label": "Propagation Steps",
+          "label": "Propagation Steps (OLD)",
           "parameters": {
             "propagation_steps": 20
           },
@@ -1073,10 +1091,22 @@
             "x": 400,
             "y": 100
           }
+        },
+        {
+          "id": "param_gene_propagation_steps_v2",
+          "label": "Propagation Steps (V2)",
+          "parameters": {
+            "propagation_steps": 500
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
         }
       ],
       "execution_order": [
-        "update_genes"
+        "update_genes",
+        "update_genes_v2"
       ],
       "input_parameters": []
     },

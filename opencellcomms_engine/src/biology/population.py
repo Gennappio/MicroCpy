@@ -247,22 +247,34 @@ class CellPopulation(ICellPopulation):
 
     def _load_custom_functions(self, custom_functions_module):
         """Load custom functions from module"""
+        print(f"[POPULATION DEBUG] _load_custom_functions called with: {custom_functions_module}")
         if custom_functions_module is None:
+            print(f"[POPULATION DEBUG] custom_functions_module is None, returning None")
             return None
 
         try:
             if isinstance(custom_functions_module, str):
                 # Load from file path
+                print(f"[POPULATION DEBUG] Loading from file path: {custom_functions_module}")
                 spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
+                print(f"[POPULATION DEBUG] spec = {spec}")
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
+                    has_gcc = hasattr(module, 'get_cell_color')
+                    print(f"[POPULATION DEBUG] Module loaded successfully! has_get_cell_color={has_gcc}")
                     return module
+                else:
+                    print(f"[POPULATION DEBUG] ERROR: spec or spec.loader is None!")
+                    return None
             else:
                 # Already a module
+                print(f"[POPULATION DEBUG] Already a module: {custom_functions_module}")
                 return custom_functions_module
         except Exception as e:
             print(f"Warning: Could not load custom functions: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def initialize_with_custom_placement(self, simulation_params: Optional[Dict] = None) -> int:
