@@ -683,7 +683,8 @@ class MultiSubstanceSimulator:
                 for x in range(nx):
                     substance_concentrations[(x, y)] = conc_slice[y, x]
 
-            concentrations[name.lower()] = substance_concentrations
+            # Use original name case to match workflow associations (e.g., "Oxygen" not "oxygen")
+            concentrations[name] = substance_concentrations
 
         return concentrations
     
@@ -710,27 +711,4 @@ class MultiSubstanceSimulator:
         
         return stats
 
-    def get_substance_concentrations(self) -> Dict[str, Dict[Tuple[int, int], float]]:
-        """Get substance concentrations at all grid positions"""
-        concentrations = {}
 
-        for name, substance_state in self.state.substances.items():
-            conc_field = {}
-
-            # Handle both 2D and 3D concentration arrays
-            if len(substance_state.concentrations.shape) == 3:
-                # 3D case: take middle slice in Z direction
-                nz = substance_state.concentrations.shape[0]
-                middle_z = nz // 2
-                conc_slice = substance_state.concentrations[middle_z, :, :]
-            else:
-                # 2D case: use as-is
-                conc_slice = substance_state.concentrations
-
-            for i in range(conc_slice.shape[0]):
-                for j in range(conc_slice.shape[1]):
-                    conc_field[(i, j)] = float(conc_slice[i, j])
-
-            concentrations[name] = conc_field
-
-        return concentrations

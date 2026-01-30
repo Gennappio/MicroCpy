@@ -107,8 +107,24 @@ def setup_associations(
         True if successful
     """
     try:
+        # DEBUG: Log what we received
+        print(f"[SETUP_ASSOCIATIONS DEBUG] Received associations parameter: {associations}")
+        print(f"[SETUP_ASSOCIATIONS DEBUG] Type: {type(associations)}")
+        print(f"[SETUP_ASSOCIATIONS DEBUG] kwargs: {kwargs}")
+
         # Parse associations from various formats
         parsed = _parse_associations(associations)
+
+        # If associations is None but kwargs contains substance mappings, use kwargs
+        # This handles the case where dictParameterNode expands entries as individual kwargs
+        if not parsed and kwargs:
+            # Check if kwargs looks like associations (has gene_input keys)
+            for key, value in kwargs.items():
+                if isinstance(value, dict) and 'gene_input' in value:
+                    parsed[key] = value
+            print(f"[SETUP_ASSOCIATIONS DEBUG] Parsed from kwargs: {parsed}")
+
+        print(f"[SETUP_ASSOCIATIONS DEBUG] Final parsed result: {parsed}")
 
         if not parsed:
             print("[WARNING] No associations provided to setup_associations")
@@ -155,6 +171,13 @@ def setup_associations(
             count += 1
 
         print(f"[WORKFLOW] Configured {count} substance-to-gene associations")
+
+        # DEBUG: Verify what's stored in config
+        if config:
+            print(f"[SETUP_ASSOCIATIONS DEBUG] config.associations = {config.associations}")
+            print(f"[SETUP_ASSOCIATIONS DEBUG] config.thresholds keys = {list(config.thresholds.keys()) if config.thresholds else 'None'}")
+            print(f"[SETUP_ASSOCIATIONS DEBUG] config object id = {id(config)}")
+
         return True
 
     except Exception as e:

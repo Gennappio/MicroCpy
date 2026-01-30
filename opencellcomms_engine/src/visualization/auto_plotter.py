@@ -196,6 +196,14 @@ class AutoPlotter:
                     cell = population.get_cell_at_position((x, y))
                     if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
                         gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
+
+                        # DEBUG: Log gene states for first few cells
+                        if not hasattr(self, '_plot_debug_count'):
+                            self._plot_debug_count = 0
+                        if self._plot_debug_count < 3:
+                            print(f"[PLOT DEBUG] Cell at ({x},{y}): gene_states={gene_states}")
+                            print(f"   glycoATP={gene_states.get('glycoATP', 'MISSING')}, mitoATP={gene_states.get('mitoATP', 'MISSING')}")
+                            self._plot_debug_count += 1
                         custom_color = population.custom_functions.get_cell_color(
                             cell=cell,
                             gene_states=gene_states,

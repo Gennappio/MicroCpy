@@ -418,7 +418,7 @@ class CellPopulation(ICellPopulation):
             if 'original_physical_position' in cell_info:
                 updates['original_physical_position'] = cell_info['original_physical_position']
 
-            # Apply gene states if provided (overrides random initialization)
+            # Apply gene states if provided (merges with existing gene states from gene network)
             if 'gene_states' in cell_info and cell_info['gene_states']:
                 # Update the cell's gene network with loaded states
                 gene_network = cell.state.gene_network
@@ -426,7 +426,11 @@ class CellPopulation(ICellPopulation):
                     for gene_name, state in cell_info['gene_states'].items():
                         if gene_name in gene_network.nodes:
                             gene_network.nodes[gene_name].current_state = bool(state)
-                updates['gene_states'] = cell_info['gene_states'].copy()
+                # CRITICAL FIX: Merge CSV gene states INTO existing full gene_states (from gene network)
+                # instead of replacing them entirely with only the 3 genes from CSV
+                merged_gene_states = cell.state.gene_states.copy()
+                merged_gene_states.update(cell_info['gene_states'])
+                updates['gene_states'] = merged_gene_states
 
             # Apply updates if any
             if updates:

@@ -126,7 +126,12 @@ def setup_population(
         # Create gene network
         if enable_gene_network:
             gene_network = BooleanNetwork(config=config)
-            print(f"   [+] Created gene network")
+            print(f"   [+] Created gene network with {len(gene_network.nodes)} nodes")
+            if 'glycoATP' in gene_network.nodes:
+                print(f"   [+] glycoATP node: FOUND")
+            else:
+                print(f"   [!] glycoATP node: NOT FOUND!")
+                print(f"       Available nodes: {list(gene_network.nodes.keys())[:15]}...")
         else:
             gene_network = None
             print(f"   [+] Gene network disabled")

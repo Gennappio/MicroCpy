@@ -16,41 +16,62 @@ from interfaces.base import IGeneNetwork
 
 
 class BooleanExpression:
-    """Evaluates boolean expressions with gene states (matches standalone version)."""
+    """Evaluates boolean expressions with gene states.
+
+    PERFORMANCE: Compiles the expression once into a fast callable function.
+    """
 
     def __init__(self, expression: str):
         self.expression = expression.strip()
+        self._compiled_func = None
+        self._compile()
 
-    def __call__(self, gene_states: Dict[str, bool]) -> bool:
-        """Make callable to match update_function interface."""
-        return self.evaluate(gene_states)
-
-    def evaluate(self, gene_states: Dict[str, bool]) -> bool:
-        """Evaluate the boolean expression given current gene states."""
+    def _compile(self):
+        """Compile the expression into a fast callable function."""
         if not self.expression:
-            return False
+            self._compiled_func = lambda states: False
+            return
 
-        # Replace gene names with their boolean values
+        # Extract variable names from expression
+        variables = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', self.expression)
+        boolean_ops = {'and', 'or', 'not', 'AND', 'OR', 'NOT', 'True', 'False', 'true', 'false'}
+        input_vars = list(set(v for v in variables if v not in boolean_ops))
+
+        # Convert expression to Python syntax
         expr = self.expression
-
-        # Sort gene names by length (longest first) to avoid partial replacements
-        gene_names = sorted(gene_states.keys(), key=len, reverse=True)
-
-        for gene_name in gene_names:
-            if gene_name in expr:
-                value = "True" if gene_states[gene_name] else "False"
-                # Use word boundaries to avoid partial replacements
-                expr = re.sub(r'\b' + re.escape(gene_name) + r'\b', value, expr)
-
-        # Replace logical operators
         expr = expr.replace('&', ' and ')
         expr = expr.replace('|', ' or ')
         expr = expr.replace('!', ' not ')
 
+        # Build code that extracts variables from states dict
+        if input_vars:
+            var_assignments = '\n    '.join(
+                f'{var} = states.get("{var}", False)' for var in input_vars
+            )
+        else:
+            var_assignments = 'pass'
+
+        func_code = f'''
+def _eval_expr(states):
+    {var_assignments}
+    return bool({expr})
+'''
+
         try:
-            return bool(eval(expr))
-        except:
-            return False
+            local_ns = {}
+            exec(func_code, {}, local_ns)
+            self._compiled_func = local_ns['_eval_expr']
+        except Exception:
+            # Fallback to always False if compilation fails
+            self._compiled_func = lambda states: False
+
+    def __call__(self, gene_states: Dict[str, bool]) -> bool:
+        """Make callable to match update_function interface."""
+        return self._compiled_func(gene_states)
+
+    def evaluate(self, gene_states: Dict[str, bool]) -> bool:
+        """Evaluate the boolean expression given current gene states."""
+        return self._compiled_func(gene_states)
 
 @dataclass
 class NetworkNode:
@@ -144,19 +165,39 @@ class BooleanNetwork(IGeneNetwork):
                 # Extract input nodes from expression
                 inputs = self._extract_inputs_from_expression(expression)
 
-                # Create update function from expression
-                update_func = self._create_update_function(expression)
-
-                # Create node
-                self.nodes[node_name] = NetworkNode(
-                    name=node_name,
-                    update_function=update_func,
-                    inputs=inputs
+                # Check if this is a self-referential input node
+                # Input nodes in MaBoSS format have logic like "(Oxygen_supply)"
+                # where the node only references itself
+                is_self_referential = (
+                    len(inputs) == 1 and
+                    inputs[0] == node_name and
+                    expression.strip('() ') == node_name
                 )
-                nodes_created += 1
 
-                # Track input nodes referenced in expressions
-                input_nodes_found.update(inputs)
+                if is_self_referential:
+                    # This is an input node - it maintains its externally set state
+                    self.nodes[node_name] = NetworkNode(
+                        name=node_name,
+                        update_function=None,  # No update function - keeps external state
+                        inputs=[],
+                        is_input=True
+                    )
+                    nodes_created += 1
+                    input_nodes_found.add(node_name)
+                else:
+                    # Regular node with update logic
+                    update_func = self._create_update_function(expression)
+
+                    # Create node
+                    self.nodes[node_name] = NetworkNode(
+                        name=node_name,
+                        update_function=update_func,
+                        inputs=inputs
+                    )
+                    nodes_created += 1
+
+                    # Track input nodes referenced in expressions
+                    input_nodes_found.update(inputs)
             else:
                 # Check if this is an input node (has rate_up = 0; rate_down = 0;)
                 if 'rate_up = 0;' in node_content and 'rate_down = 0;' in node_content:
@@ -376,11 +417,53 @@ class BooleanNetwork(IGeneNetwork):
                 # Randomize all other nodes (identical to gene_simulator.py)
                 node.current_state = random.choice([True, False])
 
-    def step(self, num_steps: int = 1) -> Dict[str, bool]:
-        """Run network for specified steps"""
-        # Use default implementation (no custom gene network functions)
-        return self._default_step(num_steps)
-    
+    def step(self, num_steps: int = 1, mode: str = "synchronous") -> Dict[str, bool]:
+        """Run network for specified steps.
+
+        Args:
+            num_steps: Number of update steps to run
+            mode: Update mode - "synchronous" (all genes update together) or "netlogo" (random single gene per step)
+
+        Returns:
+            Dictionary of all gene states
+        """
+        if mode == "synchronous":
+            return self._synchronous_step(num_steps)
+        else:
+            return self._default_step(num_steps)
+
+    def _synchronous_step(self, num_steps: int = 1) -> Dict[str, bool]:
+        """Synchronous gene network update: ALL genes update simultaneously each step.
+
+        This is much faster for propagating signals through long chains like glycolysis.
+        Each step, all non-input genes evaluate their rules based on the PREVIOUS state
+        and update simultaneously.
+        """
+        # Cache the list of updatable genes (only computed once)
+        if not hasattr(self, '_cached_updatable_genes'):
+            self._cached_updatable_genes = [name for name, gene_node in self.nodes.items()
+                                          if not gene_node.is_input and gene_node.update_function]
+
+        if not self._cached_updatable_genes:
+            return self.get_all_states()
+
+        for step in range(num_steps):
+            # Get ALL current states BEFORE any updates (synchronous semantics)
+            current_states = {name: node.current_state for name, node in self.nodes.items()}
+
+            # Evaluate ALL genes based on previous state, then update
+            new_states = {}
+            for gene_name in self._cached_updatable_genes:
+                gene_node = self.nodes[gene_name]
+                if gene_node.update_function:
+                    new_states[gene_name] = gene_node.update_function(current_states)
+
+            # Apply all updates simultaneously
+            for gene_name, new_state in new_states.items():
+                self.nodes[gene_name].current_state = new_state
+
+        return self.get_all_states()
+
     def _default_step(self, num_steps: int = 1) -> Dict[str, bool]:
         """NetLogo-style gene network update: single gene per step"""
         for step in range(num_steps):
@@ -479,11 +562,17 @@ class BooleanNetwork(IGeneNetwork):
         }
     
     def copy(self):
-        """Create a deep copy of this gene network for use by individual cells"""
-        import copy
+        """Create a deep copy of this gene network for use by individual cells.
 
-        # Create new instance with same config
-        new_network = BooleanNetwork(config=self.config)
+        IMPORTANT: We bypass __init__ to avoid reloading the BND file from disk.
+        This is critical for performance when copying networks for many cells.
+        """
+        # Create new instance WITHOUT calling __init__ (avoids BND file reload)
+        new_network = object.__new__(BooleanNetwork)
+
+        # Initialize basic attributes
+        new_network.config = self.config
+        new_network.fixed_nodes = self.fixed_nodes.copy()
 
         # Deep copy all nodes
         new_network.nodes = {}
@@ -502,7 +591,6 @@ class BooleanNetwork(IGeneNetwork):
         # Copy other attributes
         new_network.input_nodes = self.input_nodes.copy()
         new_network.output_nodes = self.output_nodes.copy()
-        new_network.fixed_nodes = self.fixed_nodes.copy()
 
         return new_network
 

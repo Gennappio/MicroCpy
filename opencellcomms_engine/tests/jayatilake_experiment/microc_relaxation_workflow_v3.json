@@ -620,6 +620,7 @@
           "id": "param_associations_dict",
           "type": "dictParameterNode",
           "label": "Associations (Dict)",
+          "targetParam": "associations",
           "entries": [
             {
               "key": "Oxygen",
@@ -634,7 +635,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "Glucose_supply",
-                "threshold": 4
+                "threshold": 0.05
               }
             },
             {
@@ -724,7 +725,7 @@
           "id": "param_propagation_steps",
           "label": "Propagation Steps",
           "parameters": {
-            "propagation_steps": 500
+            "propagation_steps": 20
           },
           "position": {
             "x": 600,
@@ -1066,7 +1067,7 @@
           "id": "param_gene_propagation_steps",
           "label": "Propagation Steps",
           "parameters": {
-            "propagation_steps": 500
+            "propagation_steps": 20
           },
           "position": {
             "x": 400,

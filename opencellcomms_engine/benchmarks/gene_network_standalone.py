@@ -97,31 +97,37 @@ class StandaloneGeneNetwork:
         with open(bnd_file, 'r') as f:
             content = f.read()
         
-        # Parse nodes
-        node_pattern = r'node\s+(\w+)\s*\{([^}]+)\}'
+        # Parse nodes (case-insensitive to handle both 'node' and 'Node')
+        node_pattern = r'[Nn]ode\s+(\w+)\s*\{([^}]+)\}'
         nodes_created = 0
-        
+
         for match in re.finditer(node_pattern, content, re.MULTILINE | re.DOTALL):
             node_name = match.group(1)
             node_content = match.group(2)
-            
+
             # Check if it's an input node (rate_up = 0; rate_down = 0;)
             is_input = ('rate_up = 0' in node_content and 'rate_down = 0' in node_content)
-            
+
             # Extract logic rule
             logic_match = re.search(r'logic\s*=\s*([^;]+);', node_content)
             logic_rule = logic_match.group(1).strip() if logic_match else ""
-            
+
+            # Check for self-referential logic (input node in MaBoSS format)
+            # e.g., "logic = (Oxygen_supply);" where node references only itself
+            if logic_rule.strip('() ') == node_name:
+                is_input = True
+                logic_rule = ""  # Clear logic for input nodes
+
             # Create node
             self.nodes[node_name] = NetworkNode(
                 name=node_name,
                 logic_rule=logic_rule,
                 is_input=is_input
             )
-            
+
             if is_input:
                 self.input_nodes.add(node_name)
-            
+
             nodes_created += 1
         
         print(f"Created {nodes_created} nodes ({len(self.input_nodes)} input nodes)")
