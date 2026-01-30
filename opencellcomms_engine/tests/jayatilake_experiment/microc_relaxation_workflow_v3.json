@@ -1104,12 +1104,11 @@
             "x": 200,
             "y": 100
           },
-          "description": "Mark cells as necrotic based on oxygen/glucose thresholds",
+          "description": "Mark cells as necrotic based on user-defined conditions",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
-            "param_oxygen_threshold",
-            "param_glucose_threshold"
+            "param_necrosis_params"
           ]
         },
         {
@@ -1178,24 +1177,29 @@
       "subworkflow_calls": [],
       "parameters": [
         {
-          "id": "param_oxygen_threshold",
-          "label": "Oxygen Threshold",
-          "parameters": {
-            "oxygen_threshold": 0.022
-          },
+          "id": "param_necrosis_params",
+          "type": "dictParameterNode",
+          "label": "Necrosis Parameters",
+          "targetParam": "necrosis_params",
+          "entries": [
+            {
+              "key": "oxygen_threshold",
+              "valueType": "float",
+              "value": 0.011
+            },
+            {
+              "key": "glucose_threshold",
+              "valueType": "float",
+              "value": 0.39
+            },
+            {
+              "key": "require_both",
+              "valueType": "bool",
+              "value": true
+            }
+          ],
           "position": {
             "x": 400,
-            "y": 100
-          }
-        },
-        {
-          "id": "param_glucose_threshold",
-          "label": "Glucose Threshold",
-          "parameters": {
-            "glucose_threshold": 0.23
-          },
-          "position": {
-            "x": 550,
             "y": 100
           }
         },

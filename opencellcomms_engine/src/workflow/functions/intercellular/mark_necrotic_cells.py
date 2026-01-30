@@ -1,8 +1,8 @@
 """
-Mark cells as necrotic based on oxygen and glucose thresholds.
+Mark cells as necrotic based on user-defined conditions.
 
-This function checks each cell's local oxygen and glucose concentrations
-and marks cells as Necrotic if BOTH are below the specified thresholds.
+This function checks each cell's local environment and marks cells as Necrotic
+based on conditions specified in a generic parameters dictionary.
 
 Necrotic cells remain in the population but do nothing (no metabolism,
 no gene network updates, no phenotype changes).
@@ -10,6 +10,26 @@ no gene network updates, no phenotype changes).
 ================================================================================
 ARCHITECTURE: Context-Based Function Pattern
 See run_diffusion_solver.py for full documentation.
+
+USAGE:
+The 'necrosis_params' dictionary can contain any parameters the user needs.
+Example configurations:
+
+1. Threshold-based (default):
+   {
+       "mode": "threshold",
+       "oxygen_threshold": 0.022,
+       "glucose_threshold": 0.23,
+       "require_both": true
+   }
+
+2. Custom logic (user can extend):
+   {
+       "mode": "custom",
+       "substance": "Oxygen",
+       "threshold": 0.01,
+       "comparison": "less_than"
+   }
 ================================================================================
 """
 
@@ -19,20 +39,18 @@ from src.workflow.decorators import register_function
 
 @register_function(
     display_name="Mark Necrotic Cells",
-    description="Mark cells as necrotic based on oxygen and glucose thresholds",
+    description="Mark cells as necrotic based on user-defined conditions in necrosis_params",
     category="INTERCELLULAR",
     parameters=[
         {
-            "name": "oxygen_threshold",
-            "type": "FLOAT",
-            "description": "Oxygen threshold for necrosis (cells below this are marked)",
-            "default": 0.022
-        },
-        {
-            "name": "glucose_threshold",
-            "type": "FLOAT",
-            "description": "Glucose threshold for necrosis (cells below this are marked)",
-            "default": 0.23
+            "name": "necrosis_params",
+            "type": "DICT",
+            "description": "Dictionary of necrosis parameters (e.g., thresholds, mode, conditions)",
+            "default": {
+                "oxygen_threshold": 0.022,
+                "glucose_threshold": 0.23,
+                "require_both": True
+            }
         },
     ],
     inputs=["context"],
@@ -41,30 +59,42 @@ from src.workflow.decorators import register_function
 )
 def mark_necrotic_cells(
     context: Dict[str, Any],
-    oxygen_threshold: float = 0.022,
-    glucose_threshold: float = 0.23,
+    necrosis_params: Dict[str, Any] = None,
     **kwargs
 ) -> None:
     """
-    Mark cells as necrotic based on oxygen and glucose thresholds.
+    Mark cells as necrotic based on user-defined conditions.
 
     For each cell:
-    1. Get local oxygen and glucose concentrations
-    2. If BOTH are below thresholds, mark cell as Necrotic
-    3. Necrotic cells stay in population but are inactive
+    1. Get local environment concentrations
+    2. Evaluate conditions from necrosis_params
+    3. If conditions are met, mark cell as Necrotic
+    4. Necrotic cells stay in population but are inactive
 
     Args:
         context: Workflow execution context containing:
             - population: Cell population (REQUIRED)
             - simulator: Diffusion simulator (REQUIRED for concentrations)
             - config: Configuration object
-        oxygen_threshold: Oxygen threshold for necrosis marking
-        glucose_threshold: Glucose threshold for necrosis marking
+        necrosis_params: Dictionary of parameters for necrosis marking.
+            Default keys:
+            - oxygen_threshold (float): Oxygen threshold (default 0.022)
+            - glucose_threshold (float): Glucose threshold (default 0.23)
+            - require_both (bool): If True, both must be below threshold (default True)
+            User can add any custom keys for their own logic.
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
+    # Set defaults if necrosis_params is None
+    if necrosis_params is None:
+        necrosis_params = {}
+
+    # Extract parameters with defaults
+    oxygen_threshold = necrosis_params.get('oxygen_threshold', 0.022)
+    glucose_threshold = necrosis_params.get('glucose_threshold', 0.23)
+    require_both = necrosis_params.get('require_both', True)
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
@@ -113,8 +143,18 @@ def mark_necrotic_cells(
         local_oxygen = local_env.get('Oxygen', local_env.get('oxygen', 0.0))
         local_glucose = local_env.get('Glucose', local_env.get('glucose', 0.0))
 
-        # Check if BOTH are below thresholds
-        if local_oxygen < oxygen_threshold and local_glucose < glucose_threshold:
+        # Check thresholds based on require_both setting
+        oxygen_below = local_oxygen < oxygen_threshold
+        glucose_below = local_glucose < glucose_threshold
+
+        if require_both:
+            # Both must be below thresholds
+            should_mark = oxygen_below and glucose_below
+        else:
+            # Either one below threshold triggers necrosis
+            should_mark = oxygen_below or glucose_below
+
+        if should_mark:
             # Mark as necrotic
             cell.state = cell.state.with_updates(phenotype='Necrosis')
             newly_necrotic += 1
@@ -125,9 +165,10 @@ def mark_necrotic_cells(
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
+    condition_str = "AND" if require_both else "OR"
     if newly_necrotic > 0:
         print(f"[NECROSIS] Marked {newly_necrotic} cells as necrotic "
-              f"(O2 < {oxygen_threshold}, Glc < {glucose_threshold}). "
+              f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold}). "
               f"Already necrotic: {already_necrotic}")
 
     # Store changes in context for GUI display
@@ -135,8 +176,7 @@ def mark_necrotic_cells(
     context['changes']['necrosis'] = {
         'newly_marked': newly_necrotic,
         'already_necrotic': already_necrotic,
-        'oxygen_threshold': oxygen_threshold,
-        'glucose_threshold': glucose_threshold
+        'params': necrosis_params
     }
 
 
