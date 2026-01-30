@@ -33,7 +33,11 @@ from src.workflow.functions.intracellular import (
     update_metabolism,
     update_gene_networks,
 )
-from src.workflow.functions.diffusion import run_diffusion_solver
+from src.workflow.functions.diffusion import (
+    run_diffusion_solver,
+    run_diffusion_solver_clamped,
+    run_diffusion_solver_coupled,
+)
 from src.workflow.functions.intercellular import (
     update_cell_division,
     update_cell_migration,

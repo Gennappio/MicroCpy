@@ -13,6 +13,8 @@ from .intracellular.update_gene_networks import update_gene_networks
 
 # Import granular diffusion functions
 from .diffusion.run_diffusion_solver import run_diffusion_solver
+from .diffusion.run_diffusion_solver_clamped import run_diffusion_solver_clamped
+from .diffusion.run_diffusion_solver_coupled import run_diffusion_solver_coupled
 
 # Import granular intercellular functions
 from .intercellular.update_cell_division import update_cell_division
@@ -36,6 +38,8 @@ __all__ = [
     'update_gene_networks',
     # Diffusion
     'run_diffusion_solver',
+    'run_diffusion_solver_clamped',
+    'run_diffusion_solver_coupled',
     # Intercellular
     'update_cell_division',
     'update_cell_migration',
