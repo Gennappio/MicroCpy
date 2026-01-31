@@ -209,6 +209,11 @@ def run_diffusion_solver(
         print(f"[run_diffusion_solver] Solver failed: {e}")
         raise
 
+    # Log population count at end
+    if population is not None:
+        final_count = len(population.state.cells)
+        print(f"[DIFFUSION-END] Population count: {final_count} cells")
+
 
 def _collect_substance_definitions(kwargs: Dict[str, Any], context: Dict[str, Any]) -> list:
     """

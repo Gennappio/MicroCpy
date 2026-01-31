@@ -102,6 +102,10 @@ def mark_proliferating_cells(
         print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
               f"Quiescent: {quiescent_count}, Skipped (inactive): {skipped_count}")
 
+    # Log population count at end
+    final_count = len(population.state.cells)
+    print(f"[PROLIFERATING-END] Population count: {final_count} cells")
+
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
     context['changes']['proliferation'] = {

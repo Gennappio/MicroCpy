@@ -155,8 +155,14 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config):
         new_cells[new_cell_id] = daughter_cell
 
     # Update population with new and updated cells
+    initial_count = len(population.state.cells)
     all_cells = {**population.state.cells, **updated_cells, **new_cells}
     population.state = population.state.with_updates(cells=all_cells)
+    final_count = len(all_cells)
+
+    # Log cell count change
+    if final_count != initial_count:
+        print(f"[DIVISION] Cell count: {initial_count} -> {final_count} (added {len(new_cells)} daughter cells)")
 
 
 def _find_daughter_position(parent_position, cell_radius: float):

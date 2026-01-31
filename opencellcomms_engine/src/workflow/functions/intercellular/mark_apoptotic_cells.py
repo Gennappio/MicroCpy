@@ -61,8 +61,10 @@ def mark_apoptotic_cells(
     # =========================================================================
     # REMOVE APOPTOTIC CELLS
     # =========================================================================
+    initial_count = len(population.state.cells)
     updated_cells = {}
     removed_count = 0
+    removed_cell_ids = []
 
     for cell_id, cell in population.state.cells.items():
         # Check gene network state for Apoptosis
@@ -70,6 +72,8 @@ def mark_apoptotic_cells(
         if gene_states.get('Apoptosis', False):
             # Remove apoptotic cell (don't add to updated_cells)
             removed_count += 1
+            removed_cell_ids.append(cell_id[:8])  # Store short ID for logging
+            print(f"  [APOPTOSIS-DEATH] Removing cell {cell_id[:8]} at {cell.state.position} (Apoptosis gene ON)")
             continue
 
         # Keep non-apoptotic cells
@@ -79,10 +83,10 @@ def mark_apoptotic_cells(
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
+    final_count = len(updated_cells)
+    print(f"[APOPTOSIS] Cell count: {initial_count} -> {final_count} (removed {removed_count})")
     if removed_count > 0:
-        remaining = len(updated_cells)
-        print(f"[APOPTOSIS] Removed {removed_count} apoptotic cells "
-              f"(Apoptosis gene ON). Remaining: {remaining}")
+        print(f"[APOPTOSIS] Removed cells: {', '.join(removed_cell_ids)}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})

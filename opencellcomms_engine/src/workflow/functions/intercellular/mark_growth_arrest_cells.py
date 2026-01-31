@@ -119,6 +119,10 @@ def mark_growth_arrest_cells(
               f"Expired (>={max_growth_arrest_steps} steps): {cells_expired}, "
               f"Exited: {cells_exited}")
 
+    # Log population count at end
+    final_count = len(population.state.cells)
+    print(f"[GROWTH-ARREST-END] Population count: {final_count} cells")
+
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
     context['changes']['growth_arrest'] = {

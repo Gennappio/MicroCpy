@@ -125,6 +125,7 @@ def mark_necrotic_cells(
     # =========================================================================
     # MARK NECROTIC CELLS
     # =========================================================================
+    initial_count = len(population.state.cells)
     updated_cells = {}
     newly_necrotic = 0
     already_necrotic = 0
@@ -165,11 +166,12 @@ def mark_necrotic_cells(
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
+    final_count = len(updated_cells)
     condition_str = "AND" if require_both else "OR"
+    print(f"[NECROSIS] Cell count: {initial_count} -> {final_count} (marked {newly_necrotic}, already {already_necrotic})")
     if newly_necrotic > 0:
         print(f"[NECROSIS] Marked {newly_necrotic} cells as necrotic "
-              f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold}). "
-              f"Already necrotic: {already_necrotic}")
+              f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold})")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
