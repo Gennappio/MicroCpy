@@ -71,6 +71,27 @@ DEBUG_COUPLED_SOLVER = True
             "default": 0.7,
             "min_value": 0.1,
             "max_value": 1.0
+        },
+        {
+            "name": "oxygen_conversion_factor",
+            "type": "FLOAT",
+            "description": "Oxygen consumption conversion factor (multiplier)",
+            "default": 0.5,
+            "min_value": 0.0
+        },
+        {
+            "name": "glucose_conversion_factor",
+            "type": "FLOAT",
+            "description": "Glucose consumption conversion factor (multiplier)",
+            "default": 100000.0,
+            "min_value": 0.0
+        },
+        {
+            "name": "lactate_conversion_factor",
+            "type": "FLOAT",
+            "description": "Lactate production conversion factor (multiplier)",
+            "default": 5.0,
+            "min_value": 0.0
         }
     ],
     inputs=["context"],
@@ -85,6 +106,9 @@ def run_diffusion_solver_coupled(
     max_coupling_iterations: int = 10,
     coupling_tolerance: float = 1e-4,
     relaxation_factor: float = 0.7,
+    oxygen_conversion_factor: float = 0.5,
+    glucose_conversion_factor: float = 100000.0,
+    lactate_conversion_factor: float = 5.0,
     **kwargs
 ) -> None:
     """
@@ -105,6 +129,9 @@ def run_diffusion_solver_coupled(
         max_coupling_iterations: Maximum Picard coupling iterations
         coupling_tolerance: Convergence tolerance for coupling
         relaxation_factor: Under-relaxation factor (0 < α ≤ 1)
+        oxygen_conversion_factor: Multiplier for oxygen consumption rates
+        glucose_conversion_factor: Multiplier for glucose consumption rates
+        lactate_conversion_factor: Multiplier for lactate production rates
         **kwargs: Additional parameters
 
     Returns:
@@ -142,7 +169,8 @@ def run_diffusion_solver_coupled(
         old_concentrations = _get_concentration_snapshot(simulator)
 
         # Step 2: Recalculate metabolism based on current concentrations
-        _recalculate_metabolism(context, simulator, population, config)
+        _recalculate_metabolism(context, simulator, population, config,
+                                oxygen_conversion_factor, glucose_conversion_factor, lactate_conversion_factor)
 
         # Step 3: Collect reaction terms and solve diffusion
         position_reactions = _collect_reactions_from_cells(population, simulator)
@@ -175,8 +203,16 @@ def run_diffusion_solver_coupled(
     # Final check for any remaining negative values (safety clamp)
     _clamp_negative_concentrations(simulator)
 
+    # Log population count at end
+    if population is not None:
+        final_count = len(population.state.cells)
+        print(f"[COUPLED-END] Population count: {final_count} cells")
 
-def _recalculate_metabolism(context: Dict[str, Any], simulator, population, config) -> None:
+
+def _recalculate_metabolism(context: Dict[str, Any], simulator, population, config,
+                           oxygen_conversion_factor: float = 0.5,
+                           glucose_conversion_factor: float = 100000.0,
+                           lactate_conversion_factor: float = 5.0) -> None:
     """
     Recalculate cell metabolism based on current concentrations.
 
@@ -184,6 +220,15 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     using the current (possibly updated) concentration field, so that
     Michaelis-Menten kinetics can naturally reduce consumption as concentrations
     approach zero.
+
+    Args:
+        context: Workflow execution context
+        simulator: Diffusion simulator
+        population: Cell population
+        config: Configuration object
+        oxygen_conversion_factor: Multiplier for oxygen consumption
+        glucose_conversion_factor: Multiplier for glucose consumption
+        lactate_conversion_factor: Multiplier for lactate production
     """
     # Get current concentrations from simulator
     try:
@@ -235,6 +280,9 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     debug_cells_with_zero_oxygen = 0
     debug_first_cell_logged = False
 
+    # CRITICAL: Collect updated cells to write back to population
+    updated_cells = {}
+
     # Update metabolism for each cell
     for cell_id, cell in population.state.cells.items():
         # Skip inactive cells
@@ -242,6 +290,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         # Handle both string phenotypes and Phenotype objects with .name attribute
         phenotype_name = phenotype.name if hasattr(phenotype, 'name') else str(phenotype) if phenotype else None
         if phenotype_name in ['Necrosis', 'Growth_Arrest']:
+            updated_cells[cell_id] = cell
             continue
 
         debug_cells_processed += 1
@@ -309,32 +358,41 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         debug_total_oxygen_consumption += oxygen_consumption
         debug_max_oxygen_consumption = max(debug_max_oxygen_consumption, oxygen_consumption)
 
+        # DEBUG: Track glucose consumption for first few cells
+        if DEBUG_COUPLED_SOLVER and debug_cells_processed < 5:
+            print(f"[GLUCOSE DEBUG] Cell {debug_cells_processed}: glucose_consumption={glucose_consumption:.2e}, glucose_mm={glucose_mm:.4f}, local_glucose={local_glucose:.4f}")
+
         # Update cell's metabolic state
         new_metabolic_state = {
-            'oxygen_consumption': oxygen_consumption,
-            'glucose_consumption': glucose_consumption*15,
-            'lactate_production': lactate_production*5,
+            'oxygen_consumption': oxygen_consumption*oxygen_conversion_factor,
+            'glucose_consumption': glucose_consumption*glucose_conversion_factor,
+            'lactate_production': lactate_production*lactate_conversion_factor,
             'lactate_consumption': lactate_consumption,
-            'Oxygen_consumption': oxygen_consumption,
-            'Glucose_consumption': glucose_consumption,
-            'Lactate_production': lactate_production,
-            'Lactate_consumption': lactate_consumption,
         }
 
         # Update cell state
         cell.state = cell.state.with_updates(metabolic_state=new_metabolic_state)
 
+        # CRITICAL: Store updated cell to write back to population
+        updated_cells[cell_id] = cell
+
+    # CRITICAL: Update population state with modified cells
+    population.state = population.state.with_updates(cells=updated_cells)
+
     # Print metabolism debug summary
     if DEBUG_COUPLED_SOLVER:
         avg_local_oxygen = debug_total_local_oxygen / debug_cells_processed if debug_cells_processed > 0 else 0
+        total_glucose_consumption = sum([c.state.metabolic_state.get('glucose_consumption', 0.0) for c in population.state.cells.values()])
         print(f"[METABOLISM] Cells processed: {debug_cells_processed}")
         print(f"[METABOLISM] Cells with mitoATP=True: {debug_cells_with_mito}")
         print(f"[METABOLISM] Cells with glycoATP=True: {debug_cells_with_glyco}")
         print(f"[METABOLISM] Cells with zero local oxygen: {debug_cells_with_zero_oxygen}")
         print(f"[METABOLISM] Avg local oxygen: {avg_local_oxygen:.6f} mM")
         print(f"[METABOLISM] vmax_oxygen: {vmax_oxygen:.2e}, km_oxygen: {km_oxygen:.4f}")
+        print(f"[METABOLISM] vmax_glucose: {vmax_glucose:.2e}, km_glucose: {km_glucose:.4f}")
         print(f"[METABOLISM] Total oxygen consumption: {debug_total_oxygen_consumption:.2e} mol/s")
         print(f"[METABOLISM] Max oxygen consumption (single cell): {debug_max_oxygen_consumption:.2e} mol/s")
+        print(f"[METABOLISM] Total glucose consumption: {total_glucose_consumption:.2e} mol/s")
 
 
 def _collect_reactions_from_cells(population, simulator) -> Dict[Tuple[float, float], Dict[str, float]]:
