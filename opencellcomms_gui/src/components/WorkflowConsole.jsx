@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowConsole.css';
 
@@ -7,28 +7,32 @@ const API_BASE_URL = 'http://localhost:5001/api';
 
 /**
  * WorkflowConsole - Per-workflow console with integrated Run/Stop button
+ * Logs are buffered and only displayed on refresh to reduce UI clutter during simulation runs.
  */
 const WorkflowConsole = ({ workflowName }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Buffered logs: logs received from SSE but not yet displayed
+  const [bufferedLogs, setBufferedLogs] = useState([]);
+  // Displayed logs: logs currently shown in the UI
+  const [displayedLogs, setDisplayedLogs] = useState([]);
+
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
   const badgePollingRef = useRef(null);
 
-  // Use store for persistent logs per workflow
-  const logs = useWorkflowStore((state) => state.workflowLogs[workflowName] || []);
-  const addLog = useWorkflowStore((state) => state.addWorkflowLog);
+  // Use store for persistent logs per workflow (keeping for compatibility)
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
   const fetchAllBadgeStats = useWorkflowStore((state) => state.fetchAllBadgeStats);
   const clearObservabilityState = useWorkflowStore((state) => state.clearObservabilityState);
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll to bottom when displayed logs change (after refresh)
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
+  }, [displayedLogs]);
 
   // Poll for badge stats while running
   useEffect(() => {
@@ -63,26 +67,39 @@ const WorkflowConsole = ({ workflowName }) => {
     };
   }, []);
 
+  // Add a log to the buffer (not displayed immediately)
+  const addToBuffer = (type, message) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setBufferedLogs(prev => [...prev, { type, message, timestamp }]);
+  };
+
+  // Refresh: move buffered logs to displayed logs
+  const handleRefresh = () => {
+    setDisplayedLogs(prev => [...prev, ...bufferedLogs]);
+    setBufferedLogs([]);
+  };
+
   const connectToLogStream = () => {
     try {
       const eventSource = new EventSource(`${API_BASE_URL}/logs`);
-      
+
       eventSource.onopen = () => {
         setIsConnected(true);
       };
-      
+
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           if (data.type === 'heartbeat' || data.type === 'connected') {
             return;
           }
-          
+
           if (data.message) {
-            addLog(workflowName, data.type, data.message);
+            // Buffer the log instead of displaying immediately
+            addToBuffer(data.type, data.message);
           }
-          
+
           // Check for completion - fetch final badge stats
           if (data.type === 'complete' || data.type === 'error') {
             setIsRunning(false);
@@ -95,12 +112,12 @@ const WorkflowConsole = ({ workflowName }) => {
           console.error('[SSE] Failed to parse message:', err);
         }
       };
-      
+
       eventSource.onerror = (err) => {
         console.error('[SSE] Connection error:', err);
         setIsConnected(false);
         eventSource.close();
-        
+
         // Attempt to reconnect after 5 seconds
         setTimeout(() => {
           if (!eventSourceRef.current) {
@@ -108,7 +125,7 @@ const WorkflowConsole = ({ workflowName }) => {
           }
         }, 5000);
       };
-      
+
       eventSourceRef.current = eventSource;
     } catch (err) {
       console.error('[SSE] Failed to connect:', err);
@@ -128,7 +145,10 @@ const WorkflowConsole = ({ workflowName }) => {
     if (isRunning) return;
 
     setError(null);
-    clearLogs(workflowName);
+    // Clear both displayed and buffered logs
+    setDisplayedLogs([]);
+    setBufferedLogs([]);
+    clearLogs(workflowName);  // Also clear store for compatibility
     clearObservabilityState();  // Clear previous run's observability data
 
     try {
@@ -142,7 +162,9 @@ const WorkflowConsole = ({ workflowName }) => {
         throw new Error(`Subworkflow '${workflowName}' not found`);
       }
 
-      addLog(workflowName, 'info', `🚀 Running workflow from entry point: ${workflowName}`);
+      // Add to displayed logs immediately (not buffered) for user feedback
+      const timestamp = new Date().toLocaleTimeString();
+      setDisplayedLogs([{ type: 'info', message: `🚀 Running workflow from entry point: ${workflowName}`, timestamp }]);
 
       const response = await fetch(`${API_BASE_URL}/run`, {
         method: 'POST',
@@ -161,33 +183,34 @@ const WorkflowConsole = ({ workflowName }) => {
       }
 
       setIsRunning(true);
-      addLog(workflowName, 'info', `✓ Workflow execution started`);
+      setDisplayedLogs(prev => [...prev, { type: 'info', message: `✓ Workflow execution started`, timestamp: new Date().toLocaleTimeString() }]);
 
     } catch (err) {
       setError(err.message);
-      addLog(workflowName, 'error', `❌ Failed to start: ${err.message}`);
+      setDisplayedLogs(prev => [...prev, { type: 'error', message: `❌ Failed to start: ${err.message}`, timestamp: new Date().toLocaleTimeString() }]);
     }
   };
 
   const handleStop = async () => {
     if (!isRunning) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/stop`, {
         method: 'POST',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to stop workflow');
       }
-      
+
       setIsRunning(false);
-      addLog(workflowName, 'warning', '⏹️ Workflow stopped by user');
-      
+      // Add stop message to displayed logs immediately
+      setDisplayedLogs(prev => [...prev, { type: 'warning', message: '⏹️ Workflow stopped by user', timestamp: new Date().toLocaleTimeString() }]);
+
     } catch (err) {
       setError(err.message);
-      addLog(workflowName, 'error', `❌ Failed to stop: ${err.message}`);
+      setDisplayedLogs(prev => [...prev, { type: 'error', message: `❌ Failed to stop: ${err.message}`, timestamp: new Date().toLocaleTimeString() }]);
     }
   };
 
@@ -206,7 +229,7 @@ const WorkflowConsole = ({ workflowName }) => {
 
   return (
     <div className="workflow-console">
-      {/* Console Header with Run/Stop Button */}
+      {/* Console Header with Run/Stop/Refresh Buttons */}
       <div className="console-header">
         <div className="console-title">
           <Terminal size={16} />
@@ -216,6 +239,20 @@ const WorkflowConsole = ({ workflowName }) => {
         </div>
 
         <div className="console-controls">
+          {/* Refresh Button with pending count badge */}
+          <button
+            className="btn-refresh-console"
+            onClick={handleRefresh}
+            disabled={bufferedLogs.length === 0}
+            title={bufferedLogs.length > 0 ? `Refresh (${bufferedLogs.length} new logs)` : 'No new logs'}
+          >
+            <RefreshCw size={14} />
+            Refresh
+            {bufferedLogs.length > 0 && (
+              <span className="pending-badge">{bufferedLogs.length}</span>
+            )}
+          </button>
+
           {!isRunning ? (
             <button
               className="btn-run-console"
@@ -235,16 +272,19 @@ const WorkflowConsole = ({ workflowName }) => {
         </div>
       </div>
 
-      {/* Logs Display */}
+      {/* Logs Display - shows only displayedLogs, not real-time */}
       <div className="console-logs">
-        {logs.length === 0 ? (
+        {displayedLogs.length === 0 ? (
           <div className="console-empty">
             <Terminal size={32} opacity={0.3} />
             <p>No logs yet</p>
+            {bufferedLogs.length > 0 && (
+              <p className="buffer-hint">{bufferedLogs.length} logs pending - click Refresh to view</p>
+            )}
           </div>
         ) : (
           <div className="console-content">
-            {logs.map((log, index) => (
+            {displayedLogs.map((log, index) => (
               <div key={index} className={`console-log log-${log.type}`}>
                 <span className="log-time">{log.timestamp}</span>
                 {getLogIcon(log.type)}
@@ -256,11 +296,11 @@ const WorkflowConsole = ({ workflowName }) => {
         )}
       </div>
 
-      {/* Running Indicator */}
+      {/* Running Indicator with pending logs count */}
       {isRunning && (
         <div className="console-running">
           <Loader size={12} className="spinner" />
-          <span>Running...</span>
+          <span>Running... {bufferedLogs.length > 0 && `(${bufferedLogs.length} logs pending)`}</span>
         </div>
       )}
     </div>
