@@ -6,6 +6,7 @@ from .mark_necrotic_cells import mark_necrotic_cells
 from .mark_growth_arrest_cells import mark_growth_arrest_cells
 from .mark_apoptotic_cells import mark_apoptotic_cells
 from .mark_proliferating_cells import mark_proliferating_cells
+from .track_population_changes import track_population_start, track_population_end
 
 __all__ = [
     'update_cell_division',
@@ -14,5 +15,7 @@ __all__ = [
     'mark_growth_arrest_cells',
     'mark_apoptotic_cells',
     'mark_proliferating_cells',
+    'track_population_start',
+    'track_population_end',
 ]
 
