@@ -183,6 +183,20 @@
           "parameter_nodes": []
         },
         {
+          "id": "call_intracellular_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "intracellular",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 550
+          },
+          "description": "Initial gene network propagation",
+          "parameter_nodes": []
+        },
+        {
           "id": "call_generate_plots_init",
           "type": "subworkflow_call",
           "subworkflow_name": "Generate_initial_plots",
@@ -204,6 +218,7 @@
         "call_setup_associations",
         "call_setup_gene_network",
         "call_setup_population",
+        "call_intracellular_init",
         "call_generate_plots_init"
       ],
       "input_parameters": []
@@ -283,8 +298,8 @@
       ],
       "parameters": [],
       "execution_order": [
-        "call_microenvironment",
         "call_intracellular",
+        "call_microenvironment",
         "call_intercellular",
         "call_checkpoint"
       ],

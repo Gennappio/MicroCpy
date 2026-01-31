@@ -20,6 +20,9 @@ from typing import Dict, Any, Tuple
 import numpy as np
 from src.workflow.decorators import register_function
 
+# Global debug switch - set to True to enable detailed logging
+DEBUG_COUPLED_SOLVER = True
+
 
 @register_function(
     display_name="Run Diffusion Solver (Coupled)",
@@ -121,8 +124,9 @@ def run_diffusion_solver_coupled(
         run_diffusion_solver(context, max_iterations, tolerance, solver_type, **kwargs)
         return
 
-    print(f"[COUPLED] Starting iterative coupling (max {max_coupling_iterations} iterations, "
-          f"α={relaxation_factor}, tol={coupling_tolerance})")
+    if DEBUG_COUPLED_SOLVER:
+        print(f"[COUPLED] Starting iterative coupling (max {max_coupling_iterations} iterations, "
+              f"α={relaxation_factor}, tol={coupling_tolerance})")
 
     # Configure solver parameters
     if hasattr(simulator, 'set_solver_params'):
@@ -148,10 +152,15 @@ def run_diffusion_solver_coupled(
         new_concentrations = _get_concentration_snapshot(simulator)
         max_change = _compute_max_change(old_concentrations, new_concentrations)
 
-        print(f"[COUPLED] Iteration {coupling_iter + 1}: max change = {max_change:.4e}")
+        if DEBUG_COUPLED_SOLVER:
+            print(f"[COUPLED] Iteration {coupling_iter + 1}: max change = {max_change:.4e}")
+            if 'Oxygen' in simulator.state.substances:
+                oxygen_conc = simulator.state.substances['Oxygen'].concentrations
+                print(f"[COUPLED] Oxygen after iteration {coupling_iter + 1}: min={oxygen_conc.min():.6f}, max={oxygen_conc.max():.6f} mM")
 
         if max_change < coupling_tolerance:
-            print(f"[COUPLED] Converged after {coupling_iter + 1} iterations")
+            if DEBUG_COUPLED_SOLVER:
+                print(f"[COUPLED] Converged after {coupling_iter + 1} iterations")
             break
 
         # Step 5: Apply under-relaxation (blend old and new)
@@ -159,8 +168,9 @@ def run_diffusion_solver_coupled(
             _apply_relaxation(simulator, old_concentrations, new_concentrations, relaxation_factor)
 
     else:
-        print(f"[COUPLED] WARNING: Did not converge after {max_coupling_iterations} iterations "
-              f"(final max_change={max_change:.4e})")
+        if DEBUG_COUPLED_SOLVER:
+            print(f"[COUPLED] WARNING: Did not converge after {max_coupling_iterations} iterations "
+                  f"(final max_change={max_change:.4e})")
 
     # Final check for any remaining negative values (safety clamp)
     _clamp_negative_concentrations(simulator)
@@ -201,6 +211,15 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     else:
         grid_spacing_x = grid_spacing_y = 30.0  # Default
 
+    # DEBUG: Track metabolism statistics
+    debug_cells_processed = 0
+    debug_cells_with_mito = 0
+    debug_cells_with_glyco = 0
+    debug_total_oxygen_consumption = 0.0
+    debug_max_oxygen_consumption = 0.0
+    debug_total_local_oxygen = 0.0
+    debug_cells_with_zero_oxygen = 0
+
     # Update metabolism for each cell
     for cell_id, cell in population.state.cells.items():
         # Skip inactive cells
@@ -209,6 +228,8 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         phenotype_name = phenotype.name if hasattr(phenotype, 'name') else str(phenotype) if phenotype else None
         if phenotype_name in ['Necrosis', 'Growth_Arrest']:
             continue
+
+        debug_cells_processed += 1
 
         # Get cell position and convert to grid coordinates
         cell_x, cell_y = cell.state.position
@@ -227,10 +248,19 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         local_glucose = max(0.0, substance_concentrations.get('Glucose', {}).get((grid_x, grid_y), 0.0))
         local_lactate = max(0.0, substance_concentrations.get('Lactate', {}).get((grid_x, grid_y), 0.0))
 
+        debug_total_local_oxygen += local_oxygen
+        if local_oxygen == 0.0:
+            debug_cells_with_zero_oxygen += 1
+
         # Get gene states
         gene_states = cell.state.gene_states or {}
         mito_atp = gene_states.get('mitoATP', False)
         glyco_atp = gene_states.get('glycoATP', False)
+
+        if mito_atp:
+            debug_cells_with_mito += 1
+        if glyco_atp:
+            debug_cells_with_glyco += 1
 
         # Calculate Michaelis-Menten terms
         oxygen_mm = local_oxygen / (km_oxygen + local_oxygen) if (km_oxygen + local_oxygen) > 0 else 0
@@ -253,6 +283,9 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
             glucose_consumption += glucose_consumption_glyco
             lactate_production += glucose_consumption_glyco * 3.0
 
+        debug_total_oxygen_consumption += oxygen_consumption
+        debug_max_oxygen_consumption = max(debug_max_oxygen_consumption, oxygen_consumption)
+
         # Update cell's metabolic state
         new_metabolic_state = {
             'oxygen_consumption': oxygen_consumption,
@@ -268,28 +301,65 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         # Update cell state
         cell.state = cell.state.with_updates(metabolic_state=new_metabolic_state)
 
+    # Print metabolism debug summary
+    if DEBUG_COUPLED_SOLVER:
+        avg_local_oxygen = debug_total_local_oxygen / debug_cells_processed if debug_cells_processed > 0 else 0
+        print(f"[METABOLISM] Cells processed: {debug_cells_processed}")
+        print(f"[METABOLISM] Cells with mitoATP=True: {debug_cells_with_mito}")
+        print(f"[METABOLISM] Cells with glycoATP=True: {debug_cells_with_glyco}")
+        print(f"[METABOLISM] Cells with zero local oxygen: {debug_cells_with_zero_oxygen}")
+        print(f"[METABOLISM] Avg local oxygen: {avg_local_oxygen:.6f} mM")
+        print(f"[METABOLISM] vmax_oxygen: {vmax_oxygen:.2e}, km_oxygen: {km_oxygen:.4f}")
+        print(f"[METABOLISM] Total oxygen consumption: {debug_total_oxygen_consumption:.2e} mol/s")
+        print(f"[METABOLISM] Max oxygen consumption (single cell): {debug_max_oxygen_consumption:.2e} mol/s")
+
 
 def _collect_reactions_from_cells(population, simulator) -> Dict[Tuple[float, float], Dict[str, float]]:
     """Collect reaction terms from all cells based on their metabolic state."""
     position_reactions = {}
 
-    for cell_id, cell in population.state.cells.items():
+    # DEBUG counters
+    total_cells = 0
+    cells_with_metabolic_state = 0
+    cells_with_oxygen_consumption = 0
+    max_oxygen_consumption = 0.0
+    total_oxygen_consumption = 0.0
+
+    for _, cell in population.state.cells.items():
+        total_cells += 1
         position = cell.state.position
         metabolic_state = cell.state.metabolic_state
 
         if not metabolic_state:
             continue
 
+        cells_with_metabolic_state += 1
+
         if position not in position_reactions:
             position_reactions[position] = {}
 
         # Build reactions from metabolic state
-        position_reactions[position]['Oxygen'] = -metabolic_state.get('oxygen_consumption', 0.0)
+        oxygen_consumption = metabolic_state.get('oxygen_consumption', 0.0)
+        position_reactions[position]['Oxygen'] = -oxygen_consumption
         position_reactions[position]['Glucose'] = -metabolic_state.get('glucose_consumption', 0.0)
         position_reactions[position]['Lactate'] = (
             metabolic_state.get('lactate_production', 0.0) -
             metabolic_state.get('lactate_consumption', 0.0)
         )
+
+        if oxygen_consumption > 0:
+            cells_with_oxygen_consumption += 1
+            max_oxygen_consumption = max(max_oxygen_consumption, oxygen_consumption)
+            total_oxygen_consumption += oxygen_consumption
+
+    # DEBUG output
+    if DEBUG_COUPLED_SOLVER:
+        print(f"[REACTIONS] Total cells: {total_cells}")
+        print(f"[REACTIONS] Cells with metabolic_state: {cells_with_metabolic_state}")
+        print(f"[REACTIONS] Cells with oxygen_consumption > 0: {cells_with_oxygen_consumption}")
+        print(f"[REACTIONS] Total oxygen consumption: {total_oxygen_consumption:.2e} mol/s")
+        print(f"[REACTIONS] Max oxygen consumption (single cell): {max_oxygen_consumption:.2e} mol/s")
+        print(f"[REACTIONS] Unique positions with reactions: {len(position_reactions)}")
 
     return position_reactions
 
@@ -335,8 +405,9 @@ def _clamp_negative_concentrations(simulator) -> None:
         if num_negative > 0:
             min_val = np.min(concentrations[negative_mask])
             substance_state.concentrations = np.maximum(concentrations, 0.0)
-            print(f"[COUPLED] Safety clamp: {name} had {num_negative} negative values "
-                  f"(min={min_val:.4e})")
+            if DEBUG_COUPLED_SOLVER:
+                print(f"[COUPLED] Safety clamp: {name} had {num_negative} negative values "
+                      f"(min={min_val:.4e})")
 
             if hasattr(simulator, 'fipy_variables') and name in simulator.fipy_variables:
                 simulator.fipy_variables[name].setValue(

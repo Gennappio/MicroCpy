@@ -29,6 +29,9 @@ from config.config import OpenCellCommsConfig, SubstanceConfig, ThresholdConfig
 from core.domain import MeshManager
 # Hook system removed - using direct function calls
 
+# Global debug switch - set to True to enable detailed logging
+DEBUG_DIFFUSION_SOLVER = True
+
 @dataclass
 class SubstanceState:
     """State of a single substance"""
@@ -338,14 +341,16 @@ class MultiSubstanceSimulator:
         # Progress logging: show which substances are being processed
         substance_names = list(self.state.substances.keys())
         total_substances = len(substance_names)
-        print(f"[DIFFUSION] Solving {total_substances} substances: {', '.join(substance_names)}")
+        if DEBUG_DIFFUSION_SOLVER:
+            print(f"[DIFFUSION] Solving {total_substances} substances: {', '.join(substance_names)}")
 
         for idx, (name, substance_state) in enumerate(self.state.substances.items(), 1):
             if name not in self.fipy_variables:
                 continue
 
             # Progress indicator for each substance
-            print(f"   [{idx}/{total_substances}] Solving {name}...", end=" ", flush=True)
+            if DEBUG_DIFFUSION_SOLVER:
+                print(f"   [{idx}/{total_substances}] Solving {name}...", end=" ", flush=True)
 
             var = self.fipy_variables[name]
             config = substance_state.config
@@ -445,6 +450,19 @@ class MultiSubstanceSimulator:
             # Create FiPy source variable
             source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
 
+            # DEBUG: Print detailed info for Oxygen
+            if DEBUG_DIFFUSION_SOLVER and name == 'Oxygen':
+                non_zero_count = np.count_nonzero(source_field)
+                print(f"\n[OXYGEN DEBUG] Before solve:")
+                print(f"   Diffusion coeff: {config.diffusion_coeff:.2e} m²/s")
+                print(f"   Boundary type: {substance_state.config.boundary_type}")
+                print(f"   Boundary value: {boundary_value:.6f} mM")
+                print(f"   Source field: {non_zero_count} non-zero cells")
+                if non_zero_count > 0:
+                    print(f"   Source range: [{np.min(source_field[source_field != 0]):.2e}, {np.max(source_field):.2e}] mM/s")
+                    print(f"   Total consumption: {np.sum(source_field):.2e} mM/s")
+                print(f"   Current var min/max: {np.min(var.value):.6f} / {np.max(var.value):.6f} mM")
+
             # DEBUG: Print source field and key info for direct comparison - DISABLED
             # if name == 'Lactate':
             #     print(f"[DEBUG] Lactate source field (final): min={np.min(source_field):.3e}, max={np.max(source_field):.3e}, sum={np.sum(source_field):.3e}")
@@ -472,10 +490,17 @@ class MultiSubstanceSimulator:
             try:
                 res = equation.solve(var=var, solver=solver)
                 # Print completion with residual if available
-                if res is not None:
-                    print(f"done (residual: {res:.2e})")
-                else:
-                    print("done")
+                if DEBUG_DIFFUSION_SOLVER:
+                    if res is not None:
+                        print(f"done (residual: {res:.2e})")
+                    else:
+                        print("done")
+
+                    # DEBUG: Print Oxygen results after solve
+                    if name == 'Oxygen':
+                        print(f"[OXYGEN DEBUG] After solve:")
+                        print(f"   var min/max: {np.min(var.value):.6f} / {np.max(var.value):.6f} mM")
+                        print(f"   var mean: {np.mean(var.value):.6f} mM")
             except Exception as e:
                 print(f"FAILED!")
                 print(f"[ERROR] Error during {name} solve: {e}")
@@ -635,7 +660,7 @@ class MultiSubstanceSimulator:
             # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
             final_rate = volumetric_rate * 1000.0
 
-            source_field[fipy_idx] = final_rate
+            source_field[fipy_idx] += final_rate
 
             # DEBUG: Print reaction terms being passed to FiPy for key substances (disabled by default)
             # if substance_name in ['Lactate', 'Oxygen', 'Glucose'] and reaction_rate != 0.0:
@@ -648,11 +673,12 @@ class MultiSubstanceSimulator:
             #     print(f"   fipy_idx: {fipy_idx}")
 
         # Log source field summary
-        non_zero_count = np.count_nonzero(source_field)
-        if non_zero_count > 0:
-            print(f"[DIFFUSION] {substance_name} source field: {non_zero_count} non-zero cells, range [{np.min(source_field[source_field != 0]):.2e}, {np.max(source_field):.2e}] mM/s")
-        else:
-            print(f"[DIFFUSION] {substance_name} source field: ALL ZEROS!")
+        if DEBUG_DIFFUSION_SOLVER:
+            non_zero_count = np.count_nonzero(source_field)
+            if non_zero_count > 0:
+                print(f"[DIFFUSION] {substance_name} source field: {non_zero_count} non-zero cells, range [{np.min(source_field[source_field != 0]):.2e}, {np.max(source_field):.2e}] mM/s")
+            else:
+                print(f"[DIFFUSION] {substance_name} source field: ALL ZEROS!")
 
         return source_field
 
