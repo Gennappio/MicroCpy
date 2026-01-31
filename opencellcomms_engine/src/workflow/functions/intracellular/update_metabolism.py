@@ -134,6 +134,10 @@ def update_metabolism(
     if skipped_inactive > 0:
         print(f"[METABOLISM] Skipped {skipped_inactive} inactive cells (Necrosis/Growth_Arrest)")
 
+    # Log population count at end
+    final_count = len(population.state.cells)
+    print(f"[METABOLISM-END] Population count: {final_count} cells")
+
 
 def _get_local_environment(position, substance_concentrations, config=None):
     """
