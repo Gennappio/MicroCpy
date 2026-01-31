@@ -1,29 +1,31 @@
 import { useState, useEffect } from 'react';
 import { Image, RefreshCw, ChevronDown } from 'lucide-react';
-import useWorkflowStore from '../store/workflowStore';
 import './WorkflowResults.css';
 
 const API_BASE_URL = 'http://localhost:5001';
 
 /**
  * WorkflowResults - Per-subworkflow results viewer (v2.0 nested structure)
+ * Images only refresh when the Refresh button is clicked to reduce UI clutter during simulation runs.
  */
 function WorkflowResults({ subworkflowName, subworkflowKind }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [availablePlots, setAvailablePlots] = useState([]);
+  // Timestamp used to cache-bust images - only updated on manual refresh
+  const [imageTimestamp, setImageTimestamp] = useState(Date.now());
 
-  // Subscribe to simulation run counter to auto-refresh when a new run starts
-  const simulationRunCounter = useWorkflowStore((state) => state.simulationRunCounter);
-
+  // Only load results on initial mount or when subworkflow changes
   useEffect(() => {
     loadResults();
-  }, [subworkflowName, subworkflowKind, simulationRunCounter]);
+  }, [subworkflowName, subworkflowKind]);
 
   const loadResults = async () => {
     setLoading(true);
     setError('');
+    // Update timestamp to force image refresh
+    setImageTimestamp(Date.now());
     try {
       // Fetch results for this specific subworkflow (v2.0 nested structure)
       const url = `${API_BASE_URL}/api/results/list?subworkflow_name=${encodeURIComponent(subworkflowName)}&subworkflow_kind=${encodeURIComponent(subworkflowKind)}`;
@@ -122,10 +124,10 @@ function WorkflowResults({ subworkflowName, subworkflowKind }) {
         ) : selectedPlot ? (
           <div className="plot-display">
             <img
-              src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${Date.now()}`}
+              src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${imageTimestamp}`}
               alt={selectedPlot.name}
               className="plot-image"
-              key={`${selectedPlot.path}-${Date.now()}`}
+              key={`${selectedPlot.path}-${imageTimestamp}`}
             />
           </div>
         ) : (
