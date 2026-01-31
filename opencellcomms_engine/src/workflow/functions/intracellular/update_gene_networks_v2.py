@@ -63,9 +63,32 @@ def update_gene_networks_v2(
     if simulator is not None:
         try:
             substance_concentrations = simulator.get_substance_concentrations()
+
+            # DEBUG: Log what keys we got and sample values
+            if substance_concentrations:
+                print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations keys: {list(substance_concentrations.keys())}")
+                for substance_name, conc_grid in substance_concentrations.items():
+                    if conc_grid:
+                        sample_pos = next(iter(conc_grid.keys()))
+                        sample_val = conc_grid[sample_pos]
+                        print(f"[GENE_NETWORK_V2 DEBUG]   {substance_name}: {len(conc_grid)} positions, sample at {sample_pos} = {sample_val:.6f}")
+            else:
+                print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations is EMPTY!")
         except Exception as e:
             print(f"[update_gene_networks_v2] Failed to get concentrations: {e}")
-    
+
+    # DEBUG: Log associations
+    if associations:
+        print(f"[GENE_NETWORK_V2 DEBUG] associations: {associations}")
+    if thresholds:
+        threshold_vals = {}
+        for gene_name, thresh_config in thresholds.items():
+            if hasattr(thresh_config, 'threshold'):
+                threshold_vals[gene_name] = thresh_config.threshold
+            else:
+                threshold_vals[gene_name] = thresh_config
+        print(f"[GENE_NETWORK_V2 DEBUG] thresholds: {threshold_vals}")
+
     # Ensure propagation_steps is int
     propagation_steps = int(propagation_steps)
     
@@ -75,11 +98,17 @@ def update_gene_networks_v2(
     updated_cells = {}
     cells_with_gn = 0
     cells_without_gn = 0
-    
-    # Track mitoATP and glycoATP for logging
+
+    # Track mitoATP and glycoATP for logging (AFTER propagation)
     mito_true_count = 0
     glyco_true_count = 0
-    
+
+    # Track input states BEFORE propagation
+    oxygen_supply_true = 0
+    glucose_supply_true = 0
+    mct1_stimulus_true = 0
+    cells_with_inputs = 0
+
     for cell_id, cell in population.state.cells.items():
         # Skip necrotic cells
         if cell.state.phenotype == 'Necrosis':
@@ -103,7 +132,16 @@ def update_gene_networks_v2(
                 cell.state.position, substance_concentrations, associations, thresholds, config
             )
             cell_gn.set_input_states(input_states)
-        
+
+            # Track input states BEFORE propagation
+            cells_with_inputs += 1
+            if input_states.get('Oxygen_supply', False):
+                oxygen_supply_true += 1
+            if input_states.get('Glucose_supply', False):
+                glucose_supply_true += 1
+            if input_states.get('MCT1_stimulus', False):
+                mct1_stimulus_true += 1
+
         # =====================================================================
         # PROPAGATE USING NETLOGO-STYLE (PROVEN TO WORK!)
         # =====================================================================
@@ -130,14 +168,36 @@ def update_gene_networks_v2(
     population.state = population.state.with_updates(cells=updated_cells)
     
     # =========================================================================
-    # LOG SUMMARY WITH mitoATP/glycoATP STATS
+    # LOG SUMMARY WITH INPUT STATES (BEFORE) AND OUTPUT STATES (AFTER)
     # =========================================================================
     total_cells = len(population.state.cells)
     print(f"[GENE_NETWORK_V2] Updated {cells_with_gn}/{total_cells} cells ({propagation_steps} steps, netlogo mode)")
-    print(f"[GENE_NETWORK_V2] mitoATP=TRUE: {mito_true_count}/{cells_with_gn}, glycoATP=TRUE: {glyco_true_count}/{cells_with_gn}")
+
+    # Log INPUT states (BEFORE propagation)
+    if cells_with_inputs > 0:
+        oxygen_pct = (oxygen_supply_true / cells_with_inputs) * 100
+        glucose_pct = (glucose_supply_true / cells_with_inputs) * 100
+        mct1_pct = (mct1_stimulus_true / cells_with_inputs) * 100
+        print(f"[GENE_NETWORK_V2] INPUT STATES (before propagation):")
+        print(f"  Oxygen_supply=TRUE: {oxygen_supply_true}/{cells_with_inputs} ({oxygen_pct:.1f}%)")
+        print(f"  Glucose_supply=TRUE: {glucose_supply_true}/{cells_with_inputs} ({glucose_pct:.1f}%)")
+        print(f"  MCT1_stimulus=TRUE: {mct1_stimulus_true}/{cells_with_inputs} ({mct1_pct:.1f}%)")
+    else:
+        print(f"[GENE_NETWORK_V2] WARNING: No cells had input states computed!")
+
+    # Log OUTPUT states (AFTER propagation)
+    if cells_with_gn > 0:
+        mito_pct = (mito_true_count / cells_with_gn) * 100
+        glyco_pct = (glyco_true_count / cells_with_gn) * 100
+        print(f"[GENE_NETWORK_V2] OUTPUT STATES (after propagation):")
+        print(f"  mitoATP=TRUE: {mito_true_count}/{cells_with_gn} ({mito_pct:.1f}%)")
+        print(f"  glycoATP=TRUE: {glyco_true_count}/{cells_with_gn} ({glyco_pct:.1f}%)")
 
     if mito_true_count == 0 and glyco_true_count == 0:
         print("[GENE_NETWORK_V2] WARNING: All cells have mitoATP=False and glycoATP=False!")
+
+    # Log population count at end
+    print(f"[GENE-NET-V2-END] Population count: {total_cells} cells")
 
     # =========================================================================
     # VERIFY gene_states are stored in cell.state.gene_states
