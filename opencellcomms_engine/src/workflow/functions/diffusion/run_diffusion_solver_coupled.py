@@ -297,7 +297,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         lactate_consumption = 0.0
 
         if mito_atp:
-            oxygen_consumption += 10*vmax_oxygen * oxygen_mm
+            oxygen_consumption += 50*vmax_oxygen * oxygen_mm
             glucose_consumption += (vmax_oxygen / 6.0) * glucose_mm * oxygen_mm
             lactate_consumption += (vmax_oxygen * 2.0 / 6.0) * lactate_mm * oxygen_mm
 
@@ -312,8 +312,8 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         # Update cell's metabolic state
         new_metabolic_state = {
             'oxygen_consumption': oxygen_consumption,
-            'glucose_consumption': glucose_consumption,
-            'lactate_production': lactate_production,
+            'glucose_consumption': glucose_consumption*15,
+            'lactate_production': lactate_production*5,
             'lactate_consumption': lactate_consumption,
             'Oxygen_consumption': oxygen_consumption,
             'Glucose_consumption': glucose_consumption,

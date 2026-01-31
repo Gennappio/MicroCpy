@@ -41,7 +41,7 @@
           "x": 50,
           "y": 50
         },
-        "number_of_steps": 1
+        "number_of_steps": 2
       },
       "functions": [],
       "subworkflow_calls": [
@@ -650,7 +650,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "Glucose_supply",
-                "threshold": 0.05
+                "threshold": 4
               }
             },
             {
@@ -658,7 +658,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "MCT1_stimulus",
-                "threshold": 1
+                "threshold": 1.5
               }
             },
             {

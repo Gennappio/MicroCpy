@@ -1,0 +1,28 @@
+# Input states for gene network testing
+# Format: node_name=value (true/false/1/0)
+
+# Environmental inputs - simulating normal conditions with oxygen and glucose
+Oxygen_supply=true
+Glucose_supply=true
+MCT1_stimulus=true
+
+# No DNA damage
+DNA_damage=false
+
+# No growth factors
+EGFR_stimulus=false
+TGFBR_stimulus=false
+FGFR_stimulus=false
+cMET_stimulus=false
+
+# No inhibitors
+EGFRI=false
+FGFRI=false
+cMETI=false
+MCT1I=false
+MCT4I=false
+GLUT1I=false
+
+# No growth inhibitor
+Growth_Inhibitor=false
+
