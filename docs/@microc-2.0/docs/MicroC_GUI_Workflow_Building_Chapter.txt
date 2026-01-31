@@ -1,0 +1,719 @@
+MicroC GUI — Workflow Building (Chapter)
+========================================
+
+This chapter documents, in deep detail, what the MicroC GUI workflow
+`opencellcomms_engine/tests/jayatilake_experiment/microc_relaxation_workflow_v3.json`
+does when executed by the OpenCellComms workflow engine.
+
+The focus is not “how to click the GUI”, but:
+- what each node means,
+- what state it reads/writes,
+- why the workflow runs as a **one-step equilibrium computation** (not a long time simulation),
+- and the exact **numerical method** used to obtain the equilibrium microenvironment:
+  a **steady-state FiPy solve** combined with **Picard (fixed-point) coupling** and
+  **under-relaxation** (a.k.a. “relaxation”).
+
+
+1) Big picture: what problem this workflow solves
+-------------------------------------------------
+
+MicroC-style multi-scale models couple:
+- a **microenvironment** (diffusing fields like Oxygen, Glucose, Lactate, …)
+- with an **agent-based population** of cells (positions and phenotypes)
+- and **intracellular Boolean gene networks** (cell decisions and metabolic modes).
+
+In the full MicroC framing, you might run many time steps (growth, death, division)
+and repeatedly solve diffusion each step.
+
+This workflow is different by design:
+
+**This is a one-step “relaxation to equilibrium” workflow.**
+
+Meaning:
+- We keep the **cell positions** fixed for the step (initial configuration).
+- We compute a consistent **steady-state diffusion-reaction field** given those cells.
+- We then compute intracellular / phenotype updates under that equilibrium environment.
+
+So the “time” of the PDE is not simulated over hours/days here. Instead we solve the
+steady-state PDE directly and iterate inside the solver until convergence.
+
+The primary scientific question this workflow answers is:
+
+  “Given an initial tumor spheroid-like population and boundary conditions,
+   what equilibrium microenvironment and resulting intracellular states arise?”
+
+
+2) Workflow format: v2.0 (subworkflow/composer-based)
+-----------------------------------------------------
+
+The workflow file is a **v2.0 workflow**, meaning it is a set of named
+subworkflows executed through subworkflow calls.
+
+Key terms:
+- **composer**: a container that orchestrates other subworkflows (high-level structure)
+- **subworkflow**: an executable block containing function nodes and parameters
+
+In `microc_relaxation_workflow_v3.json`, the key compositional structure is:
+
+MAIN COMPOSER (`main`)
+  -> `initialization`   (runs once)
+  -> `loop`             (runs once in this workflow)
+  -> `finalization`     (runs once)
+
+Even though the name is `loop`, here it is configured to run for exactly one iteration,
+so it functions as a “single macrostep execution”.
+
+CODE SNIPPET (workflow JSON: `main` composer orchestrating init/loop/finalization)
+
+```json
+"main": {
+  "controller": { "number_of_steps": 1 },
+  "subworkflow_calls": [
+    { "subworkflow_name": "initialization", "iterations": 1, "enabled": true },
+    { "subworkflow_name": "loop",          "iterations": 1, "enabled": true },
+    { "subworkflow_name": "finalization",  "iterations": 1, "enabled": true }
+  ],
+  "execution_order": ["call_initialization", "call_loop", "call_finalization"]
+}
+```
+
+Important implication:
+- If you want a true time series, you would raise iterations / step counts.
+- If you want a fixed-point between diffusion and gene networks, you would add
+  more loop iterations or add an outer coupling composer. (This workflow currently
+  couples diffusion to metabolism inside the PDE solve, but does not iterate gene
+  networks inside that PDE coupling loop.)
+
+
+3) The “one-step simulation” claim (what exactly runs once)
+----------------------------------------------------------
+
+There are two different concepts that people often mix:
+
+- (A) “How many times does the workflow graph run?”
+- (B) “How many numerical iterations happen inside a solver node?”
+
+This workflow is “one-step” in sense (A):
+
+- `main.controller.number_of_steps = 1`
+- `call_loop.iterations = 1`
+- `loop.controller.number_of_steps = 1`
+
+So the execution path “initialization -> loop -> finalization” occurs once.
+
+CODE SNIPPET (workflow JSON: controller steps are explicitly set to 1)
+
+```json
+"controller": {
+  "id": "controller-main",
+  "type": "controller",
+  "label": "MAIN COMPOSER",
+  "number_of_steps": 1
+}
+```
+
+Inside that single pass, the microenvironment solver node performs internal iterations
+to reach equilibrium. That is sense (B), and it is intentionally iterative.
+
+Also note:
+- There is a parameter node called “Total Steps” in the GUI JSON, but the underlying
+  `setup_simulation()` function does not accept `total_steps` as a real argument;
+  it is ignored via `**kwargs`. In this workflow, the actual step count is controlled
+  by the v2.0 execution structure described above.
+
+
+4) Initialization composer: building the simulation state
+---------------------------------------------------------
+
+Initialization runs once. It creates everything needed for the equilibrium solve:
+
+4.1 Setup_simulation subworkflow
+--------------------------------
+Node: `setup_simulation`
+
+Purpose:
+- Create a minimal `config` object (workflow-mode config).
+- Set `context['dt']` and initialize output directories and bookkeeping.
+- In workflow mode, “time horizon” is not controlled here; it is controlled by the
+  workflow graph (subworkflow iterations, node step counts).
+
+Key effects on context:
+- Writes `context['config']`
+- Writes `context['dt']`
+- Writes `context['simulation_params']`
+- Ensures output directories exist (and in GUI mode, the executor sets structured paths).
+
+
+4.2 Setup_domain subworkflow
+----------------------------
+Node: `setup_domain`
+
+Purpose:
+- Define domain dimensions and grid resolution.
+- Create a mesh manager and a diffusion simulator object.
+
+Important parameters (from the workflow JSON):
+- Domain physical size: `size_x`, `size_y` (in μm)
+- Grid resolution: `nx`, `ny`
+- Cell height (μm): used for biological-to-grid mapping and 2D thickness scaling
+
+Key effects on context:
+- Writes `context['simulator']` (MultiSubstanceSimulator)
+- Writes `config.domain`
+
+
+4.3 Setup_substances subworkflow
+--------------------------------
+Node: `setup_substances`
+
+Purpose:
+- Declare the list of diffusing substances and their PDE parameters:
+  diffusion coefficient \(D\), initial value, boundary value, and boundary type.
+
+In the workflow JSON, the substances are provided as a GUI list of JSON strings like:
+- Oxygen, Glucose, Lactate, H, TGFA, FGF, HGF, GI
+
+Key effects on context:
+- Populates `config.substances` (SubstanceConfig objects)
+- Calls `simulator.initialize_substances(config.substances)` so that:
+  - internal concentration arrays exist for each substance
+  - FiPy variables are created/updated for each substance
+
+
+4.4 Setup_associations subworkflow (Bridge 1 setup)
+---------------------------------------------------
+Node: `setup_associations`
+
+Purpose:
+- Define how extracellular substances map to Boolean network input nodes.
+
+In the workflow JSON, the association dictionary conceptually defines:
+
+  associations[substance_name] = {
+      "gene_input": <Boolean input node name>,
+      "threshold": <float>
+  }
+
+Example entries in this workflow:
+- Oxygen  -> Oxygen_supply   with threshold 0.022
+- Glucose -> Glucose_supply  with threshold 0.05
+
+Important nuance:
+- Thresholds are stored and later used to turn continuous concentrations into Boolean inputs:
+  input = (local_concentration > threshold)
+
+Key effects on context:
+- Writes `config.associations` and `config.thresholds` (exact structure depends on setup code)
+
+
+4.5 Setup_gene_network subworkflow
+----------------------------------
+Node: `setup_gene_network`
+
+Purpose:
+- Load and parse a MaBoSS-style `.bnd` file and build a Boolean network model.
+
+In this workflow:
+- `bnd_file` points to `tests/jayatilake_experiment/jaya_microc.bnd`
+
+Input node detection:
+- In MaBoSS format, some inputs are self-referential: `logic = (Oxygen_supply)`
+  meaning “this node has no internal logic; it is externally set”.
+  The engine treats these as input nodes.
+
+Propagation steps:
+- The workflow contains a propagation step parameter node.
+- In the currently selected intracellular update, propagation is handled by the v2 gene updater.
+
+
+4.6 Setup_population subworkflow
+--------------------------------
+Nodes:
+- `setup_population`
+- `load_cells_from_csv`
+
+Purpose:
+- Create the population object and load an initial set of cell positions.
+- Enable gene network support for each cell.
+- Provide a custom cell function module (for visualization coloring, etc.).
+
+In this workflow, `setup_population` includes:
+- `enable_gene_network: true`
+- `custom_functions_module: "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"`
+
+That custom module is used by visualization routines (e.g., `get_cell_color(...)`)
+to color cells based on gene states and phenotype, and it can also support other
+custom hooks depending on engine configuration.
+
+Key effects on context:
+- Writes `context['population']`
+- Attaches gene network objects to cells (depending on setup function details)
+- Stores custom functions module on the population (if load succeeds)
+
+
+4.7 Generate_initial_plots subworkflow
+--------------------------------------
+Node: `generate_summary_plots` (marker "INITIAL")
+
+Purpose:
+- Produce initial visualization artifacts for sanity checking before the equilibrium solve.
+
+
+5) Loop composer (executed once): equilibrium solve + intracellular + fate
+--------------------------------------------------------------------------
+
+The `loop` composer is configured with `number_of_steps = 1` and is called once.
+Its execution order is:
+
+1) microenvironment
+2) intracellular
+3) intercellular
+
+This is the core “one-step equilibrium” computation.
+
+
+5.1 Stage 1 — Microenvironment: steady-state diffusion-reaction equilibrium
+----------------------------------------------------------------------------
+
+Enabled node in `microenvironment`:
+- `run_diffusion_solver_coupled` (enabled)
+
+Disabled alternatives (present but off):
+- `run_diffusion_solver` (standard)
+- `run_diffusion_solver_clamped` (numerical safety clamp)
+- `update_metabolism` (Bridge 2) is also disabled in this stage because the coupled solver
+  performs metabolism recalculation internally (see below).
+
+CODE SNIPPET (workflow JSON: microenvironment chooses the coupled solver)
+
+```json
+{
+  "id": "run_diffusion_coupled",
+  "function_name": "run_diffusion_solver_coupled",
+  "enabled": true,
+  "parameter_nodes": [
+    "param_max_iterations",
+    "param_tolerance",
+    "param_solver_type",
+    "param_max_coupling_iterations",
+    "param_coupling_tolerance",
+    "param_relaxation_factor"
+  ]
+}
+```
+
+
+5.1.1 The PDE being solved (steady-state)
+-----------------------------------------
+
+For each substance \(c(\mathbf{x})\), the solver seeks a steady-state solution:
+
+  \( \nabla \cdot ( D \nabla c ) = S(\mathbf{x}) \)
+
+Where:
+- \(D\) is the diffusion coefficient (per substance)
+- \(S(\mathbf{x})\) is the source term (positive = production, negative = consumption)
+  induced by cells at their locations, mapped onto the grid
+
+In FiPy, the equation is implemented as:
+
+  DiffusionTerm(coeff=D) == -source_var
+
+Because FiPy uses the sign convention:
+
+  \( \nabla \cdot ( D \nabla c ) + S = 0 \)
+
+So to match the desired physics convention, we negate the source term when building
+the FiPy equation.
+
+CODE SNIPPET (engine: FiPy equation build + solve, inside `MultiSubstanceSimulator.update()`)
+
+```python
+# Create FiPy source variable
+source_var = CellVariable(mesh=self.fipy_mesh, value=source_field)
+
+# FiPy sign convention: ∇·(D∇c) + S = 0, so we negate the source
+equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
+
+# Steady-state solve
+solver = Solver(iterations=1000, tolerance=1e-6)
+res = equation.solve(var=var, solver=solver)
+```
+
+Crucially:
+- This is a **steady_state** solve, not a transient time integration.
+- The “equilibrium” concept here means “the steady-state solution of the PDE under
+  fixed boundary conditions and fixed cell reactions”.
+
+
+5.1.2 Where the “relaxation” happens (the method)
+-------------------------------------------------
+
+The workflow uses `run_diffusion_solver_coupled`, documented in code as an
+iterative coupling (Picard iteration) method:
+
+CODE SNIPPET (engine: coupled solve loop with under-relaxation, inside `run_diffusion_solver_coupled`)
+
+```python
+for coupling_iter in range(max_coupling_iterations):
+    old_concentrations = _get_concentration_snapshot(simulator)
+
+    _recalculate_metabolism(context, simulator, population, config)
+    position_reactions = _collect_reactions_from_cells(population, simulator)
+    simulator.update(position_reactions)
+
+    new_concentrations = _get_concentration_snapshot(simulator)
+    max_change = _compute_max_change(old_concentrations, new_concentrations)
+
+    if max_change < coupling_tolerance:
+        break
+
+    if relaxation_factor < 1.0 and coupling_iter < max_coupling_iterations - 1:
+        _apply_relaxation(simulator, old_concentrations, new_concentrations, relaxation_factor)
+```
+
+Algorithm overview (as implemented):
+
+Given current concentration fields \(c^{(k)}\):
+1) Compute metabolism (reaction rates) from \(c^{(k)}\) and gene states.
+2) Solve the steady-state PDE to get a new field \(\tilde{c}^{(k+1)}\).
+3) Measure convergence: max norm \(||\tilde{c}^{(k+1)} - c^{(k)}||_\infty\).
+4) If converged, stop.
+5) Otherwise apply under-relaxation to damp oscillations:
+
+   \( c^{(k+1)} = \alpha \tilde{c}^{(k+1)} + (1-\alpha) c^{(k)} \)
+
+6) Repeat until convergence or max coupling iterations.
+
+This is a standard fixed-point stabilization strategy:
+- Picard coupling = fixed-point iteration on a nonlinear diffusion-reaction system
+  (nonlinearity arises because reaction terms depend on concentrations).
+- Under-relaxation improves stability when the fixed-point map is “too aggressive”.
+
+In the workflow GUI, the key user-facing parameters for this method are:
+- `max_coupling_iterations`: maximum Picard iterations
+- `coupling_tolerance`: stopping criterion on max concentration change
+- `relaxation_factor` (α): under-relaxation factor (0 < α ≤ 1)
+  - α=1 means no relaxation (fast, but can oscillate)
+  - smaller α means more damping (more stable, slower)
+
+Also exposed (but conceptually “inner solver” settings):
+- `max_iterations`, `tolerance`, `solver_type` for the FiPy linear solve.
+
+
+5.1.3 Why this prevents negative concentrations (physics-aware stabilization)
+-----------------------------------------------------------------------------
+
+Negative concentrations usually appear when:
+- you apply consumption that is too strong for the available supply and discretization,
+- and/or you treat nonlinear kinetics as fixed while solving (linearization issues).
+
+The coupled solver’s philosophy:
+- When concentration drops, **Michaelis–Menten** kinetics reduce uptake naturally.
+- But this only happens if uptake is recomputed as concentrations change.
+
+So the method recomputes metabolism each coupling iteration based on the current field.
+This makes the overall problem closer to a consistent nonlinear solve, rather than
+“solve diffusion with a frozen, overly strong sink”.
+
+As a safety net, after the coupling loop it still clamps any remaining negative values
+to zero (should be rare if convergence works well).
+
+
+5.1.4 How metabolism is computed inside the coupled solver (Bridge 2 embedded)
+-----------------------------------------------------------------------------
+
+Inside `run_diffusion_solver_coupled`, the helper `_recalculate_metabolism(...)`:
+- reads concentrations from the simulator grid,
+- reads each cell’s gene states (e.g., `mitoATP`, `glycoATP`),
+- computes consumption/production rates using Michaelis–Menten forms, and
+- writes the cell’s `metabolic_state` (oxygen_consumption, glucose_consumption, lactate_*).
+
+This is why the explicit `update_metabolism` node is disabled in this workflow:
+the diffusion solver already needs to update metabolism repeatedly during coupling.
+
+CODE SNIPPET (engine: gene-state-dependent metabolism inside the coupled solver)
+
+```python
+gene_states = cell.state.gene_states or {}
+mito_atp = gene_states.get('mitoATP', False)
+glyco_atp = gene_states.get('glycoATP', False)
+
+oxygen_mm = local_oxygen / (km_oxygen + local_oxygen) if (km_oxygen + local_oxygen) > 0 else 0
+glucose_mm = local_glucose / (km_glucose + local_glucose) if (km_glucose + local_glucose) > 0 else 0
+lactate_mm = local_lactate / (km_lactate + local_lactate) if (km_lactate + local_lactate) > 0 else 0
+
+if mito_atp:
+    oxygen_consumption += vmax_oxygen * oxygen_mm
+    glucose_consumption += (vmax_oxygen / 6.0) * glucose_mm * oxygen_mm
+    lactate_consumption += (vmax_oxygen * 2.0 / 6.0) * lactate_mm * oxygen_mm
+
+if glyco_atp:
+    glucose_consumption_glyco = (vmax_glucose / 6.0) * glucose_mm * max(0.1, oxygen_mm)
+    glucose_consumption += glucose_consumption_glyco
+    lactate_production += glucose_consumption_glyco * 3.0
+```
+
+Key biological logic used in the embedded metabolism:
+- `mitoATP` true drives oxygen consumption and coupled glucose/lactate usage.
+- `glycoATP` true drives glycolytic glucose uptake and lactate production.
+
+These rates become the PDE source term \(S(\mathbf{x})\) via a grid mapping and
+unit conversion pipeline (mol/s/cell -> mol/(m³·s) -> mM/s).
+
+
+5.1.5 Mapping cell positions to the FiPy grid
+---------------------------------------------
+
+Cells live on a “biological grid” (cell indices), while diffusion is solved on an
+\(nx \times ny\) solver grid.
+
+The simulator builds source fields by:
+- detecting whether a position is in biological indices, micrometers, or meters
+  (heuristic thresholds),
+- converting to grid indices,
+- scaling biological grid to solver grid (scale_x, scale_y),
+- computing the correct FiPy cell index ordering (2D or 3D).
+
+This matters because a mismatch here produces:
+- uniform fields (sources applied nowhere)
+- or artifacts (sources applied to wrong places)
+
+This workflow’s equilibrium solve is only meaningful if this mapping is correct.
+
+CODE SNIPPET (engine: position unit detection + mapping to FiPy indices)
+
+```python
+# Heuristic to detect position unit:
+# - If position < bio_grid_size, it's a biological grid index
+# - If position < domain_um, it's in micrometers
+# - Otherwise, it's in meters
+if x_pos < bio_grid_nx and y_pos < bio_grid_ny:
+    x = int(x_pos * scale_x)
+    y = int(y_pos * scale_y)
+elif x_pos < domain_x_um and y_pos < domain_y_um:
+    x = int(x_pos / (domain_x_um / nx))
+    y = int(y_pos / (domain_y_um / ny))
+else:
+    x = int(x_pos / (domain_x_m / nx))
+    y = int(y_pos / (domain_y_m / ny))
+
+fipy_idx = x * ny + y  # (2D mesh case)
+source_field[fipy_idx] = final_rate  # mM/s
+```
+
+
+5.2 Stage 2 — Intracellular: concentrations → gene network inputs → propagation
+------------------------------------------------------------------------------
+
+Enabled node in `intracellular`:
+- `update_gene_networks_v2`
+
+Disabled node:
+- `update_gene_networks` (old version)
+
+CODE SNIPPET (workflow JSON: old gene updater disabled, v2 enabled)
+
+```json
+{ "id": "update_genes",    "function_name": "update_gene_networks",    "enabled": false },
+{ "id": "update_genes_v2", "function_name": "update_gene_networks_v2", "enabled": true  }
+```
+
+The job of gene network update is the “Bridge 1 execution”:
+
+1) Read microenvironment concentrations at each cell’s position.
+2) Convert to Boolean input nodes using associations + thresholds:
+   e.g., Oxygen_supply = (Oxygen > threshold_O2).
+3) Set those input nodes in the cell’s Boolean network.
+4) Propagate the network for a user-defined number of steps.
+
+In this workflow:
+- Propagation steps for v2 are set via `param_gene_propagation_steps_v2`:
+  `propagation_steps = 500`.
+
+Important modeling note:
+- The “propagation steps” are not physical time; they are Boolean network update iterations.
+- This is the intracellular counterpart of “relaxation”: we run enough updates so
+  the Boolean network reaches a stable attractor (or a representative state).
+
+Update mode:
+- The v2 description in the workflow says “NetLogo-style updates” (asynchronous/random),
+  meaning typically one gene updates per micro-step, chosen randomly.
+  This is a common approach to avoid strict synchrony artifacts.
+
+Outputs:
+- Gene states are stored back on each cell (`cell.state.gene_states`) and are used later for:
+  - phenotype decisions (apoptosis/proliferation markers)
+  - metabolism decisions in subsequent diffusion solves (if more loop steps are run)
+  - visualization coloring via custom functions
+
+
+5.3 Stage 3 — Intercellular: phenotype marking and division
+-----------------------------------------------------------
+
+This stage applies “fate logic” based on microenvironment and gene network outputs.
+In this workflow it includes:
+
+- `mark_necrotic_cells`
+  - marks cells necrotic based on threshold logic (oxygen/glucose thresholds)
+- `mark_growth_arrest_cells`
+  - tracks/updates Growth_Arrest state with a max duration
+- `mark_apoptotic_cells`
+  - marks apoptosis based on gene network output node(s)
+- `mark_proliferating_cells`
+  - sets Proliferation/Quiescence based on gene outputs
+- `update_cell_division`
+  - creates new cells for proliferating agents (if enabled logic says so)
+
+In a strict “equilibrium microenvironment” experiment, you often keep division off,
+or keep the loop single-step to inspect the state before growth changes geometry.
+This workflow currently runs one step, so any division happens at most once.
+
+
+6) Finalization composer: artifacts and data products
+-----------------------------------------------------
+
+Finalization runs once and produces “end state” outputs.
+
+6.1 Generate_final_plots
+------------------------
+Node: `generate_summary_plots` (marker "FINAL")
+
+Purpose:
+- Produce heatmaps for substances (equilibrium fields)
+- Produce cell population plots (with coloring, phenotypes, etc.)
+
+6.2 Summarize_simulation
+------------------------
+Nodes:
+- `print_simulation_summary`
+- `save_simulation_data`
+
+Purpose:
+- Print summary statistics (counts by phenotype, etc.)
+- Save data products into the run’s output directory
+
+
+7) Results layout: where outputs go (CLI vs GUI)
+------------------------------------------------
+
+The workflow executor populates path keys in `context` so nodes don’t need to guess paths.
+
+In CLI mode:
+- results are under `opencellcomms_engine/results/`
+  split by subworkflow kind:
+  - `results/composers/<name>/...`
+  - `results/subworkflows/<name>/...`
+
+In GUI mode:
+- results are under the GUI results directory passed in by the server
+  (typically `opencellcomms_gui/results/`), similarly split by kind.
+
+This matters for workflow authoring because file paths inside the workflow
+(e.g., CSV inputs, BND files, custom functions module) are resolved by the engine’s
+path resolver with multiple fallback strategies.
+
+
+8) Pseudocode: the whole workflow execution (conceptual)
+--------------------------------------------------------
+
+Below is a faithful “execution semantics” pseudocode version of what happens in this
+workflow, focusing on the enabled nodes.
+
+PSEUDOCODE (high level)
+
+  context = {}
+
+  # === main ===
+  run_subworkflow("initialization"):
+      setup_simulation(context, name, dt, output_dir)
+      setup_domain(context, dimensions, size_x, size_y, nx, ny, cell_height)
+      setup_substances(context, substances_list)
+      setup_associations(context, associations_dict)
+      setup_gene_network(context, bnd_file, propagation_steps)
+      setup_population(context, enable_gene_network=true, custom_functions_module=...)
+      load_cells_from_csv(context, file_path=...)
+      generate_summary_plots(context, marker="INITIAL")
+
+  run_subworkflow("loop") for 1 iteration:
+      run_subworkflow("microenvironment"):
+          run_diffusion_solver_coupled(
+              context,
+              solver_type="steady_state",
+              max_coupling_iterations=...,
+              coupling_tolerance=...,
+              relaxation_factor=α,
+              max_iterations=...,
+              tolerance=...
+          )
+
+      run_subworkflow("intracellular"):
+          update_gene_networks_v2(context, propagation_steps=500)
+
+      run_subworkflow("intercellular"):
+          mark_necrotic_cells(context, necrosis_params={...})
+          mark_growth_arrest_cells(context, max_growth_arrest_steps=...)
+          mark_apoptotic_cells(context)
+          mark_proliferating_cells(context)
+          update_cell_division(context)
+
+  run_subworkflow("finalization"):
+      generate_summary_plots(context, marker="FINAL")
+      print_simulation_summary(context)
+      save_simulation_data(context)
+
+
+9) Why this chapter calls it “equilibrium” (and what equilibrium means here)
+----------------------------------------------------------------------------
+
+The “equilibrium” here is primarily:
+
+**Microenvironment equilibrium**:
+- The diffusion-reaction PDE is solved in steady state, not marched forward in time.
+- Coupling iterations run until the concentration field changes by less than a tolerance.
+- Under-relaxation stabilizes the nonlinear fixed-point iteration.
+
+Intracellular equilibrium / attractor:
+- The Boolean network is propagated for many steps (500 in this workflow) to reach
+  a stable state (or representative attractor) under the current environment inputs.
+
+What is NOT fully equilibrated in one step:
+- A full coupled fixed point of (diffusion ↔ gene network ↔ metabolism) would require
+  looping diffusion and gene update until gene states stop changing too.
+  This workflow currently performs:
+  - diffusion ↔ metabolism coupling inside the solver
+  - then gene network update once afterward
+
+This is still scientifically meaningful for “equilibrium microenvironment given the
+initial intracellular state”, and it is a common first diagnostic workflow.
+
+
+10) Practical workflow-building guidance (what to change safely)
+---------------------------------------------------------------
+
+If you are building workflows in the GUI and want to preserve the “relaxation to equilibrium”
+intent, the safest knobs are:
+
+- Increase diffusion coupling robustness:
+  - raise `max_coupling_iterations`
+  - lower `coupling_tolerance` (stricter convergence)
+  - lower `relaxation_factor` α if oscillations occur
+
+- Make intracellular attractor convergence more reliable:
+  - raise gene propagation steps
+  - ensure associations + thresholds are correct and in the right units
+
+- Turn the one-step equilibrium workflow into a time series:
+  - increase `call_loop.iterations` (or create a higher-level composer)
+  - ensure metabolism + gene updates are consistently ordered across steps
+
+
+Appendix A — Key terms glossary
+------------------------------
+
+- “coupled solver”: diffusion solve that recomputes metabolism during convergence iterations
+- “Picard iteration”: fixed-point iteration for nonlinear problems by freezing nonlinear terms each iteration
+- “under-relaxation”: blending old/new iterate to stabilize convergence: \(c_{k+1} = \alpha \tilde{c}_{k+1} + (1-\alpha) c_k\)
+- “steady state”: solve the PDE for \( \partial c/\partial t = 0 \) (no transient time marching)
+- “Bridge 1”: microenvironment concentration → gene network input mapping
+- “Bridge 2”: gene network state → metabolism rates / reaction terms for diffusion
