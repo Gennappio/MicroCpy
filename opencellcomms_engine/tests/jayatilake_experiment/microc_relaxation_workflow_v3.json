@@ -18,6 +18,7 @@
         "Setup_associations": "subworkflow",
         "Setup_gene_network": "subworkflow",
         "Setup_population": "subworkflow",
+        "Initialize_gene_states": "subworkflow",
         "Generate_initial_plots": "subworkflow",
         "microenvironment": "subworkflow",
         "intracellular": "subworkflow",
@@ -41,7 +42,7 @@
           "x": 50,
           "y": 50
         },
-        "number_of_steps": 2
+        "number_of_steps": 3
       },
       "functions": [],
       "subworkflow_calls": [
@@ -183,6 +184,20 @@
           "parameter_nodes": []
         },
         {
+          "id": "call_initialize_gene_states",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Initialize_gene_states",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 525
+          },
+          "description": "Randomize initial gene states for all cells",
+          "parameter_nodes": []
+        },
+        {
           "id": "call_intracellular_init",
           "type": "subworkflow_call",
           "subworkflow_name": "intracellular",
@@ -218,6 +233,7 @@
         "call_setup_associations",
         "call_setup_gene_network",
         "call_setup_population",
+        "call_initialize_gene_states",
         "call_intracellular_init",
         "call_generate_plots_init"
       ],
@@ -821,6 +837,47 @@
       "execution_order": [
         "setup_pop",
         "load_cells"
+      ],
+      "input_parameters": []
+    },
+    "Initialize_gene_states": {
+      "description": "Randomize initial gene states for all cells",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-initialize-gene-states",
+        "type": "controller",
+        "label": "INITIALIZE GENE STATES",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "init_gene_states",
+          "function_name": "initialize_gene_states",
+          "function_file": "",
+          "parameters": {
+            "random_seed": 0,
+            "fate_nodes_false": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Randomize gene states (mitoATP, glycoATP, etc.) for all cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "init_gene_states"
       ],
       "input_parameters": []
     },
