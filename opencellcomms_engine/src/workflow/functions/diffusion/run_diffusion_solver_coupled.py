@@ -192,6 +192,17 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         print(f"[COUPLED] Failed to get concentrations: {e}")
         return
 
+    # DEBUG: Check what we got from get_substance_concentrations
+    if DEBUG_COUPLED_SOLVER:
+        oxygen_dict = substance_concentrations.get('Oxygen', {})
+        print(f"[METABOLISM DEBUG] substance_concentrations keys: {list(substance_concentrations.keys())}")
+        print(f"[METABOLISM DEBUG] Oxygen dict has {len(oxygen_dict)} entries")
+        if oxygen_dict:
+            sample_keys = list(oxygen_dict.keys())[:5]
+            sample_values = [oxygen_dict[k] for k in sample_keys]
+            print(f"[METABOLISM DEBUG] Sample Oxygen keys: {sample_keys}")
+            print(f"[METABOLISM DEBUG] Sample Oxygen values: {sample_values}")
+
     # Get metabolism parameters from context
     custom_params = context.get('custom_parameters', {})
     vmax_oxygen = custom_params.get('oxygen_vmax', 1.0e-16)
@@ -208,6 +219,9 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         domain = config.domain
         grid_spacing_x = domain.size_x.micrometers / domain.nx
         grid_spacing_y = domain.size_y.micrometers / domain.ny
+        if DEBUG_COUPLED_SOLVER:
+            print(f"[METABOLISM DEBUG] Domain: {domain.size_x.micrometers}x{domain.size_y.micrometers} μm, grid: {domain.nx}x{domain.ny}")
+            print(f"[METABOLISM DEBUG] Grid spacing: {grid_spacing_x}x{grid_spacing_y} μm, cell_size: {cell_size_um} μm")
     else:
         grid_spacing_x = grid_spacing_y = 30.0  # Default
 
@@ -219,6 +233,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     debug_max_oxygen_consumption = 0.0
     debug_total_local_oxygen = 0.0
     debug_cells_with_zero_oxygen = 0
+    debug_first_cell_logged = False
 
     # Update metabolism for each cell
     for cell_id, cell in population.state.cells.items():
@@ -242,6 +257,14 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         if config and hasattr(config, 'domain'):
             grid_x = max(0, min(config.domain.nx - 1, grid_x))
             grid_y = max(0, min(config.domain.ny - 1, grid_y))
+
+        # DEBUG: Log first cell's coordinate conversion
+        if DEBUG_COUPLED_SOLVER and not debug_first_cell_logged:
+            oxygen_dict = substance_concentrations.get('Oxygen', {})
+            lookup_result = oxygen_dict.get((grid_x, grid_y), "NOT_FOUND")
+            print(f"[METABOLISM DEBUG] First cell: pos=({cell_x}, {cell_y}), phys=({phys_x}, {phys_y}) μm, grid=({grid_x}, {grid_y})")
+            print(f"[METABOLISM DEBUG] Lookup (grid_x, grid_y)=({grid_x}, {grid_y}) -> {lookup_result}")
+            debug_first_cell_logged = True
 
         # Get local concentrations (clamped to non-negative)
         local_oxygen = max(0.0, substance_concentrations.get('Oxygen', {}).get((grid_x, grid_y), 0.0))
@@ -274,7 +297,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         lactate_consumption = 0.0
 
         if mito_atp:
-            oxygen_consumption += vmax_oxygen * oxygen_mm
+            oxygen_consumption += 10*vmax_oxygen * oxygen_mm
             glucose_consumption += (vmax_oxygen / 6.0) * glucose_mm * oxygen_mm
             lactate_consumption += (vmax_oxygen * 2.0 / 6.0) * lactate_mm * oxygen_mm
 
@@ -384,10 +407,23 @@ def _compute_max_change(old: Dict[str, np.ndarray], new: Dict[str, np.ndarray]) 
 
 def _apply_relaxation(simulator, old: Dict[str, np.ndarray], new: Dict[str, np.ndarray],
                       alpha: float) -> None:
-    """Apply under-relaxation: c_next = α * c_new + (1-α) * c_old."""
+    """Apply under-relaxation: c_next = α * c_new + (1-α) * c_old.
+
+    CRITICAL: Clamp negative values to zero before blending to prevent
+    numerical instability from propagating across iterations.
+    """
     for name, substance_state in simulator.state.substances.items():
         if name in old and name in new:
-            blended = alpha * new[name] + (1 - alpha) * old[name]
+            # CRITICAL FIX: Clamp both old and new to non-negative before blending
+            # This prevents garbage negative values from propagating
+            old_clamped = np.maximum(old[name], 0.0)
+            new_clamped = np.maximum(new[name], 0.0)
+
+            blended = alpha * new_clamped + (1 - alpha) * old_clamped
+
+            # Extra safety: clamp the result too
+            blended = np.maximum(blended, 0.0)
+
             substance_state.concentrations = blended
 
             # Update FiPy variable if it exists
