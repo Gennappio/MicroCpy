@@ -107,7 +107,7 @@ def run_diffusion_solver_coupled(
     coupling_tolerance: float = 1e-4,
     relaxation_factor: float = 0.7,
     oxygen_conversion_factor: float = 0.5,
-    glucose_conversion_factor: float = 100000.0,
+    glucose_conversion_factor: float = 1.0,
     lactate_conversion_factor: float = 5.0,
     **kwargs
 ) -> None:
