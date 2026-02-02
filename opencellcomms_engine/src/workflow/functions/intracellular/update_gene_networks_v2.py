@@ -109,6 +109,9 @@ def update_gene_networks_v2(
     mct1_stimulus_true = 0
     cells_with_inputs = 0
 
+    # DEBUG: Track first cell's coordinate conversion
+    debug_first_cell_logged = False
+
     for cell_id, cell in population.state.cells.items():
         # Skip necrotic cells
         if cell.state.phenotype == 'Necrosis':
@@ -132,6 +135,15 @@ def update_gene_networks_v2(
                 cell.state.position, substance_concentrations, associations, thresholds, config
             )
             cell_gn.set_input_states(input_states)
+
+            # DEBUG: Log first cell's coordinate conversion and lookup
+            if not debug_first_cell_logged:
+                local_env = _get_local_environment(cell.state.position, substance_concentrations, config)
+                print(f"[GENE_NETWORK_V2 DEBUG] First cell coordinate conversion:")
+                print(f"  Cell position: {cell.state.position}")
+                print(f"  Local environment: {local_env}")
+                print(f"  Input states: {input_states}")
+                debug_first_cell_logged = True
 
             # Track input states BEFORE propagation
             cells_with_inputs += 1
@@ -251,45 +263,54 @@ def _compute_input_states(position, substance_concentrations, associations, thre
 
 
 def _get_local_environment(position, substance_concentrations, config=None):
-    """Get local substance concentrations at a cell's position."""
+    """
+    Get local substance concentrations at a cell's position.
+
+    FIXED: Now uses the same coordinate conversion as run_diffusion_solver_coupled.py
+    to ensure cells look up concentrations at the correct grid positions.
+    """
     local_env = {}
 
     if not substance_concentrations:
         return local_env
 
-    first_substance = next(iter(substance_concentrations.values()))
-    if not first_substance:
-        return local_env
-
-    # Get grid dimensions
-    max_grid_x = max(pos[0] for pos in first_substance.keys()) if first_substance else 0
-    max_grid_y = max(pos[1] for pos in first_substance.keys()) if first_substance else 0
-    nx = max_grid_x + 1
-    ny = max_grid_y + 1
-
     # Convert cell position to grid index
     cell_x, cell_y = position[0], position[1]
 
     if config and hasattr(config, 'domain'):
-        domain_size_um = config.domain.size_x.micrometers if hasattr(config.domain.size_x, 'micrometers') else config.domain.size_x
-        cell_size_um = config.domain.cell_height.micrometers if hasattr(config.domain, 'cell_height') and hasattr(config.domain.cell_height, 'micrometers') else 20.0
+        # Use domain.nx and domain.ny directly (like run_diffusion_solver_coupled.py)
+        domain = config.domain
+        nx = domain.nx
+        ny = domain.ny
 
+        # Get domain size and cell size
+        domain_size_x_um = domain.size_x.micrometers if hasattr(domain.size_x, 'micrometers') else domain.size_x
+        domain_size_y_um = domain.size_y.micrometers if hasattr(domain.size_y, 'micrometers') else domain.size_y
+        cell_size_um = 20.0  # Default cell size
+
+        # Calculate grid spacing (same as run_diffusion_solver_coupled.py)
+        grid_spacing_x = domain_size_x_um / nx
+        grid_spacing_y = domain_size_y_um / ny
+
+        # Convert cell logical position to physical position
         phys_x = cell_x * cell_size_um
         phys_y = cell_y * cell_size_um
 
-        grid_spacing = domain_size_um / nx
-        grid_x = int(phys_x / grid_spacing)
-        grid_y = int(phys_y / grid_spacing)
+        # Convert physical position to grid index
+        grid_x = int(phys_x / grid_spacing_x)
+        grid_y = int(phys_y / grid_spacing_y)
+
+        # Clamp to valid grid bounds
+        grid_x = max(0, min(nx - 1, grid_x))
+        grid_y = max(0, min(ny - 1, grid_y))
     else:
+        # Fallback: assume cell positions are already in grid coordinates
         grid_x = int(cell_x)
         grid_y = int(cell_y)
 
-    # Clamp to valid bounds
-    grid_x = max(0, min(nx - 1, grid_x))
-    grid_y = max(0, min(ny - 1, grid_y))
-
     grid_pos = (grid_x, grid_y)
 
+    # Look up concentrations at the grid position
     for substance_name, conc_grid in substance_concentrations.items():
         if grid_pos in conc_grid:
             local_env[substance_name] = conc_grid[grid_pos]
