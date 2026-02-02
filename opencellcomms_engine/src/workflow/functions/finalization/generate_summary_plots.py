@@ -14,6 +14,7 @@ def _generate_plots_to_directory(
     context: Dict[str, Any],
     output_dir: Path,
     marker: str = "",
+    substances_to_plot: str = "",
     clean_directory: bool = True,
     add_timestamp: bool = False,
 ) -> int:
@@ -24,6 +25,7 @@ def _generate_plots_to_directory(
         context: Workflow context containing population, simulator, config, etc.
         output_dir: Directory to write plots to
         marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+        substances_to_plot: Comma-separated list of substances to plot (empty = all)
         clean_directory: If True, clean image files before writing new plots
         add_timestamp: If True, append timestamp to filenames for debugging
 
@@ -57,11 +59,20 @@ def _generate_plots_to_directory(
         timestamp = datetime.now().strftime("%H%M%S")
         marker = f"{marker}_{timestamp}" if marker else timestamp
 
+    # Parse substances to plot
+    substance_list = None
+    if substances_to_plot:
+        substance_list = [s.strip() for s in substances_to_plot.split(',') if s.strip()]
+
     # Create plotter with the specified output directory
     plotter = AutoPlotter(config, output_dir)
 
-    # Generate all plots with marker
-    generated_plots = plotter.generate_all_plots(results, simulator, population, marker=marker)
+    # Generate all plots with marker and substance filter
+    generated_plots = plotter.generate_all_plots(
+        results, simulator, population,
+        marker=marker,
+        substance_filter=substance_list
+    )
 
     return len(generated_plots)
 
@@ -72,6 +83,7 @@ def _generate_plots_to_directory(
     category="FINALIZATION",
     parameters=[
         {"name": "marker", "type": "STRING", "description": "String to append to filenames (e.g., 'INITIAL', 'FINAL'). Leave empty for no marker.", "default": ""},
+        {"name": "substances_to_plot", "type": "STRING", "description": "Comma-separated list of substances to plot (e.g., 'Oxygen,Glucose,Lactate'). Leave empty for all substances.", "default": ""},
         {"name": "clean_directory", "type": "BOOL", "description": "If true, remove existing plots before writing new ones", "default": False},
         {"name": "add_timestamp", "type": "BOOL", "description": "If true, append timestamp (HHMMSS) to filenames for debugging", "default": False},
     ],
@@ -82,6 +94,7 @@ def _generate_plots_to_directory(
 def generate_summary_plots(
     context: Dict[str, Any],
     marker: str = "",
+    substances_to_plot: str = "",
     clean_directory: bool = False,
     add_timestamp: bool = False,
     **kwargs
@@ -96,6 +109,7 @@ def generate_summary_plots(
     Args:
         context: Workflow context containing population, simulator, config, etc.
         marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+        substances_to_plot: Comma-separated list of substances to plot (empty = all)
         clean_directory: If True, remove existing plots before writing new ones
         add_timestamp: If True, append timestamp (HHMMSS) to filenames for debugging
         **kwargs: Additional parameters (ignored)
@@ -125,10 +139,17 @@ def generate_summary_plots(
 
     marker_info = f" with marker '{marker}'" if marker else ""
     timestamp_info = " with timestamp" if add_timestamp else ""
-    print(f"[WORKFLOW] Generating plots{marker_info}{timestamp_info}...")
+    substances_info = f" for substances: {substances_to_plot}" if substances_to_plot else " for all substances"
+    print(f"[WORKFLOW] Generating plots{marker_info}{timestamp_info}{substances_info}...")
 
     try:
-        count = _generate_plots_to_directory(context, output_path, marker=marker, clean_directory=clean_directory, add_timestamp=add_timestamp)
+        count = _generate_plots_to_directory(
+            context, output_path,
+            marker=marker,
+            substances_to_plot=substances_to_plot,
+            clean_directory=clean_directory,
+            add_timestamp=add_timestamp
+        )
         print(f"[WORKFLOW] Generated {count} plots to {output_path}")
         return True
 

@@ -816,7 +816,7 @@ Substance Initial Values:
 
             print(f"   ✅ {substance_name} initial heatmap: {plot_path.name}")
 
-    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None, marker: str = ""):
+    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None, marker: str = "", substance_filter: List[str] = None):
         """Generate all plots automatically
 
         Args:
@@ -824,10 +824,12 @@ Substance Initial Values:
             simulator: Simulator instance for current state
             population: Population instance for cell positions
             marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+            substance_filter: Optional list of substance names to plot (None = all)
         """
 
         marker_info = f" with marker '{marker}'" if marker else ""
-        print(f"[PLOT] Generating plots{marker_info}...")
+        filter_info = f" (filtering to: {', '.join(substance_filter)})" if substance_filter else ""
+        print(f"[PLOT] Generating plots{marker_info}{filter_info}...")
         generated_plots = []
 
         time_points = results.get('time', [])
@@ -860,8 +862,19 @@ Substance Initial Values:
             # Get config name from plots directory
             config_name = self.plots_dir.name if hasattr(self.plots_dir, 'name') else "unknown"
 
-            # Plot ALL substances (not just key ones)
-            all_substances = list(self.config.substances.keys())
+            # Determine which substances to plot
+            if substance_filter:
+                # Debug: show what we're filtering
+                print(f"[PLOT] Substance filter requested: {substance_filter}")
+                print(f"[PLOT] Config substances: {list(self.config.substances.keys())}")
+                print(f"[PLOT] Simulator substances: {list(simulator.state.substances.keys())}")
+                all_substances = [s for s in substance_filter if s in self.config.substances.keys()]
+                if len(all_substances) < len(substance_filter):
+                    missing = set(substance_filter) - set(all_substances)
+                    print(f"[PLOT] Warning: substances not found in config: {missing}")
+                print(f"[PLOT] Will plot: {all_substances}")
+            else:
+                all_substances = list(self.config.substances.keys())
 
             # Determine current time for heatmaps
             if time_points:
