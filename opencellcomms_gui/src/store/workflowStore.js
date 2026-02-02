@@ -1342,6 +1342,7 @@ const useWorkflowStore = create((set, get) => ({
           type: 'dictParameterNode',
           label: node.data.label || 'Dictionary',
           entries: node.data.entries || [],
+          targetParam: node.data.targetParam,
           position: node.position,
         })),
       ];
@@ -1881,8 +1882,10 @@ const useWorkflowStore = create((set, get) => ({
       if (param.type === 'listParameterNode') {
         nodeData.data.listType = param.listType || 'string';
         nodeData.data.items = param.items || [];
+        nodeData.data.targetParam = param.targetParam || 'items';
       } else if (param.type === 'dictParameterNode') {
         nodeData.data.entries = param.entries || [];
+        nodeData.data.targetParam = param.targetParam;
       } else {
         nodeData.data.parameters = param.parameters || {};
       }
