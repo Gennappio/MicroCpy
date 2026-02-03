@@ -11,3 +11,9 @@ This file tracks significant assistant-driven changes for traceability.
 
 - Added `docs/@microc-2.0/docs/MicroC_GUI_Workflow_Building_Chapter.txt`: deep, step-by-step documentation of the GUI workflow `microc_relaxation_workflow_v3.json`, emphasizing the one-step equilibrium design and the FiPy steady-state + Picard coupling with under-relaxation (“relaxation”) method.
 - Expanded `docs/@microc-2.0/docs/MicroC_GUI_Workflow_Building_Chapter.txt` with workflow JSON excerpts and key engine code snippets (FiPy equation, coupled solver loop, metabolism coupling, position→grid mapping) to make the narrative directly traceable to implementation.
+
+## 2026-02-03
+
+- Added `opencellcomms_engine/benchmarks/gene_analysis/` helper scripts to reproduce assistant analyses on confusion-matrix JSON outputs:
+  - `determinant_inputs.py` ranks input nodes by ON vs OFF effect on a target output node.
+  - `pairwise_delta_analysis.py` analyzes when one output is more probable than another via \(\Delta = P(A) - P(B)\).
