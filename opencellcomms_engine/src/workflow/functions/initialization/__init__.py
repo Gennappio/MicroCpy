@@ -19,6 +19,7 @@ from .setup_gene_network import setup_gene_network
 from .setup_maboss import setup_maboss
 from .load_cells_from_vtk import load_cells_from_vtk
 from .load_cells_from_csv import load_cells_from_csv
+from .read_checkpoint import read_checkpoint
 
 __all__ = [
     'setup_simulation',
@@ -36,5 +37,6 @@ __all__ = [
     'setup_maboss',
     'load_cells_from_vtk',
     'load_cells_from_csv',
+    'read_checkpoint',
 ]
 

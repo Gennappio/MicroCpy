@@ -28,6 +28,7 @@ from src.workflow.functions.initialization import (
     setup_gene_network,
     load_cells_from_vtk,
     load_cells_from_csv,
+    read_checkpoint,
 )
 from src.workflow.functions.intracellular import (
     update_metabolism,

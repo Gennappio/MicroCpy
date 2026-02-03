@@ -1,0 +1,1533 @@
+{
+  "version": "2.0",
+  "name": "MicroC Integrated Workflow",
+  "description": "Full multi-scale simulation: microenvironment (diffusion-reaction), intracellular (gene network, metabolism), intercellular (division, apoptosis, necrosis). Bridges: concentrations -> gene inputs -> metabolism coefficients.",
+  "metadata": {
+    "author": "OpenCellComms Team",
+    "experiment": "MicroC Multi-Scale Simulation",
+    "created": "2026-01-23",
+    "notes": "Three composers (Initialization, Loop, Finalization). Loop has 3 stages: microenvironment, intracellular, intercellular. Bridges between diffusion-reaction and gene network.",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "initialization": "composer",
+        "loop": "composer",
+        "finalization": "composer",
+        "Setup_simulation": "subworkflow",
+        "Setup_substances": "subworkflow",
+        "Setup_associations": "subworkflow",
+        "Setup_gene_network": "subworkflow",
+        "Setup_population": "subworkflow",
+        "Initialize_gene_states": "subworkflow",
+        "Generate_initial_plots": "subworkflow",
+        "microenvironment": "subworkflow",
+        "intracellular": "subworkflow",
+        "intercellular": "subworkflow",
+        "Checkpoint": "subworkflow",
+        "Generate_loop_plots": "subworkflow",
+        "Generate_final_plots": "subworkflow",
+        "Summarize_simulation": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer: initialization -> loop × N -> finalization",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN COMPOSER",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 3
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_initialization",
+          "type": "subworkflow_call",
+          "subworkflow_name": "initialization",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Initialize simulation: domain, substances, gene network, population",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_loop",
+          "type": "subworkflow_call",
+          "subworkflow_name": "loop",
+          "iterations": 5,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 199.48219944082007,
+            "y": 250
+          },
+          "description": "Main simulation loop: microenvironment -> intracellular -> intercellular",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_finalization",
+          "type": "subworkflow_call",
+          "subworkflow_name": "finalization",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "Finalize: generate plots and save data",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "call_initialization",
+        "call_loop",
+        "call_finalization"
+      ],
+      "input_parameters": []
+    },
+    "initialization": {
+      "description": "Initialization composer: setup simulation, substances, associations, gene network, population",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-initialization",
+        "type": "controller",
+        "label": "INITIALIZATION COMPOSER",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_setup_simulation",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_simulation",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Setup simulation and domain",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_setup_substances",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_substances",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 201.72956521739138,
+            "y": 200
+          },
+          "description": "Add all substances with diffusion and reaction parameters",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_setup_associations",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_associations",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 300
+          },
+          "description": "Setup substance-to-gene associations (bridge 1)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_setup_gene_network",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_gene_network",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "Configure gene network BND file and parameters",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_setup_population",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_population",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 500
+          },
+          "description": "Setup population and load cells with gene networks",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_initialize_gene_states",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Initialize_gene_states",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 525
+          },
+          "description": "Randomize initial gene states for all cells",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_intracellular_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "intracellular",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 550
+          },
+          "description": "Initial gene network propagation",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_generate_plots_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Generate_initial_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 600
+          },
+          "description": "Generate initial state plots",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "call_setup_simulation",
+        "call_setup_substances",
+        "call_setup_associations",
+        "call_setup_gene_network",
+        "call_setup_population",
+        "call_initialize_gene_states",
+        "call_intracellular_init",
+        "call_generate_plots_init"
+      ],
+      "input_parameters": []
+    },
+    "loop": {
+      "description": "Loop composer: one timestep with 3 stages (microenvironment, intracellular, intercellular)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-loop",
+        "type": "controller",
+        "label": "LOOP COMPOSER",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_microenvironment",
+          "type": "subworkflow_call",
+          "subworkflow_name": "microenvironment",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Stage 1: Solve diffusion-reaction equations",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_intracellular",
+          "type": "subworkflow_call",
+          "subworkflow_name": "intracellular",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 250
+          },
+          "description": "Stage 2: Gene network + metabolism (bridges)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_intercellular",
+          "type": "subworkflow_call",
+          "subworkflow_name": "intercellular",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "Stage 3: Cell division, apoptosis, necrosis",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_checkpoint",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Checkpoint",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 200,
+            "y": 550
+          },
+          "description": "Stage 4: Save checkpoints (gene networks, substances)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_generate_plots_loop",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Generate_loop_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 700
+          },
+          "description": "Stage 5: Generate plots for this iteration",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "call_microenvironment",
+        "call_intracellular",
+        "call_intercellular",
+        "call_checkpoint",
+        "call_generate_plots_loop"
+      ],
+      "input_parameters": []
+    },
+    "finalization": {
+      "description": "Finalization composer: generate plots and save data",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-finalization",
+        "type": "controller",
+        "label": "FINALIZATION COMPOSER",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_generate_plots_final",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Generate_final_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Generate final state plots",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_summarize_simulation",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Summarize_simulation",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 250
+          },
+          "description": "Print summary and save simulation data",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "call_generate_plots_final",
+        "call_summarize_simulation"
+      ],
+      "input_parameters": []
+    },
+    "Setup_simulation": {
+      "description": "Setup simulation infrastructure and spatial domain",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-simulation",
+        "type": "controller",
+        "label": "SETUP SIMULATION",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 50
+          },
+          "description": "Initialize simulation infrastructure",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_sim_name",
+            "param_sim_total_steps",
+            "param_sim_dt",
+            "param_sim_output_dir"
+          ]
+        },
+        {
+          "id": "setup_domain_node",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 150
+          },
+          "description": "Define 2D spatial domain",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_domain_dimensions",
+            "param_domain_size_x",
+            "param_domain_size_y",
+            "param_domain_nx",
+            "param_domain_ny",
+            "param_domain_cell_height"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_sim_name",
+          "label": "Simulation Name",
+          "parameters": {
+            "name": "MicroC Simulation"
+          },
+          "position": {
+            "x": 400,
+            "y": 50
+          }
+        },
+        {
+          "id": "param_sim_total_steps",
+          "label": "Total Steps",
+          "parameters": {
+            "total_steps": 100
+          },
+          "position": {
+            "x": 550,
+            "y": 50
+          }
+        },
+        {
+          "id": "param_sim_dt",
+          "label": "Time Step (dt)",
+          "parameters": {
+            "dt": 1
+          },
+          "position": {
+            "x": 700,
+            "y": 50
+          }
+        },
+        {
+          "id": "param_sim_output_dir",
+          "label": "Output Directory",
+          "parameters": {
+            "output_dir": "results"
+          },
+          "position": {
+            "x": 850,
+            "y": 50
+          }
+        },
+        {
+          "id": "param_domain_dimensions",
+          "label": "Dimensions",
+          "parameters": {
+            "dimensions": 2
+          },
+          "position": {
+            "x": 400,
+            "y": 150
+          }
+        },
+        {
+          "id": "param_domain_size_x",
+          "label": "Size X (μm)",
+          "parameters": {
+            "size_x": 1500
+          },
+          "position": {
+            "x": 550,
+            "y": 150
+          }
+        },
+        {
+          "id": "param_domain_size_y",
+          "label": "Size Y (μm)",
+          "parameters": {
+            "size_y": 1500
+          },
+          "position": {
+            "x": 700,
+            "y": 150
+          }
+        },
+        {
+          "id": "param_domain_nx",
+          "label": "Grid NX",
+          "parameters": {
+            "nx": 50
+          },
+          "position": {
+            "x": 850,
+            "y": 150
+          }
+        },
+        {
+          "id": "param_domain_ny",
+          "label": "Grid NY",
+          "parameters": {
+            "ny": 50
+          },
+          "position": {
+            "x": 1000,
+            "y": 150
+          }
+        },
+        {
+          "id": "param_domain_cell_height",
+          "label": "Cell Height (μm)",
+          "parameters": {
+            "cell_height": 20
+          },
+          "position": {
+            "x": 1150,
+            "y": 150
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_sim",
+        "setup_domain_node"
+      ],
+      "input_parameters": []
+    },
+    "Setup_substances": {
+      "description": "Setup all substances with diffusion and reaction parameters",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-substances",
+        "type": "controller",
+        "label": "SETUP SUBSTANCES",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_all_substances",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Configure all 8 substances for diffusion-reaction",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_substances_list"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_substances_list",
+          "type": "listParameterNode",
+          "label": "Substances (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":1.0e-9,\"production_rate\":0.0,\"uptake_rate\":3.0e-17,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-15,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-11,\"production_rate\":3.0e-15,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+            "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+            "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_all_substances"
+      ],
+      "input_parameters": []
+    },
+    "Setup_associations": {
+      "description": "Setup substance-to-gene associations (Bridge 1: concentrations -> gene inputs)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-associations",
+        "type": "controller",
+        "label": "SETUP ASSOCIATIONS",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_all_associations",
+          "function_name": "setup_associations",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Configure all substance-to-gene associations",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_associations_dict"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_associations_dict",
+          "type": "dictParameterNode",
+          "label": "Associations (Dict)",
+          "targetParam": "associations",
+          "entries": [
+            {
+              "key": "Oxygen",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Oxygen_supply",
+                "threshold": 0.022
+              }
+            },
+            {
+              "key": "Glucose",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Glucose_supply",
+                "threshold": 2
+              }
+            },
+            {
+              "key": "Lactate",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT1_stimulus",
+                "threshold": 1.5
+              }
+            },
+            {
+              "key": "HGF",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "cMET_stimulus",
+                "threshold": 0.000001
+              }
+            },
+            {
+              "key": "TGFA",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "EGFR_stimulus",
+                "threshold": 0.000001
+              }
+            }
+          ],
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_all_associations"
+      ],
+      "input_parameters": []
+    },
+    "Setup_gene_network": {
+      "description": "Configure gene network BND file and propagation parameters",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-gene-network",
+        "type": "controller",
+        "label": "SETUP GENE NETWORK",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_gene_net",
+          "function_name": "setup_gene_network",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Configure gene network with BND file",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_bnd_file",
+            "param_propagation_steps"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_bnd_file",
+          "label": "BND File Path",
+          "parameters": {
+            "bnd_file": "tests/jayatilake_experiment/jaya_microc.bnd"
+          },
+          "position": {
+            "x": 400,
+            "y": 100
+          }
+        },
+        {
+          "id": "param_propagation_steps",
+          "label": "Propagation Steps",
+          "parameters": {
+            "propagation_steps": 20
+          },
+          "position": {
+            "x": 600,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_gene_net"
+      ],
+      "input_parameters": []
+    },
+    "Setup_population": {
+      "description": "Setup cell population with gene networks enabled",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-population",
+        "type": "controller",
+        "label": "SETUP POPULATION",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": true,
+            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Initialize population with gene network support",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_checkpoint_file"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_checkpoint_file",
+          "label": "Checkpoint File",
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+          },
+          "position": {
+            "x": 32.10482758620691,
+            "y": 200
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_pop",
+        "read_checkpoint"
+      ],
+      "input_parameters": []
+    },
+    "Initialize_gene_states": {
+      "description": "Randomize initial gene states for all cells",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-initialize-gene-states",
+        "type": "controller",
+        "label": "INITIALIZE GENE STATES",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "init_gene_states",
+          "function_name": "initialize_gene_states",
+          "function_file": "",
+          "parameters": {
+            "random_seed": 0,
+            "fate_nodes_false": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Randomize gene states (mitoATP, glycoATP, etc.) for all cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "init_gene_states"
+      ],
+      "input_parameters": []
+    },
+    "Generate_initial_plots": {
+      "description": "Generate plots showing initial simulation state",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-initial-plots",
+        "type": "controller",
+        "label": "GENERATE INITIAL PLOTS",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gen_initial_plots",
+          "function_name": "generate_summary_plots",
+          "function_file": "",
+          "parameters": {
+            "marker": "INITIAL"
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Generate initial state visualization",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gen_initial_plots"
+      ],
+      "input_parameters": []
+    },
+    "Generate_loop_plots": {
+      "description": "Generate plots for current loop iteration with iteration number in filename and title",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-loop-plots",
+        "type": "controller",
+        "label": "GENERATE LOOP PLOTS",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gen_loop_plots",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Oxygen,Glucose,Lactate"
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate only)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gen_loop_plots"
+      ],
+      "input_parameters": []
+    },
+    "microenvironment": {
+      "description": "Stage 1: Update metabolism then solve diffusion-reaction PDEs. Three solver options: standard (disabled), clamped (disabled), coupled (enabled).",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-microenvironment",
+        "type": "controller",
+        "label": "MICROENVIRONMENT",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "update_metab",
+          "function_name": "update_metabolism",
+          "function_file": "",
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Bridge 2: Gene states (glycoATP, mitoATP) -> metabolism coefficients. DISABLED when using coupled solver.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "run_diffusion",
+          "function_name": "run_diffusion_solver",
+          "function_file": "",
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "STANDARD solver - may produce negative concentrations. DISABLED.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_max_iterations",
+            "param_tolerance",
+            "param_solver_type"
+          ]
+        },
+        {
+          "id": "run_diffusion_clamped",
+          "function_name": "run_diffusion_solver_clamped",
+          "function_file": "",
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 200,
+            "y": 300
+          },
+          "description": "CLAMPED solver - clamps negative concentrations to zero after solving. Simple fix.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_max_iterations",
+            "param_tolerance",
+            "param_solver_type",
+            "param_min_concentration"
+          ]
+        },
+        {
+          "id": "run_diffusion_coupled",
+          "function_name": "run_diffusion_solver_coupled",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_max_iterations",
+            "param_tolerance",
+            "param_solver_type",
+            "param_max_coupling_iterations",
+            "param_coupling_tolerance",
+            "param_relaxation_factor"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_max_iterations",
+          "label": "Max Iterations",
+          "parameters": {
+            "max_iterations": 1000
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
+        },
+        {
+          "id": "param_tolerance",
+          "label": "Tolerance",
+          "parameters": {
+            "tolerance": 0.000001
+          },
+          "position": {
+            "x": 550,
+            "y": 200
+          }
+        },
+        {
+          "id": "param_solver_type",
+          "label": "Solver Type",
+          "parameters": {
+            "solver_type": "steady_state"
+          },
+          "position": {
+            "x": 700,
+            "y": 200
+          }
+        },
+        {
+          "id": "param_min_concentration",
+          "label": "Min Concentration (Clamp)",
+          "parameters": {
+            "min_concentration": 0
+          },
+          "position": {
+            "x": 400,
+            "y": 300
+          }
+        },
+        {
+          "id": "param_max_coupling_iterations",
+          "label": "Max Coupling Iterations",
+          "parameters": {
+            "max_coupling_iterations": 10
+          },
+          "position": {
+            "x": 400,
+            "y": 400
+          }
+        },
+        {
+          "id": "param_coupling_tolerance",
+          "label": "Coupling Tolerance",
+          "parameters": {
+            "coupling_tolerance": 0.0001
+          },
+          "position": {
+            "x": 550,
+            "y": 400
+          }
+        },
+        {
+          "id": "param_relaxation_factor",
+          "label": "Relaxation Factor (α)",
+          "parameters": {
+            "relaxation_factor": 0.7
+          },
+          "position": {
+            "x": 700,
+            "y": 400
+          }
+        }
+      ],
+      "execution_order": [
+        "update_metab",
+        "run_diffusion",
+        "run_diffusion_clamped",
+        "run_diffusion_coupled"
+      ],
+      "input_parameters": []
+    },
+    "intracellular": {
+      "description": "Stage 2: Gene network update (Bridge 1)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-intracellular",
+        "type": "controller",
+        "label": "INTRACELLULAR",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "update_genes",
+          "function_name": "update_gene_networks",
+          "function_file": "",
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "OLD VERSION - DISABLED. Bridge 1: Read concentrations, set gene inputs, propagate network",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_gene_propagation_steps"
+          ]
+        },
+        {
+          "id": "update_genes_v2",
+          "function_name": "update_gene_networks_v2",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "FIXED V2: Properly propagates gene networks using NetLogo-style updates. Logs mitoATP/glycoATP.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_gene_propagation_steps_v2"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_gene_propagation_steps",
+          "label": "Propagation Steps (OLD)",
+          "parameters": {
+            "propagation_steps": 20
+          },
+          "position": {
+            "x": 400,
+            "y": 100
+          }
+        },
+        {
+          "id": "param_gene_propagation_steps_v2",
+          "label": "Propagation Steps (V2)",
+          "parameters": {
+            "propagation_steps": 500
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
+        }
+      ],
+      "execution_order": [
+        "update_genes",
+        "update_genes_v2"
+      ],
+      "input_parameters": []
+    },
+    "intercellular": {
+      "description": "Stage 3: Mark cell phenotypes and handle cell division",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-intercellular",
+        "type": "controller",
+        "label": "INTERCELLULAR",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "mark_necrotic",
+          "function_name": "mark_necrotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Mark cells as necrotic based on user-defined conditions",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_necrosis_params"
+          ]
+        },
+        {
+          "id": "mark_growth_arrest",
+          "function_name": "mark_growth_arrest_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Track cells in Growth_Arrest state with time limit",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_max_growth_arrest_steps"
+          ]
+        },
+        {
+          "id": "mark_apoptotic",
+          "function_name": "mark_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": -229.14666666666665,
+            "y": 309.75333333333333
+          },
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "mark_proliferating",
+          "function_name": "mark_proliferating_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 400
+          },
+          "description": "Mark cells as Proliferation or Quiescence based on gene network",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "cell_division",
+          "function_name": "update_cell_division",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 500
+          },
+          "description": "Handle cell division for proliferating cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_max_growth_arrest_steps",
+          "label": "Max Growth Arrest Steps",
+          "parameters": {
+            "max_growth_arrest_steps": 100
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
+        },
+        {
+          "id": "param_necrosis_params",
+          "type": "dictParameterNode",
+          "label": "Necrosis Parameters",
+          "entries": [
+            {
+              "key": "oxygen_threshold",
+              "valueType": "float",
+              "value": 0.011
+            },
+            {
+              "key": "glucose_threshold",
+              "valueType": "float",
+              "value": 0.39
+            },
+            {
+              "key": "require_both",
+              "valueType": "bool",
+              "value": true
+            }
+          ],
+          "position": {
+            "x": 400,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "mark_necrotic",
+        "mark_growth_arrest",
+        "mark_apoptotic",
+        "mark_proliferating",
+        "cell_division"
+      ],
+      "input_parameters": []
+    },
+    "Checkpoint": {
+      "description": "Save simulation checkpoints (cell positions and gene states)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-checkpoint",
+        "type": "controller",
+        "label": "CHECKPOINT",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "save_checkpoint",
+          "function_name": "save_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 300,
+            "y": 100
+          },
+          "description": "Save cell positions and gene states to CSV (same format as read_checkpoint)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_checkpoint_interval"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_checkpoint_interval",
+          "label": "Checkpoint Interval",
+          "parameters": {
+            "interval": 10
+          },
+          "position": {
+            "x": 50,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "save_checkpoint"
+      ],
+      "input_parameters": []
+    },
+    "Generate_final_plots": {
+      "description": "Generate plots showing final simulation state",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-final-plots",
+        "type": "controller",
+        "label": "GENERATE FINAL PLOTS",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gen_final_plots",
+          "function_name": "generate_summary_plots",
+          "function_file": "",
+          "parameters": {
+            "marker": "FINAL",
+            "substances_to_plot": "Oxygen,Glucose,Lactate"
+          },
+          "enabled": true,
+          "position": {
+            "x": 190.5,
+            "y": 171
+          },
+          "description": "Generate final state visualization",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gen_final_plots"
+      ],
+      "input_parameters": []
+    },
+    "Summarize_simulation": {
+      "description": "Print summary and save simulation data",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-summarize-simulation",
+        "type": "controller",
+        "label": "SUMMARIZE SIMULATION",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "print_summary",
+          "function_name": "print_simulation_summary",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Print simulation statistics and summary",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "save_data",
+          "function_name": "save_simulation_data",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Save simulation data to files",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "print_summary",
+        "save_data"
+      ],
+      "input_parameters": []
+    }
+  }
+}
