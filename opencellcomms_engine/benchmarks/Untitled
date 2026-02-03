@@ -1,0 +1,14 @@
+Most determinant inputs (ranked by effect size)
+(Values are mean Proliferation% when input is ON vs OFF)
+Growth_Inhibitor: ON → 0.00%, OFF → 1.78% (Δ -1.78 pp)
+DNA_damage: ON → 0.01%, OFF → 1.77% (Δ -1.75 pp)
+TGFBR_stimulus: ON → 0.02%, OFF → 1.76% (Δ -1.74 pp)
+Glucose_supply: ON → 1.45%, OFF → 0.33% (Δ +1.11 pp)
+Oxygen_supply: ON → 1.05%, OFF → 0.72% (Δ +0.33 pp)
+FGFR_stimulus: ON → 1.05%, OFF → 0.73% (Δ +0.32 pp)
+MCT1_stimulus: ON → 1.04%, OFF → 0.73% (Δ +0.31 pp)
+cMET_stimulus: ON → 1.02%, OFF → 0.76% (Δ +0.26 pp)
+EGFR_stimulus: ON → 0.94%, OFF → 0.84% (Δ +0.11 pp)
+Interpretation (plain):
+To make Proliferation more likely, the biggest “gatekeepers” are turning OFF: Growth_Inhibitor, DNA_damage, TGFBR_stimulus.
+The strongest “booster” is turning ON: Glucose_supply (then smaller boosts from Oxygen/FGFR/MCT1/cMET).

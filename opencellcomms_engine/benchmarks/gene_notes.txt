@@ -69,3 +69,210 @@ Proliferation:
     Apoptosis: 24.0%
     glycoATP: 0.0%
     mitoATP: 99.0%
+
+
+================================================================================
+BEST COMBINATIONS FOR OUTPUT NODES
+================================================================================
+
+glycoATP:
+  Best activation: 97.0% (97/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: ON
+    FGFR_stimulus: ON
+    Glucose_supply: ON
+    Growth_Inhibitor: ON
+    MCT1_stimulus: ON
+    Oxygen_supply: OFF
+    TGFBR_stimulus: OFF
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Growth_Arrest: 22.0%
+    Proliferation: 0.0%
+
+Proliferation:
+  Best activation: 21.0% (21/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: OFF
+    FGFR_stimulus: ON
+    Glucose_supply: ON
+    Growth_Inhibitor: OFF
+    MCT1_stimulus: ON
+    Oxygen_supply: ON
+    TGFBR_stimulus: OFF
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Growth_Arrest: 21.0%
+    glycoATP: 0.0%
+
+Growth_Arrest:
+  Best activation: 100.0% (100/100 runs)
+  Input combination:
+    DNA_damage: ON
+    EGFR_stimulus: OFF
+    FGFR_stimulus: OFF
+    Glucose_supply: OFF
+    Growth_Inhibitor: OFF
+    MCT1_stimulus: OFF
+    Oxygen_supply: OFF
+    TGFBR_stimulus: ON
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Proliferation: 0.0%
+    glycoATP: 0.0%
+
+
+================================================================================
+PAIRWISE FATE NODE COMPARISONS
+================================================================================
+
+
+Proliferation vs Growth_Arrest:
+  Proliferation > Growth_Arrest: 0 combinations
+  Growth_Arrest > Proliferation: 511 combinations
+
+  Top cases where Growth_Arrest > Proliferation:
+
+    Case 1: Growth_Arrest=100.0%, Proliferation=0.0% (diff: 100.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: OFF
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: ON
+        cMET_stimulus: OFF
+
+    Case 2: Growth_Arrest=100.0%, Proliferation=0.0% (diff: 100.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: ON
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: ON
+        cMET_stimulus: OFF
+
+    Case 3: Growth_Arrest=100.0%, Proliferation=0.0% (diff: 100.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: OFF
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: ON
+        cMET_stimulus: ON
+
+    Case 4: Growth_Arrest=100.0%, Proliferation=0.0% (diff: 100.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: ON
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: OFF
+        cMET_stimulus: ON
+
+    Case 5: Growth_Arrest=100.0%, Proliferation=0.0% (diff: 100.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: ON
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: ON
+        cMET_stimulus: ON
+
+Most determinant inputs (ranked by effect size)
+(Values are mean Proliferation% when input is ON vs OFF)
+Growth_Inhibitor: ON → 0.00%, OFF → 1.78% (Δ -1.78 pp)
+DNA_damage: ON → 0.01%, OFF → 1.77% (Δ -1.75 pp)
+TGFBR_stimulus: ON → 0.02%, OFF → 1.76% (Δ -1.74 pp)
+Glucose_supply: ON → 1.45%, OFF → 0.33% (Δ +1.11 pp)
+Oxygen_supply: ON → 1.05%, OFF → 0.72% (Δ +0.33 pp)
+FGFR_stimulus: ON → 1.05%, OFF → 0.73% (Δ +0.32 pp)
+MCT1_stimulus: ON → 1.04%, OFF → 0.73% (Δ +0.31 pp)
+cMET_stimulus: ON → 1.02%, OFF → 0.76% (Δ +0.26 pp)
+EGFR_stimulus: ON → 0.94%, OFF → 0.84% (Δ +0.11 pp)
+Interpretation (plain):
+To make Proliferation more likely, the biggest “gatekeepers” are turning OFF: Growth_Inhibitor, DNA_damage, TGFBR_stimulus.
+The strongest “booster” is turning ON: Glucose_supply (then smaller boosts from Oxygen/FGFR/MCT1/cMET).
+
+Most determinant inputs for Apoptosis (from results_apoptosis.json)
+Overall mean Apoptosis across all 512 combinations: 64.90%
+Ranked by absolute impact (mean Apoptosis% when input is ON vs OFF):
+DNA_damage: ON → 85.05%, OFF → 44.75% (Δ +40.30 pp) ← dominant driver
+TGFBR_stimulus: ON → 74.14%, OFF → 55.66% (Δ +18.48 pp)
+cMET_stimulus: ON → 66.25%, OFF → 63.55% (Δ +2.70 pp)
+FGFR_stimulus: ON → 65.58%, OFF → 64.22% (Δ +1.36 pp)
+EGFR_stimulus: ON → 65.55%, OFF → 64.24% (Δ +1.31 pp)
+Oxygen_supply: ON → 65.29%, OFF → 64.51% (Δ +0.78 pp)
+Growth_Inhibitor: ON → 64.55%, OFF → 65.25% (Δ -0.70 pp)
+Glucose_supply: ON → 64.66%, OFF → 65.13% (Δ -0.47 pp)
+MCT1_stimulus: ON → 64.93%, OFF → 64.87% (Δ +0.06 pp)
+What do the highest-Apoptosis combinations look like?
+Top 3 combinations in your file:
+Apop 96% with ON: DNA_damage, EGFR_stimulus, Growth_Inhibitor, cMET_stimulus
+Apop 96% with ON: DNA_damage, MCT1_stimulus, TGFBR_stimulus, cMET_stimulus
+Apop 96% with ON: DNA_damage, EGFR_stimulus, Glucose_supply, Growth_Inhibitor, Oxygen_supply, TGFBR_stimulus
+
+
+Closest you get to “Proliferation > Apoptosis”
+Best (highest \(\Delta\)) combination:
+Prolif = 6%, Apop = 14%, \(\Delta = -8\) pp
+ON: FGFR_stimulus, Glucose_supply, MCT1_stimulus
+OFF: DNA_damage, EGFR_stimulus, Growth_Inhibitor, Oxygen_supply, TGFBR_stimulus, cMET_stimulus
+That’s the nearest point to crossing; even there, Apoptosis is still higher.
+Which inputs are most determinant for “Prolif beating Apop” (i.e., for 
+Δ
+Δ)?
+Ranked by effect on 
+Δ
+Δ when toggled ON vs OFF (mean 
+Δ
+Δ across all combos):
+DNA_damage: ON makes 
+Δ
+Δ worse by 41.16 pp (huge)
+mean 
+Δ
+Δ with DNA_damage ON: -84.70 pp
+mean 
+Δ
+Δ with DNA_damage OFF: -43.53 pp
+TGFBR_stimulus: ON makes 
+Δ
+Δ worse by 19.13 pp
+cMET_stimulus: ON makes 
+Δ
+Δ worse by 2.57 pp
+Glucose_supply: ON makes 
+Δ
+Δ better by 1.54 pp (the only meaningful “helpful” input here)
+Everything else shifts 
+Δ
+Δ by ~1 pp or less.
+Plain interpretation:
+If your goal is “Proliferation higher than Apoptosis”, this model/run says it doesn’t happen under these 9 inputs. The best you can do is:
+keep DNA_damage=OFF
+keep TGFBR_stimulus=OFF
+turn Glucose_supply=ON
+…and even then Apoptosis stays higher.
+
+If you want Proliferation to actually win
+Two likely reasons it never wins here:
+Your input set doesn’t include the right “pro-proliferation” drivers (or they exist but are downstream logic nodes, not inputs).
+Your update dynamics / initialization strongly bias Apoptosis.
+If you tell me which input nodes you’re willing to add (e.g. growth-factor nodes, nutrient stress nodes, etc.), I can rerun the same analysis and see whether a regime where Proliferation > Apoptosis ap
