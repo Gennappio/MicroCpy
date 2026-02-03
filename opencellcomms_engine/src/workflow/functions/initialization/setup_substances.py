@@ -5,8 +5,9 @@ This function initializes substances and creates the diffusion simulator.
 """
 
 import json
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 def _parse_substances(substances: List[Union[str, Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -41,6 +42,9 @@ def _parse_substances(substances: List[Union[str, Dict[str, Any]]]) -> List[Dict
     display_name="Setup Substances",
     description="Initialize substances and diffusion simulator",
     category="INITIALIZATION",
+    parameters=[
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
+    ],
     inputs=["context"],
     outputs=["simulator"],
     cloneable=False
@@ -49,6 +53,7 @@ def setup_substances(
     context: Dict[str, Any],
     substances: List[Union[str, Dict[str, Any]]] = None,
     associations: Dict[str, str] = None,
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -116,12 +121,12 @@ def setup_substances(
                 config.associations = {}
             config.associations.update(associations)
 
-        print(f"   [+] Configured {len(getattr(config, 'substances', {}))} substances in diffusion solver")
-        
+        log(context, f"Configured {len(getattr(config, 'substances', {}))} substances in diffusion solver", prefix="[+]", node_verbose=verbose)
+
         return True
-        
+
     except Exception as e:
-        print(f"[ERROR] Failed to setup substances: {e}")
+        log_always(f"[ERROR] Failed to setup substances: {e}")
         import traceback
         traceback.print_exc()
         return False

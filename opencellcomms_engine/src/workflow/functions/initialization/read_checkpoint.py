@@ -77,13 +77,14 @@ def read_checkpoint(
         initial_state_manager = InitialStateManager(config)
 
         # Load cell data from checkpoint
-        cell_data = initial_state_manager.load_initial_state(str(checkpoint_path))
+        # load_initial_state returns a tuple: (cell_data, cell_size_um)
+        cell_data, cell_size_um = initial_state_manager.load_initial_state(str(checkpoint_path))
 
         if not cell_data:
             print(f"[ERROR] No cell data loaded from checkpoint")
             return False
 
-        print(f"[WORKFLOW] Loaded {len(cell_data)} cells from checkpoint")
+        print(f"[WORKFLOW] Loaded {len(cell_data)} cells from checkpoint (cell size: {cell_size_um:.2f} um)")
 
         # Initialize cells in population
         cells_loaded = population.initialize_cells(cell_data)

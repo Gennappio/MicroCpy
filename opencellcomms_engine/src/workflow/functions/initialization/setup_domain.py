@@ -4,8 +4,9 @@ Setup domain and mesh.
 This function initializes the spatial domain and mesh for the simulation.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -21,6 +22,7 @@ from src.workflow.decorators import register_function
         {"name": "ny", "type": "INT", "description": "Mesh cells in Y direction", "default": 25},
         {"name": "nz", "type": "INT", "description": "Mesh cells in Z direction (3D only)", "default": 25},
         {"name": "cell_height", "type": "FLOAT", "description": "Biological cell height (micrometers)", "default": 20.0},
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
     outputs=["domain", "mesh"],
@@ -36,6 +38,7 @@ def setup_domain(
     ny: int = 25,
     nz: int = 25,
     cell_height: float = 5.0,
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -56,7 +59,7 @@ def setup_domain(
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Setting up {dimensions}D domain and mesh")
+    log(context, f"Setting up {dimensions}D domain and mesh", prefix="[WORKFLOW]", node_verbose=verbose)
 
     try:
         from src.config.config import DomainConfig
@@ -66,7 +69,7 @@ def setup_domain(
         # Get config from context (should be created by setup_simulation)
         config = context.get('config')
         if not config:
-            print("[ERROR] Config must be set up before domain (run setup_simulation first)")
+            log_always("[ERROR] Config must be set up before domain (run setup_simulation first)")
             return False
 
         # Setup domain configuration
@@ -90,15 +93,15 @@ def setup_domain(
         simulator = MultiSubstanceSimulator(config, mesh_manager, verbose=False)
         context['simulator'] = simulator
 
-        print(f"   [+] Domain: {size_x}x{size_y}" + (f"x{size_z}" if dimensions == 3 else "") + " um")
-        print(f"   [+] Mesh: {nx}x{ny}" + (f"x{nz}" if dimensions == 3 else "") + " cells")
-        print(f"   [+] Cell height: {cell_height} um")
-        print(f"   [+] Created simulator with {len(simulator.state.substances)} substances")
+        log(context, f"Domain: {size_x}x{size_y}" + (f"x{size_z}" if dimensions == 3 else "") + " um", prefix="[+]", node_verbose=verbose)
+        log(context, f"Mesh: {nx}x{ny}" + (f"x{nz}" if dimensions == 3 else "") + " cells", prefix="[+]", node_verbose=verbose)
+        log(context, f"Cell height: {cell_height} um", prefix="[+]", node_verbose=verbose)
+        log(context, f"Created simulator with {len(simulator.state.substances)} substances", prefix="[+]", node_verbose=verbose)
         
         return True
         
     except Exception as e:
-        print(f"[ERROR] Failed to setup domain: {e}")
+        log_always(f"[ERROR] Failed to setup domain: {e}")
         import traceback
         traceback.print_exc()
         return False

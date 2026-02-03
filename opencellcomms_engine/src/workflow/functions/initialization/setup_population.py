@@ -4,8 +4,9 @@ Setup cell population and gene network.
 This function initializes the cell population and gene network infrastructure.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -24,6 +25,12 @@ from src.workflow.decorators import register_function
             "type": "STRING",
             "description": "Path to custom functions module",
             "default": "src/config/custom_functions.py"
+        },
+        {
+            "name": "verbose",
+            "type": "BOOL",
+            "description": "Enable detailed logging",
+            "default": None
         }
     ],
     inputs=["context"],
@@ -34,6 +41,7 @@ def setup_population(
     context: Dict[str, Any],
     enable_gene_network: bool = True,
     custom_functions_module: str = "src/config/custom_functions.py",
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -160,14 +168,14 @@ def setup_population(
         )
         context['population'] = population
 
-        print(f"   [+] Created cell population")
-        print(f"   [+] Biological grid size: {grid_size}")
-        print(f"   [+] FiPy solver grid: ({config.domain.nx}, {config.domain.ny}" + (f", {config.domain.nz})" if config.domain.dimensions == 3 else ")"))
-        
+        log(context, f"Created cell population", prefix="[+]", node_verbose=verbose)
+        log(context, f"Biological grid size: {grid_size}", prefix="[+]", node_verbose=verbose)
+        log(context, f"FiPy solver grid: ({config.domain.nx}, {config.domain.ny}" + (f", {config.domain.nz})" if config.domain.dimensions == 3 else ")"), prefix="[+]", node_verbose=verbose)
+
         return True
-        
+
     except Exception as e:
-        print(f"[ERROR] Failed to setup population: {e}")
+        log_always(f"[ERROR] Failed to setup population: {e}")
         import traceback
         traceback.print_exc()
         return False

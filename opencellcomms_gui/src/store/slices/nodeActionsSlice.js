@@ -99,11 +99,19 @@ export const createNodeActionsSlice = (set, get) => ({
       if (!toggledNode) return state;
 
       const newVerbose = !toggledNode.data.verbose;
+
+      // Deep clone stageNodes to avoid mutation issues
       const newStageNodes = {};
+      Object.keys(state.stageNodes).forEach((stageName) => {
+        newStageNodes[stageName] = state.stageNodes[stageName].map(node => ({
+          ...node,
+          data: { ...node.data }
+        }));
+      });
 
       // Toggle the node itself
-      Object.keys(state.stageNodes).forEach((stageName) => {
-        newStageNodes[stageName] = state.stageNodes[stageName].map((node) => {
+      Object.keys(newStageNodes).forEach((stageName) => {
+        newStageNodes[stageName] = newStageNodes[stageName].map((node) => {
           if (node.id === nodeId) {
             return {
               ...node,
@@ -114,41 +122,39 @@ export const createNodeActionsSlice = (set, get) => ({
         });
       });
 
-      // If this is a subworkflow call, propagate to all nodes in that subworkflow
-      if (subworkflowName && newStageNodes[subworkflowName]) {
-        newStageNodes[subworkflowName] = newStageNodes[subworkflowName].map((node) => {
+      // Recursive function to propagate verbose to a subworkflow and all its nested subworkflows
+      const propagateToSubworkflow = (swName, verboseValue, visited = new Set()) => {
+        // Prevent infinite loops from circular references
+        if (visited.has(swName) || !newStageNodes[swName]) return;
+        visited.add(swName);
+
+        // Collect nested subworkflow names before modifying
+        const nestedSubworkflows = [];
+
+        // Update all function and subworkflow call nodes in this subworkflow
+        newStageNodes[swName] = newStageNodes[swName].map((node) => {
           if (node.type === 'workflowFunction' || node.type === 'subworkflowCall') {
+            // Collect nested subworkflow names for recursive propagation
+            if (node.type === 'subworkflowCall' && node.data.subworkflowName) {
+              nestedSubworkflows.push(node.data.subworkflowName);
+            }
             return {
               ...node,
-              data: { ...node.data, verbose: newVerbose }
+              data: { ...node.data, verbose: verboseValue }
             };
           }
           return node;
         });
 
-        // Also propagate to nested subworkflows (recursively)
-        const propagateToSubworkflow = (swName, verboseValue) => {
-          if (!newStageNodes[swName]) return;
-
-          newStageNodes[swName] = newStageNodes[swName].map((node) => {
-            if (node.type === 'workflowFunction' || node.type === 'subworkflowCall') {
-              if (node.type === 'subworkflowCall' && node.data.subworkflowName) {
-                propagateToSubworkflow(node.data.subworkflowName, verboseValue);
-              }
-              return {
-                ...node,
-                data: { ...node.data, verbose: verboseValue }
-              };
-            }
-            return node;
-          });
-        };
-
-        (newStageNodes[subworkflowName] || []).forEach((node) => {
-          if (node.type === 'subworkflowCall' && node.data.subworkflowName) {
-            propagateToSubworkflow(node.data.subworkflowName, newVerbose);
-          }
+        // Recursively propagate to nested subworkflows
+        nestedSubworkflows.forEach(nestedSwName => {
+          propagateToSubworkflow(nestedSwName, verboseValue, visited);
         });
+      };
+
+      // If this is a subworkflow call, propagate to all nodes in that subworkflow
+      if (subworkflowName) {
+        propagateToSubworkflow(subworkflowName, newVerbose);
       }
 
       return { stageNodes: newStageNodes };

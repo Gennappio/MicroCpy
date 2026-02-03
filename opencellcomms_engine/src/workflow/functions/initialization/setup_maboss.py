@@ -5,9 +5,10 @@ This function initializes pyMaBoSS with the Boolean network model (.bnd/.cfg fil
 and configures time parameters for stochastic simulation.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -20,6 +21,7 @@ from src.workflow.decorators import register_function
         {"name": "max_time", "type": "FLOAT", "description": "Maximum simulation time for MaBoSS", "default": 20.0},
         {"name": "time_tick", "type": "FLOAT", "description": "Time step for MaBoSS simulation", "default": 0.1},
         {"name": "sample_count", "type": "INT", "description": "Number of stochastic samples", "default": 1000},
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
     outputs=[],
@@ -32,6 +34,7 @@ def setup_maboss(
     max_time: float = 20.0,
     time_tick: float = 0.1,
     sample_count: int = 1000,
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -119,16 +122,16 @@ def setup_maboss(
         maboss_module._MABOSS_CONFIG = context['maboss_config']
         maboss_module._MABOSS_NODES = node_names
 
-        print(f"   [+] MaBoSS model loaded successfully")
-        print(f"   [+] Nodes: {node_names}")
-        print(f"   [+] Time parameters: max_time={max_time}, time_tick={time_tick}")
-        print(f"   [+] Sample count: {sample_count}")
-        print(f"   [+] Calculated macrosteps: {num_steps}")
+        log(context, f"MaBoSS model loaded successfully", prefix="[+]", node_verbose=verbose)
+        log(context, f"Nodes: {node_names}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Time parameters: max_time={max_time}, time_tick={time_tick}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Sample count: {sample_count}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Calculated macrosteps: {num_steps}", prefix="[+]", node_verbose=verbose)
 
         return True
 
     except Exception as e:
-        print(f"[ERROR] Failed to setup MaBoSS: {e}")
+        log_always(f"[ERROR] Failed to setup MaBoSS: {e}")
         import traceback
         traceback.print_exc()
         return False

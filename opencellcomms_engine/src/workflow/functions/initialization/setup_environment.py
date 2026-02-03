@@ -4,8 +4,9 @@ Setup environment configuration.
 This function configures environment parameters like pH.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -14,6 +15,7 @@ from src.workflow.decorators import register_function
     category="INITIALIZATION",
     parameters=[
         {"name": "ph", "type": "FLOAT", "description": "Environment pH value", "default": 7.4},
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
     outputs=[],
@@ -22,6 +24,7 @@ from src.workflow.decorators import register_function
 def setup_environment(
     context: Dict[str, Any],
     ph: float = 7.4,
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -35,28 +38,28 @@ def setup_environment(
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Setting up environment configuration")
-    
+    log(context, f"Setting up environment configuration", prefix="[WORKFLOW]", node_verbose=verbose)
+
     try:
         config = context.get('config')
-        
+
         if not config:
-            print("[ERROR] Config must be set up before environment")
+            log_always("[ERROR] Config must be set up before environment")
             return False
-        
+
         # Create environment config
         class EnvironmentConfig:
             def __init__(self, ph_value):
                 self.ph = ph_value
-        
+
         config.environment = EnvironmentConfig(ph)
-        
-        print(f"   [+] Environment pH: {ph}")
-        
+
+        log(context, f"Environment pH: {ph}", prefix="[+]", node_verbose=verbose)
+
         return True
-        
+
     except Exception as e:
-        print(f"[ERROR] Failed to setup environment: {e}")
+        log_always(f"[ERROR] Failed to setup environment: {e}")
         import traceback
         traceback.print_exc()
         return False

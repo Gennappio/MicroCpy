@@ -4,9 +4,10 @@ Setup gene network configuration.
 This function configures gene network parameters.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -17,6 +18,7 @@ from src.workflow.decorators import register_function
         {"name": "bnd_file", "type": "STRING", "description": "Path to BND file (relative to workflow)", "default": "gene_network.bnd"},
         {"name": "propagation_steps", "type": "INT", "description": "Number of propagation steps", "default": 500},
         {"name": "random_initialization", "type": "BOOL", "description": "Use random initialization", "default": True},
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
     outputs=[],
@@ -27,6 +29,7 @@ def setup_gene_network(
     bnd_file: str = "gene_network.bnd",
     propagation_steps: int = 500,
     random_initialization: bool = True,
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -109,14 +112,14 @@ def setup_gene_network(
 
         config.gene_network = GeneNetworkConfig(bnd_path, propagation_steps, random_initialization)
 
-        print(f"   [+] BND file: {bnd_path}")
-        print(f"   [+] Propagation steps: {propagation_steps}")
-        print(f"   [+] Random initialization: {random_initialization}")
+        log(context, f"BND file: {bnd_path}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Propagation steps: {propagation_steps}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Random initialization: {random_initialization}", prefix="[+]", node_verbose=verbose)
 
         return True
 
     except Exception as e:
-        print(f"[ERROR] Failed to setup gene network: {e}")
+        log_always(f"[ERROR] Failed to setup gene network: {e}")
         import traceback
         traceback.print_exc()
         return False

@@ -4,10 +4,11 @@ Setup simulation infrastructure.
 This function initializes the basic simulation parameters like name, duration, timestep, etc.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 from src.workflow.decorators import register_function
+from src.workflow.logging import log, log_always
 
 
 @register_function(
@@ -18,6 +19,7 @@ from src.workflow.decorators import register_function
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "OpenCellComms Simulation"},
         {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
+        {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
     outputs=["config"],
@@ -28,6 +30,7 @@ def setup_simulation(
     name: str = "OpenCellComms Simulation",
     dt: float = 0.1,
     output_dir: str = "results",
+    verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
@@ -141,14 +144,14 @@ def setup_simulation(
 
         context['config'] = MinimalConfig()
 
-        print(f"   [+] Simulation name: {name}")
-        print(f"   [+] Timestep: {dt}")
-        print(f"   [+] Output directory: {timestamped_dir}")
+        log(context, f"Simulation name: {name}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Timestep: {dt}", prefix="[+]", node_verbose=verbose)
+        log(context, f"Output directory: {timestamped_dir}", prefix="[+]", node_verbose=verbose)
 
         return True
 
     except Exception as e:
-        print(f"[ERROR] Failed to setup simulation: {e}")
+        log_always(f"[ERROR] Failed to setup simulation: {e}")
         import traceback
         traceback.print_exc()
         return False
