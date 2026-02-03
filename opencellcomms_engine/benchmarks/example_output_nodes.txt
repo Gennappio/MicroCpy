@@ -1,5 +1,5 @@
 # Output nodes to analyze for optimal input combinations
 # One node name per line
-glycoATP
+Apoptosis
 Proliferation
 Growth_Arrest
