@@ -1,0 +1,83 @@
+# Augment Code Ignore File
+# Files and directories listed here are excluded from Augment's context indexing
+# This reduces token usage by excluding non-essential files
+
+# ===== Build Artifacts & Dependencies =====
+node_modules/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+
+# ===== Results & Output Directories =====
+# Simulation results are generated at runtime, not needed for code context
+opencellcomms_engine/results/
+opencellcomms_gui/results/
+results/
+*.checkpoint
+
+# ===== IDE & Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== Version Control =====
+.git/
+
+# ===== Environment & Config =====
+.env
+.venv/
+venv/
+env/
+*.local
+
+# ===== Large Workflow JSON Files =====
+# These are data files, not source code
+# Comment out if you need Augment to help with specific workflow content
+# microc-2.0/
+
+# ===== Cache Directories =====
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== Lock Files =====
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+
+# ===== Documentation Build =====
+docs/_build/
+site/
+
+# ===== Logs & Temporary Files =====
+*.log
+*.tmp
+*.temp
+
+# ===== Test Coverage =====
+htmlcov/
+.coverage
+coverage.xml
+
+# ===== Binary & Media Files =====
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+*.zip
+*.tar.gz
+
+# ===== Legacy Directories =====
+# Exclude the old microc-2.0 directory if it's mostly for reference
+# microc-2.0/
+
