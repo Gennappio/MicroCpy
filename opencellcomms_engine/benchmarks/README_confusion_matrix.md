@@ -70,11 +70,27 @@ Proliferation
 
 ## Output Format
 
+The tool produces two main sections of output:
+
+### 1. Best Combinations for Each Output Node
+
 For each output node, the tool reports:
 
 1. **Activation probability**: Percentage of runs where the node was ON
 2. **Input combination**: Which inputs were ON/OFF for maximum activation
 3. **Other outputs**: Activation probabilities of other output nodes at this combination
+
+### 2. Pairwise Fate Node Comparisons
+
+Analyzes when one fate node has higher activation probability than another:
+- Proliferation vs Apoptosis
+- Growth_Arrest vs Apoptosis
+- Proliferation vs Growth_Arrest
+
+For each pair, reports:
+- Count of combinations where each node dominates
+- Top 5 cases with largest probability differences
+- Input combinations for those cases
 
 ### Example Output
 
@@ -96,12 +112,11 @@ Apoptosis:
     TGFBR_stimulus: OFF
     cMET_stimulus: OFF
   Other outputs at this combination:
+    Growth_Arrest: 5.0%
     Proliferation: 0.0%
-    glycoATP: 5.0%
-    mitoATP: 3.0%
 
-mitoATP:
-  Best activation: 98.0% (98/100 runs)
+Proliferation:
+  Best activation: 85.0% (85/100 runs)
   Input combination:
     DNA_damage: OFF
     EGFR_stimulus: ON
@@ -114,8 +129,59 @@ mitoATP:
     cMET_stimulus: ON
   Other outputs at this combination:
     Apoptosis: 0.0%
-    Proliferation: 85.0%
-    glycoATP: 15.0%
+    Growth_Arrest: 2.0%
+
+Growth_Arrest:
+  Best activation: 78.0% (78/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: OFF
+    FGFR_stimulus: OFF
+    Glucose_supply: ON
+    Growth_Inhibitor: ON
+    MCT1_stimulus: ON
+    Oxygen_supply: OFF
+    TGFBR_stimulus: ON
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Apoptosis: 15.0%
+    Proliferation: 0.0%
+
+================================================================================
+PAIRWISE FATE NODE COMPARISONS
+================================================================================
+
+Proliferation vs Apoptosis:
+  Proliferation > Apoptosis: 324 combinations
+  Apoptosis > Proliferation: 188 combinations
+
+  Top cases where Proliferation > Apoptosis:
+
+    Case 1: Proliferation=85.0%, Apoptosis=0.0% (diff: 85.0%)
+      Input combination:
+        DNA_damage: OFF
+        EGFR_stimulus: ON
+        FGFR_stimulus: ON
+        Glucose_supply: ON
+        Growth_Inhibitor: OFF
+        MCT1_stimulus: OFF
+        Oxygen_supply: ON
+        TGFBR_stimulus: OFF
+        cMET_stimulus: ON
+
+  Top cases where Apoptosis > Proliferation:
+
+    Case 1: Apoptosis=92.0%, Proliferation=0.0% (diff: 92.0%)
+      Input combination:
+        DNA_damage: ON
+        EGFR_stimulus: OFF
+        FGFR_stimulus: OFF
+        Glucose_supply: OFF
+        Growth_Inhibitor: ON
+        MCT1_stimulus: OFF
+        Oxygen_supply: OFF
+        TGFBR_stimulus: OFF
+        cMET_stimulus: OFF
 ```
 
 ## Performance Considerations

@@ -326,6 +326,101 @@ def find_best_combinations(results: Dict,
     return best_combinations
 
 
+def analyze_pairwise_comparisons(results: Dict, 
+                                fate_nodes: List[str]) -> Dict:
+    """Analyze pairwise comparisons between fate nodes."""
+    
+    comparisons = {}
+    
+    # Define all pairwise comparisons
+    pairs = [
+        ('Proliferation', 'Apoptosis'),
+        ('Growth_Arrest', 'Apoptosis'),
+        ('Proliferation', 'Growth_Arrest')
+    ]
+    
+    for node_a, node_b in pairs:
+        # Skip if nodes don't exist in the list
+        if node_a not in fate_nodes or node_b not in fate_nodes:
+            continue
+        
+        # Find combinations where node_a > node_b
+        a_higher = []
+        b_higher = []
+        
+        for combo_idx, combo_data in results.items():
+            prob_a = combo_data['output_probabilities'][node_a]
+            prob_b = combo_data['output_probabilities'][node_b]
+            
+            if prob_a > prob_b:
+                a_higher.append({
+                    'combo_idx': combo_idx,
+                    'input_states': combo_data['input_states'],
+                    'prob_a': prob_a,
+                    'prob_b': prob_b,
+                    'difference': prob_a - prob_b
+                })
+            elif prob_b > prob_a:
+                b_higher.append({
+                    'combo_idx': combo_idx,
+                    'input_states': combo_data['input_states'],
+                    'prob_a': prob_a,
+                    'prob_b': prob_b,
+                    'difference': prob_b - prob_a
+                })
+        
+        # Sort by difference (highest first)
+        a_higher.sort(key=lambda x: x['difference'], reverse=True)
+        b_higher.sort(key=lambda x: x['difference'], reverse=True)
+        
+        comparisons[f"{node_a}_vs_{node_b}"] = {
+            'node_a': node_a,
+            'node_b': node_b,
+            'a_higher_count': len(a_higher),
+            'b_higher_count': len(b_higher),
+            'a_higher_combos': a_higher[:10],  # Top 10
+            'b_higher_combos': b_higher[:10]   # Top 10
+        }
+    
+    return comparisons
+
+
+def print_pairwise_comparisons(comparisons: Dict):
+    """Print pairwise comparison analysis."""
+    
+    print(f"\n{'='*80}")
+    print(f"PAIRWISE FATE NODE COMPARISONS")
+    print(f"{'='*80}\n")
+    
+    for comp_key, comp_data in comparisons.items():
+        node_a = comp_data['node_a']
+        node_b = comp_data['node_b']
+        
+        print(f"\n{node_a} vs {node_b}:")
+        print(f"  {node_a} > {node_b}: {comp_data['a_higher_count']} combinations")
+        print(f"  {node_b} > {node_a}: {comp_data['b_higher_count']} combinations")
+        
+        # Show top cases where node_a > node_b
+        if comp_data['a_higher_combos']:
+            print(f"\n  Top cases where {node_a} > {node_b}:")
+            for i, combo in enumerate(comp_data['a_higher_combos'][:5], 1):
+                print(f"\n    Case {i}: {node_a}={combo['prob_a']*100:.1f}%, {node_b}={combo['prob_b']*100:.1f}% (diff: {combo['difference']*100:.1f}%)")
+                print(f"      Input combination:")
+                for input_node, state in sorted(combo['input_states'].items()):
+                    print(f"        {input_node}: {'ON' if state else 'OFF'}")
+        
+        # Show top cases where node_b > node_a
+        if comp_data['b_higher_combos']:
+            print(f"\n  Top cases where {node_b} > {node_a}:")
+            for i, combo in enumerate(comp_data['b_higher_combos'][:5], 1):
+                print(f"\n    Case {i}: {node_b}={combo['prob_b']*100:.1f}%, {node_a}={combo['prob_a']*100:.1f}% (diff: {combo['difference']*100:.1f}%)")
+                print(f"      Input combination:")
+                for input_node, state in sorted(combo['input_states'].items()):
+                    print(f"        {input_node}: {'ON' if state else 'OFF'}")
+        
+        print()
+
+
 def print_results(best_combinations: Dict, 
                  output_nodes: List[str],
                  runs: int):
@@ -414,6 +509,10 @@ def main():
     # Print results
     print_results(best_combinations, output_nodes, args.runs)
     
+    # Analyze pairwise comparisons (for fate nodes)
+    pairwise_comparisons = analyze_pairwise_comparisons(results, output_nodes)
+    print_pairwise_comparisons(pairwise_comparisons)
+    
     # Save to JSON if requested
     if args.output:
         output_data = {
@@ -424,6 +523,7 @@ def main():
             'steps': args.steps,
             'total_combinations': len(results),
             'best_combinations': best_combinations,
+            'pairwise_comparisons': pairwise_comparisons,
             'all_results': results
         }
         
