@@ -1,0 +1,11 @@
+# Input nodes for gene network confusion matrix analysis
+# One node name per line
+Oxygen_supply
+Glucose_supply
+MCT1_stimulus
+FGFR_stimulus
+EGFR_stimulus
+cMET_stimulus
+Growth_Inhibitor
+DNA_damage
+TGFBR_stimulus

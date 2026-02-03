@@ -1,0 +1,6 @@
+# Output nodes to analyze for optimal input combinations
+# One node name per line
+Apoptosis
+mitoATP
+glycoATP
+Proliferation

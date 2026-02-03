@@ -1010,6 +1010,7 @@ const useWorkflowStore = create((set, get) => ({
           functionName: func.function_name,
           parameters: func.parameters || {},
           enabled: func.enabled !== false,
+          verbose: func.verbose || false,
           description: func.description || '',
           functionFile: func.function_file || func.parameters?.function_file || '',
           customName: func.custom_name || '',
@@ -1029,6 +1030,7 @@ const useWorkflowStore = create((set, get) => ({
           iterations: call.iterations || 1,
           parameters: call.parameters || {},
           enabled: call.enabled !== false,
+          verbose: call.verbose || false,
           description: call.description || '',
           results: call.results || '',
           onEdit: () => {}
@@ -1432,6 +1434,7 @@ const useWorkflowStore = create((set, get) => ({
         functionName: functionData.function_name,
         parameters: functionData.parameters || {},
         enabled: true,
+        verbose: false,
         description: functionData.description || '',
       },
     };
@@ -1465,6 +1468,87 @@ const useWorkflowStore = create((set, get) => ({
 	      });
 	      return { stageNodes: newStageNodes };
 	    }),
+
+  /**
+   * Toggle verbose logging for a node.
+   * When toggling a subworkflow call node, propagates the verbose setting
+   * to all nodes within that subworkflow (hierarchically).
+   * @param {string} nodeId - The ID of the node to toggle
+   * @param {string} subworkflowName - If this is a subworkflow call, the name of the target subworkflow
+   */
+  toggleNodeVerbose: (nodeId, subworkflowName = null) =>
+    set((state) => {
+      // First, find the node being toggled and determine the new verbose value
+      let toggledNode = null;
+      Object.keys(state.stageNodes).forEach((stageName) => {
+        const node = state.stageNodes[stageName].find(n => n.id === nodeId);
+        if (node) {
+          toggledNode = node;
+        }
+      });
+
+      if (!toggledNode) return state;
+
+      const newVerbose = !toggledNode.data.verbose;
+
+      // Start building the new state
+      const newStageNodes = {};
+
+      // Toggle the node itself
+      Object.keys(state.stageNodes).forEach((stageName) => {
+        newStageNodes[stageName] = state.stageNodes[stageName].map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: { ...node.data, verbose: newVerbose }
+            };
+          }
+          return node;
+        });
+      });
+
+      // If this is a subworkflow call, propagate to all nodes in that subworkflow
+      if (subworkflowName && newStageNodes[subworkflowName]) {
+        newStageNodes[subworkflowName] = newStageNodes[subworkflowName].map((node) => {
+          // Set verbose on all function and subworkflow call nodes in this subworkflow
+          if (node.type === 'workflowFunction' || node.type === 'subworkflowCall') {
+            return {
+              ...node,
+              data: { ...node.data, verbose: newVerbose }
+            };
+          }
+          return node;
+        });
+
+        // Also propagate to nested subworkflows (recursively)
+        const propagateToSubworkflow = (swName, verboseValue) => {
+          if (!newStageNodes[swName]) return;
+
+          newStageNodes[swName] = newStageNodes[swName].map((node) => {
+            if (node.type === 'workflowFunction' || node.type === 'subworkflowCall') {
+              // If this is a subworkflow call, also propagate deeper
+              if (node.type === 'subworkflowCall' && node.data.subworkflowName) {
+                propagateToSubworkflow(node.data.subworkflowName, verboseValue);
+              }
+              return {
+                ...node,
+                data: { ...node.data, verbose: verboseValue }
+              };
+            }
+            return node;
+          });
+        };
+
+        // Propagate to nested subworkflows
+        (newStageNodes[subworkflowName] || []).forEach((node) => {
+          if (node.type === 'subworkflowCall' && node.data.subworkflowName) {
+            propagateToSubworkflow(node.data.subworkflowName, newVerbose);
+          }
+        });
+      }
+
+      return { stageNodes: newStageNodes };
+    }),
 
   // Remove a function from a stage
   removeFunction: (stage, nodeId) =>
@@ -1660,6 +1744,7 @@ const useWorkflowStore = create((set, get) => ({
         function_name: node.data.functionName,
         parameters: node.data.parameters || {},
         enabled: node.data.enabled !== false,
+        verbose: node.data.verbose || false,
         position: node.position,
         description: node.data.description || '',
         custom_name: node.data.customName || '',
@@ -1676,6 +1761,7 @@ const useWorkflowStore = create((set, get) => ({
         subworkflow_name: node.data.subworkflowName,
         iterations: node.data.iterations || 1,
         enabled: node.data.enabled !== false,
+        verbose: node.data.verbose || false,
         description: node.data.description || '',
         parameters: node.data.parameters || {},
         context_mapping: node.data.contextMapping || {},
@@ -1840,6 +1926,7 @@ const useWorkflowStore = create((set, get) => ({
           functionName: func.function_name,
           parameters: func.parameters || {},
           enabled: func.enabled !== false,
+          verbose: func.verbose || false,
           description: func.description || '',
           customName: func.custom_name || '',
           parameterNodes: func.parameter_nodes || [],
@@ -1860,6 +1947,7 @@ const useWorkflowStore = create((set, get) => ({
           subworkflowName: call.subworkflow_name,
           iterations: call.iterations || 1,
           enabled: call.enabled !== false,
+          verbose: call.verbose || false,
           description: call.description || '',
           parameters: call.parameters || {},
           contextMapping: call.context_mapping || {},

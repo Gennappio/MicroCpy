@@ -81,6 +81,38 @@
   color: white;
 }
 
+/* Verbose toggle button for subworkflow/composer nodes */
+.subworkflow-call-node .node-verbose {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s;
+}
+
+.subworkflow-call-node .node-verbose:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.subworkflow-call-node .node-verbose.active {
+  background: rgba(255, 255, 255, 0.4);
+  color: white;
+}
+
+.subworkflow-call-node .verbose-icon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.subworkflow-call-node .verbose-icon.active {
+  color: white;
+}
+
 .subworkflow-call-node .node-edit-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;

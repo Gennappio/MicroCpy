@@ -1,0 +1,71 @@
+================================================================================
+BEST COMBINATIONS FOR OUTPUT NODES
+================================================================================
+
+Apoptosis:
+  Best activation: 100.0% (100/100 runs)
+  Input combination:
+    DNA_damage: ON
+    EGFR_stimulus: OFF
+    FGFR_stimulus: OFF
+    Glucose_supply: OFF
+    Growth_Inhibitor: OFF
+    MCT1_stimulus: OFF
+    Oxygen_supply: OFF
+    TGFBR_stimulus: ON
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Proliferation: 0.0%
+    glycoATP: 0.0%
+    mitoATP: 0.0%
+
+mitoATP:
+  Best activation: 100.0% (100/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: OFF
+    FGFR_stimulus: OFF
+    Glucose_supply: OFF
+    Growth_Inhibitor: ON
+    MCT1_stimulus: ON
+    Oxygen_supply: ON
+    TGFBR_stimulus: OFF
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Apoptosis: 0.0%
+    Proliferation: 0.0%
+    glycoATP: 0.0%
+
+glycoATP:
+  Best activation: 97.0% (97/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: ON
+    FGFR_stimulus: OFF
+    Glucose_supply: ON
+    Growth_Inhibitor: OFF
+    MCT1_stimulus: ON
+    Oxygen_supply: OFF
+    TGFBR_stimulus: ON
+    cMET_stimulus: OFF
+  Other outputs at this combination:
+    Apoptosis: 93.0%
+    Proliferation: 0.0%
+    mitoATP: 0.0%
+
+Proliferation:
+  Best activation: 23.0% (23/100 runs)
+  Input combination:
+    DNA_damage: OFF
+    EGFR_stimulus: ON
+    FGFR_stimulus: ON
+    Glucose_supply: OFF
+    Growth_Inhibitor: OFF
+    MCT1_stimulus: ON
+    Oxygen_supply: ON
+    TGFBR_stimulus: OFF
+    cMET_stimulus: ON
+  Other outputs at this combination:
+    Apoptosis: 24.0%
+    glycoATP: 0.0%
+    mitoATP: 99.0%

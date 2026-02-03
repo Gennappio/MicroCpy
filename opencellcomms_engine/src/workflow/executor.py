@@ -692,6 +692,10 @@ class WorkflowExecutor:
         else:
             tracked_context = context
 
+        # Set verbose in context from node's verbose property
+        if hasattr(workflow_func, 'verbose'):
+            tracked_context['verbose'] = workflow_func.verbose
+
         # Add context data based on function inputs
         if metadata:
             for input_name in metadata.inputs:

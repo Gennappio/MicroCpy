@@ -1,5 +1,5 @@
 import { Handle, Position, useEdges } from 'reactflow';
-import { Settings, Play, Pause, FileCode } from 'lucide-react';
+import { Settings, Play, Pause, FileCode, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
 import { getFunction } from '../data/functionRegistry';
@@ -16,6 +16,7 @@ import './WorkflowFunctionNode.css';
  */
 const WorkflowFunctionNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const toggleNodeVerbose = useWorkflowStore((state) => state.toggleNodeVerbose);
   const currentStage = useWorkflowStore((state) => state.currentStage);
   const workflow = useWorkflowStore((state) => state.workflow);
   const nodeBadgeStatsByScope = useWorkflowStore((state) => state.nodeBadgeStatsByScope);
@@ -23,7 +24,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   const edges = useEdges(); // Use reactflow's useEdges hook
 
-  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, stepCount } = data;
+  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, stepCount, verbose } = data;
 
   // Get function metadata from registry to get parameter definitions
   const funcMeta = getFunction(functionName);
@@ -63,6 +64,11 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
     toggleFunctionEnabled(id);
+  };
+
+  const handleToggleVerbose = (e) => {
+    e.stopPropagation();
+    toggleNodeVerbose(id);
   };
 
   // Format default value for display
@@ -111,6 +117,13 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
           ) : (
             <Pause size={14} className="status-icon disabled" />
           )}
+        </button>
+        <button
+          className={`node-verbose ${verbose ? 'active' : ''}`}
+          onClick={handleToggleVerbose}
+          title={verbose ? 'Disable logging' : 'Enable logging'}
+        >
+          <MessageSquare size={14} className={verbose ? 'verbose-icon active' : 'verbose-icon'} />
         </button>
         <div className="node-title">
           {displayName}

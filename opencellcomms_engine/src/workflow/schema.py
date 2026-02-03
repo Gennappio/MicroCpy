@@ -219,6 +219,7 @@ class WorkflowFunction:
     function_name: str
     parameters: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    verbose: bool = False
     position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
     description: str = ""
     function_file: Optional[str] = None
@@ -233,6 +234,7 @@ class WorkflowFunction:
             "function_name": self.function_name,
             "parameters": self.parameters,
             "enabled": self.enabled,
+            "verbose": self.verbose,
             "position": self.position,
             "description": self.description,
             "custom_name": self.custom_name,
@@ -252,6 +254,7 @@ class WorkflowFunction:
             function_name=data["function_name"],
             parameters=data.get("parameters", {}),
             enabled=data.get("enabled", True),
+            verbose=data.get("verbose", False),
             position=data.get("position", {"x": 0, "y": 0}),
             description=data.get("description", ""),
             function_file=data.get("function_file"),
@@ -272,6 +275,7 @@ class SubWorkflowCall:
         iterations: Number of times to execute the sub-workflow (default: 1)
         parameters: Parameters to pass to the sub-workflow
         enabled: Whether this call should be executed
+        verbose: Whether to enable logging for this call and its children
         position: UI position for visual editor (x, y coordinates)
         description: Optional description of this call
         parameter_nodes: List of parameter node IDs connected to this call
@@ -282,6 +286,7 @@ class SubWorkflowCall:
     iterations: int = 1
     parameters: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    verbose: bool = False
     position: Dict[str, float] = field(default_factory=lambda: {"x": 0, "y": 0})
     description: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
@@ -296,6 +301,7 @@ class SubWorkflowCall:
             "iterations": self.iterations,
             "parameters": self.parameters,
             "enabled": self.enabled,
+            "verbose": self.verbose,
             "position": self.position,
             "description": self.description,
             "parameter_nodes": self.parameter_nodes,
@@ -311,6 +317,7 @@ class SubWorkflowCall:
             iterations=data.get("iterations", 1),
             parameters=data.get("parameters", {}),
             enabled=data.get("enabled", True),
+            verbose=data.get("verbose", False),
             position=data.get("position", {"x": 0, "y": 0}),
             description=data.get("description", ""),
             parameter_nodes=data.get("parameter_nodes", []),

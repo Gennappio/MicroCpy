@@ -1,5 +1,5 @@
 import { Handle, Position, useEdges, useNodes } from 'reactflow';
-import { Settings, Play, Pause, Zap, ExternalLink } from 'lucide-react';
+import { Settings, Play, Pause, Zap, ExternalLink, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
 import './SubWorkflowCallNode.css';
@@ -10,6 +10,7 @@ import './SubWorkflowCallNode.css';
  */
 const SubWorkflowCallNode = ({ id, data, selected }) => {
   const toggleFunctionEnabled = useWorkflowStore((state) => state.toggleFunctionEnabled);
+  const toggleNodeVerbose = useWorkflowStore((state) => state.toggleNodeVerbose);
   const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
   const setCurrentMainTab = useWorkflowStore((state) => state.setCurrentMainTab);
   const workflow = useWorkflowStore((state) => state.workflow);
@@ -19,7 +20,7 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
   const edges = useEdges();
   const nodes = useNodes();
 
-  const { label, subworkflowName, iterations, enabled, onEdit, description } = data;
+  const { label, subworkflowName, iterations, enabled, onEdit, description, verbose } = data;
 
   // Get badge stats for this node
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
@@ -47,6 +48,11 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
     toggleFunctionEnabled(id);
   };
 
+  const handleToggleVerbose = (e) => {
+    e.stopPropagation();
+    toggleNodeVerbose(id, subworkflowName);
+  };
+
   return (
     <div
       className={`subworkflow-call-node ${isComposerCall ? 'composer-call' : ''} ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
@@ -66,6 +72,13 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
           ) : (
             <Pause size={14} className="status-icon disabled" />
           )}
+        </button>
+        <button
+          className={`node-verbose ${verbose ? 'active' : ''}`}
+          onClick={handleToggleVerbose}
+          title={verbose ? 'Disable logging (propagates to children)' : 'Enable logging (propagates to children)'}
+        >
+          <MessageSquare size={14} className={verbose ? 'verbose-icon active' : 'verbose-icon'} />
         </button>
         <div className="node-icon">
           <Zap size={16} className="subworkflow-icon" />
