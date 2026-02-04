@@ -1,0 +1,4 @@
+# Input nodes: Oxygen, Glucose, Lactate (MCT1)
+Oxygen_supply
+Glucose_supply
+MCT1_stimulus

@@ -1,0 +1,4 @@
+# Test input states: Oxygen, Glucose, MCT1 all ON
+Oxygen_supply=ON
+Glucose_supply=ON
+MCT1_stimulus=ON

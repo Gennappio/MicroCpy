@@ -1,0 +1,4 @@
+# Fate output nodes
+Apoptosis
+Proliferation
+Growth_Arrest

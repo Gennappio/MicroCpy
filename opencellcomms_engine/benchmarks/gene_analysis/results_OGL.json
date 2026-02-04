@@ -1,0 +1,497 @@
+{
+  "bnd_file": "opencellcomms_engine/tests/jayatilake_experiment/jaya_microc.bnd",
+  "input_nodes": [
+    "Oxygen_supply",
+    "Glucose_supply",
+    "MCT1_stimulus"
+  ],
+  "output_nodes": [
+    "Apoptosis",
+    "Proliferation",
+    "Growth_Arrest"
+  ],
+  "runs": 1000,
+  "steps": 500,
+  "total_combinations": 8,
+  "best_combinations": {
+    "Apoptosis": [
+      {
+        "combo_idx": 4,
+        "input_states": {
+          "Oxygen_supply": true,
+          "Glucose_supply": false,
+          "MCT1_stimulus": false
+        },
+        "activation_probability": 0.193,
+        "activation_count": 193,
+        "other_outputs": {
+          "Proliferation": 0.003,
+          "Growth_Arrest": 0.346
+        }
+      }
+    ],
+    "Proliferation": [
+      {
+        "combo_idx": 2,
+        "input_states": {
+          "Oxygen_supply": false,
+          "Glucose_supply": true,
+          "MCT1_stimulus": false
+        },
+        "activation_probability": 0.045,
+        "activation_count": 45,
+        "other_outputs": {
+          "Apoptosis": 0.169,
+          "Growth_Arrest": 0.303
+        }
+      }
+    ],
+    "Growth_Arrest": [
+      {
+        "combo_idx": 4,
+        "input_states": {
+          "Oxygen_supply": true,
+          "Glucose_supply": false,
+          "MCT1_stimulus": false
+        },
+        "activation_probability": 0.346,
+        "activation_count": 346,
+        "other_outputs": {
+          "Apoptosis": 0.193,
+          "Proliferation": 0.003
+        }
+      }
+    ]
+  },
+  "pairwise_comparisons": {
+    "Proliferation_vs_Apoptosis": {
+      "node_a": "Proliferation",
+      "node_b": "Apoptosis",
+      "a_higher_count": 0,
+      "b_higher_count": 8,
+      "a_higher_combos": [],
+      "b_higher_combos": [
+        {
+          "combo_idx": 4,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.003,
+          "prob_b": 0.193,
+          "difference": 0.19
+        },
+        {
+          "combo_idx": 1,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.0,
+          "prob_b": 0.17,
+          "difference": 0.17
+        },
+        {
+          "combo_idx": 0,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.0,
+          "prob_b": 0.145,
+          "difference": 0.145
+        },
+        {
+          "combo_idx": 3,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.043,
+          "prob_b": 0.185,
+          "difference": 0.14200000000000002
+        },
+        {
+          "combo_idx": 5,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.025,
+          "prob_b": 0.167,
+          "difference": 0.14200000000000002
+        },
+        {
+          "combo_idx": 6,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.038,
+          "prob_b": 0.176,
+          "difference": 0.13799999999999998
+        },
+        {
+          "combo_idx": 7,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.029,
+          "prob_b": 0.166,
+          "difference": 0.137
+        },
+        {
+          "combo_idx": 2,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.045,
+          "prob_b": 0.169,
+          "difference": 0.12400000000000001
+        }
+      ]
+    },
+    "Growth_Arrest_vs_Apoptosis": {
+      "node_a": "Growth_Arrest",
+      "node_b": "Apoptosis",
+      "a_higher_count": 8,
+      "b_higher_count": 0,
+      "a_higher_combos": [
+        {
+          "combo_idx": 6,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.338,
+          "prob_b": 0.176,
+          "difference": 0.16200000000000003
+        },
+        {
+          "combo_idx": 7,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.325,
+          "prob_b": 0.166,
+          "difference": 0.159
+        },
+        {
+          "combo_idx": 4,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.346,
+          "prob_b": 0.193,
+          "difference": 0.15299999999999997
+        },
+        {
+          "combo_idx": 0,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.293,
+          "prob_b": 0.145,
+          "difference": 0.148
+        },
+        {
+          "combo_idx": 1,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.314,
+          "prob_b": 0.17,
+          "difference": 0.144
+        },
+        {
+          "combo_idx": 5,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.304,
+          "prob_b": 0.167,
+          "difference": 0.13699999999999998
+        },
+        {
+          "combo_idx": 2,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.303,
+          "prob_b": 0.169,
+          "difference": 0.13399999999999998
+        },
+        {
+          "combo_idx": 3,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.299,
+          "prob_b": 0.185,
+          "difference": 0.11399999999999999
+        }
+      ],
+      "b_higher_combos": []
+    },
+    "Proliferation_vs_Growth_Arrest": {
+      "node_a": "Proliferation",
+      "node_b": "Growth_Arrest",
+      "a_higher_count": 0,
+      "b_higher_count": 8,
+      "a_higher_combos": [],
+      "b_higher_combos": [
+        {
+          "combo_idx": 4,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.003,
+          "prob_b": 0.346,
+          "difference": 0.34299999999999997
+        },
+        {
+          "combo_idx": 1,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.0,
+          "prob_b": 0.314,
+          "difference": 0.314
+        },
+        {
+          "combo_idx": 6,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.038,
+          "prob_b": 0.338,
+          "difference": 0.30000000000000004
+        },
+        {
+          "combo_idx": 7,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.029,
+          "prob_b": 0.325,
+          "difference": 0.296
+        },
+        {
+          "combo_idx": 0,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": false,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.0,
+          "prob_b": 0.293,
+          "difference": 0.293
+        },
+        {
+          "combo_idx": 5,
+          "input_states": {
+            "Oxygen_supply": true,
+            "Glucose_supply": false,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.025,
+          "prob_b": 0.304,
+          "difference": 0.27899999999999997
+        },
+        {
+          "combo_idx": 2,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": false
+          },
+          "prob_a": 0.045,
+          "prob_b": 0.303,
+          "difference": 0.258
+        },
+        {
+          "combo_idx": 3,
+          "input_states": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true
+          },
+          "prob_a": 0.043,
+          "prob_b": 0.299,
+          "difference": 0.256
+        }
+      ]
+    }
+  },
+  "all_results": {
+    "0": {
+      "input_states": {
+        "Oxygen_supply": false,
+        "Glucose_supply": false,
+        "MCT1_stimulus": false
+      },
+      "output_counts": {
+        "Apoptosis": 145,
+        "Proliferation": 0,
+        "Growth_Arrest": 293
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.145,
+        "Proliferation": 0.0,
+        "Growth_Arrest": 0.293
+      }
+    },
+    "1": {
+      "input_states": {
+        "Oxygen_supply": false,
+        "Glucose_supply": false,
+        "MCT1_stimulus": true
+      },
+      "output_counts": {
+        "Apoptosis": 170,
+        "Proliferation": 0,
+        "Growth_Arrest": 314
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.17,
+        "Proliferation": 0.0,
+        "Growth_Arrest": 0.314
+      }
+    },
+    "2": {
+      "input_states": {
+        "Oxygen_supply": false,
+        "Glucose_supply": true,
+        "MCT1_stimulus": false
+      },
+      "output_counts": {
+        "Apoptosis": 169,
+        "Proliferation": 45,
+        "Growth_Arrest": 303
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.169,
+        "Proliferation": 0.045,
+        "Growth_Arrest": 0.303
+      }
+    },
+    "3": {
+      "input_states": {
+        "Oxygen_supply": false,
+        "Glucose_supply": true,
+        "MCT1_stimulus": true
+      },
+      "output_counts": {
+        "Apoptosis": 185,
+        "Proliferation": 43,
+        "Growth_Arrest": 299
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.185,
+        "Proliferation": 0.043,
+        "Growth_Arrest": 0.299
+      }
+    },
+    "4": {
+      "input_states": {
+        "Oxygen_supply": true,
+        "Glucose_supply": false,
+        "MCT1_stimulus": false
+      },
+      "output_counts": {
+        "Apoptosis": 193,
+        "Proliferation": 3,
+        "Growth_Arrest": 346
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.193,
+        "Proliferation": 0.003,
+        "Growth_Arrest": 0.346
+      }
+    },
+    "5": {
+      "input_states": {
+        "Oxygen_supply": true,
+        "Glucose_supply": false,
+        "MCT1_stimulus": true
+      },
+      "output_counts": {
+        "Apoptosis": 167,
+        "Proliferation": 25,
+        "Growth_Arrest": 304
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.167,
+        "Proliferation": 0.025,
+        "Growth_Arrest": 0.304
+      }
+    },
+    "6": {
+      "input_states": {
+        "Oxygen_supply": true,
+        "Glucose_supply": true,
+        "MCT1_stimulus": false
+      },
+      "output_counts": {
+        "Apoptosis": 176,
+        "Proliferation": 38,
+        "Growth_Arrest": 338
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.176,
+        "Proliferation": 0.038,
+        "Growth_Arrest": 0.338
+      }
+    },
+    "7": {
+      "input_states": {
+        "Oxygen_supply": true,
+        "Glucose_supply": true,
+        "MCT1_stimulus": true
+      },
+      "output_counts": {
+        "Apoptosis": 166,
+        "Proliferation": 29,
+        "Growth_Arrest": 325
+      },
+      "output_probabilities": {
+        "Apoptosis": 0.166,
+        "Proliferation": 0.029,
+        "Growth_Arrest": 0.325
+      }
+    }
+  }
+}
