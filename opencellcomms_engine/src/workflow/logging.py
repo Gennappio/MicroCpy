@@ -63,7 +63,7 @@ def log_always(message: str, prefix: str = "") -> None:
     """
     Always log a message regardless of verbosity settings.
     Use for critical information, errors, or warnings.
-    
+
     Args:
         message: Message to log
         prefix: Prefix for the message (e.g., "[ERROR]")
@@ -72,4 +72,50 @@ def log_always(message: str, prefix: str = "") -> None:
         print(f"{prefix} {message}")
     else:
         print(message)
+
+
+def cli_log(context: Dict[str, Any], message: str,
+            prefix: str = "", node_verbose: Optional[bool] = None) -> None:
+    """
+    Log a message ONLY when running from CLI (not from GUI).
+
+    Useful for CLI-specific debug information or progress messages that
+    should not appear in the GUI console.
+
+    Args:
+        context: Workflow context dictionary
+        message: Message to log
+        prefix: Prefix for the message (e.g., "[CLI]")
+        node_verbose: Per-node verbose setting (None = use global setting)
+    """
+    # Only log if NOT running from GUI (i.e., running from CLI)
+    if not context.get('running_from_gui', False):
+        if should_log(context, node_verbose):
+            if prefix:
+                print(f"{prefix} {message}")
+            else:
+                print(message)
+
+
+def gui_log(context: Dict[str, Any], message: str,
+            prefix: str = "", node_verbose: Optional[bool] = None) -> None:
+    """
+    Log a message ONLY when running from GUI (not from CLI).
+
+    Useful for GUI-specific messages or progress updates that should only
+    appear in the GUI console, not in CLI output.
+
+    Args:
+        context: Workflow context dictionary
+        message: Message to log
+        prefix: Prefix for the message (e.g., "[GUI]")
+        node_verbose: Per-node verbose setting (None = use global setting)
+    """
+    # Only log if running from GUI
+    if context.get('running_from_gui', False):
+        if should_log(context, node_verbose):
+            if prefix:
+                print(f"{prefix} {message}")
+            else:
+                print(message)
 
