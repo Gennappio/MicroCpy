@@ -138,11 +138,22 @@
             "propagation_steps": 500
           },
           "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "update_gene_networks_hierarchical",
+          "function_name": "update_gene_networks_hierarchical",
+          "enabled": false,
+          "description": "Propagate gene network with hierarchical fate logic (Proliferation > Growth_Arrest > Apoptosis > Necrosis)",
+          "parameters": {
+            "propagation_steps": 500,
+            "verbose": false
+          },
+          "position": {"x": 200, "y": 200}
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
-      "execution_order": ["update_gene_networks"],
+      "execution_order": ["update_gene_networks", "update_gene_networks_hierarchical"],
       "enabled": true
     },
     "analysis": {
