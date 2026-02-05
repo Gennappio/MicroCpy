@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-"""Test that gene_states persist correctly through the workflow."""
+"""Test that gene_states persist correctly through the workflow.
+
+NOTE: Gene networks are stored in context['gene_networks'] (dict mapping cell_id → BooleanNetwork),
+not in cell.state. This test validates the new context-based architecture.
+"""
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'src')
@@ -14,10 +18,12 @@ print("="*60)
 
 # 1. Create a cell
 cell = Cell(position=(50, 75), phenotype="Growth_Arrest")
+cell_id = cell.state.id
 print(f"1. Created cell at position {cell.state.position}")
+print(f"   Cell ID: {cell_id}")
 print(f"   Initial gene_states: {cell.state.gene_states}")
 
-# 2. Create a gene network and attach it
+# 2. Create a gene network and store it in context (NOT in cell.state)
 bnd_path = Path("tests/maboss_example/cell_fate.bnd")
 if not bnd_path.exists():
     print(f"   ERROR: BND file not found at {bnd_path}")
@@ -37,20 +43,23 @@ class MockConfig:
 
 config = MockConfig()
 gene_network = BooleanNetwork(config=config)
-cell.state = cell.state.with_updates(gene_network=gene_network)
-print(f"2. Attached gene network to cell")
-print(f"   gene_network attached: {cell.state.gene_network is not None}")
+
+# Store gene network in context (new architecture - gene networks in context, not cell.state)
+context = {'gene_networks': {}}
+context['gene_networks'][cell_id] = gene_network
+print(f"2. Stored gene network in context['gene_networks']['{cell_id}']")
+print(f"   gene_network in context: {cell_id in context['gene_networks']}")
 
 # 3. Set input states (simulating what update_gene_networks does)
 input_states = {
     'Oxygen_supply': True,  # Above threshold
     'Glucose_supply': True,  # Above threshold
 }
-cell.state.gene_network.set_input_states(input_states)
+context['gene_networks'][cell_id].set_input_states(input_states)
 print(f"3. Set input states: {input_states}")
 
-# 4. Propagate gene network
-gene_states = cell.state.gene_network.step(20, mode="synchronous")
+# 4. Propagate gene network (access from context)
+gene_states = context['gene_networks'][cell_id].step(20, mode="synchronous")
 print(f"4. Propagated gene network, got {len(gene_states)} gene states")
 print(f"   glycoATP = {gene_states.get('glycoATP')}")
 print(f"   mitoATP = {gene_states.get('mitoATP')}")

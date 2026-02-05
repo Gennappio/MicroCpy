@@ -4,6 +4,9 @@ Mock classes for lightweight gene network testing (no FiPy/diffusion required).
 These classes allow testing gene network workflows without the full simulation
 infrastructure. They provide minimal implementations of Population, Cell, and
 related classes.
+
+Note: Gene networks are stored in context['gene_networks'] (dict mapping cell_id → BooleanNetwork)
+rather than in the cell state. This matches the real architecture.
 """
 
 from typing import Dict, Any
@@ -26,16 +29,24 @@ class MockPosition:
 
 @dataclass
 class MockCellState:
-    """Mock cell state with gene network."""
+    """Mock cell state (gene networks are in context, not here)."""
+    id: str = ""
     position: MockPosition = field(default_factory=MockPosition)
-    gene_network: Any = None
+    phenotype: str = "Quiescent"
     gene_states: Dict[str, bool] = field(default_factory=dict)
 
     def with_updates(self, **kwargs):
-        """Return a copy with updated fields."""
+        """Return a copy with updated fields.
+
+        Note: Filters out 'gene_network' for backward compatibility.
+        """
+        # Filter out gene_network if passed (for backward compatibility)
+        kwargs.pop('gene_network', None)
+
         new_state = MockCellState(
+            id=self.id,
             position=self.position,
-            gene_network=self.gene_network,
+            phenotype=kwargs.get('phenotype', self.phenotype),
             gene_states=kwargs.get('gene_states', self.gene_states)
         )
         return new_state

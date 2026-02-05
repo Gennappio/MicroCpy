@@ -3,10 +3,13 @@ Set Gene Network Input States - Set input states for all cells.
 
 Input nodes (is_input=True) are NEVER updated during propagation.
 They stay FIXED at the values set here.
+
+Gene networks are accessed from context['gene_networks'] (dict mapping cell_id → BooleanNetwork).
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional, Union
 from src.workflow.decorators import register_function
+from interfaces.base import IGeneNetwork
 
 
 @register_function(
@@ -14,32 +17,30 @@ from src.workflow.decorators import register_function
     description="Set input node states for all cells. These stay FIXED during propagation.",
     category="INITIALIZATION",
     parameters=[
-        {"name": "Oxygen_supply", "type": "BOOL", "description": "Oxygen supply input", "default": True},
-        {"name": "Glucose_supply", "type": "BOOL", "description": "Glucose supply input", "default": True},
-        {"name": "MCT1_stimulus", "type": "BOOL", "description": "MCT1 stimulus input", "default": False},
-        {"name": "Proton_level", "type": "BOOL", "description": "Proton level input", "default": False},
-        {"name": "FGFR_stimulus", "type": "BOOL", "description": "FGFR stimulus input", "default": False},
-        {"name": "EGFR_stimulus", "type": "BOOL", "description": "EGFR stimulus input", "default": False},
-        {"name": "cMET_stimulus", "type": "BOOL", "description": "cMET stimulus input", "default": False},
-        {"name": "Growth_Inhibitor", "type": "BOOL", "description": "Growth inhibitor input", "default": False},
-        {"name": "DNA_damage", "type": "BOOL", "description": "DNA damage input", "default": False},
-        {"name": "TGFBR_stimulus", "type": "BOOL", "description": "TGFBR stimulus input", "default": False},
+        {
+            "name": "fixed_substances",
+            "type": "DICT",
+            "description": "Dict mapping gene input names to boolean values (True/False)",
+            "default": {
+                "Oxygen_supply": True,
+                "Glucose_supply": True,
+                "MCT1_stimulus": False,
+                "Proton_level": False,
+                "FGFR_stimulus": False,
+                "EGFR_stimulus": False,
+                "cMET_stimulus": False,
+                "Growth_Inhibitor": False,
+                "DNA_damage": False,
+                "TGFBR_stimulus": False,
+            }
+        }
     ],
     outputs=[],
     cloneable=False
 )
 def set_gene_network_inputs(
     context: Dict[str, Any],
-    Oxygen_supply: bool = True,
-    Glucose_supply: bool = True,
-    MCT1_stimulus: bool = False,
-    Proton_level: bool = False,
-    FGFR_stimulus: bool = False,
-    EGFR_stimulus: bool = False,
-    cMET_stimulus: bool = False,
-    Growth_Inhibitor: bool = False,
-    DNA_damage: bool = False,
-    TGFBR_stimulus: bool = False,
+    fixed_substances: Union[Dict, List, str] = None,
     **kwargs
 ) -> bool:
     """
@@ -47,34 +48,54 @@ def set_gene_network_inputs(
 
     Input nodes (is_input=True) are NEVER updated during propagation.
     They stay FIXED at the values set here.
+
+    Gene networks are accessed from context['gene_networks'].
+
+    Args:
+        context: Workflow context containing population and gene_networks
+        fixed_substances: Dict mapping gene input names to boolean values
+            Example: {"Oxygen_supply": True, "Glucose_supply": True, "FGFR_stimulus": False}
     """
     print(f"[GENE_NETWORK] Setting input states for all cells")
 
-    # Build input states dict
-    input_states = {
-        'Oxygen_supply': Oxygen_supply,
-        'Glucose_supply': Glucose_supply,
-        'MCT1_stimulus': MCT1_stimulus,
-        'Proton_level': Proton_level,
-        'FGFR_stimulus': FGFR_stimulus,
-        'EGFR_stimulus': EGFR_stimulus,
-        'cMET_stimulus': cMET_stimulus,
-        'Growth_Inhibitor': Growth_Inhibitor,
-        'DNA_damage': DNA_damage,
-        'TGFBR_stimulus': TGFBR_stimulus,
-    }
+    # Use fixed_substances parameter or default values
+    if fixed_substances is None:
+        fixed_substances = {
+            'Oxygen_supply': True,
+            'Glucose_supply': True,
+            'MCT1_stimulus': False,
+            'Proton_level': False,
+            'FGFR_stimulus': False,
+            'EGFR_stimulus': False,
+            'cMET_stimulus': False,
+            'Growth_Inhibitor': False,
+            'DNA_damage': False,
+            'TGFBR_stimulus': False,
+        }
+
+    # Build input states dict from fixed_substances
+    input_states = dict(fixed_substances)
 
     # Store for later use
     context['gene_network_inputs'] = input_states
 
+    # Get gene networks from context
+    gene_networks = context.get('gene_networks', {})
+
     # Apply to all cells in population
     population = context.get('population')
-    if population:
+    cells_updated = 0
+
+    if population and gene_networks:
         cells = population.state.cells
         for cell_id, cell in cells.items():
-            if cell.state.gene_network:
-                cell.state.gene_network.set_input_states(input_states)
-        print(f"   [+] Applied input states to {len(cells)} cells")
+            cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
+            if cell_gn:
+                cell_gn.set_input_states(input_states)
+                cells_updated += 1
+        print(f"   [+] Applied input states to {cells_updated} cells")
+    elif population and not gene_networks:
+        print(f"   [!] No gene networks in context - run 'Initialize Gene Networks' first")
     else:
         print(f"   [!] No population yet - inputs will be applied when gene networks are created")
 

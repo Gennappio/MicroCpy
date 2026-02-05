@@ -58,19 +58,25 @@ def initialize_population(
         cells = {}
 
         for i in range(num_cells):
-            cell = MockCell(id=f"cell_{i}")
+            cell_id = f"cell_{i}"
+            cell = MockCell(id=cell_id)
             cell.state = MockCellState(
+                id=cell_id,
                 position=MockPosition(x=float(i), y=0.0),
-                gene_network=None,  # No gene network yet!
+                # gene_network is stored in context['gene_networks'], not in cell state
                 gene_states={}
             )
-            cells[f"cell_{i}"] = cell
+            cells[cell_id] = cell
 
         population.state = MockPopulationState(cells=cells)
 
         # Store in context
         context['population'] = population
         context['num_cells'] = num_cells
+
+        # Initialize gene_networks dict in context (gene networks added by Initialize Gene Networks)
+        if 'gene_networks' not in context:
+            context['gene_networks'] = {}
 
         # Create mock simulator if not present (for testing)
         if 'simulator' not in context:

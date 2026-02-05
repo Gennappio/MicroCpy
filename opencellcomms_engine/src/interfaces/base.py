@@ -69,21 +69,116 @@ class ICellPopulation(ABC):
         pass
 
 class IGeneNetwork(ABC):
-    """Interface for gene regulatory networks"""
-    
+    """Interface for gene regulatory networks.
+
+    This defines the complete public API for gene network implementations.
+    Use this type for IDE discoverability when accessing gene networks from context.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import IGeneNetwork
+
+        cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
+        if cell_gn:
+            cell_gn.step(500, mode="netlogo")       # propagate
+            states = cell_gn.get_all_states()        # read all node states
+            outputs = cell_gn.get_output_states()    # read fate nodes only
+    """
+
     @abstractmethod
-    def set_input_states(self, inputs: Dict[str, bool]):
-        """Set input node states"""
+    def fix_node(self, node_name: str, state: bool) -> None:
+        """Fix a node to a specific state (permanently pinned during propagation).
+
+        Args:
+            node_name: Name of the node to fix
+            state: Boolean state to fix the node to
+        """
         pass
-    
+
     @abstractmethod
-    def step(self, num_steps: int = 1) -> Dict[str, bool]:
-        """Run network for specified steps"""
+    def set_input_states(self, inputs: Dict[str, bool]) -> None:
+        """Set input node states. Input nodes stay FIXED during propagation.
+
+        Args:
+            inputs: Dict mapping input node names to boolean states
+        """
         pass
-    
+
+    @abstractmethod
+    def initialize_logic_states(self, verbose: bool = False) -> int:
+        """Initialize all non-input nodes to match their logic rules.
+
+        Args:
+            verbose: If True, print details of each node initialization
+
+        Returns:
+            Number of nodes that were updated
+        """
+        pass
+
+    @abstractmethod
+    def initialize_random(self) -> None:
+        """Initialize ALL nodes with random states (except fixed nodes)."""
+        pass
+
+    @abstractmethod
+    def step(self, num_steps: int = 1, mode: str = "synchronous") -> Dict[str, bool]:
+        """Run network for specified steps.
+
+        Args:
+            num_steps: Number of update steps to run
+            mode: Update mode:
+                - "synchronous": All genes update together each step
+                - "netlogo": Random single gene per step (NetLogo-style)
+
+        Returns:
+            Dictionary of all gene states after propagation
+        """
+        pass
+
     @abstractmethod
     def get_output_states(self) -> Dict[str, bool]:
-        """Get current output node states"""
+        """Get current output/fate node states (e.g. Proliferation, Apoptosis).
+
+        Returns:
+            Dict mapping output node names to their boolean states
+        """
+        pass
+
+    @abstractmethod
+    def get_all_states(self) -> Dict[str, bool]:
+        """Get all node states (inputs, internal, and outputs).
+
+        Returns:
+            Dict mapping all node names to their boolean states
+        """
+        pass
+
+    @abstractmethod
+    def reset(self, random_init: bool = False) -> None:
+        """Reset network: fate nodes to False, others to random by default.
+
+        Args:
+            random_init: If True, randomize non-input, non-fate nodes
+        """
+        pass
+
+    @abstractmethod
+    def copy(self) -> 'IGeneNetwork':
+        """Create a deep copy of this gene network.
+
+        Returns:
+            A new IGeneNetwork instance with identical state
+        """
+        pass
+
+    @abstractmethod
+    def get_network_info(self) -> Dict[str, Any]:
+        """Get network metadata (node counts, input/output node names, etc.).
+
+        Returns:
+            Dict with network information
+        """
         pass
 
 class IVisualization(ABC):

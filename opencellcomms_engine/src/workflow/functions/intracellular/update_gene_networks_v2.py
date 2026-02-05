@@ -11,8 +11,9 @@ The key fixes:
 4. Logs mitoATP and glycoATP states for debugging
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IGeneNetwork
 
 
 @register_function(
@@ -91,7 +92,16 @@ def update_gene_networks_v2(
 
     # Ensure propagation_steps is int
     propagation_steps = int(propagation_steps)
-    
+
+    # =========================================================================
+    # GET GENE NETWORKS FROM CONTEXT
+    # =========================================================================
+    gene_networks = context.get('gene_networks', {})
+
+    if not gene_networks:
+        print("[update_gene_networks_v2] No gene networks in context - run 'Initialize Gene Networks' first")
+        return
+
     # =========================================================================
     # UPDATE EACH CELL
     # =========================================================================
@@ -117,14 +127,15 @@ def update_gene_networks_v2(
         if cell.state.phenotype == 'Necrosis':
             updated_cells[cell_id] = cell
             continue
-        
-        cell_gn = cell.state.gene_network
-        
+
+        # Get gene network from context (NOT from cell.state)
+        cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
+
         if cell_gn is None:
             cells_without_gn += 1
             updated_cells[cell_id] = cell
             continue
-        
+
         cells_with_gn += 1
         
         # =====================================================================

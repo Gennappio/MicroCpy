@@ -175,6 +175,9 @@ def main():
     print(f"    Input nodes: {len(gn_template.input_nodes)}")
     print(f"    Total nodes: {len(gn_template.nodes)}")
 
+    # Create context for gene network storage
+    context = {}
+
     # Create population
     print("\n[2] Creating CellPopulation...")
     custom_funcs = "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
@@ -182,7 +185,8 @@ def main():
         grid_size=(150, 150),
         gene_network=gn_template,
         custom_functions_module=custom_funcs,
-        config=config
+        config=config,
+        context=context  # Pass context for gene network storage
     )
 
     # Add cells
@@ -195,10 +199,11 @@ def main():
     population.initialize_cells(cell_data)
     print(f"    Initialized {len(population.state.cells)} cells")
 
-    # Check initial state
+    # Check initial state (gene networks are now in context)
     print("\n[4] Checking initial gene network attachment...")
+    gene_networks = context.get('gene_networks', {})
     for cell_id, cell in population.state.cells.items():
-        has_gn = cell.state.gene_network is not None
+        has_gn = cell_id in gene_networks
         gs = cell.state.gene_states
         print(f"    {cell_id}: gene_network={has_gn}, gene_states keys={list(gs.keys())[:5]}...")
 

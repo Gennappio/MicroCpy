@@ -378,11 +378,15 @@ def setup_simulation(config, custom_functions_path=None, verbose=True):
         print(f"   [*] Population biocell grid: {biocell_grid_size}")
         print(f"   [*] FiPy solver grid: {(config.domain.nx, config.domain.ny)}")
 
+    # Create context for gene network storage (gene networks stored in context['gene_networks'])
+    context = {}
+
     population = CellPopulation(
         grid_size=biocell_grid_size,
         gene_network=gene_network,
         custom_functions_module=custom_functions,
-        config=config
+        config=config,
+        context=context  # Pass context for gene network storage
     )
 
     # Initialize cells based on configuration mode

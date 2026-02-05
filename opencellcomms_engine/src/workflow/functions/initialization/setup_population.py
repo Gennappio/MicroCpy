@@ -160,11 +160,13 @@ def setup_population(
             grid_size = (biocell_nx, biocell_ny)
 
         # Create cell population (use resolved path, not original parameter)
+        # Pass context so gene networks are stored in context['gene_networks']
         population = CellPopulation(
             grid_size=grid_size,
             gene_network=gene_network,
             custom_functions_module=str(custom_functions_path.absolute()),
-            config=config
+            config=config,
+            context=context  # Pass context for gene network storage
         )
         context['population'] = population
 

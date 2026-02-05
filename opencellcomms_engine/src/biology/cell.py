@@ -15,7 +15,12 @@ from pathlib import Path
 
 @dataclass
 class CellState:
-    """Immutable cell state representation"""
+    """Immutable cell state representation.
+
+    Note: Gene networks are stored in context['gene_networks'] (dict mapping cell_id → BooleanNetwork)
+    rather than in the cell state. This keeps cell state clean and allows gene network operations
+    to be fully controlled by workflow functions.
+    """
     id: str
     position: Union[Tuple[int, int], Tuple[int, int, int]]  # Support both 2D and 3D positions
     phenotype: str
@@ -24,11 +29,13 @@ class CellState:
     metabolic_state: Dict[str, float] = field(default_factory=dict)
     gene_states: Dict[str, bool] = field(default_factory=dict)
     tq_wait_time: float = 0.0  # Time waiting in Growth_Arrest state (TQ time)
-    gene_network: Optional[object] = None  # Each cell has its own gene network instance
     original_physical_position: Optional[Tuple[float, float, float]] = None  # Original physical position from VTK (um)
-    
+
     def with_updates(self, **kwargs) -> 'CellState':
         """Create new CellState with updates (immutable pattern)"""
+        # Filter out gene_network if passed (for backward compatibility during migration)
+        kwargs.pop('gene_network', None)
+
         updates = {
             'id': self.id,
             'position': self.position,
@@ -38,7 +45,6 @@ class CellState:
             'metabolic_state': self.metabolic_state.copy(),
             'gene_states': self.gene_states.copy(),
             'tq_wait_time': self.tq_wait_time,
-            'gene_network': self.gene_network,  # Keep reference to gene network
             'original_physical_position': self.original_physical_position  # Preserve original physical position
         }
         updates.update(kwargs)

@@ -73,26 +73,29 @@ def main():
     s4 = gn4.step(20, mode='synchronous')
     print(f'Nothing:        mitoATP={s4.get("mitoATP")}, glycoATP={s4.get("glycoATP")}')
 
-    # Test cell integration
-    print('\n--- Testing Cell Integration ---')
+    # Test cell integration (gene networks stored in context, not cell.state)
+    print('\n--- Testing Cell Integration (Context-based Gene Networks) ---')
     cell = Cell(position=(100, 100), phenotype="Growth_Arrest", cell_id="test_cell")
+    cell_id = cell.state.id
     print(f'Initial gene_states: {cell.state.gene_states}')
 
-    # Attach gene network
-    cell.state = cell.state.with_updates(gene_network=gn.copy())
-    print(f'Gene network attached: {cell.state.gene_network is not None}')
+    # Store gene network in context (NOT in cell.state)
+    context = {'gene_networks': {}}
+    cell_gene_network = gn.copy()
+    context['gene_networks'][cell_id] = cell_gene_network
+    print(f'Gene network stored in context: {cell_id in context["gene_networks"]}')
 
-    # Set inputs and step
-    cell.state.gene_network.set_input_states({
+    # Set inputs and step (access gene network from context)
+    context['gene_networks'][cell_id].set_input_states({
         'Oxygen_supply': True,
         'Glucose_supply': True,
     })
-    gene_states = cell.state.gene_network.step(20, mode='synchronous')
+    gene_states = context['gene_networks'][cell_id].step(20, mode='synchronous')
     mito2 = gene_states.get('mitoATP')
     glyco2 = gene_states.get('glycoATP')
     print(f'After step - mitoATP: {mito2}, glycoATP: {glyco2}')
 
-    # Update cell's gene_states
+    # Update cell's gene_states (gene_states still stored in cell.state)
     cell.state = cell.state.with_updates(gene_states=gene_states)
     mito3 = cell.state.gene_states.get('mitoATP')
     glyco3 = cell.state.gene_states.get('glycoATP')

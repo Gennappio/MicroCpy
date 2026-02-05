@@ -1,24 +1,57 @@
 """
-Initialize Gene Networks - Attach gene networks to all cells in population.
+Initialize Gene Networks - Create gene networks for all cells in population.
 
-This function creates and attaches a Boolean gene network to each cell.
-Each cell gets its OWN copy of the gene network with random initialization.
+This function creates a Boolean gene network for each cell and stores them
+in context['gene_networks'] (a dict mapping cell_id → BooleanNetwork).
+
+Gene networks are NOT stored in cell.state to keep cell state clean and
+allow gene network operations to be fully controlled by workflow functions.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import IGeneNetwork
+
+
+def get_gene_network(context: Dict[str, Any], cell_id: str) -> Optional[IGeneNetwork]:
+    """
+    Helper function to safely get a cell's gene network from context.
+
+    Args:
+        context: Workflow context containing gene_networks dict
+        cell_id: The cell's unique identifier
+
+    Returns:
+        IGeneNetwork instance or None if not found
+    """
+    gene_networks = context.get('gene_networks', {})
+    return gene_networks.get(cell_id)
+
+
+def set_gene_network(context: Dict[str, Any], cell_id: str, gene_network: IGeneNetwork) -> None:
+    """
+    Helper function to set a cell's gene network in context.
+
+    Args:
+        context: Workflow context containing gene_networks dict
+        cell_id: The cell's unique identifier
+        gene_network: IGeneNetwork instance to store
+    """
+    if 'gene_networks' not in context:
+        context['gene_networks'] = {}
+    context['gene_networks'][cell_id] = gene_network
 
 
 @register_function(
     display_name="Initialize Gene Networks",
-    description="Create and attach gene networks to all cells in population",
+    description="Create gene networks for all cells in population (stored in context['gene_networks'])",
     category="INITIALIZATION",
     parameters=[
         {"name": "bnd_file", "type": "STRING", "description": "Path to BND file", "default": "gene_network.bnd"},
         {"name": "random_initialization", "type": "BOOL", "description": "Use random initialization for non-input nodes", "default": True},
     ],
-    outputs=["gene_network"],
+    outputs=["gene_networks"],
     cloneable=False
 )
 def initialize_gene_networks(
@@ -28,7 +61,11 @@ def initialize_gene_networks(
     **kwargs
 ) -> bool:
     """
-    Create and attach gene networks to all cells in population.
+    Create gene networks for all cells in population.
+
+    Gene networks are stored in context['gene_networks'] as a dict mapping
+    cell_id → BooleanNetwork instance. This keeps cell state clean and allows
+    gene network operations to be fully controlled by workflow functions.
 
     This is REUSABLE:
     - Each cell gets its OWN copy of the gene network
@@ -82,7 +119,10 @@ def initialize_gene_networks(
         context['gene_network_config'] = config
         context['random_initialization'] = random_initialization
 
-        # Attach gene network to each cell
+        # Initialize gene_networks dict in context
+        context['gene_networks'] = {}
+
+        # Create gene network for each cell (stored in context, NOT in cell.state)
         cells = population.state.cells
         num_cells = len(cells)
 
@@ -91,8 +131,12 @@ def initialize_gene_networks(
             cell_gn = BooleanNetwork(config=config)
             cell_gn.reset(random_init=random_initialization)
 
-            # Update cell state with gene network
-            cell.state.gene_network = cell_gn
+            # Store gene network in context (NOT in cell.state)
+            context['gene_networks'][cell_id] = cell_gn
+
+            # Get initial gene states and update cell's gene_states dict
+            initial_gene_states = cell_gn.get_all_states()
+            cell.state = cell.state.with_updates(gene_states=initial_gene_states)
 
         # Create a reference gene network for getting input node names etc.
         # NOTE: We do NOT add this to context['gene_network'] because that would
@@ -101,7 +145,7 @@ def initialize_gene_networks(
         context['reference_gene_network'] = reference_gn
 
         print(f"   [+] Loaded BND file: {bnd_path}")
-        print(f"   [+] Attached gene networks to {num_cells} cells")
+        print(f"   [+] Created gene networks for {num_cells} cells (stored in context['gene_networks'])")
         print(f"   [+] Random initialization: {random_initialization}")
         print(f"   [+] Input nodes: {list(reference_gn.input_nodes)}")
 

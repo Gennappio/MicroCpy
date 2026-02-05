@@ -13,8 +13,9 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IGeneNetwork
 
 
 @register_function(
@@ -105,6 +106,15 @@ def update_gene_networks(
         update_mode = "synchronous"
 
     # =========================================================================
+    # GET GENE NETWORKS FROM CONTEXT
+    # =========================================================================
+    gene_networks = context.get('gene_networks', {})
+
+    if not gene_networks:
+        print("[GENE_NETWORK] No gene networks in context - run 'Initialize Gene Networks' first")
+        return
+
+    # =========================================================================
     # UPDATE EACH CELL'S GENE NETWORK
     # =========================================================================
     updated_cells = {}
@@ -127,10 +137,10 @@ def update_gene_networks(
         # Get local environment (with coordinate conversion from biological to solver grid)
         local_env = _get_local_environment(cell.state.position, substance_concentrations, config)
 
-        # Get cell's gene network
-        cell_gene_network = cell.state.gene_network
+        # Get cell's gene network from context (NOT from cell.state)
+        cell_gene_network: Optional[IGeneNetwork] = gene_networks.get(cell_id)
 
-        # Skip if this cell has no gene network attached
+        # Skip if this cell has no gene network
         if cell_gene_network is None:
             cells_without_gn += 1
             updated_cells[cell_id] = cell
@@ -193,7 +203,7 @@ def update_gene_networks(
 
         # Collect statistics on output node states across all cells
         for cell_id, cell in updated_cells.items():
-            cell_gn = cell.state.gene_network
+            cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
             if cell_gn:
                 output_states = cell_gn.get_output_states()
                 for node_name, state in output_states.items():
@@ -203,8 +213,8 @@ def update_gene_networks(
 
         # Sample output: show fate gene states for first cell
         if updated_cells:
-            sample_cell = next(iter(updated_cells.values()))
-            sample_gn = sample_cell.state.gene_network
+            sample_cell_id = next(iter(updated_cells.keys()))
+            sample_gn: Optional[IGeneNetwork] = gene_networks.get(sample_cell_id)
             if sample_gn:
                 sample_outputs = sample_gn.get_output_states()
                 print(f"[GENE_NETWORK] Sample cell outputs: {sample_outputs}")

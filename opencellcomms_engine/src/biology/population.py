@@ -211,18 +211,30 @@ class PopulationState:
 class CellPopulation(ICellPopulation):
     """
     Spatial cell population management with immutable state tracking
-    
+
     Manages cell positions, division, death, and migration on a spatial grid.
     All behaviors can be customized via the hook system.
+
+    Gene networks are stored in context['gene_networks'] (dict mapping cell_id → BooleanNetwork)
+    rather than in the cell state. This allows gene network operations to be fully
+    controlled by workflow functions.
     """
-    
+
     def __init__(self, grid_size: Union[Tuple[int, int], Tuple[int, int, int]], gene_network: Optional[BooleanNetwork] = None,
-                 custom_functions_module=None, config=None):
+                 custom_functions_module=None, config=None, context: Optional[Dict[str, Any]] = None):
 
         self.grid_size = grid_size
         self.gene_network_template = gene_network or BooleanNetwork()  # Template for creating cell-specific networks
         self.custom_functions = self._load_custom_functions(custom_functions_module)
         self.config = config  # Store config for threshold calculations
+
+        # Store context for gene network storage (workflow context)
+        # If no context provided, create a local one for backward compatibility
+        self.context = context if context is not None else {}
+
+        # Ensure gene_networks dict exists in context
+        if 'gene_networks' not in self.context:
+            self.context['gene_networks'] = {}
 
         # Initialize phenotype logger
         output_dir = getattr(config, 'output_dir', 'logs') if config else 'logs'
@@ -432,8 +444,8 @@ class CellPopulation(ICellPopulation):
 
             # Apply gene states if provided (merges with existing gene states from gene network)
             if 'gene_states' in cell_info and cell_info['gene_states']:
-                # Update the cell's gene network with loaded states
-                gene_network = cell.state.gene_network
+                # Update the cell's gene network with loaded states (from context)
+                gene_network = self.context.get('gene_networks', {}).get(cell.state.id)
                 if gene_network:
                     for gene_name, state in cell_info['gene_states'].items():
                         if gene_name in gene_network.nodes:
@@ -646,12 +658,15 @@ class CellPopulation(ICellPopulation):
         - Provides each new cell with random initial gene states
         - Fate nodes (Apoptosis, Proliferation, etc.) always start as False
         - Each cell gets its own gene network instance
+
+        Gene networks are stored in context['gene_networks'] (dict mapping cell_id → BooleanNetwork)
+        rather than in the cell state.
         """
         # Create a new gene network instance for this cell by copying the template
         cell_gene_network = self.gene_network_template.copy()
 
         # Use NetLogo-style random initialization if configured
-        random_init = getattr(self.config.gene_network, 'random_initialization', False)
+        random_init = getattr(self.config.gene_network, 'random_initialization', False) if self.config and hasattr(self.config, 'gene_network') else False
 
         # Reset gene network with random initialization for new cells only
         cell_gene_network.reset(random_init=random_init)
@@ -660,12 +675,15 @@ class CellPopulation(ICellPopulation):
         # This ensures nodes start in states consistent with their logic, not just random
         cell_gene_network.initialize_logic_states(verbose=False)
 
-        # Get initial gene states and store them in the cell along with the gene network
+        # Get initial gene states
         initial_gene_states = cell_gene_network.get_all_states()
-        cell.state = cell.state.with_updates(
-            gene_states=initial_gene_states,
-            gene_network=cell_gene_network  # Store the cell's own gene network instance
-        )
+
+        # Store gene network in context (NOT in cell.state)
+        cell_id = cell.state.id
+        self.context['gene_networks'][cell_id] = cell_gene_network
+
+        # Update cell's gene_states only (not gene_network)
+        cell.state = cell.state.with_updates(gene_states=initial_gene_states)
 
     def _initialize_population_gene_network(self):
         """Initialize the population's gene network at simulation start"""
@@ -933,13 +951,15 @@ class CellPopulation(ICellPopulation):
             # DO NOT RESET gene network during regular updates - this destroys gene dynamics!
             # Gene network should only be reset during cell creation, not every update
 
-            # Get this cell's own gene network instance
-            cell_gene_network = cell.state.gene_network
+            # Get this cell's gene network from context (NOT from cell.state)
+            gene_networks = self.context.get('gene_networks', {})
+            cell_gene_network = gene_networks.get(cell_id)
+
             if cell_gene_network is None:
                 # Fallback: create a new gene network for this cell if it doesn't have one
                 print(f"[WARNING]  Cell {cell_id} missing gene network, creating new one")
                 self._initialize_cell_gene_network(cell)
-                cell_gene_network = cell.state.gene_network
+                cell_gene_network = self.context['gene_networks'].get(cell_id)
 
             # Update gene network using configuration-based thresholds
             gene_inputs = self._calculate_gene_inputs(local_env)
