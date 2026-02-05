@@ -7,8 +7,9 @@ For each association (substance -> gene_input):
 - Set gene_input = ON if concentration > threshold, else OFF
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation
 
 
 @register_function(
@@ -35,7 +36,7 @@ def apply_associations_to_inputs(
     This is for use after add_substance and add_association.
     """
     try:
-        population = context.get('population')
+        population: Optional[ICellPopulation] = context.get('population')
         config = context.get('config')
 
         # Get substances from context

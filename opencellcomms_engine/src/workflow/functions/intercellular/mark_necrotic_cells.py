@@ -33,8 +33,9 @@ Example configurations:
 ================================================================================
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -98,8 +99,8 @@ def mark_necrotic_cells(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population = context.get('population')
-    simulator = context.get('simulator')
+    population: Optional[ICellPopulation] = context.get('population')
+    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
     config = context.get('config')
 
     # =========================================================================

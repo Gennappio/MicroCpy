@@ -29,8 +29,9 @@ Functions pull what they need from context and handle None gracefully.
 ================================================================================
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -69,8 +70,8 @@ def update_metabolism(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population = context.get('population')
-    simulator = context.get('simulator')
+    population: Optional[ICellPopulation] = context.get('population')
+    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
     config = context.get('config')
     dt = context.get('dt', 0.1)
 

@@ -56,6 +56,7 @@ WHY THIS PATTERN:
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -132,8 +133,8 @@ def run_diffusion_solver(
     # EXTRACT CORE CONTEXT ITEMS
     # These may be None in workflow-only mode or custom simulations
     # =========================================================================
-    simulator = context.get('simulator')
-    population = context.get('population')  # May be None - that's OK
+    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
+    population: Optional[ICellPopulation] = context.get('population')  # May be None - that's OK
     config = context.get('config')
     dt = context.get('dt', 0.1)
 

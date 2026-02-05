@@ -14,9 +14,10 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import random
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation
 
 
 @register_function(
@@ -58,7 +59,7 @@ def update_cell_division(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population = context.get('population')
+    population: Optional[ICellPopulation] = context.get('population')
     config = context.get('config')
 
     # =========================================================================

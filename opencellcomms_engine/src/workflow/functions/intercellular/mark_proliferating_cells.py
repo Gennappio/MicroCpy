@@ -13,8 +13,9 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation
 
 
 @register_function(
@@ -50,7 +51,7 @@ def mark_proliferating_cells(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population = context.get('population')
+    population: Optional[ICellPopulation] = context.get('population')
 
     # =========================================================================
     # VALIDATE REQUIRED CORE ITEMS

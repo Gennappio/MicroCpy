@@ -2,9 +2,10 @@
 Generate initial state plots workflow function.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -38,8 +39,8 @@ def generate_initial_plots(
         # Import AutoPlotter (uses context['engine_root'] if available)
         from visualization.auto_plotter import AutoPlotter
 
-        population = context['population']
-        simulator = context['simulator']
+        population: ICellPopulation = context['population']
+        simulator: ISubstanceSimulator = context['simulator']
         config = context['config']
 
         # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===

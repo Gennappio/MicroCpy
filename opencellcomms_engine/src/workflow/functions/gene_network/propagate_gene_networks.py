@@ -9,7 +9,7 @@ Gene networks are accessed from context['gene_networks'] (dict mapping cell_id â
 
 from typing import Dict, Any, List, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IGeneNetwork
+from interfaces.base import IGeneNetwork, ICellPopulation
 
 
 @register_function(
@@ -69,7 +69,7 @@ def propagate_gene_networks(
         return False
     
     # Get population
-    population = context.get('population')
+    population: Optional[ICellPopulation] = context.get('population')
     if population is None:
         print("[ERROR] No population in context")
         return False

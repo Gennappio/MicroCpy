@@ -5,8 +5,9 @@ This function collects and computes final statistics about the simulation
 including cell population statistics, substance concentration statistics, etc.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -38,8 +39,8 @@ def collect_statistics(
     print("[WORKFLOW] Collecting final simulation statistics...")
 
     try:
-        population = context['population']
-        simulator = context['simulator']
+        population: ICellPopulation = context['population']
+        simulator: ISubstanceSimulator = context['simulator']
         config = context['config']
 
         statistics = {

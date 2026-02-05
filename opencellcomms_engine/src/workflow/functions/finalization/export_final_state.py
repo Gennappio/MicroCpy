@@ -5,9 +5,10 @@ This function exports the final state of the simulation (cells, substances)
 for analysis or visualization in external tools.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -63,8 +64,8 @@ def export_final_state(
     print("[WORKFLOW] Exporting final simulation state...")
 
     try:
-        population = context['population']
-        simulator = context['simulator']
+        population: ICellPopulation = context['population']
+        simulator: ISubstanceSimulator = context['simulator']
         config = context['config']
         step = context.get('step', 0)
 

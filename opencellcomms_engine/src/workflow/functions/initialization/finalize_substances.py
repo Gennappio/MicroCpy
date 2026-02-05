@@ -5,8 +5,9 @@ This function initializes the simulator with all configured substances.
 Call this AFTER all add_substance calls to ensure all substances are properly initialized.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ISubstanceSimulator
 
 
 @register_function(
@@ -37,7 +38,7 @@ def finalize_substances(
     """
     try:
         config = context.get('config')
-        simulator = context.get('simulator')
+        simulator: Optional[ISubstanceSimulator] = context.get('simulator')
         
         if not config or not simulator:
             print("[WARNING] No config or simulator in context")

@@ -12,6 +12,7 @@ See run_diffusion_solver.py for full documentation.
 
 from typing import Dict, Any
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -49,8 +50,8 @@ def run_maboss_step(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population = context.get('population')
-    simulator = context.get('simulator')
+    population: Optional[ICellPopulation] = context.get('population')
+    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
     config = context.get('config')
 
     # =========================================================================

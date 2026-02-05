@@ -4,21 +4,111 @@ import numpy as np
 
 
 class ISubstanceSimulator(ABC):
-    """Interface for substance diffusion-reaction simulators"""
-    
+    """Interface for multi-substance diffusion-reaction simulators.
+
+    This defines the complete public API for substance simulators.
+    Use this type for IDE discoverability when accessing the simulator from context.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import ISubstanceSimulator
+
+        simulator: Optional[ISubstanceSimulator] = context.get('simulator')
+        if simulator:
+            simulator.update(substance_reactions)
+            concentrations = simulator.get_substance_concentrations()
+            stats = simulator.get_summary_statistics()
+    """
+
+    @abstractmethod
+    def initialize_substances(self, substances: Dict[str, Any]) -> None:
+        """(Re)initialize substances from a provided config dict.
+
+        Called by workflow initialization functions after the simulator
+        has been constructed to bring internal state in sync with
+        workflow-defined substances.
+
+        Args:
+            substances: Dict mapping substance names to SubstanceConfig objects
+        """
+        pass
+
+    @abstractmethod
+    def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> None:
+        """Solve diffusion PDE for all substances using cell reactions as source/sink terms.
+
+        Args:
+            substance_reactions: Dict mapping cell positions ``(x, y)`` to
+                per-substance reaction rates ``{substance_name: rate}``
+        """
+        pass
+
     @abstractmethod
     def solve_steady_state(self, cell_reactions: Dict[Tuple[float, float], float]) -> bool:
-        """Solve diffusion-reaction to steady state"""
+        """Solve diffusion-reaction to steady state.
+
+        Args:
+            cell_reactions: Dict mapping cell positions to reaction rates
+
+        Returns:
+            True if solver converged
+        """
         pass
-    
+
     @abstractmethod
     def evaluate_at_point(self, position: Tuple[float, float]) -> float:
-        """Get concentration at specific position"""
+        """Get concentration at specific position.
+
+        Args:
+            position: ``(x, y)`` coordinates
+
+        Returns:
+            Concentration value at the given position
+        """
         pass
-    
+
     @abstractmethod
     def get_field_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Get X, Y, Z arrays for visualization"""
+        """Get X, Y, Z arrays for visualization.
+
+        Returns:
+            Tuple of ``(X, Y, Z)`` numpy arrays
+        """
+        pass
+
+    @abstractmethod
+    def get_substance_concentrations(self) -> Dict[str, Dict[Tuple[int, int], float]]:
+        """Get all substance concentrations for cell updates.
+
+        Returns:
+            Dict mapping substance names to position→concentration dicts,
+            e.g. ``{'Oxygen': {(0,0): 0.28, (1,0): 0.27, ...}}``
+        """
+        pass
+
+    @abstractmethod
+    def get_gene_network_inputs_for_position(self, position: Tuple[int, int]) -> Dict[str, float]:
+        """Get gene network inputs for a specific cell position.
+
+        Converts substance concentrations to gene network input values
+        using configured associations and thresholds.
+
+        Args:
+            position: ``(x, y)`` grid position
+
+        Returns:
+            Dict mapping gene input names to float values
+        """
+        pass
+
+    @abstractmethod
+    def get_summary_statistics(self) -> Dict[str, Dict[str, float]]:
+        """Get summary statistics for all substances.
+
+        Returns:
+            Dict mapping substance names to stats dicts with keys
+            ``'min'``, ``'max'``, ``'mean'``, ``'std'``
+        """
         pass
 
 class ICell(ABC):
@@ -46,26 +136,194 @@ class ICell(ABC):
         pass
 
 class ICellPopulation(ABC):
-    """Interface for cell population management"""
-    
+    """Interface for cell population management.
+
+    This defines the complete public API for cell population implementations.
+    Use this type for IDE discoverability when accessing the population from context.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import ICellPopulation
+
+        population: Optional[ICellPopulation] = context.get('population')
+        if population:
+            cells = population.state.cells
+            stats = population.get_population_statistics()
+            positions = population.get_cell_positions()
+    """
+
+    @abstractmethod
+    def initialize_with_custom_placement(self, simulation_params: Optional[Dict] = None) -> int:
+        """Initialize population using custom placement function.
+
+        Args:
+            simulation_params: Optional simulation parameters dict
+
+        Returns:
+            Number of cells placed
+        """
+        pass
+
+    @abstractmethod
+    def initialize_cells(self, cell_data: List[Dict[str, Any]]) -> int:
+        """Batch initialize cells with a single state update for efficiency.
+
+        Args:
+            cell_data: List of dicts, each with keys like 'position', 'phenotype', etc.
+
+        Returns:
+            Number of cells successfully initialized
+        """
+        pass
+
     @abstractmethod
     def add_cell(self, position: Union[Tuple[int, int], Tuple[int, int, int]], phenotype: str = "normal") -> bool:
-        """Add cell at lattice position"""
+        """Add a single cell at a lattice position.
+
+        Args:
+            position: ``(x, y)`` or ``(x, y, z)`` grid position
+            phenotype: Initial cell phenotype (default ``"normal"``)
+
+        Returns:
+            True if cell was added, False if position was occupied or invalid
+        """
         pass
-    
+
     @abstractmethod
     def attempt_division(self, parent_id: str) -> bool:
-        """Attempt to divide a cell"""
+        """Attempt to divide a single cell.
+
+        Args:
+            parent_id: ID of the parent cell
+
+        Returns:
+            True if division succeeded, False otherwise
+        """
         pass
-    
+
+    @abstractmethod
+    def attempt_divisions(self) -> int:
+        """Attempt cell divisions in batch with a single state update.
+
+        Returns:
+            Number of successful divisions
+        """
+        pass
+
     @abstractmethod
     def remove_dead_cells(self) -> List[str]:
-        """Remove dead cells and return their IDs"""
+        """Remove dead cells and return their IDs.
+
+        Returns:
+            List of removed cell IDs
+        """
         pass
-    
+
     @abstractmethod
-    def get_substance_reactions(self) -> Dict[Tuple[float, float], Dict[str, float]]:
-        """Get all cell reactions for substances"""
+    def get_substance_reactions(self, substance_concentrations: Optional[Dict[str, Dict[Tuple[int, int], float]]] = None) -> Dict[Tuple[float, float], Dict[str, float]]:
+        """Get all cell reactions for substances.
+
+        Args:
+            substance_concentrations: Optional pre-computed substance concentrations
+
+        Returns:
+            Dict mapping cell positions to per-substance reaction rate dicts
+        """
+        pass
+
+    @abstractmethod
+    def update_cells(self, dt: float, substance_concentrations: Optional[Dict[str, Dict[Tuple[int, int], float]]] = None) -> None:
+        """DEPRECATED: Use update_intracellular_processes() instead.
+
+        Args:
+            dt: Time step in hours
+            substance_concentrations: Optional substance concentrations
+        """
+        pass
+
+    @abstractmethod
+    def update_intracellular_processes(self, dt: float, substance_concentrations: Optional[Dict[str, Dict[Tuple[int, int], float]]] = None) -> None:
+        """Update intracellular processes: aging, metabolism, division, death.
+
+        Should be called every intracellular_step (fast timescale).
+
+        Args:
+            dt: Time step in hours
+            substance_concentrations: Optional substance concentrations
+        """
+        pass
+
+    @abstractmethod
+    def update_gene_networks(self, substance_concentrations: Optional[Dict[str, Dict[Tuple[int, int], float]]] = None) -> None:
+        """Update gene networks based on current environment.
+
+        Args:
+            substance_concentrations: Optional substance concentrations
+        """
+        pass
+
+    @abstractmethod
+    def update_phenotypes(self) -> None:
+        """Update cell phenotypes based on cached gene states.
+
+        Should be called every intracellular_step (phenotype changes follow gene expression).
+        """
+        pass
+
+    @abstractmethod
+    def update_intercellular_processes(self) -> Dict[str, Any]:
+        """Update intercellular processes: migration, cell-cell interactions, signaling.
+
+        Should be called every intercellular_step (slower than intracellular processes).
+
+        Returns:
+            Dict with keys ``'migrations'`` and ``'divisions'`` containing counts
+        """
+        pass
+
+    @abstractmethod
+    def get_population_statistics(self) -> Dict[str, Any]:
+        """Get population statistics.
+
+        Returns:
+            Dict with keys ``'total_cells'``, ``'phenotype_counts'``,
+            ``'average_age'``, ``'generation_count'``, ``'grid_occupancy'``
+        """
+        pass
+
+    @abstractmethod
+    def get_cell_positions(self) -> List[Tuple[Union[Tuple[int, int], Tuple[int, int, int]], str]]:
+        """Get list of (position, phenotype) for all cells.
+
+        Returns:
+            List of ``(position, phenotype)`` tuples
+        """
+        pass
+
+    @abstractmethod
+    def get_cell_at_position(self, position: Union[Tuple[int, int], Tuple[int, int, int]]) -> Optional[Any]:
+        """Get cell at specific position, if any.
+
+        Args:
+            position: ``(x, y)`` or ``(x, y, z)`` grid position
+
+        Returns:
+            Cell object or None
+        """
+        pass
+
+    @abstractmethod
+    def get_state(self) -> Any:
+        """Get current population state (immutable).
+
+        Returns:
+            PopulationState object
+        """
+        pass
+
+    @abstractmethod
+    def print_atp_statistics(self) -> None:
+        """Print ATP statistics — called only at status_print_interval."""
         pass
 
 class IGeneNetwork(ABC):

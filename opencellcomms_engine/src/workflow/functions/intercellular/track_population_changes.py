@@ -5,8 +5,9 @@ This function logs the cell count before and after the intercellular stage
 to detect any unexpected cell removals.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation
 
 
 @register_function(
@@ -28,12 +29,12 @@ def track_population_start(
     Args:
         context: Workflow execution context containing population
     """
-    population = context.get('population')
-    
+    population: Optional[ICellPopulation] = context.get('population')
+
     if population is None:
         print("[TRACK] No population in context")
         return
-    
+
     cell_count = len(population.state.cells)
     context['_population_count_start'] = cell_count
     print(f"[TRACK-START] Population count: {cell_count} cells")
@@ -58,12 +59,12 @@ def track_population_end(
     Args:
         context: Workflow execution context containing population
     """
-    population = context.get('population')
-    
+    population: Optional[ICellPopulation] = context.get('population')
+
     if population is None:
         print("[TRACK] No population in context")
         return
-    
+
     cell_count = len(population.state.cells)
     start_count = context.get('_population_count_start', cell_count)
     

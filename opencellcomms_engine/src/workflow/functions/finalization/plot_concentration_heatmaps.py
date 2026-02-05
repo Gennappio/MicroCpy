@@ -4,10 +4,11 @@ Plot concentration heatmaps for all substances.
 Creates color gradient plots showing the concentration field for each substance.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 import numpy as np
 from src.workflow.decorators import register_function
+from interfaces.base import ICellPopulation, ISubstanceSimulator
 
 
 @register_function(
@@ -49,8 +50,8 @@ def plot_concentration_heatmaps(
     try:
         import matplotlib.pyplot as plt
         
-        simulator = context.get('simulator')
-        population = context.get('population')
+        simulator: Optional[ISubstanceSimulator] = context.get('simulator')
+        population: Optional[ICellPopulation] = context.get('population')
         config = context.get('config')
         
         if not simulator:
