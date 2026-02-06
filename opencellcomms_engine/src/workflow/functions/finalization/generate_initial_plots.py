@@ -5,7 +5,7 @@ Generate initial state plots workflow function.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator
+from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -41,7 +41,7 @@ def generate_initial_plots(
 
         population: ICellPopulation = context['population']
         simulator: ISubstanceSimulator = context['simulator']
-        config = context['config']
+        config: IConfig = context['config']
 
         # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
         if 'plots_dir' in context:

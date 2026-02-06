@@ -4,9 +4,10 @@ Load cells from VTK file.
 This function loads initial cell state from a VTK file.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -46,7 +47,7 @@ def load_cells_from_vtk(
         True if successful, False otherwise
     """
     population = context.get('population')
-    config = context.get('config')
+    config: Optional[IConfig] = context.get('config')
     
     if not population or not config:
         print("[ERROR] Population and config must be set up before loading cells")

@@ -7,6 +7,7 @@ This function initializes substances and creates the diffusion simulator.
 import json
 from typing import Dict, Any, List, Union, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 
@@ -105,7 +106,7 @@ def setup_substances(
         # Import helper to configure substances using existing simulator
         from src.workflow.functions.diffusion.run_diffusion_solver import _configure_substances
 
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         simulator = context.get('simulator')
 
         if not config or not simulator:

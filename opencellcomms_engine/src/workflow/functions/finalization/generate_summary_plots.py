@@ -5,9 +5,10 @@ This function generates all automatic plots (substance heatmaps, cell distributi
 at the end of the simulation. Supports both custom directory output and GUI-compatible output.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 def _generate_plots_to_directory(
@@ -42,7 +43,7 @@ def _generate_plots_to_directory(
 
     population = context['population']
     simulator = context['simulator']
-    config = context['config']
+    config: IConfig = context['config']
     results = context.get('results', {})
 
     # Create output directory if it doesn't exist
@@ -127,7 +128,7 @@ def generate_summary_plots(
         output_path = Path(context['plots_dir'])
     else:
         # Fallback for legacy contexts without plots_dir
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         if config and hasattr(config, 'plots_dir'):
             output_path = Path(config.plots_dir)
         else:

@@ -6,6 +6,7 @@ This function initializes the cell population and gene network infrastructure.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig, IMeshManager
 from src.workflow.logging import log, log_always
 
 
@@ -62,8 +63,8 @@ def setup_population(
         from src.biology.gene_network import BooleanNetwork
         from src.biology.population import CellPopulation
         
-        config = context.get('config')
-        mesh_manager = context.get('mesh_manager')
+        config: Optional[IConfig] = context.get('config')
+        mesh_manager: Optional[IMeshManager] = context.get('mesh_manager')
         
         if not config or not mesh_manager:
             print("[ERROR] Config and mesh_manager must be set up before population")

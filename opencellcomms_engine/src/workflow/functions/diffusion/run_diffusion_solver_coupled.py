@@ -19,6 +19,7 @@ Under-relaxation (0 < α < 1) improves stability by damping oscillations.
 from typing import Dict, Any, Tuple, Optional
 import numpy as np
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 # Global debug switch - DEPRECATED: Use verbose parameter instead
@@ -148,7 +149,7 @@ def run_diffusion_solver_coupled(
     """
     simulator = context.get('simulator')
     population = context.get('population')
-    config = context.get('config')
+    config: Optional[IConfig] = context.get('config')
 
     if simulator is None:
         log_always("[run_diffusion_solver_coupled] No simulator in context - cannot run diffusion.")

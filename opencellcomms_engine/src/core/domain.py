@@ -5,12 +5,13 @@ from fipy import Grid2D, Grid3D
 
 from config.config import DomainConfig
 from core.units import Length, UnitValidator
+from interfaces.base import IMeshManager
 
 class DomainError(Exception):
     """Raised when domain configuration is invalid"""
     pass
 
-class MeshManager:
+class MeshManager(IMeshManager):
     """Manages FiPy mesh with bulletproof unit handling"""
 
     def __init__(self, config: DomainConfig, verbose: bool = True):

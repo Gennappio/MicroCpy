@@ -7,7 +7,7 @@ including cell population statistics, substance concentration statistics, etc.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator
+from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -41,7 +41,7 @@ def collect_statistics(
     try:
         population: ICellPopulation = context['population']
         simulator: ISubstanceSimulator = context['simulator']
-        config = context['config']
+        config: IConfig = context['config']
 
         statistics = {
             'cell_statistics': {},

@@ -7,6 +7,7 @@ This function configures gene network parameters.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 
@@ -48,7 +49,7 @@ def setup_gene_network(
     print(f"[WORKFLOW] Setting up gene network configuration")
 
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         if not config:
             print("[ERROR] Config must be set up before gene network")

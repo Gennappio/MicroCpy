@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 def _log_debug(stage: str, function_name: str, context: Optional[Dict[str, Any]] = None, message: str = "", **kwargs: Any) -> bool:
@@ -354,7 +355,7 @@ def debug_generate_image(context: Optional[Dict[str, Any]] = None, message: str 
         if "subworkflow_results_dir" in context:
             output_dir = Path(context["subworkflow_results_dir"])
         elif "config" in context:
-            config = context["config"]
+            config: IConfig = context["config"]
             if hasattr(config, 'output_dir'):
                 output_dir = Path(config.output_dir)
 

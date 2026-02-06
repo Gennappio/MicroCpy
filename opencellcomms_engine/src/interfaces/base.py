@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Any, Optional, Union
+from pathlib import Path
 import numpy as np
 
 
@@ -113,23 +114,23 @@ class ISubstanceSimulator(ABC):
 
 class ICell(ABC):
     """Interface for individual cell behavior"""
-    
+
     @abstractmethod
-    def update_phenotype(self, local_environment: Dict[str, float], 
+    def update_phenotype(self, local_environment: Dict[str, float],
                         gene_states: Dict[str, bool]) -> str:
         """Update cell phenotype based on environment and genes"""
         pass
-    
+
     @abstractmethod
     def calculate_metabolism(self, local_environment: Dict[str, float]) -> Dict[str, float]:
         """Calculate metabolic production/consumption rates"""
         pass
-    
+
     @abstractmethod
     def should_divide(self) -> bool:
         """Check if cell should attempt division"""
         pass
-    
+
     @abstractmethod
     def should_die(self, local_environment: Dict[str, float]) -> bool:
         """Check if cell should die"""
@@ -441,28 +442,28 @@ class IGeneNetwork(ABC):
 
 class IVisualization(ABC):
     """Interface for visualization components"""
-    
+
     @abstractmethod
-    def plot_substance_field(self, substance_name: str, data: np.ndarray, 
+    def plot_substance_field(self, substance_name: str, data: np.ndarray,
                            metadata: Dict[str, Any]) -> str:
         """Plot substance concentration field"""
         pass
-    
+
     @abstractmethod
-    def plot_cell_population(self, cell_positions: List[Tuple[int, int]], 
+    def plot_cell_population(self, cell_positions: List[Tuple[int, int]],
                            cell_phenotypes: List[str], metadata: Dict[str, Any]) -> str:
         """Plot cell population distribution"""
         pass
 
 class IDataExporter(ABC):
     """Interface for data export components"""
-    
+
     @abstractmethod
     def export_simulation_data(self, timestep: int, substance_data: Dict[str, np.ndarray],
                              cell_data: Dict[str, Any], metadata: Dict[str, Any]) -> bool:
         """Export simulation data for a timestep"""
         pass
-    
+
     @abstractmethod
     def finalize_export(self) -> str:
         """Finalize export and return output path"""
@@ -470,17 +471,17 @@ class IDataExporter(ABC):
 
 class ITimescaleOrchestrator(ABC):
     """Interface for multi-timescale coordination"""
-    
+
     @abstractmethod
     def should_update_diffusion(self, current_step: int) -> bool:
         """Check if diffusion should be updated this step"""
         pass
-    
+
     @abstractmethod
     def should_update_intracellular(self, current_step: int) -> bool:
         """Check if intracellular processes should be updated"""
         pass
-    
+
     @abstractmethod
     def should_update_intercellular(self, current_step: int) -> bool:
         """Check if intercellular processes should be updated"""
@@ -488,18 +489,341 @@ class ITimescaleOrchestrator(ABC):
 
 class IPerformanceProfiler(ABC):
     """Interface for performance monitoring"""
-    
+
     @abstractmethod
     def start_timer(self, operation_name: str):
         """Start timing an operation"""
         pass
-    
+
     @abstractmethod
     def end_timer(self, operation_name: str) -> float:
         """End timing and return duration"""
         pass
-    
+
     @abstractmethod
     def get_performance_report(self) -> Dict[str, Any]:
         """Get comprehensive performance report"""
+        pass
+
+
+class IConfig(ABC):
+    """Interface for OpenCellCommsConfig — the master simulation configuration.
+
+    This defines all public fields and methods of the configuration dataclass.
+    Use this type for IDE discoverability when accessing config from context.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import IConfig
+
+        config: Optional[IConfig] = context.get('config')
+        if config:
+            dt = config.time.dt
+            substances = config.substances
+            output_dir = config.output_dir
+    """
+
+    # ── Core simulation parameters ───────────────────────────────
+    @property
+    @abstractmethod
+    def domain(self) -> Any:
+        """Domain configuration (DomainConfig): size_x, size_y, nx, ny, dimensions, cell_height, …"""
+        pass
+
+    @property
+    @abstractmethod
+    def time(self) -> Any:
+        """Time configuration (TimeConfig): dt, end_time, diffusion_step, intracellular_step, intercellular_step"""
+        pass
+
+    @property
+    @abstractmethod
+    def diffusion(self) -> Any:
+        """Diffusion solver configuration (DiffusionConfig): max_iterations, tolerance, solver_type, twodimensional_adjustment_coefficient"""
+        pass
+
+    @property
+    @abstractmethod
+    def substances(self) -> Dict[str, Any]:
+        """Substance configurations: Dict mapping substance names to SubstanceConfig objects.
+
+        Each SubstanceConfig has: name, diffusion_coeff, production_rate, uptake_rate,
+        initial_value, boundary_value, boundary_type.
+        """
+        pass
+
+    # ── Gene network configuration ───────────────────────────────
+    @property
+    @abstractmethod
+    def associations(self) -> Dict[str, str]:
+        """Substance-to-gene input mapping: e.g. ``{'Oxygen': 'Oxygen_supply'}``"""
+        pass
+
+    @property
+    @abstractmethod
+    def thresholds(self) -> Dict[str, Any]:
+        """Gene activation thresholds: Dict mapping threshold names to ThresholdConfig (name, threshold, initial)"""
+        pass
+
+    @property
+    @abstractmethod
+    def composite_genes(self) -> List[Any]:
+        """Composite gene configurations: List of CompositeGeneConfig (name, inputs, logic)"""
+        pass
+
+    @property
+    @abstractmethod
+    def gene_network(self) -> Optional[Any]:
+        """Gene network configuration (GeneNetworkConfig or None): nodes, input_nodes, output_nodes, propagation_steps, bnd_file, random_initialization"""
+        pass
+
+    @property
+    @abstractmethod
+    def gene_network_steps(self) -> int:
+        """Number of propagation steps for gene network updates (default 3)"""
+        pass
+
+    # ── Environment and output ───────────────────────────────────
+    @property
+    @abstractmethod
+    def environment(self) -> Any:
+        """Environment configuration (EnvironmentConfig)"""
+        pass
+
+    @property
+    @abstractmethod
+    def output(self) -> Any:
+        """Output configuration (OutputConfig): save_data_interval, save_plots_interval, status_print_interval, cell_size_um, …"""
+        pass
+
+    @property
+    @abstractmethod
+    def initial_state(self) -> Any:
+        """Initial state configuration (InitialStateConfig): file_path"""
+        pass
+
+    # ── Paths ────────────────────────────────────────────────────
+    @property
+    @abstractmethod
+    def output_dir(self) -> Path:
+        """Output directory path (default ``Path('results')``)"""
+        pass
+
+    @property
+    @abstractmethod
+    def plots_dir(self) -> Path:
+        """Plots directory path (default ``Path('plots')``)"""
+        pass
+
+    @property
+    @abstractmethod
+    def data_dir(self) -> Path:
+        """Data directory path (default ``Path('data')``)"""
+        pass
+
+    # ── Customization ────────────────────────────────────────────
+    @property
+    @abstractmethod
+    def custom_functions_path(self) -> Optional[str]:
+        """Path to custom workflow functions file (or None)"""
+        pass
+
+    @property
+    @abstractmethod
+    def custom_parameters(self) -> Dict[str, Any]:
+        """User-defined custom parameters dict"""
+        pass
+
+    # ── Debug flags ──────────────────────────────────────────────
+    @property
+    @abstractmethod
+    def debug_phenotype_detailed(self) -> bool:
+        """Enable detailed phenotype debugging output"""
+        pass
+
+    @property
+    @abstractmethod
+    def log_simulation_status(self) -> bool:
+        """Enable structured simulation status logging"""
+        pass
+
+    # ── Factory methods ──────────────────────────────────────────
+    @classmethod
+    @abstractmethod
+    def load_from_yaml(cls, config_file: Path) -> 'IConfig':
+        """Load configuration from a YAML file.
+
+        Args:
+            config_file: Path to the YAML configuration file
+
+        Returns:
+            A fully populated IConfig instance
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'IConfig':
+        """Create configuration from a dictionary.
+
+        Args:
+            data: Dict with all configuration keys
+
+        Returns:
+            A fully populated IConfig instance
+        """
+        pass
+
+
+
+class IMeshManager(ABC):
+    """Interface for spatial mesh management (FiPy solver mesh).
+
+    This defines the complete public API for MeshManager.
+    Use this type for IDE discoverability when accessing the mesh manager from context.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import IMeshManager
+
+        mesh_manager: Optional[IMeshManager] = context.get('mesh_manager')
+        if mesh_manager:
+            metadata = mesh_manager.get_metadata()
+            vol = mesh_manager.cell_volume_um3
+    """
+
+    @property
+    @abstractmethod
+    def config(self) -> Any:
+        """Domain configuration (DomainConfig) used to build this mesh."""
+        pass
+
+    @property
+    @abstractmethod
+    def solver_mesh(self) -> Any:
+        """The FiPy solver mesh (Grid2D or Grid3D). Used by the diffusion solver."""
+        pass
+
+    @property
+    @abstractmethod
+    def mesh(self) -> Any:
+        """Backward-compatible alias for ``solver_mesh``."""
+        pass
+
+    @property
+    @abstractmethod
+    def verbose(self) -> bool:
+        """Whether to print diagnostic messages."""
+        pass
+
+    @property
+    @abstractmethod
+    def cell_volume_m3(self) -> float:
+        """Cell (voxel) volume in m³ — handles both 2D and 3D."""
+        pass
+
+    @property
+    @abstractmethod
+    def cell_volume_um3(self) -> float:
+        """Cell (voxel) volume in μm³ for easier reading."""
+        pass
+
+    @abstractmethod
+    def center_solver_mesh_at_origin(self) -> None:
+        """Center the solver mesh at origin after FiPy variables are created.
+
+        Should be called after all FiPy setup is complete.
+        """
+        pass
+
+    @abstractmethod
+    def center_mesh_at_origin(self) -> None:
+        """Backward-compatible alias for ``center_solver_mesh_at_origin()``."""
+        pass
+
+    @abstractmethod
+    def get_metadata(self) -> dict:
+        """Return mesh metadata as a dictionary.
+
+        Returns:
+            Dict with keys: ``dimensions``, ``nx``, ``ny``, ``dx_um``, ``dy_um``,
+            ``domain_x_um``, ``domain_y_um``, ``cell_volume_um3``, ``total_cells``
+            (plus ``nz``, ``dz_um``, ``domain_z_um`` for 3D).
+        """
+        pass
+
+    @abstractmethod
+    def validate_against_expected(self, expected_spacing_um: float = None,
+                                  expected_volume_um3: float = None) -> None:
+        """Validate mesh against expected values.
+
+        Args:
+            expected_spacing_um: Expected grid spacing in μm (uses config if None)
+            expected_volume_um3: Expected cell volume in μm³ (uses config if None)
+
+        Raises:
+            DomainError: If validation fails
+        """
+        pass
+
+
+class IWorkflowHelpers(ABC):
+    """Interface for workflow helper functions provided by SimulationEngine.
+
+    In full simulation mode, helpers is a dict of convenience lambdas built by
+    ``SimulationEngine._build_context()``. This interface documents the available
+    helper keys for IDE discoverability.
+
+    Example usage in workflow functions::
+
+        from interfaces.base import IWorkflowHelpers
+
+        helpers: Optional[IWorkflowHelpers] = context.get('helpers')
+        if helpers:
+            helpers.run_diffusion()
+            helpers.update_phenotypes()
+
+    Note:
+        In the default engine, helpers is a ``Dict[str, Callable]`` accessed via
+        ``helpers['run_diffusion']()``.  This interface exists for documentation
+        and discoverability purposes.
+    """
+
+    @abstractmethod
+    def update_intracellular(self) -> None:
+        """Run intracellular update: ``population.update_intracellular_processes(dt)``"""
+        pass
+
+    @abstractmethod
+    def update_gene_networks(self) -> None:
+        """Run gene network update: ``population.update_gene_networks(concentrations)``"""
+        pass
+
+    @abstractmethod
+    def update_phenotypes(self) -> None:
+        """Run phenotype update: ``population.update_phenotypes()``"""
+        pass
+
+    @abstractmethod
+    def remove_dead_cells(self) -> None:
+        """Remove dead cells: ``population.remove_dead_cells()``"""
+        pass
+
+    @abstractmethod
+    def run_diffusion(self) -> None:
+        """Run one diffusion solver step."""
+        pass
+
+    @abstractmethod
+    def get_substance_reactions(self) -> Dict[Tuple[float, float], Dict[str, float]]:
+        """Get substance reactions from all cells.
+
+        Returns:
+            Dict mapping cell positions to per-substance reaction rates
+        """
+        pass
+
+    @abstractmethod
+    def update_intercellular(self) -> None:
+        """Run intercellular update: ``population.update_intercellular_processes()``"""
         pass

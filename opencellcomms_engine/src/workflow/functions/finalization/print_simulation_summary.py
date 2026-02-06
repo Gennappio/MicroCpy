@@ -6,6 +6,7 @@ This function prints a summary of the simulation results at the end.
 
 from typing import Dict, Any
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -36,7 +37,7 @@ def print_simulation_summary(
         True if successful, False otherwise
     """
     try:
-        config = context['config']
+        config: IConfig = context['config']
         results = context.get('results', {})
         population = context.get('population')
 

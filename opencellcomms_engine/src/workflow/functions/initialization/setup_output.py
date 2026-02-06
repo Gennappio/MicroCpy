@@ -4,8 +4,9 @@ Setup output configuration.
 This function configures output settings for plots, data saving, etc.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -53,7 +54,7 @@ def setup_output(
     print(f"[WORKFLOW] Setting up output configuration")
     
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         
         if not config:
             print("[ERROR] Config must be set up before output")

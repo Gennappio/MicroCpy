@@ -5,8 +5,9 @@ This function can be used multiple times to add different substances.
 Each substance node in the GUI represents one substance.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -64,7 +65,7 @@ def add_substance(
         True if successful
     """
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         simulator = context.get('simulator')
 
         # If concentration is provided, use simple mode

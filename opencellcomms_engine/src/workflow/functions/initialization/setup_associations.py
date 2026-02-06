@@ -5,8 +5,9 @@ This function configures how substances map to gene network inputs.
 """
 
 import json
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 def _parse_associations(associations: Union[Dict, List[str], str]) -> Dict[str, Dict[str, Any]]:
@@ -130,7 +131,7 @@ def setup_associations(
             print("[WARNING] No associations provided to setup_associations")
             return True
 
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         # Process each association
         count = 0
@@ -225,7 +226,7 @@ def add_association(
         True if successful
     """
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         if config:
             # Full simulation mode: store in config

@@ -6,6 +6,7 @@ This function configures environment parameters like pH.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 
@@ -41,7 +42,7 @@ def setup_environment(
     log(context, f"Setting up environment configuration", prefix="[WORKFLOW]", node_verbose=verbose)
 
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         if not config:
             log_always("[ERROR] Config must be set up before environment")

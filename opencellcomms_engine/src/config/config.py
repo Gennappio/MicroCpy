@@ -5,6 +5,7 @@ import yaml
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from core.units import Length, Concentration
+from interfaces.base import IConfig
 
 @dataclass
 class DomainConfig:
@@ -130,7 +131,7 @@ class EnvironmentConfig:
     ph: float = 7.4
 
 @dataclass
-class OpenCellCommsConfig:
+class OpenCellCommsConfig(IConfig):
     """Master configuration - single source of truth for OpenCellComms simulations"""
     domain: DomainConfig
     time: TimeConfig

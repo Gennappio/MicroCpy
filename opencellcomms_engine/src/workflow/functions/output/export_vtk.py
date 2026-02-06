@@ -6,6 +6,7 @@ typically used for 3D simulations.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -39,7 +40,7 @@ def export_vtk_checkpoint(
         # Get required objects from context
         population = context.get('population')
         simulator = context.get('simulator')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         step = context.get('step', 0)
 
         if not all([population, simulator, config]):

@@ -18,7 +18,7 @@ from typing import Dict, Any, Optional
 import random
 import math
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator
+from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -61,7 +61,7 @@ def update_cell_migration(
     # =========================================================================
     population: Optional[ICellPopulation] = context.get('population')
     simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config = context.get('config')
+    config: Optional[IConfig] = context.get('config')
     dt = context.get('dt', 0.1)
 
     # =========================================================================

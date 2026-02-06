@@ -9,6 +9,7 @@ from typing import Dict, Any
 from pathlib import Path
 import json
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -66,7 +67,7 @@ def save_simulation_data(
     try:
         import numpy as np
 
-        config = context['config']
+        config: IConfig = context['config']
         results = context.get('results', {})
 
         # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===

@@ -7,8 +7,9 @@ that can be read and displayed by the ABM_GUI.
 
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -48,7 +49,7 @@ def save_maboss_results(
     try:
         # Get simulation objects from context
         population = context.get('population')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         if population is None or config is None:
             print("[WARNING] Missing population or config in context")

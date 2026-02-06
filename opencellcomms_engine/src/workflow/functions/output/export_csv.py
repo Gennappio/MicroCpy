@@ -6,6 +6,7 @@ typically used for 2D simulations.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -40,7 +41,7 @@ def export_csv_checkpoint(
         # Get required objects from context
         population = context.get('population')
         simulator = context.get('simulator')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         step = context.get('step', 0)
 
         if not all([population, simulator, config]):
@@ -123,7 +124,7 @@ def export_csv_cells(
         from pathlib import Path
 
         population = context.get('population')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         step = context.get('step', 0)
 
         if not all([population, config]):
@@ -187,7 +188,7 @@ def export_csv_substances(
         from pathlib import Path
 
         simulator = context.get('simulator')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         step = context.get('step', 0)
 
         if not all([simulator, config]):
@@ -263,7 +264,7 @@ def export_csv_checkpoint_conditional(
 	    function returns ``True`` without exporting.
 	    """
 	    try:
-	        config = context.get('config')
+	        config: Optional[IConfig] = context.get('config')
 	        step = context.get('step', 0)
 
 	        if not config:

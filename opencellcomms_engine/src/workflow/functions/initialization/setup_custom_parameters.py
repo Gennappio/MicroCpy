@@ -4,8 +4,9 @@ Setup custom parameters for cell behavior.
 This function configures custom parameters used by cell functions.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
+from interfaces.base import IConfig
 
 
 @register_function(
@@ -68,7 +69,7 @@ def setup_custom_parameters(
     print(f"[WORKFLOW] Setting up custom parameters")
     
     try:
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         
         if not config:
             print("[ERROR] Config must be set up before custom parameters")

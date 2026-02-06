@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 import numpy as np
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator
+from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -52,7 +52,7 @@ def plot_concentration_heatmaps(
         
         simulator: Optional[ISubstanceSimulator] = context.get('simulator')
         population: Optional[ICellPopulation] = context.get('population')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
         
         if not simulator:
             print("[ERROR] No simulator in context")

@@ -35,7 +35,7 @@ Example configurations:
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator
+from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -101,7 +101,7 @@ def mark_necrotic_cells(
     # =========================================================================
     population: Optional[ICellPopulation] = context.get('population')
     simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config = context.get('config')
+    config: Optional[IConfig] = context.get('config')
 
     # =========================================================================
     # VALIDATE REQUIRED CORE ITEMS

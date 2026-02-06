@@ -13,7 +13,7 @@ The key fixes:
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulator
+from interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
@@ -45,7 +45,7 @@ def update_gene_networks_v2(
     # =========================================================================
     population: Optional[ICellPopulation] = context.get('population')
     simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config = context.get('config')
+    config: Optional[IConfig] = context.get('config')
     
     if population is None:
         print("[update_gene_networks_v2] No population in context - skipping")

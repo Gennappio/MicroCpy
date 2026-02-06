@@ -9,7 +9,7 @@ For each association (substance -> gene_input):
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation
+from interfaces.base import ICellPopulation, IConfig
 
 
 @register_function(
@@ -37,7 +37,7 @@ def apply_associations_to_inputs(
     """
     try:
         population: Optional[ICellPopulation] = context.get('population')
-        config = context.get('config')
+        config: Optional[IConfig] = context.get('config')
 
         # Get substances from context
         substances = context.get('substances', {})
