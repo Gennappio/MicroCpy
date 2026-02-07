@@ -7,7 +7,7 @@ This function loads initial cell state from a VTK file.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 @register_function(

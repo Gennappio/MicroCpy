@@ -8,7 +8,7 @@ in both the filename and plot title. Supports filtering to specific substances.
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 @register_function(

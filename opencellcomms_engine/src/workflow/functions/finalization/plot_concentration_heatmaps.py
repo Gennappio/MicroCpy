@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 import numpy as np
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(

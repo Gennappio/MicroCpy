@@ -8,7 +8,7 @@ at the end of the simulation. Supports both custom directory output and GUI-comp
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 def _generate_plots_to_directory(

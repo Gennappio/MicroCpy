@@ -15,7 +15,7 @@ See run_diffusion_solver.py for full documentation.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation
+from src.interfaces.base import ICellPopulation
 
 
 @register_function(

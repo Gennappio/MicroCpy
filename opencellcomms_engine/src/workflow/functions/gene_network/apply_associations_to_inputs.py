@@ -9,7 +9,7 @@ For each association (substance -> gene_input):
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, IConfig
+from src.interfaces.base import ICellPopulation, IConfig
 
 
 @register_function(

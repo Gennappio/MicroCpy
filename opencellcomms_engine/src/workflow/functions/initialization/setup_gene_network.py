@@ -7,7 +7,7 @@ This function configures gene network parameters.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 

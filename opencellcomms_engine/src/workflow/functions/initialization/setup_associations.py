@@ -7,7 +7,7 @@ This function configures how substances map to gene network inputs.
 import json
 from typing import Dict, Any, List, Union, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 def _parse_associations(associations: Union[Dict, List[str], str]) -> Dict[str, Dict[str, Any]]:

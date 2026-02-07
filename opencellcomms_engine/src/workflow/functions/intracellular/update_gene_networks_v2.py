@@ -13,7 +13,7 @@ The key fixes:
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(

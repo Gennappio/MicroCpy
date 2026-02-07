@@ -7,7 +7,7 @@ including cell population statistics, substance concentration statistics, etc.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(

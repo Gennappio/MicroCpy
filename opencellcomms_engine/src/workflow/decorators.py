@@ -275,7 +275,8 @@ def register_function(
             outputs=outputs or [],
             cloneable=cloneable,
             module_path=module_path,
-            source_file=source_file
+            source_file=source_file,
+            compatible_kernels=compatible_kernels
         )
 
         # Register in the decorator registry

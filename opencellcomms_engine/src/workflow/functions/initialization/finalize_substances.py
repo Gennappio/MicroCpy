@@ -7,7 +7,7 @@ Call this AFTER all add_substance calls to ensure all substances are properly in
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ISubstanceSimulator, IConfig
+from src.interfaces.base import ISubstanceSimulator, IConfig
 
 
 @register_function(

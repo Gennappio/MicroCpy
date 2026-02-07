@@ -12,7 +12,7 @@ See run_diffusion_solver.py for full documentation.
 
 from typing import Dict, Any
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(

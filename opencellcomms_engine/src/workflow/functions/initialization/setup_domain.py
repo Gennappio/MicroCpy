@@ -6,7 +6,7 @@ This function initializes the spatial domain and mesh for the simulation.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 

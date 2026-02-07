@@ -5,7 +5,7 @@ Generate initial state plots workflow function.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(

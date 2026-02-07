@@ -19,7 +19,7 @@ Under-relaxation (0 < α < 1) improves stability by damping oscillations.
 from typing import Dict, Any, Tuple, Optional
 import numpy as np
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 from src.workflow.logging import log, log_always
 
 # Global debug switch - DEPRECATED: Use verbose parameter instead

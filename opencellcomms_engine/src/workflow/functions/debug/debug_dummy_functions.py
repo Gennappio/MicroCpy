@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 def _log_debug(stage: str, function_name: str, context: Optional[Dict[str, Any]] = None, message: str = "", **kwargs: Any) -> bool:

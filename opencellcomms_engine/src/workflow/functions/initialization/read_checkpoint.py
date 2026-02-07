@@ -7,7 +7,7 @@ the population with the loaded cell states.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 @register_function(

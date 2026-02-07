@@ -6,7 +6,7 @@ This function initializes the cell population and gene network infrastructure.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig, IMeshManager
+from src.interfaces.base import IConfig, IMeshManager
 from src.workflow.logging import log, log_always
 
 

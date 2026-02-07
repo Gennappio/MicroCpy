@@ -11,7 +11,7 @@ allow gene network operations to be fully controlled by workflow functions.
 from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
-from interfaces.base import IGeneNetwork
+from src.interfaces.base import IGeneNetwork
 
 
 def get_gene_network(context: Dict[str, Any], cell_id: str) -> Optional[IGeneNetwork]:

@@ -7,7 +7,7 @@ to detect any unexpected cell removals.
 
 from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from interfaces.base import ICellPopulation
+from src.interfaces.base import ICellPopulation
 
 
 @register_function(

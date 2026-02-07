@@ -9,7 +9,7 @@ from typing import Dict, Any
 from pathlib import Path
 import json
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 @register_function(

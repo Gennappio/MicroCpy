@@ -6,7 +6,7 @@ This function prints a summary of the simulation results at the end.
 
 from typing import Dict, Any
 from src.workflow.decorators import register_function
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 
 @register_function(
