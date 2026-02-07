@@ -55,6 +55,7 @@ class FunctionMetadata:
     cloneable: bool = False  # Can this function be cloned/customized?
     module_path: str = ""  # Where to find this function
     source_file: str = ""  # Path to source file (for GUI code viewer)
+    compatible_kernels: Optional[List[str]] = None  # Which kernels this function works with (None = all kernels, ["*"] = all kernels, ["biophysics"] = only biophysics)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -125,6 +126,9 @@ def get_default_registry() -> FunctionRegistry:
     """
     # Import all modules with decorated functions to trigger registration
     import src.workflow.standard_functions
+
+    # Import kernel loading functions
+    import src.workflow.functions.initialization.load_kernel
 
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss

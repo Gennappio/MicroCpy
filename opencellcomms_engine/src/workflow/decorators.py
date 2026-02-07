@@ -193,7 +193,8 @@ def register_function(
     parameters: Optional[List[Dict[str, Any]]] = None,
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
-    cloneable: bool = False
+    cloneable: bool = False,
+    compatible_kernels: Optional[List[str]] = None
 ) -> Callable:
     """
     Decorator for registering workflow functions.
@@ -206,7 +207,8 @@ def register_function(
             parameters=[
                 {"name": "ph_sensitivity", "type": "FLOAT", "default": 0.1},
                 {"name": "temperature_effect", "type": "FLOAT", "default": 1.0}
-            ]
+            ],
+            compatible_kernels=["biophysics"]
         )
         def advanced_metabolism(context, ph_sensitivity=0.1, temperature_effect=1.0, **kwargs):
             # Function implementation
@@ -220,6 +222,7 @@ def register_function(
         inputs: Optional list of input names (auto-detected from signature if not provided)
         outputs: Optional list of output names
         cloneable: Whether the function can be cloned/customized in the GUI
+        compatible_kernels: List of kernel names this function is compatible with (None or ["*"] = all kernels)
 
     Returns:
         Decorated function with registration metadata
