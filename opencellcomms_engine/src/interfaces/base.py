@@ -521,131 +521,49 @@ class IConfig(ABC):
             dt = config.time.dt
             substances = config.substances
             output_dir = config.output_dir
+
+    Attributes:
+        domain: Domain configuration (DomainConfig): size_x, size_y, nx, ny, dimensions, cell_height, …
+        time: Time configuration (TimeConfig): dt, end_time, diffusion_step, intracellular_step, intercellular_step
+        diffusion: Diffusion solver configuration (DiffusionConfig): max_iterations, tolerance, solver_type
+        substances: Dict mapping substance names to SubstanceConfig objects
+        associations: Substance-to-gene input mapping: e.g. ``{'Oxygen': 'Oxygen_supply'}``
+        thresholds: Gene activation thresholds: Dict mapping threshold names to ThresholdConfig
+        composite_genes: List of CompositeGeneConfig (name, inputs, logic)
+        gene_network: Gene network configuration (GeneNetworkConfig or None)
+        gene_network_steps: Number of propagation steps for gene network updates (default 3)
+        environment: Environment configuration (EnvironmentConfig)
+        output: Output configuration (OutputConfig)
+        initial_state: Initial state configuration (InitialStateConfig)
+        output_dir: Output directory path (default ``Path('results')``)
+        plots_dir: Plots directory path (default ``Path('plots')``)
+        data_dir: Data directory path (default ``Path('data')``)
+        custom_functions_path: Path to custom workflow functions file (or None)
+        custom_parameters: User-defined custom parameters dict
+        debug_phenotype_detailed: Enable detailed phenotype debugging output
+        log_simulation_status: Enable structured simulation status logging
     """
 
-    # ── Core simulation parameters ───────────────────────────────
-    @property
-    @abstractmethod
-    def domain(self) -> Any:
-        """Domain configuration (DomainConfig): size_x, size_y, nx, ny, dimensions, cell_height, …"""
-        pass
-
-    @property
-    @abstractmethod
-    def time(self) -> Any:
-        """Time configuration (TimeConfig): dt, end_time, diffusion_step, intracellular_step, intercellular_step"""
-        pass
-
-    @property
-    @abstractmethod
-    def diffusion(self) -> Any:
-        """Diffusion solver configuration (DiffusionConfig): max_iterations, tolerance, solver_type, twodimensional_adjustment_coefficient"""
-        pass
-
-    @property
-    @abstractmethod
-    def substances(self) -> Dict[str, Any]:
-        """Substance configurations: Dict mapping substance names to SubstanceConfig objects.
-
-        Each SubstanceConfig has: name, diffusion_coeff, production_rate, uptake_rate,
-        initial_value, boundary_value, boundary_type.
-        """
-        pass
-
-    # ── Gene network configuration ───────────────────────────────
-    @property
-    @abstractmethod
-    def associations(self) -> Dict[str, str]:
-        """Substance-to-gene input mapping: e.g. ``{'Oxygen': 'Oxygen_supply'}``"""
-        pass
-
-    @property
-    @abstractmethod
-    def thresholds(self) -> Dict[str, Any]:
-        """Gene activation thresholds: Dict mapping threshold names to ThresholdConfig (name, threshold, initial)"""
-        pass
-
-    @property
-    @abstractmethod
-    def composite_genes(self) -> List[Any]:
-        """Composite gene configurations: List of CompositeGeneConfig (name, inputs, logic)"""
-        pass
-
-    @property
-    @abstractmethod
-    def gene_network(self) -> Optional[Any]:
-        """Gene network configuration (GeneNetworkConfig or None): nodes, input_nodes, output_nodes, propagation_steps, bnd_file, random_initialization"""
-        pass
-
-    @property
-    @abstractmethod
-    def gene_network_steps(self) -> int:
-        """Number of propagation steps for gene network updates (default 3)"""
-        pass
-
-    # ── Environment and output ───────────────────────────────────
-    @property
-    @abstractmethod
-    def environment(self) -> Any:
-        """Environment configuration (EnvironmentConfig)"""
-        pass
-
-    @property
-    @abstractmethod
-    def output(self) -> Any:
-        """Output configuration (OutputConfig): save_data_interval, save_plots_interval, status_print_interval, cell_size_um, …"""
-        pass
-
-    @property
-    @abstractmethod
-    def initial_state(self) -> Any:
-        """Initial state configuration (InitialStateConfig): file_path"""
-        pass
-
-    # ── Paths ────────────────────────────────────────────────────
-    @property
-    @abstractmethod
-    def output_dir(self) -> Path:
-        """Output directory path (default ``Path('results')``)"""
-        pass
-
-    @property
-    @abstractmethod
-    def plots_dir(self) -> Path:
-        """Plots directory path (default ``Path('plots')``)"""
-        pass
-
-    @property
-    @abstractmethod
-    def data_dir(self) -> Path:
-        """Data directory path (default ``Path('data')``)"""
-        pass
-
-    # ── Customization ────────────────────────────────────────────
-    @property
-    @abstractmethod
-    def custom_functions_path(self) -> Optional[str]:
-        """Path to custom workflow functions file (or None)"""
-        pass
-
-    @property
-    @abstractmethod
-    def custom_parameters(self) -> Dict[str, Any]:
-        """User-defined custom parameters dict"""
-        pass
-
-    # ── Debug flags ──────────────────────────────────────────────
-    @property
-    @abstractmethod
-    def debug_phenotype_detailed(self) -> bool:
-        """Enable detailed phenotype debugging output"""
-        pass
-
-    @property
-    @abstractmethod
-    def log_simulation_status(self) -> bool:
-        """Enable structured simulation status logging"""
-        pass
+    # ── Data attributes (documented above, set by concrete implementations) ──
+    domain: Any
+    time: Any
+    diffusion: Any
+    substances: Dict[str, Any]
+    associations: Dict[str, str]
+    thresholds: Dict[str, Any]
+    composite_genes: List[Any]
+    gene_network: Optional[Any]
+    gene_network_steps: int
+    environment: Any
+    output: Any
+    initial_state: Any
+    output_dir: Path
+    plots_dir: Path
+    data_dir: Path
+    custom_functions_path: Optional[str]
+    custom_parameters: Dict[str, Any]
+    debug_phenotype_detailed: bool
+    log_simulation_status: bool
 
     # ── Factory methods ──────────────────────────────────────────
     @classmethod
@@ -690,30 +608,22 @@ class IMeshManager(ABC):
         if mesh_manager:
             metadata = mesh_manager.get_metadata()
             vol = mesh_manager.cell_volume_um3
+
+    Attributes:
+        config: Domain configuration (DomainConfig) used to build this mesh.
+        solver_mesh: The FiPy solver mesh (Grid2D or Grid3D). Used by the diffusion solver.
+        verbose: Whether to print diagnostic messages.
     """
 
-    @property
-    @abstractmethod
-    def config(self) -> Any:
-        """Domain configuration (DomainConfig) used to build this mesh."""
-        pass
-
-    @property
-    @abstractmethod
-    def solver_mesh(self) -> Any:
-        """The FiPy solver mesh (Grid2D or Grid3D). Used by the diffusion solver."""
-        pass
+    # ── Data attributes (set in __init__ by concrete implementations) ──
+    config: Any
+    solver_mesh: Any
+    verbose: bool
 
     @property
     @abstractmethod
     def mesh(self) -> Any:
         """Backward-compatible alias for ``solver_mesh``."""
-        pass
-
-    @property
-    @abstractmethod
-    def verbose(self) -> bool:
-        """Whether to print diagnostic messages."""
         pass
 
     @property
