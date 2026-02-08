@@ -20,12 +20,12 @@ from src.interfaces.base import IGeneNetwork
         {"name": "propagation_steps", "type": "INT", "description": "Number of propagation steps", "default": 500},
         {"name": "update_mode", "type": "STRING", "description": "Update mode: 'netlogo' or 'synchronous'", "default": "netlogo"},
     ],
-    inputs=["population", "gene_networks"],
+    inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=False,
+    compatible_kernels=["biophysics"]
 )
 def update_gene_networks_standalone(
-    population=None,
     context: Dict[str, Any] = None,
     propagation_steps: int = 500,
     update_mode: str = "netlogo",
@@ -44,21 +44,26 @@ def update_gene_networks_standalone(
     This is for testing when input states are set manually.
 
     Args:
-        population: Cell population (optional, will get from context)
-        context: Workflow context containing gene_networks
+        context: Workflow context containing population and gene_networks
         propagation_steps: Number of propagation steps
         update_mode: 'netlogo' (random single gene) or 'synchronous' (all genes)
     """
-    # Get population from context if not passed directly
-    if population is None and context:
-        population = context.get('population')
-
-    if population is None:
-        print("[ERROR] No population found")
+    # =========================================================================
+    # VALIDATE CONTEXT
+    # =========================================================================
+    if not context:
+        print("[ERROR] [update_gene_networks_standalone] No context provided")
         return False
 
-    # Get gene networks from context
-    gene_networks = context.get('gene_networks', {}) if context else {}
+    # =========================================================================
+    # GET REQUIRED ITEMS FROM CONTEXT
+    # =========================================================================
+    population = context.get('population')
+    if population is None:
+        print("[ERROR] [update_gene_networks_standalone] No population in context")
+        return False
+
+    gene_networks = context.get('gene_networks', {})
 
     if not gene_networks:
         print("[ERROR] No gene networks in context - run 'Initialize Gene Networks' first")

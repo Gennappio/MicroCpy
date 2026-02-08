@@ -186,6 +186,78 @@ def _extract_inputs_from_signature(func: Callable) -> List[str]:
     return inputs
 
 
+def _validate_function_signature(
+    func: Callable,
+    input_list: List[str],
+    func_name: str,
+    source_file: str
+) -> None:
+    """
+    Validate function signature against declared inputs to catch common mistakes.
+
+    This catches the most common error: declaring inputs in the decorator that
+    don't have matching parameters in the function signature.
+
+    Args:
+        func: The function to validate
+        input_list: List of inputs declared in @register_function
+        func_name: Name of the function (for error messages)
+        source_file: Source file path (for error messages)
+
+    Raises:
+        ValueError: If validation fails
+    """
+    # Get function signature
+    sig = inspect.signature(func)
+    params = set(sig.parameters.keys())
+
+    # Remove special parameters that don't need to match inputs
+    params.discard('kwargs')
+    params.discard('args')
+
+    # Check for mismatches
+    declared_inputs = set(input_list)
+
+    # Special case: 'context' can be in inputs even if not in signature
+    # (for legacy compatibility)
+    declared_inputs_to_check = declared_inputs - {'context'}
+
+    # Find inputs that are declared but not in signature
+    missing_params = declared_inputs_to_check - params
+
+    if missing_params:
+        # Build helpful error message
+        error_msg = (
+            f"\n{'='*80}\n"
+            f"❌ WORKFLOW FUNCTION VALIDATION ERROR\n"
+            f"{'='*80}\n"
+            f"Function: {func_name}\n"
+            f"File: {source_file}\n"
+            f"\n"
+            f"Problem: The @register_function decorator declares inputs that are\n"
+            f"         missing from the function signature.\n"
+            f"\n"
+            f"Declared inputs: {sorted(declared_inputs)}\n"
+            f"Missing from signature: {sorted(missing_params)}\n"
+            f"\n"
+            f"This is a common mistake! The executor will try to pass these as\n"
+            f"kwargs, but they won't be received by the function.\n"
+            f"\n"
+            f"RECOMMENDED FIX (Pattern 1 - Simplest):\n"
+            f"  Change decorator to: inputs=['context']\n"
+            f"  Change signature to: def {func_name}(context=None, ...)\n"
+            f"  Access items manually: population = context.get('population')\n"
+            f"\n"
+            f"ALTERNATIVE FIX (Pattern 2 - Legacy):\n"
+            f"  Add missing parameters to signature:\n"
+            f"  def {func_name}({', '.join(sorted(missing_params))}=None, context=None, ...)\n"
+            f"\n"
+            f"See src/workflow/functions/_TEMPLATE.py for the recommended pattern.\n"
+            f"{'='*80}\n"
+        )
+        raise ValueError(error_msg)
+
+
 def register_function(
     display_name: str,
     description: str,
@@ -263,6 +335,11 @@ def register_function(
             input_list = inputs
         else:
             input_list = _extract_inputs_from_signature(func)
+
+        # =====================================================================
+        # VALIDATION: Check for common mistakes
+        # =====================================================================
+        _validate_function_signature(func, input_list, func_name, source_file)
 
         # Create metadata
         metadata = FunctionMetadata(

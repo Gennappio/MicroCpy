@@ -141,9 +141,11 @@ def get_default_registry() -> FunctionRegistry:
     # Import gene network functions (1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks
+    import src.workflow.functions.gene_network.initialize_hierarchical_gene_networks
     import src.workflow.functions.gene_network.set_gene_network_inputs
     import src.workflow.functions.gene_network.apply_associations_to_inputs
     import src.workflow.functions.gene_network.update_gene_networks_standalone
+    import src.workflow.functions.gene_network.propagate_and_update_gene_networks
     import src.workflow.functions.gene_network.print_gene_network_states
 
     # Import intercellular functions (phenotype marking)

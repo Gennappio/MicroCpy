@@ -191,6 +191,133 @@ opencellcomms_engine/src/workflow/functions/
 
 5. **Restart the backend server** to see your function in the GUI
 
+## Common Mistakes
+
+### ❌ Mistake 1: Mismatch between `inputs` and function signature
+
+This is the **most common error** when creating new workflow functions!
+
+**Wrong:**
+```python
+@register_function(
+    inputs=["population", "gene_networks"],  # ← Declares these as inputs
+    ...
+)
+def my_func(population=None, context=None, ...):  # ❌ Missing gene_networks parameter!
+    # This will fail! The executor tries to pass gene_networks as a kwarg,
+    # but the function doesn't accept it, so context gets passed incorrectly.
+```
+
+**Symptom:** Function receives `context=False` or `context=None` even though context exists.
+
+**Right (Recommended Pattern):**
+```python
+@register_function(
+    inputs=["context"],  # ← Only declare context
+    ...
+)
+def my_func(context=None, ...):  # ✅ Only context in signature
+    # Get everything from context manually
+    population = context.get('population')
+    gene_networks = context.get('gene_networks', {})
+```
+
+**Why this is better:**
+- Simple and explicit
+- No confusion about what comes from where
+- Easy to add new context items without changing signature
+- Recommended in all modern functions
+
+**Alternative (Legacy Pattern - Not Recommended):**
+```python
+@register_function(
+    inputs=["population", "gene_networks"],  # ← Declare specific inputs
+    ...
+)
+def my_func(
+    population=None,        # ✅ MUST have matching parameters
+    gene_networks=None,     # ✅ MUST have matching parameters
+    context=None,
+    ...
+):
+```
+
+### ❌ Mistake 2: Forgetting to import in `registry.py`
+
+Even with `@register_function`, the module must be imported so the decorator runs!
+
+**Symptom:** "Function 'my_function' not found in custom or standard functions"
+
+**Fix:** Add to `src/workflow/registry.py`:
+```python
+import src.workflow.functions.my_category.my_new_function  # ← Required!
+```
+
+### ❌ Mistake 3: Not checking if context items exist
+
+**Wrong:**
+```python
+gene_networks = context['gene_networks']  # ❌ Crashes if not in context
+```
+
+**Right:**
+```python
+gene_networks = context.get('gene_networks', {})  # ✅ Safe with default
+if not gene_networks:
+    print("[ERROR] No gene networks in context")
+    return False
+```
+
+### ❌ Mistake 4: Trying to access removed fields
+
+**Wrong:**
+```python
+cell_gn = cell.state.gene_network  # ❌ This field was removed!
+```
+
+**Right:**
+```python
+gene_networks = context.get('gene_networks', {})  # ✅ Access from context
+cell_gn = gene_networks.get(cell_id)
+```
+
+### ❌ Mistake 5: Forgetting `compatible_kernels`
+
+**Wrong:**
+```python
+@register_function(
+    display_name="...",
+    inputs=["context"],
+    outputs=[],
+    cloneable=False
+    # ❌ Missing compatible_kernels!
+)
+```
+
+**Right:**
+```python
+@register_function(
+    display_name="...",
+    inputs=["context"],
+    outputs=[],
+    cloneable=False,
+    compatible_kernels=["biophysics"]  # ✅ Required!
+)
+```
+
+### ✅ Validation Tools
+
+To catch these mistakes early:
+
+1. **Automatic validation:** The `@register_function` decorator now validates your function and will raise a clear error if there's a mismatch.
+
+2. **Pre-commit check:** Run the validation script before committing:
+   ```bash
+   python scripts/validate_functions.py
+   ```
+
+3. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
+
 ## Complete Function Template
 
 ```python

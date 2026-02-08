@@ -1,12 +1,12 @@
 {
   "version": "2.0",
-  "name": "Brute Force Gene Network Benchmark v4 (Hierarchical Architecture)",
-  "description": "Gene network benchmark with hierarchical fate logic encapsulated in concrete class. kernel_setup → loop → analysis.",
+  "name": "Brute Force Gene Network Benchmark v4 (No Hierarchy)",
+  "description": "Gene network benchmark WITHOUT hierarchical fate logic. kernel_setup → loop → analysis.",
   "metadata": {
     "author": "OpenCellComms Team",
-    "experiment": "Gene Network Benchmark v4",
+    "experiment": "Gene Network Benchmark v4 (No Hierarchy)",
     "created": "2026-02-08",
-    "notes": "Demonstrates the new architecture: kernel_setup creates HierarchicalBooleanNetwork (concrete class with fate logic), loop has ONE generic function that works with ANY IGeneNetwork implementation. To switch to non-hierarchical mode, just change init_gene_networks to use initialize_gene_networks instead of initialize_hierarchical_gene_networks.",
+    "notes": "Demonstrates the new architecture with plain BooleanNetwork (no fate logic). The loop is IDENTICAL to the hierarchical version - only kernel_setup differs. This proves the architecture works: initialization creates concrete classes, loop just calls interface methods.",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -97,13 +97,12 @@
         },
         {
           "id": "init_gene_networks",
-          "function_name": "initialize_hierarchical_gene_networks",
+          "function_name": "initialize_gene_networks",
           "enabled": true,
-          "description": "Create HierarchicalBooleanNetwork concrete class per cell (with fate logic)",
+          "description": "Create BooleanNetwork concrete class per cell (NO fate logic)",
           "parameters": {
             "bnd_file": "tests/jayatilake_experiment/jaya.bnd",
-            "random_initialization": true,
-            "fate_hierarchy": "Necrosis,Apoptosis,Growth_Arrest,Proliferation"
+            "random_initialization": true
           },
           "position": {"x": 200, "y": 300}
         },

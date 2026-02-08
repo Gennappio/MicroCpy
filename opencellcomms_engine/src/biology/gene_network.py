@@ -599,3 +599,158 @@ class BooleanNetwork(IGeneNetwork):
         return (f"BooleanNetwork(nodes={info['total_nodes']}, "
                 f"inputs={len(info['input_nodes'])}, "
                 f"outputs={len(info['output_nodes'])})")
+
+
+class HierarchicalBooleanNetwork(BooleanNetwork):
+    """
+    Boolean gene network with hierarchical fate determination logic.
+
+    This class extends BooleanNetwork to add fate counting and hierarchy application.
+    During propagation, it counts how many times each fate gene fires, then applies
+    a hierarchy to determine the effective phenotype.
+
+    Default hierarchy: Proliferation > Growth_Arrest > Apoptosis > Necrosis > Quiescent
+
+    This encapsulates the fate logic inside the concrete class, allowing the workflow
+    loop to remain identical across all experiments - it just calls step() and get_phenotype().
+    """
+
+    def __init__(self, config=None, network_file: Optional[Path] = None,
+                 fate_hierarchy: Optional[List[str]] = None,
+                 custom_functions_module=None):
+        """
+        Initialize hierarchical gene network.
+
+        Args:
+            config: Configuration object with gene network settings
+            network_file: Path to .bnd file
+            fate_hierarchy: List of fate genes in priority order (last = highest priority)
+                           Default: ["Necrosis", "Apoptosis", "Growth_Arrest", "Proliferation"]
+            custom_functions_module: Optional custom functions module
+        """
+        super().__init__(config, network_file, custom_functions_module)
+
+        # Fate hierarchy: last in list = highest priority
+        self.fate_hierarchy = fate_hierarchy or [
+            "Necrosis", "Apoptosis", "Growth_Arrest", "Proliferation"
+        ]
+
+        # State tracking
+        self.effective_fate: str = "Quiescent"
+        self.fate_fire_counts: Dict[str, int] = {fate: 0 for fate in self.fate_hierarchy}
+
+    def step(self, num_steps: int = 1, mode: str = "netlogo") -> Dict[str, bool]:
+        """
+        Run network for specified steps with fate counting and hierarchy application.
+
+        This overrides the parent step() to add hierarchical fate logic:
+        1. Propagate step-by-step (calling parent's update logic)
+        2. Count how many times each fate gene fires
+        3. Apply hierarchy to determine effective fate
+
+        Args:
+            num_steps: Number of propagation steps
+            mode: Update mode (ignored - always uses netlogo style from parent)
+
+        Returns:
+            Dictionary of all gene states after propagation
+        """
+        # Reset fate fire counts
+        self.fate_fire_counts = {fate: 0 for fate in self.fate_hierarchy}
+
+        # Propagate step by step and count fate firings
+        for _ in range(num_steps):
+            # Call parent's single-gene update
+            self._netlogo_single_gene_update()
+
+            # Get current states and count fate gene activations
+            current_states = self.get_all_states()
+            for fate in self.fate_hierarchy:
+                if current_states.get(fate, False):
+                    self.fate_fire_counts[fate] += 1
+
+        # Apply hierarchical fate logic
+        self._apply_fate_hierarchy()
+
+        # Return final gene states
+        return self.get_all_states()
+
+    def _apply_fate_hierarchy(self) -> None:
+        """
+        Apply hierarchical fate logic based on firing counts.
+
+        Hierarchy: last in fate_hierarchy list = highest priority
+        Default: Proliferation > Growth_Arrest > Apoptosis > Necrosis > Quiescent
+
+        Sets self.effective_fate to the highest-priority fate that fired at least once.
+        """
+        # Default to Quiescent if no fate genes fired
+        self.effective_fate = "Quiescent"
+
+        # Apply hierarchy: iterate through list, last one that fired wins
+        for fate in self.fate_hierarchy:
+            if self.fate_fire_counts[fate] > 0:
+                self.effective_fate = fate
+
+    def get_phenotype(self) -> Optional[str]:
+        """
+        Get the determined phenotype after step().
+
+        Returns:
+            The effective fate determined by hierarchical logic
+        """
+        return self.effective_fate
+
+    def get_fate_fire_counts(self) -> Dict[str, int]:
+        """
+        Get the fate firing counts from the last step() call.
+
+        Returns:
+            Dict mapping fate gene names to their firing counts
+        """
+        return self.fate_fire_counts.copy()
+
+    def copy(self) -> 'HierarchicalBooleanNetwork':
+        """
+        Create a deep copy of this hierarchical gene network.
+
+        Returns:
+            A new HierarchicalBooleanNetwork instance with identical state
+        """
+        # Create new instance with same config and hierarchy
+        new_network = HierarchicalBooleanNetwork(
+            config=self.config,
+            fate_hierarchy=self.fate_hierarchy.copy()
+        )
+
+        # Deep copy all nodes
+        new_network.nodes = {}
+        for name, node in self.nodes.items():
+            new_node = NetworkNode(
+                name=node.name,
+                current_state=node.current_state,
+                next_state=node.next_state,
+                update_function=node.update_function,
+                inputs=node.inputs.copy(),
+                is_input=node.is_input,
+                is_output=node.is_output
+            )
+            new_network.nodes[name] = new_node
+
+        # Copy other attributes
+        new_network.input_nodes = self.input_nodes.copy()
+        new_network.output_nodes = self.output_nodes.copy()
+        new_network.fixed_nodes = self.fixed_nodes.copy()
+
+        # Copy fate state
+        new_network.effective_fate = self.effective_fate
+        new_network.fate_fire_counts = self.fate_fire_counts.copy()
+
+        return new_network
+
+    def __repr__(self) -> str:
+        info = self.get_network_info()
+        return (f"HierarchicalBooleanNetwork(nodes={info['total_nodes']}, "
+                f"inputs={len(info['input_nodes'])}, "
+                f"outputs={len(info['output_nodes'])}, "
+                f"fate={self.effective_fate})")

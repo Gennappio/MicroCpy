@@ -17,25 +17,32 @@ from src.workflow.decorators import register_function
     parameters=[
         {"name": "show_per_cell", "type": "BOOL", "description": "Show per-cell results", "default": False},
     ],
-    inputs=["population"],
+    inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=False,
+    compatible_kernels=["biophysics"]
 )
 def print_gene_network_states(
     context: Dict[str, Any] = None,
-    population=None,
     show_per_cell: bool = False,
     **kwargs
 ) -> bool:
     """
     Print gene network statistics from all cells.
     """
-    # Get population from context or parameter
-    if population is None and context:
-        population = context.get('population')
+    # =========================================================================
+    # VALIDATE CONTEXT
+    # =========================================================================
+    if not context:
+        print("[ERROR] [print_gene_network_states] No context provided")
+        return False
 
+    # =========================================================================
+    # GET REQUIRED ITEMS FROM CONTEXT
+    # =========================================================================
+    population = context.get('population')
     if population is None:
-        print("[ERROR] No population found")
+        print("[ERROR] [print_gene_network_states] No population in context")
         return False
 
     cells = population.state.cells

@@ -20,9 +20,10 @@ from src.interfaces.base import IGeneNetwork
         {"name": "cell_ids", "type": "LIST", "description": "Optional list of cell IDs (empty = all cells)", "default": []},
         {"name": "output_nodes_only", "type": "BOOL", "description": "Return only output/fate nodes", "default": False},
     ],
-    inputs=["gene_networks"],
+    inputs=["context"],
     outputs=["gene_states_by_cell"],
-    cloneable=False
+    cloneable=False,
+    compatible_kernels=["biophysics"]
 )
 def get_gene_network_states(
     context: Dict[str, Any],

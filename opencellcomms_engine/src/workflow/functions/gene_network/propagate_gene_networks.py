@@ -26,9 +26,10 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation
         },
         {"name": "cell_ids", "type": "LIST", "description": "Optional list of cell IDs to update (empty = all cells)", "default": []},
     ],
-    inputs=["population", "gene_networks"],
+    inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=False,
+    compatible_kernels=["biophysics"]
 )
 def propagate_gene_networks(
     context: Dict[str, Any],

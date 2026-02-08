@@ -25,12 +25,12 @@ from src.workflow.decorators import register_function
         {"name": "update_mode", "type": "STRING", "description": "Update mode: 'netlogo' or 'synchronous'", "default": "netlogo"},
         {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": False},
     ],
-    inputs=["population", "gene_networks"],
+    inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=False,
+    compatible_kernels=["biophysics"]
 )
 def update_gene_networks_hierarchical(
-    population=None,
     context: Dict[str, Any] = None,
     propagation_steps: int = 500,
     update_mode: str = "netlogo",
@@ -49,8 +49,7 @@ def update_gene_networks_hierarchical(
     4. Set effective fate based on hierarchy
 
     Args:
-        population: Cell population (can be None, will get from context)
-        context: Workflow execution context containing gene_networks
+        context: Workflow execution context containing population and gene_networks
         propagation_steps: Number of gene network propagation steps
         update_mode: 'netlogo' (random single gene) or 'synchronous' (all genes)
         verbose: Enable detailed logging
@@ -61,20 +60,21 @@ def update_gene_networks_hierarchical(
     from src.workflow.logging import log, log_always
 
     # =========================================================================
-    # GET POPULATION FROM CONTEXT IF NOT PROVIDED
+    # VALIDATE CONTEXT
     # =========================================================================
-    if population is None and context:
-        population = context.get('population')
-
-    # =========================================================================
-    # VALIDATE REQUIRED ITEMS
-    # =========================================================================
-    if population is None:
-        log_always("[ERROR] No population found", prefix="[HIERARCHICAL]")
+    if not context:
+        print("[ERROR] [update_gene_networks_hierarchical] No context provided")
         return False
 
-    # Get gene networks from context
-    gene_networks = context.get('gene_networks', {}) if context else {}
+    # =========================================================================
+    # GET REQUIRED ITEMS FROM CONTEXT
+    # =========================================================================
+    population = context.get('population')
+    if population is None:
+        log_always("[ERROR] No population in context", prefix="[HIERARCHICAL]")
+        return False
+
+    gene_networks = context.get('gene_networks', {})
 
     if not gene_networks:
         log_always("[ERROR] No gene networks in context - run 'Initialize Gene Networks' first", prefix="[HIERARCHICAL]")

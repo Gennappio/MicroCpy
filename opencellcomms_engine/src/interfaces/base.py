@@ -440,6 +440,22 @@ class IGeneNetwork(ABC):
         """
         pass
 
+    def get_phenotype(self) -> Optional[str]:
+        """Get determined phenotype after step(), if any.
+
+        This is NOT abstract - it has a default implementation that returns None.
+
+        Concrete classes with no fate determination logic (e.g., BooleanNetwork)
+        use the default implementation.
+
+        Concrete classes with fate logic (e.g., HierarchicalBooleanNetwork)
+        override this to return the determined phenotype.
+
+        Returns:
+            Phenotype string if determined by this network, None otherwise
+        """
+        return None
+
 class IVisualization(ABC):
     """Interface for visualization components"""
 
