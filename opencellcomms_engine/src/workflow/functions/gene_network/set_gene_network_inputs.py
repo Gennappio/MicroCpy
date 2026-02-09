@@ -99,6 +99,35 @@ def set_gene_network_inputs(
                 # === END INLINE set_input_states() ===
                 cells_updated += 1
         print(f"   [+] Applied input states to {cells_updated} cells")
+        
+        # === CRITICAL: Initialize logic states after setting inputs ===
+        # After setting inputs, synchronize all non-input nodes to match their logic rules.
+        # This ensures simulation starts from a consistent state (matches standalone behavior).
+        print(f"   [+] Synchronizing gene network logic states...")
+        total_updates = 0
+        cells = population.state.cells
+        for cell_id, cell_gn in gene_networks.items():
+            # Get current states for evaluation
+            current_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            
+            # Update all non-input nodes to match their logic
+            for node_name, node in cell_gn.nodes.items():
+                if not node.is_input and node.update_function:
+                    try:
+                        expected_state = node.update_function(current_states)
+                        if node.current_state != expected_state:
+                            node.current_state = expected_state
+                            current_states[node_name] = expected_state  # Update for next evaluations
+                            total_updates += 1
+                    except:
+                        pass  # Skip nodes with evaluation errors
+            
+            # Update cell's gene_states to reflect synchronized states
+            cell = cells.get(cell_id)
+            if cell:
+                cell.state = cell.state.with_updates(gene_states=current_states)
+        
+        print(f"   [+] Synchronized {total_updates} node states across all cells")
     elif population and not gene_networks:
         print(f"   [!] No gene networks in context - run 'Initialize Gene Networks' first")
     else:

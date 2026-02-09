@@ -1,0 +1,20 @@
+{
+  "fromVersion": 7,
+  "toVersion": 8,
+  "scopeKey": "composer:kernel_setup",
+  "added": {
+    "gene_network_inputs": {
+      "type": "dict",
+      "preview": {
+        "Oxygen_supply": true,
+        "Glucose_supply": true,
+        "MCT1_stimulus": false,
+        "...": "(7 more keys)"
+      },
+      "truncated": true,
+      "len": 10
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

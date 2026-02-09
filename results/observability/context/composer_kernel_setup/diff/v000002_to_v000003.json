@@ -1,0 +1,14 @@
+{
+  "fromVersion": 2,
+  "toVersion": 3,
+  "scopeKey": "composer:kernel_setup",
+  "added": {
+    "result": {
+      "type": "boolean",
+      "preview": true,
+      "truncated": false
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

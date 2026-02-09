@@ -1,0 +1,21 @@
+{
+  "fromVersion": 1,
+  "toVersion": 2,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "population": {
+      "before": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={'EGFR_s...",
+        "truncated": true
+      },
+      "after": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Growth_Arrest', gene_states={'EG...",
+        "truncated": true
+      }
+    }
+  }
+}

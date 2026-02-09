@@ -1,0 +1,67 @@
+{
+  "fromVersion": 5,
+  "toVersion": 6,
+  "scopeKey": "composer:kernel_setup",
+  "added": {
+    "reference_gene_network": {
+      "type": "HierarchicalBooleanNetwork",
+      "preview": "HierarchicalBooleanNetwork(nodes=106, inputs=25, outputs=9, fate=Quiescent)",
+      "truncated": false
+    },
+    "fate_hierarchy": {
+      "type": "list",
+      "preview": [
+        "Necrosis",
+        "Apoptosis",
+        "Growth_Arrest",
+        "Proliferation"
+      ],
+      "truncated": false,
+      "len": 4
+    },
+    "random_initialization": {
+      "type": "boolean",
+      "preview": true,
+      "truncated": false
+    },
+    "gene_network_config": {
+      "type": "MinimalConfig",
+      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x11f2852e0>",
+      "truncated": false
+    }
+  },
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {},
+        "truncated": false,
+        "len": 0
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_0": "<HierarchicalBooleanNetwork>",
+          "cell_1": "<HierarchicalBooleanNetwork>",
+          "cell_2": "<HierarchicalBooleanNetwork>",
+          "...": "(97 more keys)"
+        },
+        "truncated": true,
+        "len": 100
+      }
+    },
+    "population": {
+      "before": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={}), _ca...",
+        "truncated": true
+      },
+      "after": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={'EGFR_s...",
+        "truncated": true
+      }
+    }
+  }
+}
