@@ -42,9 +42,9 @@
         {
           "id": "call_loop",
           "subworkflow_name": "loop",
-          "iterations": 10,
+          "iterations": 1,
           "enabled": true,
-          "description": "Run gene network updates multiple times",
+          "description": "Run gene network updates once (500 steps, comparable to standalone)",
           "parameters": {},
           "context_mapping": {},
           "position": {"x": 200, "y": 200}
