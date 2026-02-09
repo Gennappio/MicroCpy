@@ -6,7 +6,7 @@
   "keys": {
     "workflow_file": {
       "type": "string",
-      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment/v4_brute_gene_network_workflow.json",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment/v5_brute_gene_network_workflow.json",
       "truncated": false,
       "len": 145
     },
@@ -49,7 +49,7 @@
     },
     "resolve_path": {
       "type": "function",
-      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1183f8a40>",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x10a4551c0>",
       "truncated": false
     },
     "running_from_gui": {

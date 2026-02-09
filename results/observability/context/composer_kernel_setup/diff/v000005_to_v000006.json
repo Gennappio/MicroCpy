@@ -26,24 +26,12 @@
     },
     "gene_network_config": {
       "type": "MinimalConfig",
-      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x11840dfa0>",
+      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x10a45b020>",
       "truncated": false
     }
   },
   "removed": {},
   "changed": {
-    "population": {
-      "before": {
-        "type": "MockPopulation",
-        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={}), _ca...",
-        "truncated": true
-      },
-      "after": {
-        "type": "MockPopulation",
-        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={'EGFR_s...",
-        "truncated": true
-      }
-    },
     "gene_networks": {
       "before": {
         "type": "dict",
@@ -61,6 +49,18 @@
         },
         "truncated": true,
         "len": 100
+      }
+    },
+    "population": {
+      "before": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={}), _ca...",
+        "truncated": true
+      },
+      "after": {
+        "type": "MockPopulation",
+        "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={'EGFR_s...",
+        "truncated": true
       }
     }
   }

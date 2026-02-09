@@ -41,6 +41,7 @@ from .initialize_population import initialize_population
 from .initialize_gene_networks import initialize_gene_networks, get_gene_network, set_gene_network
 from .set_gene_network_inputs import set_gene_network_inputs
 from .apply_associations_to_inputs import apply_associations_to_inputs
+from .propagate_gene_networks_graph_walking import propagate_gene_networks_graph_walking
 from .update_gene_networks_standalone import update_gene_networks_standalone
 from .propagate_gene_networks import propagate_gene_networks
 from .get_gene_network_states import get_gene_network_states, remove_gene_network
@@ -52,6 +53,7 @@ __all__ = [
     'initialize_gene_networks',
     'set_gene_network_inputs',
     'apply_associations_to_inputs',
+    'propagate_gene_networks_graph_walking',
     'update_gene_networks_standalone',
     'propagate_gene_networks',
     'get_gene_network_states',
