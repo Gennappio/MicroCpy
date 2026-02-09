@@ -106,14 +106,115 @@ def propagate_and_update_gene_networks(
 
         cells_with_gn += 1
 
-        # Propagate gene network (works for ANY IGeneNetwork implementation)
-        gene_states = cell_gn.step(propagation_steps)
+        # === INLINE step() logic ===
+        # Check if this is a HierarchicalBooleanNetwork (has fate_hierarchy attribute)
+        is_hierarchical = hasattr(cell_gn, 'fate_hierarchy')
+
+        if is_hierarchical:
+            # === INLINE HierarchicalBooleanNetwork.step() (line 642) ===
+            import random
+
+            # Reset fate fire counts
+            fate_hierarchy = cell_gn.fate_hierarchy
+            fate_fire_counts = {fate: 0 for fate in fate_hierarchy}
+
+            # Propagate step by step and count fate firings
+            for _ in range(propagation_steps):
+                # === INLINE _netlogo_single_gene_update() (line 476) ===
+                # Cache the list of updatable genes (only computed once)
+                if not hasattr(cell_gn, '_cached_updatable_genes'):
+                    cell_gn._cached_updatable_genes = [
+                        name for name, gene_node in cell_gn.nodes.items()
+                        if not gene_node.is_input and gene_node.update_function
+                    ]
+
+                if cell_gn._cached_updatable_genes:
+                    # Randomly select ONE gene (NetLogo style)
+                    selected_gene = random.choice(cell_gn._cached_updatable_genes)
+                    gene_node = cell_gn.nodes[selected_gene]
+
+                    # Cache and reuse the current states dictionary
+                    if not hasattr(cell_gn, '_state_cache'):
+                        cell_gn._state_cache = {}
+
+                    # Update the cached states with current values
+                    for name, node in cell_gn.nodes.items():
+                        cell_gn._state_cache[name] = node.current_state
+
+                    # Evaluate the gene's rule and update ONLY this gene
+                    new_state = gene_node.update_function(cell_gn._state_cache)
+                    gene_node.current_state = new_state
+                # === END INLINE _netlogo_single_gene_update() ===
+
+                # Get current states and count fate gene activations
+                current_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+                for fate in fate_hierarchy:
+                    if current_states.get(fate, False):
+                        fate_fire_counts[fate] += 1
+
+            # === INLINE _apply_fate_hierarchy() (line 678) ===
+            # Default to Quiescent if no fate genes fired
+            effective_fate = "Quiescent"
+
+            # Apply hierarchy: iterate through list, last one that fired wins
+            for fate in fate_hierarchy:
+                if fate_fire_counts[fate] > 0:
+                    effective_fate = fate
+            # === END INLINE _apply_fate_hierarchy() ===
+
+            # Store the effective fate in the network object
+            cell_gn.effective_fate = effective_fate
+            cell_gn.fate_fire_counts = fate_fire_counts
+
+            # Get final gene states
+            gene_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            # === END INLINE HierarchicalBooleanNetwork.step() ===
+        else:
+            # === INLINE BooleanNetwork._default_step() (line 467) ===
+            import random
+
+            for step in range(propagation_steps):
+                # === INLINE _netlogo_single_gene_update() (line 476) ===
+                # Cache the list of updatable genes (only computed once)
+                if not hasattr(cell_gn, '_cached_updatable_genes'):
+                    cell_gn._cached_updatable_genes = [
+                        name for name, gene_node in cell_gn.nodes.items()
+                        if not gene_node.is_input and gene_node.update_function
+                    ]
+
+                if cell_gn._cached_updatable_genes:
+                    # Randomly select ONE gene (NetLogo style)
+                    selected_gene = random.choice(cell_gn._cached_updatable_genes)
+                    gene_node = cell_gn.nodes[selected_gene]
+
+                    # Cache and reuse the current states dictionary
+                    if not hasattr(cell_gn, '_state_cache'):
+                        cell_gn._state_cache = {}
+
+                    # Update the cached states with current values
+                    for name, node in cell_gn.nodes.items():
+                        cell_gn._state_cache[name] = node.current_state
+
+                    # Evaluate the gene's rule and update ONLY this gene
+                    new_state = gene_node.update_function(cell_gn._state_cache)
+                    gene_node.current_state = new_state
+                # === END INLINE _netlogo_single_gene_update() ===
+
+            # Get all states
+            gene_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            # === END INLINE BooleanNetwork._default_step() ===
+        # === END INLINE step() ===
 
         # Prepare updates
         updates = {'gene_states': gene_states}
 
+        # === INLINE get_phenotype() (line 695) ===
         # Check if this network determined a phenotype
-        phenotype = cell_gn.get_phenotype()
+        phenotype = None
+        if is_hierarchical:
+            phenotype = cell_gn.effective_fate
+        # === END INLINE get_phenotype() ===
+
         if phenotype is not None:
             updates['phenotype'] = phenotype
             phenotype_updates += 1
