@@ -64,11 +64,23 @@ def get_gene_network_states(
         cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
         if cell_gn is None:
             continue
-            
+
         if output_nodes_only:
-            gene_states_by_cell[cell_id] = cell_gn.get_output_states()
+            # === INLINE get_output_states() (from BooleanNetwork.get_output_states() line 521) ===
+            # Get current output node states
+            gene_states_by_cell[cell_id] = {
+                name: cell_gn.nodes[name].current_state
+                for name in cell_gn.output_nodes
+                if name in cell_gn.nodes
+            }
+            # === END INLINE get_output_states() ===
         else:
-            gene_states_by_cell[cell_id] = cell_gn.get_all_states()
+            # === INLINE get_all_states() (from BooleanNetwork.get_all_states() line 529) ===
+            # Get all node states
+            gene_states_by_cell[cell_id] = {
+                name: node.current_state for name, node in cell_gn.nodes.items()
+            }
+            # === END INLINE get_all_states() ===
     
     print(f"[GET_STATES] Retrieved gene states for {len(gene_states_by_cell)} cells")
     
