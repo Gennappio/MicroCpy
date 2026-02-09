@@ -91,7 +91,12 @@ def set_gene_network_inputs(
         for cell_id, cell in cells.items():
             cell_gn: Optional[IGeneNetwork] = gene_networks.get(cell_id)
             if cell_gn:
-                cell_gn.set_input_states(input_states)
+                # === INLINE set_input_states() (from BooleanNetwork.set_input_states() line 373) ===
+                # Set input node states
+                for node_name, state in input_states.items():
+                    if node_name in cell_gn.nodes:
+                        cell_gn.nodes[node_name].current_state = state
+                # === END INLINE set_input_states() ===
                 cells_updated += 1
         print(f"   [+] Applied input states to {cells_updated} cells")
     elif population and not gene_networks:

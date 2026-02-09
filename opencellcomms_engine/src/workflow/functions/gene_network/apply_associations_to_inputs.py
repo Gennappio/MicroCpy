@@ -81,7 +81,12 @@ def apply_associations_to_inputs(
             cells = population.state.cells
             for cell_id, cell in cells.items():
                 if cell.state.gene_network:
-                    cell.state.gene_network.set_input_states(input_states)
+                    # === INLINE set_input_states() (from BooleanNetwork.set_input_states() line 373) ===
+                    # Set input node states
+                    for node_name, state in input_states.items():
+                        if node_name in cell.state.gene_network.nodes:
+                            cell.state.gene_network.nodes[node_name].current_state = state
+                    # === END INLINE set_input_states() ===
             print(f"   [+] Applied input states to {len(cells)} cells")
         else:
             print(f"   [!] No population yet")
