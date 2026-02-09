@@ -2,7 +2,7 @@
   "version": 2,
   "scopeKey": "subworkflow:loop",
   "nodeId": "propagate_gene_networks",
-  "executionId": "352c368f-0909-4922-9554-854452f351c1",
+  "executionId": "fbe61c4b-f948-4aef-93dd-09d09aa0d92c",
   "keys": {
     "workflow_file": {
       "type": "string",
@@ -49,7 +49,7 @@
     },
     "resolve_path": {
       "type": "function",
-      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x11ff4ac00>",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1183f9f80>",
       "truncated": false
     },
     "running_from_gui": {
@@ -121,7 +121,7 @@
     },
     "simulator": {
       "type": "MockSimulator",
-      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x11ed84590>",
+      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x1180c3740>",
       "truncated": false
     },
     "config": {
@@ -137,7 +137,7 @@
     },
     "gene_network_config": {
       "type": "MinimalConfig",
-      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x11f2852e0>",
+      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x11840dfa0>",
       "truncated": false
     },
     "random_initialization": {
@@ -158,15 +158,15 @@
     },
     "reference_gene_network": {
       "type": "HierarchicalBooleanNetwork",
-      "preview": "HierarchicalBooleanNetwork(nodes=106, inputs=25, outputs=9, fate=Quiescent)",
+      "preview": "HierarchicalBooleanNetwork(nodes=97, inputs=16, outputs=9, fate=Quiescent)",
       "truncated": false
     },
     "gene_network_inputs": {
       "type": "dict",
       "preview": {
-        "Oxygen_supply": true,
+        "Oxygen_supply": false,
         "Glucose_supply": true,
-        "MCT1_stimulus": false,
+        "MCT1_stimulus": true,
         "...": "(7 more keys)"
       },
       "truncated": true,

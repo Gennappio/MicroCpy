@@ -3,15 +3,16 @@
   "toVersion": 4,
   "scopeKey": "composer:kernel_setup",
   "added": {
-    "num_cells": {
-      "type": "number",
-      "preview": 100,
-      "truncated": false
-    },
     "simulator": {
       "type": "MockSimulator",
-      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x11ed84590>",
+      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x1180c3740>",
       "truncated": false
+    },
+    "helpers": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
     },
     "population": {
       "type": "MockPopulation",
@@ -24,16 +25,15 @@
       "truncated": false,
       "len": 0
     },
+    "num_cells": {
+      "type": "number",
+      "preview": 100,
+      "truncated": false
+    },
     "config": {
       "type": "MockConfig",
       "preview": "MockConfig(associations={}, thresholds={}, gene_network=None, time=MockTime(dt=1.0))",
       "truncated": false
-    },
-    "helpers": {
-      "type": "dict",
-      "preview": {},
-      "truncated": false,
-      "len": 0
     }
   },
   "removed": {},

@@ -6,9 +6,9 @@
     "gene_network_inputs": {
       "type": "dict",
       "preview": {
-        "Oxygen_supply": true,
+        "Oxygen_supply": false,
         "Glucose_supply": true,
-        "MCT1_stimulus": false,
+        "MCT1_stimulus": true,
         "...": "(7 more keys)"
       },
       "truncated": true,

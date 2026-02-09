@@ -49,7 +49,7 @@
     },
     "resolve_path": {
       "type": "function",
-      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x11f290a40>",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1183f8a40>",
       "truncated": false
     },
     "running_from_gui": {

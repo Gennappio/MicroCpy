@@ -58,20 +58,30 @@ def set_gene_network_inputs(
     """
     print(f"[GENE_NETWORK] Setting input states for all cells")
 
-    # Use fixed_substances parameter or default values
+    # Use fixed_substances parameter, or individual kwargs, or default values
     if fixed_substances is None:
-        fixed_substances = {
-            'Oxygen_supply': True,
-            'Glucose_supply': True,
-            'MCT1_stimulus': False,
-            'Proton_level': False,
-            'FGFR_stimulus': False,
-            'EGFR_stimulus': False,
-            'cMET_stimulus': False,
-            'Growth_Inhibitor': False,
-            'DNA_damage': False,
-            'TGFBR_stimulus': False,
-        }
+        # Check if individual input parameters were provided via kwargs
+        input_node_names = ['Oxygen_supply', 'Glucose_supply', 'MCT1_stimulus', 'Proton_level',
+                           'FGFR_stimulus', 'EGFR_stimulus', 'cMET_stimulus', 'Growth_Inhibitor',
+                           'DNA_damage', 'TGFBR_stimulus']
+        
+        # If any input node names are in kwargs, build from kwargs
+        if any(name in kwargs for name in input_node_names):
+            fixed_substances = {name: kwargs.get(name, False) for name in input_node_names}
+        else:
+            # Use default values
+            fixed_substances = {
+                'Oxygen_supply': True,
+                'Glucose_supply': True,
+                'MCT1_stimulus': False,
+                'Proton_level': False,
+                'FGFR_stimulus': False,
+                'EGFR_stimulus': False,
+                'cMET_stimulus': False,
+                'Growth_Inhibitor': False,
+                'DNA_damage': False,
+                'TGFBR_stimulus': False,
+            }
 
     # Build input states dict from fixed_substances
     input_states = dict(fixed_substances)

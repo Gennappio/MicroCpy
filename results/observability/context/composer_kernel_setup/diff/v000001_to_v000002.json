@@ -3,16 +3,16 @@
   "toVersion": 2,
   "scopeKey": "composer:kernel_setup",
   "added": {
+    "verbose": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
     "kernel_type": {
       "type": "string",
       "preview": "biophysics",
       "truncated": false,
       "len": 10
-    },
-    "verbose": {
-      "type": "boolean",
-      "preview": false,
-      "truncated": false
     }
   },
   "removed": {},
