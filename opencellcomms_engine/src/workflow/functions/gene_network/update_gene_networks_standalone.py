@@ -91,8 +91,70 @@ def update_gene_networks_standalone(
 
         cells_with_gn += 1
 
-        # Propagate Boolean network (input nodes stay FIXED - they're excluded from updates)
-        gene_states = cell_gn.step(propagation_steps, mode=update_mode)
+        # === INLINE step() logic ===
+        import random
+
+        if update_mode == "synchronous":
+            # === INLINE _synchronous_step() (line 435) ===
+            # Cache the list of updatable genes (only computed once)
+            if not hasattr(cell_gn, '_cached_updatable_genes'):
+                cell_gn._cached_updatable_genes = [
+                    name for name, gene_node in cell_gn.nodes.items()
+                    if not gene_node.is_input and gene_node.update_function
+                ]
+
+            if cell_gn._cached_updatable_genes:
+                for step in range(propagation_steps):
+                    # Get ALL current states BEFORE any updates (synchronous semantics)
+                    current_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+
+                    # Evaluate ALL genes based on previous state, then update
+                    new_states = {}
+                    for gene_name in cell_gn._cached_updatable_genes:
+                        gene_node = cell_gn.nodes[gene_name]
+                        if gene_node.update_function:
+                            new_states[gene_name] = gene_node.update_function(current_states)
+
+                    # Apply all updates simultaneously
+                    for gene_name, new_state in new_states.items():
+                        cell_gn.nodes[gene_name].current_state = new_state
+
+            # Get all states
+            gene_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            # === END INLINE _synchronous_step() ===
+        else:
+            # === INLINE _default_step() (NetLogo mode) (line 467) ===
+            for step in range(propagation_steps):
+                # === INLINE _netlogo_single_gene_update() (line 476) ===
+                # Cache the list of updatable genes (only computed once)
+                if not hasattr(cell_gn, '_cached_updatable_genes'):
+                    cell_gn._cached_updatable_genes = [
+                        name for name, gene_node in cell_gn.nodes.items()
+                        if not gene_node.is_input and gene_node.update_function
+                    ]
+
+                if cell_gn._cached_updatable_genes:
+                    # Randomly select ONE gene (NetLogo style)
+                    selected_gene = random.choice(cell_gn._cached_updatable_genes)
+                    gene_node = cell_gn.nodes[selected_gene]
+
+                    # Cache and reuse the current states dictionary
+                    if not hasattr(cell_gn, '_state_cache'):
+                        cell_gn._state_cache = {}
+
+                    # Update the cached states with current values
+                    for name, node in cell_gn.nodes.items():
+                        cell_gn._state_cache[name] = node.current_state
+
+                    # Evaluate the gene's rule and update ONLY this gene
+                    new_state = gene_node.update_function(cell_gn._state_cache)
+                    gene_node.current_state = new_state
+                # === END INLINE _netlogo_single_gene_update() ===
+
+            # Get all states
+            gene_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            # === END INLINE _default_step() ===
+        # === END INLINE step() ===
 
         # Cache gene states
         cell._cached_gene_states = gene_states
