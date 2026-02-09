@@ -58,14 +58,21 @@ def print_gene_network_states(
 
     # Collect statistics
     node_stats = {node: Counter() for node in all_nodes}
+    phenotype_counts = Counter()
 
     for cell_id, cell in cells.items():
         gene_states = cell.state.gene_states or {}
+        phenotype = cell.state.phenotype if hasattr(cell.state, 'phenotype') else None
+
+        # Count phenotypes (from hierarchical fate determination)
+        if phenotype:
+            phenotype_counts[phenotype] += 1
 
         if show_per_cell:
             fate_str = ", ".join([f"{n}={'ON' if gene_states.get(n, False) else 'OFF'}" for n in fate_nodes])
             meta_str = ", ".join([f"{n}={'ON' if gene_states.get(n, False) else 'OFF'}" for n in metabolic_nodes])
-            print(f"   {cell_id}: {fate_str} | {meta_str}")
+            pheno_str = f"PHENOTYPE={phenotype}" if phenotype else "PHENOTYPE=None"
+            print(f"   {cell_id}: {pheno_str} | {fate_str} | {meta_str}")
 
         for node in all_nodes:
             state = gene_states.get(node, False)
@@ -73,7 +80,15 @@ def print_gene_network_states(
 
     # Print summary
     print(f"\n[RESULTS] Gene Network Statistics ({num_cells} cells):")
-    print(f"   Fate Nodes:")
+    
+    # Show phenotype distribution (determined by hierarchical fate logic)
+    if phenotype_counts:
+        print(f"   Cell Phenotypes (from hierarchical fate logic):")
+        for phenotype, count in sorted(phenotype_counts.items(), key=lambda x: -x[1]):
+            print(f"      {phenotype}: {count}/{num_cells} ({100*count/num_cells:.1f}%)")
+        print()
+    
+    print(f"   Fate Node States (current boolean values):")
     for node in fate_nodes:
         on_count = node_stats[node][True]
         off_count = node_stats[node][False]
