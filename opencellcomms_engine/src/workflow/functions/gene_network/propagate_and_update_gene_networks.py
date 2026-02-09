@@ -235,6 +235,19 @@ def propagate_and_update_gene_networks(
             print(f"   [!] Skipped {cells_without_gn} cells without gene network")
         if phenotype_updates > 0:
             print(f"   [+] Updated phenotype for {phenotype_updates} cells (hierarchical fate logic)")
+            
+            # Show phenotype distribution (for comparison with standalone)
+            from collections import Counter
+            phenotype_counts = Counter()
+            cells = population.state.cells
+            for cell_id, cell in cells.items():
+                phenotype = cell.state.phenotype if hasattr(cell.state, 'phenotype') else None
+                if phenotype:
+                    phenotype_counts[phenotype] += 1
+            
+            if phenotype_counts:
+                pheno_str = ", ".join([f"'{k}': {v}" for k, v in sorted(phenotype_counts.items(), key=lambda x: -x[1])])
+                print(f"   [+] Phenotype distribution: {{{pheno_str}}}")
         else:
             print(f"   [+] No phenotype updates (using BooleanNetwork without fate logic)")
 
