@@ -129,13 +129,37 @@ def initialize_gene_networks(
         for cell_id, cell in cells.items():
             # Create a FRESH gene network for each cell
             cell_gn = BooleanNetwork(config=config)
-            cell_gn.reset(random_init=random_initialization)
+
+            # === INLINE reset() logic (from BooleanNetwork.reset() line 533) ===
+            # Reset nodes: fate nodes to False, others to random by default
+            import random
+
+            # Define output/fate nodes that should always start as False
+            fate_nodes = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
+
+            for node in cell_gn.nodes.values():
+                if node.is_input:
+                    # Input nodes keep their externally set states
+                    continue
+                elif node.name in fate_nodes:
+                    # Fate nodes always start as False (biologically correct)
+                    node.current_state = False
+                    node.next_state = False
+                else:
+                    # ALL other non-input nodes start RANDOM by default
+                    state = random.choice([True, False]) if random_initialization else False
+                    node.current_state = state
+                    node.next_state = state
+            # === END INLINE reset() ===
 
             # Store gene network in context (NOT in cell.state)
             context['gene_networks'][cell_id] = cell_gn
 
-            # Get initial gene states and update cell's gene_states dict
-            initial_gene_states = cell_gn.get_all_states()
+            # === INLINE get_all_states() logic (from BooleanNetwork.get_all_states() line 529) ===
+            # Get all node states
+            initial_gene_states = {name: node.current_state for name, node in cell_gn.nodes.items()}
+            # === END INLINE get_all_states() ===
+
             cell.state = cell.state.with_updates(gene_states=initial_gene_states)
 
         # Create a reference gene network for getting input node names etc.
