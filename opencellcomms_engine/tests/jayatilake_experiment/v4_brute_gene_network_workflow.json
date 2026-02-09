@@ -101,7 +101,7 @@
           "enabled": true,
           "description": "Create HierarchicalBooleanNetwork concrete class per cell (with fate logic)",
           "parameters": {
-            "bnd_file": "tests/jayatilake_experiment/jaya.bnd",
+            "bnd_file": "opencellcomms_engine/tests/jayatilake_experiment/jaya.bnd",
             "random_initialization": true,
             "fate_hierarchy": "Necrosis,Apoptosis,Growth_Arrest,Proliferation"
           },
