@@ -32,7 +32,7 @@
         {
           "id": "call_kernel_setup",
           "subworkflow_name": "kernel_setup",
-          "iterations": 1,
+          "iterations": 10,
           "enabled": true,
           "description": "Load kernel and setup all concrete classes",
           "parameters": {},
@@ -42,7 +42,7 @@
         {
           "id": "call_loop",
           "subworkflow_name": "loop",
-          "iterations": 1,
+          "iterations": 10,
           "enabled": true,
           "description": "Run gene network updates multiple times",
           "parameters": {},
@@ -52,7 +52,7 @@
         {
           "id": "call_analysis",
           "subworkflow_name": "analysis",
-          "iterations": 1,
+          "iterations": 10,
           "enabled": true,
           "description": "Analyze and print results",
           "parameters": {},
