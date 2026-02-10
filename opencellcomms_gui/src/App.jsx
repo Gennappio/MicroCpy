@@ -173,17 +173,15 @@ function App() {
     }
   };
 
-  const handleSaveWorkflow = async () => {
-    if (!workflowFilePath) {
-      alert('No project file path available. Use "Export Project" to save to a new location.');
-      return;
-    }
+  // Store file handle for direct saving (File System Access API)
+  const [fileHandle, setFileHandle] = useState(null);
 
-    // Ask for confirmation before overwriting
+  const handleSaveWorkflow = async () => {
+    // Ask for confirmation before saving
     const confirmed = window.confirm(
-      `Are you sure you want to overwrite the current project?\n\n` +
-      `File: ${workflowFilePath}\n\n` +
-      `This action cannot be undone.`
+      `Are you sure you want to save the current project?\n\n` +
+      `File: ${workflowFilePath || 'New file'}\n\n` +
+      `This will overwrite the existing file.`
     );
 
     if (!confirmed) {
@@ -194,43 +192,56 @@ function App() {
       const workflowData = exportWorkflow();
       const jsonContent = JSON.stringify(workflowData, null, 2);
 
-      // Use the File System Access API if available (modern browsers)
-      if ('showSaveFilePicker' in window) {
-        // Try to write directly to the file
-        const response = await fetch('/api/save-workflow', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            path: workflowFilePath,
-            content: jsonContent
-          })
-        });
+      // If we have a file handle from a previous save, use it
+      if (fileHandle) {
+        try {
+          const writable = await fileHandle.createWritable();
+          await writable.write(jsonContent);
+          await writable.close();
+          alert(`Project saved successfully!\n\nFile: ${fileHandle.name}`);
+          return;
+        } catch (err) {
+          console.log('Could not write to existing handle, will prompt for new location');
+        }
+      }
 
-        if (response.ok) {
-          alert(`Project saved successfully!\n\nFile: ${workflowFilePath}`);
-        } else {
-          // Fallback to download if API fails
-          const blob = new Blob([jsonContent], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = workflowFilePath.split('/').pop() || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          alert('Project exported as download (direct save not available in browser).');
+      // Use File System Access API to let user pick save location
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: workflowFilePath || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`,
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] }
+            }]
+          });
+
+          const writable = await handle.createWritable();
+          await writable.write(jsonContent);
+          await writable.close();
+
+          // Store the handle for future saves
+          setFileHandle(handle);
+          setWorkflowFilePath(handle.name);
+
+          alert(`Project saved successfully!\n\nFile: ${handle.name}`);
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.error('Save failed:', err);
+            alert('Error saving project: ' + err.message);
+          }
+          // User cancelled - do nothing
         }
       } else {
-        // Fallback: download the file
+        // Fallback for browsers without File System Access API
         const blob = new Blob([jsonContent], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = workflowFilePath.split('/').pop() || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+        a.download = workflowFilePath || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        alert('Project exported as download (direct save not available in browser).');
+        alert('Project downloaded. Please replace the original file manually.');
       }
     } catch (error) {
       alert('Error saving project: ' + error.message);
