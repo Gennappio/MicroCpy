@@ -301,12 +301,15 @@ function App() {
             <Upload size={16} />
             Import Project
           </button>
-          {workflowFilePath && (
-            <button className="btn btn-success" onClick={handleSaveWorkflow}>
-              <Save size={16} />
-              Save Project
-            </button>
-          )}
+          <button
+            className="btn btn-success"
+            onClick={handleSaveWorkflow}
+            disabled={!workflowFilePath}
+            title={workflowFilePath ? `Save to: ${workflowFilePath}` : 'Import a project first'}
+          >
+            <Save size={16} />
+            Save Project
+          </button>
           <button className="btn btn-primary" onClick={handleExportWorkflow}>
             <Download size={16} />
             Export Project
