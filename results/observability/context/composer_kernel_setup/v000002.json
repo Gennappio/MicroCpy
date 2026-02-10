@@ -2,7 +2,7 @@
   "version": 2,
   "scopeKey": "composer:kernel_setup",
   "nodeId": "load_kernel",
-  "executionId": "eb48f558-3672-4529-ac35-db4930f5bebf",
+  "executionId": "05dc94b4-a376-449a-9670-4b6b410bfb67",
   "keys": {
     "workflow_file": {
       "type": "string",
@@ -49,7 +49,7 @@
     },
     "resolve_path": {
       "type": "function",
-      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x10a4551c0>",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1304f91c0>",
       "truncated": false
     },
     "running_from_gui": {

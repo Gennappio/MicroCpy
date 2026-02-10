@@ -1,0 +1,2192 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+			This GraphML document was generated from GXL by
+			a GXL-to-GraphML conversion style sheet.
+		-->
+<graphml>
+   <key id="MY-ID" for="node" attr.name="MY-ID" attr.type="string"/>
+   <key id="KIND" for="node" attr.name="KIND" attr.type="string"/>
+   <key id="BREED" for="node" attr.name="BREED" attr.type="string"/>
+   <key id="MY-RULE" for="node" attr.name="MY-RULE" attr.type="string"/>
+   <key id="MY-PARAMETER"
+        for="node"
+        attr.name="MY-PARAMETER"
+        attr.type="string"/>
+   <key id="MY-VALUE"
+        for="node"
+        attr.name="MY-VALUE"
+        attr.type="string"/>
+   <key id="MY-SHAPE"
+        for="node"
+        attr.name="MY-SHAPE"
+        attr.type="string"/>
+   <key id="PROBABILITY-OF-LINK"
+        for="edge"
+        attr.name="PROBABILITY-OF-LINK"
+        attr.type="string"/>
+   <key id="SIGN-OF-LINK"
+        for="edge"
+        attr.name="SIGN-OF-LINK"
+        attr.type="string"/>
+   <key id="BREED" for="edge" attr.name="BREED" attr.type="string"/>
+   <graph id="NOV-2022-TNBC-GLU-MODEL53-ATP-V8-pH-MCT1D-GLUT1D"
+          edgedefault="directed">
+      <node id="EGFR_stimulus">
+         <data key="MY-ID">EGFR_stimulus</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce EGFR activation
+</node>
+      <node id="FGFR_stimulus">
+         <data key="MY-ID">FGFR_stimulus</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce FGFR3 activation
+</node>
+      <node id="TGFBR_stimulus">
+         <data key="MY-ID">TGFBR_stimulus</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce TGFBR activation
+
+</node>
+      <node id="DNA_damage">
+         <data key="MY-ID">DNA_damage</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: DNA damaging agents/therapies action
+
+ATM autophosphorylates itself at serine 1981 in response to DNA damage and some other cellular stresses.
+PMID:18235226</node>
+      <node id="Apoptosis">
+         <data key="MY-ID">Apoptosis</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">not BCL2 and not ERK and FOXO3 and p53</data>
+         <data key="MY-SHAPE">rect</data>Phenotype
+
+VARIABLE: apoptosis enablement
+
+Modelling hypotheses: apoptosis is supposed to be enabled when at least a pro-apoptotic component is activated (p53, FOXO3) and no anti-apoptotic components are activated (ERK, BCL2).
+
+FOXO3a promotes apoptosis through activation of PUMA.
+PMID:20978166
+
+In response to genotoxic stress such as DNA damage, PUMA is transactivated by p53 (leading to apoptosis).
+PMID:19641508
+
+Caspase 9 is efficiently phosphorylated on Thr125 by ERK in vitro, suggesting that it is targeted directly by ERK in vivo. This is one of the ways ERK plays its anti-apoptotic role.
+PMID:12792650
+
+Akt phosphorylation of the apoptosis-inducing protein Bad creates a binding site for 14-3-3 proteins and prevents Bad from binding to Bcl-2 family members Bcl-2 and Bcl-XL, thus releasing them for a cell survival response.
+PMID:12040186
+</node>
+      <node id="Growth_Arrest">
+         <data key="MY-ID">Growth_Arrest</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p21</data>
+         <data key="MY-SHAPE">rect</data>Phenotype
+
+VARIABLE: growth arrest enablement
+
+Cell growth arrest is induced through cyclin-dependent kinase inhibitor p21 WAF1/CIP1.
+PMID:8614832</node>
+      <node id="Proliferation">
+         <data key="MY-ID">Proliferation</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p70 and MYC and not p21 and not Growth_Inhibitor and ATP_Production_Rate</data>
+         <data key="MY-SHAPE">rect</data>Proliferation
+
+VARIABLE: proliferation enablement
+
+Proliferation is an output variable of the model.
+
+Modelling hypotheses: proliferation is supposed to be enabled when both MYC and p70 are activated, and p21 (CDK inhibitor) is inactive
+
+PDK1 is a PI3K target, leading to activation of p70 and subsequent cell growth.
+PMID:12040186
+
+MYC contributes to E2F-induced cell cycle progression.
+PMID:11805123
+
+Cell growth arrest is induced through cyclin-dependent kinase inhibitor p21 WAF1/CIP1.
+PMID:8614832
+
+</node>
+      <node id="ERK">
+         <data key="MY-ID">ERK</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MEK1_2</data>
+         <data key="MY-SHAPE">ellipse</data>MAPK1 = mitogen-activated protein kinase 1
+MAPK3 = mitogen-activated protein kinase 3
+
+VARIABLE: ERK (any isoform) phosphorylation level
+
+Once activated, Raf family members are capable of initiating the phosphorylation cascade, whereby Raf activates MEK, and MEK in turn activates ERK.
+PMID:17496910
+
+Spry is induced by activated ERK, through phosphorylation on Tyr55.
+PMID:15173823
+
+Caspase 9 is efficiently phosphorylated on Thr125 by ERK in vitro, suggesting that it is targeted directly by ERK in vivo. This is one of the ways ERK plays its anti-apoptotic role.
+PMID:12792650
+
+MSK1 and MSK2 are potently activated (by phosphorylation) in vivo by ERK1/2 and p38 but not JNK.
+RSKs interact with ERK and dissociate upon activation.
+PMID:15187187
+
+RSK2 is a well known ERK substrate in the cytoplasm and has been shown to undergo autophosphorylation after ERK phosphorylation.
+PMID:15239952
+
+Phosphorylation by both ERKs and their downstream RSKs can stabilise the c-Fos protein for several hours. The combination of these phosphorylations allows c-Fos sustained activity.
+The rapid and efficient phosphorylation of Elk1 by ERKs is enabled by a direct interaction between the two proteins.
+PMID:16393692
+
+p70 activation requires both ERK cascade and PI3K/AKT cascade, at least in some cell types.
+PMID:11940578, PMID:10601235, PMID:11431469</node>
+      <node id="p38">
+         <data key="MY-ID">p38</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(TAOK and MAP3K1_3) or (MAP3K1_3 and MTK1) or (TAOK and MTK1) or (TAK1 and MTK1) or (TAK1 and MAP3K1_3) or (TAK1 and TAOK) or ((TAOK or MTK1 or MAP3K1_3 or TAK1) and not DUSP1)</data>
+         <data key="MY-SHAPE">ellipse</data>MAPK11 = mitogen-activated protein kinase 11
+MAPK12 = mitogen-activated protein kinase 12
+MAPK13 = mitogen-activated protein kinase 13
+MAPK14 = mitogen-activated protein kinase 14
+
+VARIABLE: p38 (any isoform) phosphorylation level
+
+p38 and JNK are activated after expression of GADD45, following stress, through MTK1.
+Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+TAO kinases are MAP3Ks that function upstream of p38 and JNK.
+Activated p38 phosphorylates p53 at several residues, including Ser33, and thereby increases the transcriptional activity of p53. Activated p53 then induces apoptosis in cells that have suffered extensive DNA damage. When the intensity of the damage is moderate, however, the cell can repair the damage and escape apoptotic cell death by down-regulating p38-p53 signaling. Under these conditions, p53-induced Wip1 phosphatase interacts with activated p38 and selectively dephosphorylates p38 at the phospho-Thr180 residue, thereby reducing its kinase activity towards p53.
+PMID:21614932
+
+DUSP1 preferentially inactivates JNK and p38.
+PMID:19436832
+
+JNK and p38 can both phosphorylate ATF2 at Thr69 and Ser71.
+MAX is phosphorylated (and activated) by p38, through complex formation.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345
+
+MSK1 and MSK2 are potently activated (by phosphorylation) in vivo by ERK1/2 and p38 but not JNK.
+PMID:15187187
+
+ELK1 is a nuclear p38 target.
+PMID:20506250
+
+MEK is continuously dephosphorylated by PP2A (PPP2CA), whose activity is stimulated by p38: p38 activity increases the physical association between PP2A and MEK/ERK complex.
+PMID:18039929
+
+Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</node>
+      <node id="JNK">
+         <data key="MY-ID">JNK</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(TAOK and MAP3K1_3) or (MAP3K1_3 and MTK1) or (TAOK and MTK1) or (TAK1 and MTK1) or (TAK1 and MAP3K1_3) or (TAK1 and TAOK) or ((TAOK or MTK1 or MAP3K1_3 or TAK1) and not DUSP1)</data>
+         <data key="MY-SHAPE">ellipse</data>MAPK8 = mitogen-activated protein kinase 8
+MAPK9 = mitogen-activated protein kinase 9
+MAPK10 = mitogen-activated protein kinase 10
+
+VARIABLE: JNK (any isoform) phosphorylation level
+
+p38 and JNK are activated after expression of GADD45, following stress, through MTK1.
+Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+TAO kinases are MAP3Ks that function upstream of p38 and JNK.
+PMID:21614932
+
+DUSP1 preferentially inactivates JNK and p38.
+PMID:19436832
+
+JNK phosphorylates MST1 at serine 82, which leads to the enhancement of MST1 activation. The activation of MST1 phosphorylates FOXO3 at serine 207 and promotes cell death.
+PMID:20028971
+
+JNK and p38 can both phosphorylate ATF2 at Thr69 and Ser71.
+JNK can phosphorylate the c-Juntrans-activating domain at Ser63 and Ser73. JNKs, but not the ERKs or p38s, binds c-Jun quite strongly.
+ELK1 is a nuclear JNK target.
+MEKK1 can interact with Ras in a GTP-dependent manner. The GTP-dependent coupling of MEKK1 to Ras indicates that MEKK1 may be an effector for those agonists that recruit JNK through Ras-dependent mechanisms.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345
+
+Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</node>
+      <node id="p53">
+         <data key="MY-ID">p53</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(ATM and p38) or ((ATM or p38) and not MDM2)</data>
+         <data key="MY-SHAPE">ellipse</data>TP53 = tumor protein p53
+
+VARIABLE: p53 phosphorylation level
+
+ATM phosphorylates p53 at ser15 and stabilize it.
+PMID:15140942
+
+Activated p38 phosphorylates p53 at several residues, including Ser33, and thereby increases the transcriptional activity of p53. Activated p53 then induces apoptosis in cells that have suffered extensive DNA damage. When the intensity of the damage is moderate, however, the cell can repair the damage and escape apoptotic cell death by down-regulating p38-p53 signaling. Under these conditions, p53-induced Wip1 phosphatase interacts with activated p38 and selectively dephosphorylates p38 at the phospho-Thr180 residue, thereby reducing its kinase activity towards p53.
+PMID:21614932
+
+The Mdm2 protein is involved in an autoregulatory feedback loop with p53, thus controlling its activity. Increased p53 levels transactivate the MDM2 promoter causing its upregulation. The translated protein then binds to p53 and transports it to the proteasome for ubiquitin-mediated degradation. The resultant lowered p53 levels then reduce the levels of Mdm2. p21 is transcriptionally regulated by the p53 protein.
+PMID:17158541
+
+Expression of GADD45 is the culmination of a signaling pathway that requires prior expression of the tumor suppressor protein p53 which trans-activates the GADD45 gene.
+PMID:11274345
+
+In response to genotoxic stress such as DNA damage, PUMA is transactivated by p53 (leading to apoptosis).
+PMID:19641508
+
+p53 induces transcription of the PTEN gene and elevates cellular levels of the PTEN protein.
+PMID:12217521</node>
+      <node id="p21">
+         <data key="MY-ID">p21</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">not AKT and p53</data>
+         <data key="MY-SHAPE">ellipse</data>CDKN1A = cyclin-dependent kinase inhibitor 1A (p21, Cip1)
+
+VARIABLE: p21 activation level
+
+p21 is a direct substrate of AKT and this may regulate the subcellular localisation of p21. Phosphorylation of p21 by AKT correlated with its exit from the nucleus and with increased cell cycle progression.
+PMID:11882383
+
+p21 is transcriptionally induced by the p53 protein.
+p21 is a CDK inhibitor.
+PMID:17158541
+
+Cell growth arrest is induced through cyclin-dependent kinase inhibitor p21 WAF1/CIP1.
+PMID:8614832</node>
+      <node id="TGFBR">
+         <data key="MY-ID">TGFBR</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">TGFBR_stimulus</data>
+         <data key="MY-SHAPE">ellipse</data>TGFBR1 = transforming growth factor, beta receptor 1
+TGFBR2 = transforming growth factor, beta receptor II (70/80kDa)
+TGFBR3 = transforming growth factor, beta receptor III
+
+VARIABLE: TGFBR activation level
+
+Smad-dependent gene expression can provoke p38 activation in response to TGFbeta.
+PMID:21614932
+
+TGF-beta-induced ShcA phosphorylation induces ShcA association with Grb2 and Sos, thereby initiating the well-characterised pathway linking receptor tyrosine kinases with Erk MAP kinases.
+PMID:17673906</node>
+      <node id="EGFR">
+         <data key="MY-ID">EGFR</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(EGFR_stimulus or SPRY) and not (PKC or GRB2 or EGFRI_affinity)</data>
+         <data key="MY-SHAPE">ellipse</data>EGFR = epidermal growth factor receptor
+
+VARIABLE: EGFR activation level
+
+The ubiquitin ligase Cbl interacts with EGFR directly and indirectly through Grb2, promoting ubiquitination and degradation of EGFR
+PMID:15567848
+
+Spry is induced by activated ERK. It positively regulates EGFR signalling by sequestering Cbl (positive feedback in the model, from Spry to EGFR), whereas it negatively regulates FGFR signalling by sequestering Grb2 from FSR2 (negative feedback in the model, from Spry to FSR2).
+PMID:15173823
+
+PKC may cause phosphorylation of EGFR, leading to a decrease in its activity.
+PMID:6321473
+
+Grb2 is an adaptor protein, normally present in cytosol. It is recruited to the plasma membrane by activated RTKs.
+PMID:17496910
+
+Tyrosine phosphorylation of PLC-gamma by EGF receptor leads to its activation.
+PMID:2472219</node>
+      <node id="FGFR">
+         <data key="MY-ID">FGFR</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">FGFR_stimulus and not (GRB2 or PKC or FGFRI)</data>
+         <data key="MY-SHAPE">ellipse</data>FGFR3 = fibroblast growth factor receptor 3
+
+VARIABLE: FGFR3 activation level
+
+Grb2, bound to Cbl, does not interact directly with FGFR but, rather, binds to tyrosine-phosphorylated FRS2, promoting ubiquitination and degradation of FRS2 and FGFR
+PMID:15567848
+
+FGF stimulation leads to phosphorylation of Shp2 on a tyrosine residue that forms a complex with an additional molecule of Grb2. Grb2/Sos complexes are thus recruited directly and indirectly via Shp2 upon tyrosine phosphorylation of FRS2a in response to growth factor stimulation.
+PMID:11447289
+
+Binding of FGF to FGFR leads to tyrosine phosphorylation of PLCgamma.
+PMID:1656221
+
+(Inferred from FGFR1) PKC-mediated phosphorylation can lead to internalization and degradation of FGFR1.
+PMID:9694798, PMID:8622701, PMID:14699054</node>
+      <node id="ATM">
+         <data key="MY-ID">ATM</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">DNA_damage</data>
+         <data key="MY-SHAPE">ellipse</data>ATM = ataxia telangiectasia mutated
+
+VARIABLE: ATM phosphorylation level
+
+ATM autophosphorylates itself at serine 1981 in response to DNA damage and some other cellular stresses.
+PMID:18235226
+
+Ataxia telangiectasia mutated (ATM) is activated in response to DNA damage and directly phosphorylates TAOK.
+PMID:18855897
+
+ATM phosphorylates p53 at ser15 and stabilize it.
+PMID:15140942
+</node>
+      <node id="TAOK">
+         <data key="MY-ID">TAOK</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ATM</data>
+         <data key="MY-SHAPE">ellipse</data>TAOK1 = TAO kinase 1
+TAOK2 = TAO kinase 2
+TAOK3 = TAO kinase 3
+
+VARIABLE: TAOK (any isoform) phosphorylation level
+
+Ataxia telangiectasia mutated (ATM) is activated in response to DNA damage and directly phosphorylates TAOK.
+PMID:18855897
+
+TAO kinases are MAP3Ks that function upstream of p38 and JNK.
+PMID:21614932</node>
+      <node id="MAX">
+         <data key="MY-ID">MAX</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p38</data>
+         <data key="MY-SHAPE">ellipse</data>MAX = MYC associated factor X
+
+VARIABLE: MAX phosphorylation level
+
+MAX interacts with the transcription factor c-Myc, enabling c-Myc to trans-activate at least a subset of its target genes.
+MAX is phosphorylated (and activated) by p38, through complex formation.
+PMID:11274345</node>
+      <node id="GRB2">
+         <data key="MY-ID">GRB2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">EGFR or FRS2 or TGFBR or cMET</data>
+         <data key="MY-SHAPE">ellipse</data>GRB2 = growth factor receptor-bound protein 2
+
+VARIABLE: GRB2 recruitment by activated RTKs
+
+Grb2 is an adaptor protein, normally present in cytosol. It is recruited to the plasma membrane by activated RTKs.
+Sos is recruited from the cytosol to the plasma membrane as a result of its constitutive interaction with Grb2. It is in an autoinhibited state.
+PMID:17496910
+
+The signaling pathways activated by FGFRs substantially overlap with those activated by EGFRs.
+Grb2 molecules recruit the nucleotide exchange factor SOS, leading to the activation of the Ras-MAPK signaling cascade.
+Grb2 recruits the docking protein Gab1, which is tyrosine phosphorylated by EGFR or FGFR, leading to recruitment and activation of the PI3K-Akt cell survival pathway.
+The ubiquitin ligase Cbl interacts with EGFR directly and indirectly through Grb2, promoting ubiquitination and degradation of EGFR
+Grb2, bound to Cbl, does not interact directly with FGFR but, rather, binds to tyrosine-phosphorylated FRS2, promoting ubiquitination and degradation of FRS2 and FGFR
+PMID:15567848
+
+FGF-induced tyrosine phosphorylation of FRS2 results in complex formation with the adaptor protein Grb2 bound to Cbl by means of its SH3 domains. FGF-induced ternary complex formation among FRS2, Grb2, and Cbl results in ubiquitination and degradation of FRS2 and FGF receptor (FGFR).
+PMID:11997436
+
+TGF-beta-induced ShcA phosphorylation induces ShcA association with Grb2 and Sos, thereby initiating the well-characterised pathway linking receptor tyrosine kinases with Erk MAP kinases.
+PMID:17673906
+
+FGF stimulation leads to phosphorylation of Shp2 on a tyrosine residue that forms a complex with an additional molecule of Grb2. Grb2/Sos complexes are thus recruited directly and indirectly via Shp2 upon tyrosine phosphorylation of FRS2a in response to growth factor stimulation.
+PMID:11447289
+
+Linklater et al. Targeting MET and EGFR crosstalk signaling in triple-negative
+breast cancers, 2016.
+www.impactjournals.com/oncotarget/
+
+Yi et al. Dual inhibition of EGFR and MET induces synthetic lethality in triple-negative breast cancer cells through downregulation of ribosomal protein S6, 2015.
+
+Sohn et al. cMET Activation and EGFR-Directed Therapy Resistance in Triple-Negative Breast Cancer, 2014.
+
+Mueller et al., EGFR/Met association regulates EGFR TKI resistance in breast cancer Journal of Molecular Signaling 2010, 5:8
+
+KEGG Network. https://www.genome.jp/dbget-bin/www_bget?pathway:map01521</node>
+      <node id="FRS2">
+         <data key="MY-ID">FRS2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">FGFR and not SPRY and not GRB2</data>
+         <data key="MY-SHAPE">ellipse</data>FRS2 = fibroblast growth factor receptor substrate 2
+
+VARIABLE: FRS2 phosphorylation level
+
+FGF stimulation leads to phosphorylation of Shp2 on a tyrosine residue that forms a complex with an additional molecule of Grb2. Grb2/Sos complexes are thus recruited directly and indirectly via Shp2 upon tyrosine phosphorylation of FRS2a in response to growth factor stimulation.
+PMID:11447289
+
+Spry is induced by activated ERK. It positively regulates EGFR signalling by sequestering Cbl (positive feedback in the model, from Spry to EGFR), whereas it negatively regulates FGFR signalling by sequestering Grb2 from FSR2 (negative feedback in the model, from Spry to FSR2).
+PMID:15173823
+
+FGF-induced tyrosine phosphorylation of FRS2 results in complex formation with the adaptor protein Grb2 bound to Cbl by means of its SH3 domains. FGF-induced ternary complex formation among FRS2, Grb2, and Cbl results in ubiquitination and degradation of FRS2 and FGF receptor (FGFR).
+PMID:11997436</node>
+      <node id="PI3K">
+         <data key="MY-ID">PI3K</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GAB1 or (RAS and SOS)</data>
+         <data key="MY-SHAPE">ellipse</data>PIK3CA = phosphoinositide-3-kinase, catalytic, alpha polypeptide
+
+VARIABLE: PI3K activation level
+
+Grb2 recruits the docking protein Gab1, which is tyrosine phosphorylated by FGFR, leading to
+recruitment and activation of the PI3K-Akt cell survival pathway.
+EGF stimulates a cell survival pathway mediated by phosphoinositide 3-kinase (PI3K) and the protein kinase Akt by an indirect mechanism in which tyrosine phosphorylation of the docking protein Gab1 or ErbB3 by EGFR leads to recruitment and activation of PI3K.
+PMID:15567848
+
+Recruitment and activation of PI 3-kinase by Gab1 results in a positive-feedback loop mediated by binding of the PH domain of Gab1 to the product of PI3-kinase activation, phosphatidylinositol-3,4,5-triphosphate.
+Phosphatidylinositol-3,4,5-triphosphate (PIP3), the reaction product of PI 3-kinase, is responsible for activation of phosphoinositide-dependent kinase (PDK) and the antiapoptotic protein kinase Akt.
+PMID:15199124
+
+PI3K is a well characterised effector of RAS, through GRB2/SOS pathway.
+PMID:21779497</node>
+      <node id="AP1">
+         <data key="MY-ID">AP1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">JUN and (FOS or ATF2)</data>
+         <data key="MY-SHAPE">ellipse</data>AP-1
+
+VARIABLE: AP-1 formation
+
+AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+PMID:11274345
+
+AP-1 mediated gene expression inhibits ERK phosphorylation.
+PMID:18039929</node>
+      <node id="PPP2CA">
+         <data key="MY-ID">PPP2CA</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p38</data>
+         <data key="MY-SHAPE">ellipse</data>PPP2CA = protein phosphatase 2, catalytic subunit, alpha isozyme
+
+VARIABLE: PPP2CA activation level
+
+MEK is continuously dephosphorylated by PP2A (PPP2CA), whose activity is stimulated by p38: p38 activity increases the physical association between PP2A and MEK/ERK complex.
+PMID:18039929</node>
+      <node id="MEK1_2">
+         <data key="MY-ID">MEK1_2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(RAF or MAP3K1_3) and not (PPP2CA or AP1)</data>
+         <data key="MY-SHAPE">ellipse</data>MAP2K1 = mitogen-activated protein kinase kinase 1
+MAP2K2 = mitogen-activated protein kinase kinase 2
+
+VARIABLE: MEK (any isoform) phosphorylation level
+
+Once activated, Raf family members are capable of initiating the phosphorylation cascade, whereby Raf activates MEK, and MEK in turn activates ERK.
+PMID:17496910
+
+MEK is continuously dephosphorylated by PP2A (PPP2CA), whose activity is stimulated by p38: p38 activity increases the physical association between PP2A and MEK/ERK complex.
+AP-1 mediated gene expression inhibits ERK phosphorylation.
+PMID:18039929</node>
+      <node id="DUSP1">
+         <data key="MY-ID">DUSP1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">CREB</data>
+         <data key="MY-SHAPE">ellipse</data>DUSP1 = dual specificity phosphatase 1
+
+VARIABLE: DUSP1 gene expression level
+
+DUSP1 is a CREB target gene.
+PMID:19815709
+
+DUSP1 preferentially inactivates JNK and p38.
+PMID:19436832</node>
+      <node id="MYC">
+         <data key="MY-ID">MYC</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(MSK and MAX) or (MSK and AKT)</data>
+         <data key="MY-SHAPE">ellipse</data>MYC = v-myc myelocytomatosis viral oncogene homolog (avian)
+
+VARIABLE: MYC activation level (implies gene expression)
+
+Modelling hypotheses: MSK determines MYC gene expression, so it is always needed for MYC activation; MAX activates MYC protein; AKT inhibits GSK3B, which in turn inactivates MYC protein
+
+Translocation of ERK into the nucleus activates the mitogen activated and stress-activated protein kinase 1 (MSK1), a histone H3 kinase that can relax chromatin, thus making it more transcriptionally accessible. This alteration in the chromatin state induces MYC, a gene that encodes the c-Myc protein, a transcription factor that controls the cell cycle. c-Myc signals downstream to promote expression of cyclins that complex with CDKs.
+MYC inhibits p16, whereas it activates p14.
+PMID:17158541
+
+MAX interacts with the transcription factor c-Myc (this interaction is modelled here by complex formation) enabling c-Myc to trans-activate at least a subset of its target genes.
+PMID:11274345
+
+Glycogen synthase kinase 3 (GSK3) is a target of Akt. This protein kinase is constitutively active in unstimulated cells and phosphorylates many proteins (including glycogen synthase, c-Myc, and cyclin D) to keep them in inactive states or promote their degradation. Phosphorylation of GSK3 (both alpha and beta isoforms) by Akt turns off the catalytic activity of this enzyme, resulting in the activation of pathways that are normally repressed by GSK3.
+PMID:12040186
+
+MYC contributes to E2F-induced cell cycle progression.
+PMID:11805123</node>
+      <node id="AKT">
+         <data key="MY-ID">AKT</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PDK1 and not PTEN</data>
+         <data key="MY-SHAPE">ellipse</data>AKT1 = v-akt murine thymoma viral oncogene homolog 1
+AKT2 = v-akt murine thymoma viral oncogene homolog 2
+AKT3 = v-akt murine thymoma viral oncogene homolog 3
+
+VARIABLE: AKT (any isoform) phosphorylation level
+
+Grb2 recruits the docking protein Gab1, which is tyrosine phosphorylated by FGFR, leading to
+recruitment and activation of the PI3K-Akt cell survival pathway.
+EGF stimulates a cell survival pathway mediated by phosphoinositide 3-kinase (PI3K) and the protein kinase Akt by an indirect mechanism in which tyrosine phosphorylation of the docking protein Gab1 or ErbB3 by EGFR leads to recruitment and activation of PI3K.
+PMID:15567848
+
+Signaling proteins with pleckstrin-homology (PH) domains accumulate at sites of PI3K activation by directly binding to PI(3,4,5)P3. Of particular interest are the protein serine-threonine kinases Akt and phosphoinositide-dependent kinase 1 (PDK1). Association with PI(3,4,5)P3 at the membrane brings these proteins into proximity and facilitates phosphorylation of Akt by PDK1. This phosphorylation stimulates the catalytic activity of Akt, resulting in the phosphorylation of a host of other proteins that affect cell growth, cell cycle entry, and cell survival.
+Akt phosphorylation of the apoptosis-inducing protein Bad creates a binding site for 14-3-3 proteins and prevents Bad from binding to Bcl-2 family members Bcl-2 and Bcl-XL, thus releasing them for a cell survival response.
+Glycogen synthase kinase 3 (GSK3) is a target of Akt. This protein kinase is constitutively active in unstimulated cells and phosphorylates many proteins (including glycogen synthase, c-Myc, and cyclin D) to keep them in inactive states or promote their degradation. Phosphorylation of GSK3 (both alpha and beta isoforms) by Akt turns off the catalytic activity of this enzyme, resulting in the activation of pathways that are normally repressed by GSK3.
+Phosphorylation of FOXO3 by Akt creates a binding site for the 14-3-3 family of proteins. The complex of FOXO3 and 14-3-3 is retained in the cytosol, blocking transcription of genes normally stimulated by FOXO3.
+PMID:12040186
+
+p21 is a direct substrate of AKT and that this may regulate the subcellular localisation of p21. Phosphorylation of p21 by AKT correlated with its exit from the nucleus and with increased cell cycle progression.
+PMID:11882383
+
+Phosphorylation by Akt inhibits EGF-dependent activity of B-Raf and C-Raf.
+PMID:10869359
+
+Effective recruitment of Akt by appropriate survival signals may lead to activation of Mdm2, inactivation of p53, and eventually inhibition of p53-dependent apoptosis.
+PMID:11850850
+
+p53 induces transcription of the PTEN gene and elevates cellular levels of the PTEN protein, which in turn inhibits activation of Akt.
+PMID:12217521</node>
+      <node id="PLCG">
+         <data key="MY-ID">PLCG</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">EGFR or FGFR or cMET</data>
+         <data key="MY-SHAPE">ellipse</data>PLCG1 = phospholipase C, gamma 1
+PLCG2 = phospholipase C, gamma 2 (phosphatidylinositol-specific)
+
+VARIABLE: PLCG (any isoform) phosphorylation level
+
+Binding of FGF to FGFR leads to tyrosine phosphorylation of PLCgamma.
+PMID:1656221
+
+Tyrosine phosphorylation of PLC-gamma by EGF receptor leads to its activation.
+PMID:2472219
+
+Recruitment to the membrane and tyrosine phosphorylation enhance the enzymatic activity of PLC-g, leading to the formation of two second messengers, diacylglycerol (DAG) and inositol 1,4,5-trisphosphate (IP3). IP3 releases Ca2+ from internal stores, which in turn acts in concert with DAG to translocate protein kinase C (PKC) to the cell membrane and stimulate its enzymatic activity.
+PMID:15567848
+
+RasGRP1 is a C1-domain containing protein that is activated by DAG and Ca2+, in a manner analogous to members of the PKC family.
+PMID:17496910
+
+Calcium liberated from internal stores by IP3 acts on the calcium- and DAG-sensitive RasGRP1 and causes it to translocate to the Golgi. RasGRP1 activates Golgi-associated Ras on this compartment.
+PMID:16488589
+
+KEGG Network. https://www.genome.jp/dbget-bin/www_bget?pathway:map01521</node>
+      <node id="PKC">
+         <data key="MY-ID">PKC</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PLCG</data>
+         <data key="MY-SHAPE">ellipse</data>PRKCA = protein kinase C, alpha
+PRKCB = protein kinase C, beta
+PRKCG = protein kinase C, gamma
+
+VARIABLE: PKC (any isoform) enzymatic activity
+
+Recruitment to the membrane and tyrosine phosphorylation enhance the enzymatic activity of PLC-g, leading to the formation of two second messengers, diacylglycerol (DAG) and inositol 1,4,5-trisphosphate (IP3). IP3 releases Ca2+ from internal stores, which in turn acts in concert with DAG to translocate protein kinase C (PKC) to the cell membrane and stimulate its enzymatic activity.
+PMID:15567848
+
+PKC may cause phosphorylation of EGFR, leading to a decrease in its activity.
+PMID:6321473
+
+PKCalpha can directly phosphorylate and activates Raf-1.
+PMID:8321321
+
+(Inferred from FGFR1) PKC-mediated phosphorylation can lead to internalization and degradation of FGFR1.
+PMID:9694798, PMID:8622701, PMID:14699054</node>
+      <node id="GADD45">
+         <data key="MY-ID">GADD45</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">SMAD or p53</data>
+         <data key="MY-SHAPE">ellipse</data>GADD45A = growth arrest and DNA-damage-inducible, alpha
+GADD45B = growth arrest and DNA-damage-inducible, beta
+GADD45G = growth arrest and DNA-damage-inducible, gamma
+
+VARIABLE: GADD45 gene (any isoform) expression level
+
+The GADD45 gene is inducible by various environmental stresses.
+Smad-dependent gene expression can provoke p38 activation in response to TGFbeta. GADD45beta was identified as the TGFbeta-inducible gene whose expression activates the p38 pathway.
+Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+PMID:21614932
+
+Expression of GADD45 is the culmination of a signaling pathway that requires prior expression of the tumor suppressor protein p53 which trans-activates the GADD45 gene.
+PMID:11274345</node>
+      <node id="ELK1">
+         <data key="MY-ID">ELK1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ERK or JNK or p38</data>
+         <data key="MY-SHAPE">ellipse</data>ELK1 = ELK1, member of ETS oncogene family
+
+VARIABLE: ELK1 phosphorylation level
+
+The rapid and efficient phosphorylation of Elk1 by ERKs is enabled by a direct interaction between the two proteins.
+PMID:16393692
+
+ELK1 is a nuclear p38 target.
+PMID:20506250
+
+ELK1 is a nuclear JNK target.
+ELK1 induces c-fos expression.
+PMID:11274345</node>
+      <node id="FOS">
+         <data key="MY-ID">FOS</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ERK and RSK and (ELK1 or CREB)</data>
+         <data key="MY-SHAPE">ellipse</data>FOS = FBJ murine osteosarcoma viral oncogene homolog
+
+VARIABLE: FOS phosphorylation level
+
+Further observations: ELK1 or CREB are supposed to induce FOS gene expression, ERK or RSK are supposed to activate it
+
+AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+ELK1 induces c-fos expression.
+PMID:11274345
+
+FOS is a CREB target gene.
+PMID:19815709
+
+Phosphorylation by both ERKs and their downstream RSKs can stabilise the c-Fos protein for several hours. The combination of these phosphorylations allows c-Fos sustained activity.
+PMID:16393692</node>
+      <node id="ATF2">
+         <data key="MY-ID">ATF2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">JNK or p38</data>
+         <data key="MY-SHAPE">ellipse</data>ATF2 = activating transcription factor 2
+
+VARIABLE: ATF2 phosphorylation level
+
+AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+JNK and p38 can both phosphorylate ATF2 at Thr69 and Ser71.
+PMID:11274345</node>
+      <node id="JUN">
+         <data key="MY-ID">JUN</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">JNK</data>
+         <data key="MY-SHAPE">ellipse</data>JUN = jun proto-oncogene
+
+VARIABLE: JUN phosphorylation level
+
+AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+JNK can phosphorylate the c-Jun trans-activating domain at Ser63 and Ser73. JNKs, but not the ERKs or p38s, binds c-Jun quite strongly.
+PMID:11274345</node>
+      <node id="MSK">
+         <data key="MY-ID">MSK</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ERK or p38</data>
+         <data key="MY-SHAPE">ellipse</data>RPS6KA4 = ribosomal protein S6 kinase, 90kDa, polypeptide 4
+RPS6KA5 = ribosomal protein S6 kinase, 90kDa, polypeptide 5
+
+VARIABLE: MSK (any isoform) phosphorylation level
+
+MSK1 and MSK2 are potently activated (by phosphorylation) in vivo by ERK1/2 and p38 but not JNK.
+MSK1 mediates the mitogen-stimulated phoshphorylation of CREB.
+PMID:15187187
+
+Translocation of ERK into the nucleus activates the mitogen activated and stress-activated protein kinase 1 (MSK1), a histone H3 kinase that can relax chromatin, thus making it more transcriptionally accessible. This alteration in the chromatin state induces MYC, a gene that encodes the c-Myc protein, a transcription factor that controls the cell cycle.
+PMID:17158541</node>
+      <node id="CREB">
+         <data key="MY-ID">CREB</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MSK</data>
+         <data key="MY-SHAPE">ellipse</data>CREB1 = cAMP responsive element binding protein 1
+
+VARIABLE: CREB phosphorylation level
+
+MSK1 mediates the mitogen-stimulated phoshphorylation of CREB.
+PMID:15187187
+
+DUSP1, FOS and BCL2 are CREB target genes.
+PMID:19815709</node>
+      <node id="RSK">
+         <data key="MY-ID">RSK</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ERK</data>
+         <data key="MY-SHAPE">ellipse</data>RPS6KA1 = ribosomal protein S6 kinase, 90kDa, polypeptide 1
+RPS6KA2 = ribosomal protein S6 kinase, 90kDa, polypeptide 2
+RPS6KA3 = ribosomal protein S6 kinase, 90kDa, polypeptide 3
+RPS6KA6 = ribosomal protein S6 kinase, 90kDa, polypeptide 6
+
+VARIABLE: RSK (any isoform) phosphorylation level
+
+RSK2 is a well known ERK substrate in the cytoplasm and has been shown to undergo autophosphorylation after ERK phosphorylation.
+PMID:15239952
+
+Phosphorylation by both ERKs and their downstream RSKs can stabilise the c-Fos protein for several hours. The combination of these phosphorylations allows c-Fos sustained activity.
+PMID:16393692
+
+p90 Rsk-2 is involved in SOS phosphorylation and may be important in down-regulation of the growth factor response.
+PMID:9242373</node>
+      <node id="SMAD">
+         <data key="MY-ID">SMAD</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">TGFBR</data>
+         <data key="MY-SHAPE">ellipse</data>SMAD2 = SMAD family member 2
+SMAD3 = SMAD family member 3
+SMAD4 = SMAD family member 4
+
+VARIABLE: SMAD gene (any isoform) expression level
+
+Smad-dependent gene expression can provoke p38 activation in response to TGFbeta. GADD45beta was identified as the TGFbeta-inducible gene whose expression activates the p38 pathway.
+PMID:21614932</node>
+      <node id="MTK1">
+         <data key="MY-ID">MTK1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GADD45</data>
+         <data key="MY-SHAPE">ellipse</data>MAP3K4 = mitogen-activated protein kinase kinase kinase 4
+
+VARIABLE: MTK1 phosphorylation level
+
+The delayed activation of p38 by TGFbeta is mediated mainly by Smad-dependent GADD45beta expression and by its subsequent activation of MTK1.
+Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+PMID:21614932</node>
+      <node id="SPRY">
+         <data key="MY-ID">SPRY</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ERK</data>
+         <data key="MY-SHAPE">ellipse</data>SPRY2 = sprouty homolog 2 (Drosophila)
+
+VARIABLE: SPRY2 phosphorylation level
+
+Spry is induced by activated ERK, through phosphorylation on Tyr55. It positively regulates EGFR signalling by sequestering Cbl, whereas it negatively regulates FGFR signalling by sequestering Grb2 from FSR2.
+PMID:15173823</node>
+      <node id="RAF">
+         <data key="MY-ID">RAF</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(RAS or PKC) and not (ERK or AKT)</data>
+         <data key="MY-SHAPE">ellipse</data>RAF1 = v-raf-1 murine leukemia viral oncogene homolog 1
+BRAF = v-raf murine sarcoma viral oncogene homolog B1
+ARAF = v-raf murine sarcoma 3611 viral oncogene homolog
+
+VARIABLE: RAF (any isoform) phosphorylation
+
+Once activated, Raf family members are capable of initiating the phosphorylation cascade, whereby Raf activates MEK, and MEK in turn activates ERK.
+PMID:17496910
+
+PKCalpha directly phosphorylates and activates Raf-1.
+PMID:8321321
+
+Activated Ras recruits cytoplasmic Raf (MAPKKK) for activation. There are three mammalian serine/threonine Raf kinases: A-Raf, B-Raf, and Raf-1 (also known as C-Raf). All three Raf proteins share the same downstream MAPKK substrate mitogen activated protein kinase kinases 1,2 (MEK1,2).
+PMID:18039929
+
+Phosphorylation by Akt inhibits EGF-dependent activity of B-Raf and C-Raf.
+PMID:10869359
+
+B-Raf phosphorylated by activated ERK and find that feedback phosphorylation of B-Raf inhibits binding to activated Ras.
+PMID:19933846</node>
+      <node id="GAB1">
+         <data key="MY-ID">GAB1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GRB2 or PI3K</data>
+         <data key="MY-SHAPE">ellipse</data>GAB1 = GRB2-associated binding protein 1
+
+VARIABLE: GAB1 phosphorylation level
+
+Grb2 recruits the docking protein Gab1, which is tyrosine phosphorylated by EGFR or FGFR, leading to recruitment and activation of the PI3K-Akt cell survival pathway.
+PMID:15567848
+
+Recruitment of PI 3-kinase by Gab1 results in a positive-feedback loop mediated by binding of the PH domain of Gab1 to the product of PI3-kinase activation, phosphatidylinositol-3,4,5-triphosphate.
+PMID:15199124</node>
+      <node id="PDK1">
+         <data key="MY-ID">PDK1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PI3K or HIF1 or MYC</data>
+         <data key="MY-SHAPE">ellipse</data>PDK1 = pyruvate dehydrogenase kinase, isozyme 1
+
+VARIABLE: PDK1 activation level
+
+PDK1 is a PI3K target, leading to activation of p70 and subsequent cell growth.
+Signaling proteins with pleckstrin-homology (PH) domains accumulate at sites of PI3K activation by directly binding to PI(3,4,5)P3. Of particular interest are the protein serine-threonine kinases Akt and phosphoinositide-dependent kinase 1 (PDK1). Association with PI(3,4,5)P3 at the membrane brings these proteins into proximity and facilitates phosphorylation of Akt by PDK1. This phosphorylation stimulates the catalytic activity of Akt, resulting in the phosphorylation of a host of other proteins that affect cell growth, cell cycle entry, and cell survival.
+PMID:12040186
+
+HIF1-PDK1:
+
+MYC and HIF1 can activate PDK1, PDK1 inhibits PDH to stop aerobic glycolysis (Dang, et al. 2008; Hsieh, et al. 2015). 
+
+-----------------------------------------------------------------------------------------------------------------------------
+Dang CV, Kim JW, Gao P, Yustein J. The interplay between MYC and HIF in cancer. Nat Rev Cancer. 2008;8(1):51-6. Epub 2007/11/30. doi: 10.1038/nrc2274. PubMed PMID: 18046334.
+Hsieh AL, Walton ZE, Altman BJ, Stine ZE, Dang CV. MYC and metabolism on the path to cancer. Semin Cell Dev Biol. 2015;43:11-21. Epub 2015/08/19. doi: 10.1016/j.semcdb.2015.08.003. PubMed PMID: 26277543; PubMed Central PMCID: PMCPMC4818970.
+</node>
+      <node id="p70">
+         <data key="MY-ID">p70</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PDK1 and ERK</data>
+         <data key="MY-SHAPE">ellipse</data>RPS6KB1 = ribosomal protein S6 kinase, 70kDa, polypeptide 1
+RPS6KB2 = ribosomal protein S6 kinase, 70kDa, polypeptide 2
+
+VARIABLE: p70 (any isoform) phosphorylation level
+
+PDK1 is a PI3K target, leading to activation of p70 (through phosphorylation) and subsequent cell growth.
+PMID:12040186
+
+p70 activation requires both ERK cascade and PI3K/AKT cascade, at least in some cell types.
+PMID:11940578, PMID:10601235, PMID:11431469</node>
+      <node id="p14">
+         <data key="MY-ID">p14</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MYC</data>
+         <data key="MY-SHAPE">ellipse</data>CDKN2A = cyclin-dependent kinase inhibitor 2A (melanoma, p16, inhibits CDK4)
+
+VARIABLE: p14 activation level
+
+MYC inhibits p16, whereas it activates p14.
+The MDM2 gene is transcriptionally inhibited by p14.
+PMID:17158541</node>
+      <node id="FOXO3">
+         <data key="MY-ID">FOXO3</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">JNK and not AKT</data>
+         <data key="MY-SHAPE">ellipse</data>FOXO3 = forkhead box O3
+
+VARIABLE: FOXO3 phosphorylation level
+
+JNK phosphorylates MST1 at serine 82, which leads to the enhancement of MST1 activation. The activation of MST1 phosphorylates FOXO3 at serine 207 and promotes cell death.
+PMID:20028971
+
+FOXO3a promotes apoptosis through activation of PUMA.
+PMID:20978166
+
+Phosphorylation of FOXO3 by Akt creates a binding site for the 14-3-3 family of proteins. The complex of FOXO3 and 14-3-3 is retained in the cytosol, blocking transcription of genes normally stimulated by FOXO3.
+PMID:12040186</node>
+      <node id="RAS">
+         <data key="MY-ID">RAS</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">SOS or PLCG</data>
+         <data key="MY-SHAPE">ellipse</data>HRAS = v-Ha-ras Harvey rat sarcoma viral oncogene homolog
+KRAS = v-Ki-ras2 Kirsten rat sarcoma viral oncogene homolog
+NRAS = neuroblastoma RAS viral (v-ras) oncogene homolog
+
+VARIABLE: RAS (any isoform) phosphorylation level
+
+Grb2 molecules recruit the nucleotide exchange factor SOS, leading to the activation of the Ras-MAPK signaling cascade.
+Most of the signals activating the ERK pathway are initiated through receptor-mediated activation of the small G-protein, Ras. Ras is a membrane-bound protein activated through the exchange of bound GDP to GTP. The process of activating Ras thereby requires the recruitment of proteins responsible for initiating GDP/GTP exchange to the membrane, such as SOS (son of sevenless).
+Activated Ras recruits cytoplasmic Raf (MAPKKK) for activation (through phosphorylation). There are three mammalian serine/threonine Raf kinases: A-Raf, B-Raf, and Raf-1 (also known as C-Raf). All three Raf proteins share the same downstream MAPKK substrate mitogen activated protein kinase kinases 1,2 (MEK1,2).
+PMID:18039929
+
+The GTP-dependent coupling of MEKK1 to Ras indicates that MEKK1 may be an effector for those agonists that recruit JNK through Ras-dependent mechanisms. MEKK1 selectively activates the endogenous JNK pathway. MEKK1 can activate MEK4 and MEK7 in vivo.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345
+
+PI3K is a well characterised effector of RAS, through GRB2/SOS pathway.
+PMID:21779497
+
+Calcium liberated from internal stores by IP3 acts on the calcium- and DAG-sensitive RasGRP1 and causes it to translocate to the Golgi. RasGRP1 activates Golgi-associated Ras on this compartment.
+PMID:16488589</node>
+      <node id="SOS">
+         <data key="MY-ID">SOS</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GRB2 and not RSK</data>
+         <data key="MY-SHAPE">ellipse</data>SOS1 = son of sevenless homolog 1 (Drosophila)
+SOS2 = son of sevenless homolog 2 (Drosophila)
+
+VARIABLE: SOS (any isoform) recruitment by GRB2
+
+Sos is recruited from the cytosol to the plasma membrane as a result of its constitutive interaction with Grb2. It is in an autoinhibited state.
+PMID:17496910
+
+The signaling pathways activated by FGFRs substantially overlap with those activated by EGFRs.
+Grb2 molecules bound to FRS2 recruit the nucleotide exchange factor SOS, leading to the activation of the Ras-MAPK signaling cascade.
+The process of activating Ras requires the recruitment of proteins responsible for initiating GDP/GTP exchange to the membrane, such as SOS (son of sevenless).
+PMID:18039929
+
+PI3K is a well characterised effector of RAS, through GRB2/SOS pathway.
+PMID:21779497
+
+p90 Rsk-2 is involved in SOS phosphorylation and may be important in down-regulation of the growth factor response.
+PMID:9242373
+</node>
+      <node id="MDM2">
+         <data key="MY-ID">MDM2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(p53 or AKT) and not p14</data>
+         <data key="MY-SHAPE">ellipse</data>MDM2 = Mdm2, p53 E3 ubiquitin protein ligase homolog (mouse)
+
+VARIABLE: MDM2 gene expression level
+
+The Mdm2 protein is involved in an autoregulatory feedback loop with p53, thus controlling its activity. Increased p53 levels transactivate the MDM2 promoter causing its upregulation. The translated protein then binds to p53 and transports it to the proteasome for ubiquitin-mediated degradation. The resultant lowered p53 levels then reduce the levels of Mdm2. The MDM2 gene is, in turn, transcriptionally inhibited by p14, providing another fine level of control for p53 activity.
+PMID:17158541
+
+Effective recruitment of Akt by appropriate survival signals may lead to activation of Mdm2, inactivation of p53, and eventually inhibition of p53-dependent apoptosis.
+PMID:11850850
+</node>
+      <node id="BCL2">
+         <data key="MY-ID">BCL2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">CREB and AKT</data>
+         <data key="MY-SHAPE">ellipse</data>BCL2 = B-cell CLL/lymphoma 2
+
+VARIABLE: BCL2 activation level (implies gene expression)
+
+Modelling hypotheses: CREB is needed for BCL2 gene expression, AKT is needed for BCL2 activation.
+
+DUSP1, FOS, BCL2 are CREB target genes.
+PMID:19815709
+
+Akt phosphorylation of the apoptosis-inducing protein Bad creates a binding site for 14-3-3 proteins and prevents Bad from binding to Bcl-2 family members Bcl-2 and Bcl-XL, thus releasing them for a cell survival response.
+PMID:12040186
+</node>
+      <node id="TAK1">
+         <data key="MY-ID">TAK1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">TGFBR</data>
+         <data key="MY-SHAPE">ellipse</data>MAP3K7 = mitogen-activated protein kinase kinase kinase 7
+
+VARIABLE: TAK1 phosphorylation level
+
+Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</node>
+      <node id="MAP3K1_3">
+         <data key="MY-ID">MAP3K1_3</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">RAS</data>
+         <data key="MY-SHAPE">ellipse</data>MAP3K1 = mitogen-activated protein kinase kinase kinase 1
+MAP3K2 = mitogen-activated protein kinase kinase kinase 2
+MAP3K3 = mitogen-activated protein kinase kinase kinase 3
+
+VARIABLE: MAP3K1/2/3 (any isoform) phosphorylation level
+
+The GTP-dependent coupling of MEKK1 to Ras indicates that MEKK1 may be an effector for those agonists that recruit JNK through Ras-dependent mechanisms. MEKK1 selectively activates the endogenous JNK pathway. MEKK1 can activate MEK4 and MEK7 in vivo.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345</node>
+      <node id="PTEN">
+         <data key="MY-ID">PTEN</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p53</data>
+         <data key="MY-SHAPE">ellipse</data>PTEN = phosphatase and tensin homolog
+
+VARIABLE: PTEN protein expression level
+
+p53 induces transcription of the PTEN gene and elevates cellular levels of the PTEN protein, which in turn inhibits activation of Akt.
+PMID:12217521</node>
+      <node id="HIF1">
+         <data key="MY-ID">HIF1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">p70 and ERK and not Oxygen_supply</data>
+         <data key="MY-SHAPE">ellipse</data>HIF1A = Hypoxia-Inducible Factor 1-Alpha</node>
+      <node id="LOX">
+         <data key="MY-ID">LOX</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">HIF1</data>
+         <data key="MY-SHAPE">ellipse</data>LOX = Lysyl oxidase</node>
+      <node id="VEGF">
+         <data key="MY-ID">VEGF</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">HIF1</data>
+         <data key="MY-SHAPE">ellipse</data>VEGFA = Vascular Endothelial Growth Factor-A</node>
+      <node id="Oxygen_supply">
+         <data key="MY-ID">Oxygen_supply</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>
+      </node>
+      <node id="Necrosis">
+         <data key="MY-ID">Necrosis</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">not Oxygen_supply and not Cell_Glucose</data>
+         <data key="MY-SHAPE">rect</data>
+      </node>
+      <node id="FGF">
+         <data key="MY-ID">FGF</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>FGF = Fibroblast Growth Factor</node>
+      <node id="TGFA">
+         <data key="MY-ID">TGFA</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">HIF1</data>
+         <data key="MY-SHAPE">ellipse</data>TGFA = Tumour Growth Factor Alpha</node>
+      <node id="EGFRI">
+         <data key="MY-ID">EGFRI</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>EGFRI = EGFR Inhibitor</node>
+      <node id="EGFRD">
+         <data key="MY-ID">EGFRD</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>EGFRD = EGFR inhibiting drug</node>
+      <node id="FGFRI">
+         <data key="MY-ID">FGFRI</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>FGFRI = FGFR inhibitor</node>
+      <node id="FGFRD">
+         <data key="MY-ID">FGFRD</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>FGFRD = FGFR inhibiting drug</node>
+      <node id="Glucose">
+         <data key="MY-ID">Glucose</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Glucose = Extracellular glucose</node>
+      <node id="Glucose_supply">
+         <data key="MY-ID">Glucose_supply</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Glucose_supply = Glucose supply from the microenvironment</node>
+      <node id="GLUT1">
+         <data key="MY-ID">GLUT1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(HIF1 or not p53 or MYC) and not GLUT1I</data>
+         <data key="MY-SHAPE">ellipse</data>GLUT1 = Glucose Transporter 1
+
+
+HIF1-GLUT1:
+
+GLUT1 can be upregulated by hypoxia in breast cancers (Gatenby, et al. 2007).
+GLUT1 is upregulated by HIF1 (Airley, et al. 2001; Hamann, et al. 2018; Lee, et al. 2020).
+GLUT1 expression is upregulated by HIF1, but GLUT1 translocation to membrane is not governed by HIF1, but GLUT1 translocation will be increased by decreased ATP level (Mamun, et al. 2020).
+
+p53-GLUT1:
+
+p53 loss of function could promote GLUT1 translocation to membrane, but p53- will not effect on GLUT1 expression level (Liu, et al. 2019; Zhang, et al. 2013). 
+p53 can inhibit the expression of GLUT1/GLUT4 (Vousden 2010; Vousden and Ryan 2009)
+MYC and HIF1 can promotes expression of GLUT1. AKT can induce translocation of GLUT1/GLUT4. p53 reduces glucose uptake by repressing expression of GLUT1/GLUT4 (Liang, et al. 2013).
+
+MYC-GLUT1:
+MYC can activate GLUT1 (Dang, et al. 2008; Hsieh, et al. 2015). 
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Gatenby RA, Smallbone K, Maini PK, Rose F, Averill J, Nagle RB, et al. Cellular adaptations to hypoxia and acidosis during somatic evolution of breast cancer. Br J Cancer. 2007;97(5):646-53. Epub 2007/08/10. doi: 10.1038/sj.bjc.6603922. PubMed PMID: 17687336; PubMed Central PMCID: PMCPMC2360372.
+
+Airley R, Loncaster J, Davidson S, Bromley M, Roberts S, Patterson A, et al. Glucose transporter glut-1 expression correlates with tumor hypoxia and predicts metastasis-free survival in advanced carcinoma of the cervix. Clin Cancer Res. 2001;7(4):928-34. Epub 2001/04/20. PubMed PMID: 11309343.
+
+Lee P, Chandel NS, Simon MC. Cellular adaptation to hypoxia through hypoxia inducible factors and beyond. Nat Rev Mol Cell Biol. 2020;21(5):268-83. Epub 2020/03/08. doi: 10.1038/s41580-020-0227-y. PubMed PMID: 32144406; PubMed Central PMCID: PMCPMC7222024.
+
+Mamun AA, Hayashi H, Yamamura A, Nayeem MJ, Sato M. Hypoxia induces the translocation of glucose transporter 1 to the plasma membrane in vascular endothelial cells. J Physiol Sci. 2020;70(1):44. Epub 2020/09/24. doi: 10.1186/s12576-020-00773-y. PubMed PMID: 32962633.
+
+Hamann I, Krys D, Glubrecht D, Bouvet V, Marshall A, Vos L, et al. Expression and function of hexose transporters GLUT1, GLUT2, and GLUT5 in breast cancer-effects of hypoxia. FASEB J. 2018;32(9):5104-18. Epub 2018/06/20. doi: 10.1096/fj.201800360R. PubMed PMID: 29913554.
+
+Zhang C, Liu J, Liang Y, Wu R, Zhao Y, Hong X, et al. Tumour-associated mutant p53 drives the Warburg effect. Nat Commun. 2013;4:2935. Epub 2013/12/18. doi: 10.1038/ncomms3935. PubMed PMID: 24343302; PubMed Central PMCID: PMCPMC3969270.
+
+Liu J, Zhang C, Hu W, Feng Z. Tumor suppressor p53 and metabolism. J Mol Cell Biol. 2019;11(4):284-92. Epub 2018/12/01. doi: 10.1093/jmcb/mjy070. PubMed PMID: 30500901; PubMed Central PMCID: PMCPMC6487777.
+
+Vousden KH, Ryan KM. p53 and metabolism. Nat Rev Cancer. 2009;9(10):691-700. Epub 2009/09/18. doi: 10.1038/nrc2715. PubMed PMID: 19759539.
+
+Vousden KH. Alternative fuel--another role for p53 in the regulation of metabolism. Proc Natl Acad Sci U S A. 2010;107(16):7117-8. Epub 2010/04/16. doi: 10.1073/pnas.1002656107. PubMed PMID: 20393124; PubMed Central PMCID: PMCPMC2867698.
+
+Liang Y, Liu J, Feng Z. The regulation of cellular metabolism by tumor suppressor p53. Cell Biosci. 2013;3(1):9. Epub 2013/02/08. doi: 10.1186/2045-3701-3-9. PubMed PMID: 23388203; PubMed Central PMCID: PMCPMC3573943.
+
+Dang CV, Kim JW, Gao P, Yustein J. The interplay between MYC and HIF in cancer. Nat Rev Cancer. 2008;8(1):51-6. Epub 2007/11/30. doi: 10.1038/nrc2274. PubMed PMID: 18046334.
+
+Hsieh AL, Walton ZE, Altman BJ, Stine ZE, Dang CV. MYC and metabolism on the path to cancer. Semin Cell Dev Biol. 2015;43:11-21. Epub 2015/08/19. doi: 10.1016/j.semcdb.2015.08.003. PubMed PMID: 26277543; PubMed Central PMCID: PMCPMC4818970.
+
+
+
+
+
+</node>
+      <node id="Growth_Inhibitor">
+         <data key="MY-ID">Growth_Inhibitor</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce Growth_Inhibitor activation (GI)</node>
+      <node id="GI">
+         <data key="MY-ID">GI</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>GI = Growth Inhibitor</node>
+      <node id="EGFRI_affinity">
+         <data key="MY-ID">EGFRI_affinity</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">EGFRI</data>
+         <data key="MY-SHAPE">ellipse</data>
+      </node>
+      <node id="Cell_Glucose">
+         <data key="MY-ID">Cell_Glucose</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GLUT1 and Glucose_supply</data>
+         <data key="MY-SHAPE">ellipse</data>Cell_Glucose = Glucose inside the cell</node>
+      <node id="G6P">
+         <data key="MY-ID">G6P</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">Cell_Glucose</data>
+         <data key="MY-SHAPE">ellipse</data>G6P = Glucose 6-Phosphate</node>
+      <node id="F6P">
+         <data key="MY-ID">F6P</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">G6P</data>
+         <data key="MY-SHAPE">ellipse</data>F6P = Fructose 6-Phosphate</node>
+      <node id="F16BP">
+         <data key="MY-ID">F16BP</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">F6P</data>
+         <data key="MY-SHAPE">ellipse</data>F16BP = Fructose 1,6-Bisphosphate</node>
+      <node id="GA3P">
+         <data key="MY-ID">GA3P</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">F16BP</data>
+         <data key="MY-SHAPE">ellipse</data>GA3P = Glyceraldehyde 3-phosphate</node>
+      <node id="BPG">
+         <data key="MY-ID">BPG</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">GA3P</data>
+         <data key="MY-SHAPE">ellipse</data>BPG = 1,3-Bisphosphoglycerate</node>
+      <node id="PG3">
+         <data key="MY-ID">PG3</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">BPG</data>
+         <data key="MY-SHAPE">ellipse</data>PG3 = 3-Phosphoglycerate</node>
+      <node id="PG2">
+         <data key="MY-ID">PG2</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PG3</data>
+         <data key="MY-SHAPE">ellipse</data>PG2 = 2-Phosphoglycerate</node>
+      <node id="PEP">
+         <data key="MY-ID">PEP</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PG2</data>
+         <data key="MY-SHAPE">ellipse</data>PEP = Phosphoenolpyruvate</node>
+      <node id="Pyruvate">
+         <data key="MY-ID">Pyruvate</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PEP or (LDHB and Cell_Lactate)</data>
+         <data key="MY-SHAPE">ellipse</data>Pyruvate -&gt; Pyruvate is the end product of glycolysis.</node>
+      <node id="Cell_Lactate">
+         <data key="MY-ID">Cell_Lactate</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">(Pyruvate and LDHA) or (Pyruvate and not p53) or MCT1</data>
+         <data key="MY-SHAPE">ellipse</data>Cell_Lactate = Lactate inside the cell
+
+Lactate will be produced by aerobic glycolysis. 
+
+
+p53 mutation drives Warburg effect in which cancer cells predominantly use aerobic glycolysis (Liang, et al. 2013; Zhang, et al. 2013).   
+
+Hypoxic cells convert pyruvate to lactate (Denko 2008).
+
+------------------------------------------------------------------------------------------------------------------------------
+
+Liang Y, Liu J, Feng Z. The regulation of cellular metabolism by tumor suppressor p53. Cell Biosci. 2013;3(1):9. Epub 2013/02/08. doi: 10.1186/2045-3701-3-9. PubMed PMID: 23388203; PubMed Central PMCID: PMCPMC3573943.
+
+Zhang C, Liu J, Liang Y, Wu R, Zhao Y, Hong X, et al. Tumour-associated mutant p53 drives the Warburg effect. Nat Commun. 2013;4:2935. Epub 2013/12/18. doi: 10.1038/ncomms3935. PubMed PMID: 24343302; PubMed Central PMCID: PMCPMC3969270.
+
+Denko NC. Hypoxia, HIF1 and glucose metabolism in the solid tumour. Nat Rev Cancer. 2008;8(9):705-13. Epub 2009/01/15. doi: 10.1038/nrc2468. PubMed PMID: 19143055.</node>
+      <node id="AcetylCoA">
+         <data key="MY-ID">AcetylCoA</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">Pyruvate and PDH</data>
+         <data key="MY-SHAPE">ellipse</data>AcetylCoA -&gt; Normoxic cells can use this pathway to produe mitochondrial ATP.</node>
+      <node id="TCA">
+         <data key="MY-ID">TCA</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">AcetylCoA</data>
+         <data key="MY-SHAPE">ellipse</data>TCA = TCA cycle (tricarboxylic acid cycle) or Krebs cycle,</node>
+      <node id="ETC">
+         <data key="MY-ID">ETC</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">TCA and Oxygen_supply</data>
+         <data key="MY-SHAPE">ellipse</data>ETC = Electron Transport Chain</node>
+      <node id="mitoATP">
+         <data key="MY-ID">mitoATP</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">ETC</data>
+         <data key="MY-SHAPE">ellipse</data>mitoATP = mitochondrial ATP 
+
+ETC can produce about 30-36 ATP.
+
+Glycolysis alone can produce 2 ATP. </node>
+      <node id="PDH">
+         <data key="MY-ID">PDH</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">not PDK1 or p53 or LDHB</data>
+         <data key="MY-SHAPE">ellipse</data>PDH = Pyruvate dehydrogenase
+
+
+p53 activates PDH and then oxidative phosphorylation under normoxia (Liang, et al. 2013).
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+Liang Y, Liu J, Feng Z. The regulation of cellular metabolism by tumor suppressor p53. Cell Biosci. 2013;3(1):9. Epub 2013/02/08. doi: 10.1186/2045-3701-3-9. PubMed PMID: 23388203; PubMed Central PMCID: PMCPMC3573943.
+
+LDHB knockout attenuates OXPHOS activity through PDH (Hong et al. 2019).
+
+Hong SM, Lee YK, Park I, Kwon SM, Min S, Yoon G. Lactic acidosis caused by repressed lactate dehydrogenase subunit B expression down-regulates mitochondrial oxidative phosphorylation via the pyruvate dehydrogenase (PDH)-PDH kinase axis. J Biol Chem. 2019;294(19):7810-20. Epub 2019/03/30. doi: 10.1074/jbc.RA118.006095. PubMed PMID: 30923124; PubMed Central PMCID: PMCPMC6514637.
+</node>
+      <node id="LDHA">
+         <data key="MY-ID">LDHA</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">HIF1 and MYC</data>
+         <data key="MY-SHAPE">ellipse</data>LDHA = Lactate dehydrogenase A (LDHA)
+
+
+MYC and HIF1 can activate LDHA which facilitates Lactate production (Dang, et al. 2008; Hsieh, et al. 2015; Ooi and Gomperts 2015).
+
+------------------------------------------------------------------------------------------------------------------------------
+Dang CV, Kim JW, Gao P, Yustein J. The interplay between MYC and HIF in cancer. Nat Rev Cancer. 2008;8(1):51-6. Epub 2007/11/30. doi: 10.1038/nrc2274. PubMed PMID: 18046334.
+
+Hsieh AL, Walton ZE, Altman BJ, Stine ZE, Dang CV. MYC and metabolism on the path to cancer. Semin Cell Dev Biol. 2015;43:11-21. Epub 2015/08/19. doi: 10.1016/j.semcdb.2015.08.003. PubMed PMID: 26277543; PubMed Central PMCID: PMCPMC4818970.
+
+Ooi AT, Gomperts BN. Molecular Pathways: Targeting Cellular Energy Metabolism in Cancer via Inhibition of SLC2A1 and LDHA. Clin Cancer Res. 2015;21(11):2440-4. Epub 2015/04/04. doi: 10.1158/1078-0432.CCR-14-1209. PubMed PMID: 25838393; PubMed Central PMCID: PMCPMC4452440.
+</node>
+      <node id="cMET">
+         <data key="MY-ID">cMET</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">cMET_stimulus and not (PKC or cMETI)</data>
+         <data key="MY-SHAPE">ellipse</data>cMET = Mesenchymal Epithelial Transition Factor (MET) or Hepatocyte Growth Factor Receptor (HGFR)
+
+Negative feedback from PKC (Organ et al. 2011, Hass et al. 2017) and EGFR-MET cross talks (Linklater et al. 2016). 
+
+Organ SL, Tsao MS. An overview of the c-MET signaling pathway. Ther Adv Med Oncol. 2011;3(1 Suppl):S7-S19. Epub 2011/12/01. doi: 10.1177/1758834011422556. PubMed PMID: 22128289; PubMed Central PMCID: PMCPMC3225017.
+
+Hass R, Jennek S, Yang Y, Friedrich K. c-Met expression and activity in urogenital cancers - novel aspects of signal transduction and medical implications. Cell Commun Signal. 2017;15(1):10. Epub 2017/02/19. doi: 10.1186/s12964-017-0165-2. PubMed PMID: 28212658; PubMed Central PMCID: PMCPMC5316205.
+
+Linklater ES, Tovar EA, Essenburg CJ, Turner L, Madaj Z, Winn ME, et al. Targeting MET and EGFR crosstalk signaling in triple-negative breast cancers. Oncotarget. 2016;7(43):69903-15. Epub 2016/09/23. doi: 10.18632/oncotarget.12065. PubMed PMID: 27655711; PubMed Central PMCID: PMCPMC5342523.
+</node>
+      <node id="cMET_stimulus">
+         <data key="MY-ID">cMET_stimulus</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce cMET activation (HGF)</node>
+      <node id="cMETI">
+         <data key="MY-ID">cMETI</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>cMETI = cMET inhibitor</node>
+      <node id="HGF">
+         <data key="MY-ID">HGF</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>HGF = Hepatocyte growth factor </node>
+      <node id="cMETD">
+         <data key="MY-ID">cMETD</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>cMETD = cMET inhibiting drug</node>
+      <node id="glycoATP">
+         <data key="MY-ID">glycoATP</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">PEP and not LDHB</data>
+         <data key="MY-SHAPE">ellipse</data>glycoATP = glycolytic ATP</node>
+      <node id="ATP_Production_Rate">
+         <data key="MY-ID">ATP_Production_Rate</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">mitoATP or glycoATP</data>
+         <data key="MY-SHAPE">ellipse</data>ATP can be produced through both mitochondrial respiration and glycolysis</node>
+      <node id="MCT4">
+         <data key="MY-ID">MCT4</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">Cell_Lactate and not MCT1 and not MCT4I</data>
+         <data key="MY-SHAPE">ellipse</data>MCT4 = Monocarboxylate Transporter 4
+MCT4 exports lactic acids.
+</node>
+      <node id="MCT1">
+         <data key="MY-ID">MCT1</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">Oxygen_supply and MCT1_stimulus and not MCT1I</data>
+         <data key="MY-SHAPE">ellipse</data>MCT1 = Monocarboxylate Transporter 1
+MCT1 imports lactic acids, oxygen is needed for lactate metabolism. 
+It is assumed that cell imports lactate only if it does not export lacate.</node>
+      <node id="LDHB">
+         <data key="MY-ID">LDHB</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MCT1</data>
+         <data key="MY-SHAPE">ellipse</data>LDHB = Lactate dehydrogenase B (LDHB)
+
+LDHB facilitates lactate pyruvate conversion (Semenza 2008).
+
+Semenza GL. Tumor metabolism: cancer cells give and take lactate. J Clin Invest. 2008;118(12):3835-7. Epub 2008/11/27. doi: 10.1172/JCI37373. PubMed PMID: 19033652; PubMed Central PMCID: PMCPMC2582934.</node>
+      <node id="Lactate">
+         <data key="MY-ID">Lactate</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MCT4</data>
+         <data key="MY-SHAPE">ellipse</data>Lactate -&gt; Extracellular lactate
+Lactate is exported to the envioranment.</node>
+      <node id="MCT1_stimulus">
+         <data key="MY-ID">MCT1_stimulus</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>Model input
+
+VARIABLE: any stimulus able to induce MCT1 activation (Lactate)
+</node>
+      <node id="Proton">
+         <data key="MY-ID">Proton</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-VALUE">1</data>
+         <data key="MY-RULE">MCT4</data>
+         <data key="MY-SHAPE">ellipse</data>Proton = Extracellular proton
+H+ exported to the envioronment.</node>
+      <node id="MCT1I">
+         <data key="MY-ID">MCT1I</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>MCT1I = MCT1 inhibitor</node>
+      <node id="MCT1D">
+         <data key="MY-ID">MCT1D</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>MCT1D = MCT1 inhibiting drug</node>
+      <node id="GLUT1I">
+         <data key="MY-ID">GLUT1I</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>GLUT1I = GLUT1 inhibitor</node>
+      <node id="GLUT1D">
+         <data key="MY-ID">GLUT1D</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>GLUT1D = GLUT1 inhibiting drug</node>
+      <node id="MCT4I">
+         <data key="MY-ID">MCT4I</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>MCT4I = MCT4 inhibitor</node>
+      <node id="MCT4D">
+         <data key="MY-ID">MCT4D</data>
+         <data key="BREED">objects</data>
+         <data key="KIND">Gene</data>
+         <data key="MY-SHAPE">ellipse</data>MCT4D = MCT4 inhibiting drug</node>
+      <edge source="Cell_Lactate" target="MCT4" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Cell_Lactate" target="Pyruvate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PEP" target="Pyruvate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PEP" target="glycoATP" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="LOX" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="VEGF" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="TGFA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="GLUT1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="PDK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="HIF1" target="LDHA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="ATP_Production_Rate" target="Proliferation" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="TAK1" target="JNK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</edge>
+      <edge source="TAK1" target="p38" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</edge>
+      <edge source="PDH" target="AcetylCoA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="JUN" target="AP1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+PMID:11274345</edge>
+      <edge source="MTK1" target="p38" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+PMID:21614932</edge>
+      <edge source="MTK1" target="JNK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+PMID:21614932</edge>
+      <edge source="FGFR_stimulus" target="FGFR" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="cMET_stimulus" target="cMET" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PLCG" target="RAS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>RasGRP1 is a C1-domain containing protein that is activated by DAG and Ca2+, in a manner analogous to members of the PKC family.
+PMID:17496910
+
+Calcium liberated from internal stores by IP3 acts on the calcium- and DAG-sensitive RasGRP1 and causes it to translocate to the Golgi. RasGRP1 activates Golgi-associated Ras on this compartment.
+PMID:16488589</edge>
+      <edge source="PLCG" target="PKC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Recruitment to the membrane and tyrosine phosphorylation enhance the enzymatic activity of PLC-g, leading to the formation of two second messengers, diacylglycerol (DAG) and inositol 1,4,5-trisphosphate (IP3). IP3 releases Ca2+ from internal stores, which in turn acts in concert with DAG to translocate protein kinase C (PKC) to the cell membrane and stimulate its enzymatic activity.
+PMID:15567848</edge>
+      <edge source="Oxygen_supply" target="HIF1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Oxygen_supply" target="Necrosis" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Oxygen_supply" target="ETC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Oxygen_supply" target="MCT1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="RAF" target="MEK1_2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Once activated, Raf family members are capable of initiating the phosphorylation cascade, whereby Raf activates MEK, and MEK in turn activates ERK.
+PMID:17496910</edge>
+      <edge source="DNA_damage" target="ATM" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>ATM autophosphorylates itself at serine 1981 in response to DNA damage and some other cellular stresses.
+PMID:18235226</edge>
+      <edge source="TCA" target="ETC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="BPG" target="PG3" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="ERK" target="MSK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MSK1 and MSK2 are potently activated (by phosphorylation) in vivo by ERK1/2 and p38 but not JNK.
+PMID:15187187</edge>
+      <edge source="ERK" target="RSK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>RSK2 is a well known ERK substrate in the cytoplasm and has been shown to undergo autophosphorylation after ERK phosphorylation.
+PMID:15239952</edge>
+      <edge source="ERK" target="SPRY" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Spry is induced by activated ERK, through phosphorylation on Tyr55.
+PMID:15173823</edge>
+      <edge source="ERK" target="FOS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Phosphorylation by both ERKs and their downstream RSKs can stabilise the c-Fos protein for several hours. The combination of these phosphorylations allows c-Fos sustained activity.
+PMID:16393692</edge>
+      <edge source="ERK" target="ELK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="ERK" target="Apoptosis" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Caspase 9 is efficiently phosphorylated on Thr125 by ERK in vitro, suggesting that it is targeted directly by ERK in vivo. This is one of the ways ERK plays its anti-apoptotic role.
+PMID:12792650
+</edge>
+      <edge source="ERK" target="p70" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>p70 activation requires both ERK cascade and PI3K/AKT cascade, at least in some cell types.
+PMID:11940578, PMID:10601235, PMID:11431469</edge>
+      <edge source="ERK" target="RAF" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>B-Raf phosphorylated by activated ERK and find that feedback phosphorylation of B-Raf inhibits binding to activated Ras.
+PMID:19933846</edge>
+      <edge source="ERK" target="HIF1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PPP2CA" target="MEK1_2" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>MEK is continuously dephosphorylated by PP2A (PPP2CA), whose activity is stimulated by p38: p38 activity increases the physical association between PP2A and MEK/ERK complex.
+PMID:18039929</edge>
+      <edge source="MCT1I" target="MCT1" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="GA3P" target="BPG" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="LDHA" target="Cell_Lactate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="EGFR" target="GRB2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Grb2 is an adaptor protein, normally present in cytosol. It is recruited to the plasma membrane by activated RTKs.
+PMID:17496910</edge>
+      <edge source="EGFR" target="PLCG" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Tyrosine phosphorylation of PLC-gamma by EGF receptor leads to its activation.
+PMID:2472219</edge>
+      <edge source="MDM2" target="p53" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>The Mdm2 protein is involved in an autoregulatory feedback loop with p53, thus controlling its activity. Increased p53 levels transactivate the MDM2 promoter causing its upregulation. The translated protein then binds to p53 and transports it to the proteasome for ubiquitin-mediated degradation. The resultant lowered p53 levels then reduce the levels of Mdm2.
+PMID:17158541</edge>
+      <edge source="FOXO3" target="Apoptosis" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>FOXO3a promotes apoptosis through activation of PUMA.
+PMID:20978166</edge>
+      <edge source="TGFBR_stimulus" target="TGFBR" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="ATM" target="TAOK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Ataxia telangiectasia mutated (ATM) is activated in response to DNA damage and directly phosphorylates TAOK.
+PMID:18855897</edge>
+      <edge source="ATM" target="p53" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>ATM phosphorylates p53 at ser15 and stabilize it.
+PMID:15140942</edge>
+      <edge source="ETC" target="mitoATP" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PG2" target="PEP" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="FRS2" target="GRB2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>FGF stimulation leads to phosphorylation of Shp2 on a tyrosine residue that forms a complex with an additional molecule of Grb2. Grb2/Sos complexes are thus recruited directly and indirectly via Shp2 upon tyrosine phosphorylation of FRS2a in response to growth factor stimulation.
+PMID:11447289</edge>
+      <edge source="Cell_Glucose" target="G6P" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Cell_Glucose" target="Necrosis" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PKC" target="EGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>PKC may cause phosphorylation of EGFR, leading to a decrease in its activity.
+PMID:6321473</edge>
+      <edge source="PKC" target="RAF" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>PKCalpha can directly phosphorylate and activates Raf-1.
+PMID:8321321</edge>
+      <edge source="PKC" target="FGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>(Inferred from FGFR1) PKC-mediated phosphorylation can lead to internalization and degradation of FGFR1.
+PMID:9694798, PMID:8622701, PMID:14699054</edge>
+      <edge source="PKC" target="cMET" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="EGFRI" target="EGFRI_affinity" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="TAOK" target="p38" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>TAO kinases are MAP3Ks that function upstream of p38 and JNK.
+PMID:21614932</edge>
+      <edge source="TAOK" target="JNK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>TAO kinases are MAP3Ks that function upstream of p38 and JNK.
+PMID:21614932</edge>
+      <edge source="Glucose_supply" target="Cell_Glucose" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="cMETI" target="cMET" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="ATF2" target="AP1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+PMID:11274345</edge>
+      <edge source="cMET" target="GRB2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="cMET" target="PLCG" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PDK1" target="p70" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>PDK1 is a PI3K target, leading to activation of p70 and subsequent cell growth.
+PMID:12040186</edge>
+      <edge source="PDK1" target="AKT" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Signaling proteins with pleckstrin-homology (PH) domains accumulate at sites of PI3K activation by directly binding to PI(3,4,5)P3. Of particular interest are the protein serine-threonine kinases Akt and phosphoinositide-dependent kinase 1 (PDK1). Association with PI(3,4,5)P3 at the membrane brings these proteins into proximity and facilitates phosphorylation of Akt by PDK1. This phosphorylation stimulates the catalytic activity of Akt, resulting in the phosphorylation of a host of other proteins that affect cell growth, cell cycle entry, and cell survival.
+PMID:12040186</edge>
+      <edge source="PDK1" target="PDH" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="PTEN" target="AKT" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>p53 induces transcription of the PTEN gene and elevates cellular levels of the PTEN protein, which in turn inhibits activation of Akt.
+PMID:12217521</edge>
+      <edge source="MAX" target="MYC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MAX interacts with the transcription factor c-Myc, enabling c-Myc to trans-activate at least a subset of its target genes.
+PMID:11274345</edge>
+      <edge source="Growth_Inhibitor" target="Proliferation" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p53" target="GADD45" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Expression of GADD45 is the culmination of a signaling pathway that requires prior expression of the tumor suppressor protein p53 which trans-activates the GADD45 gene.
+PMID:11274345</edge>
+      <edge source="p53" target="p21" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>p21 is transcriptionally induced by the p53 protein.
+PMID:17158541</edge>
+      <edge source="p53" target="MDM2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>The Mdm2 protein is involved in an autoregulatory feedback loop with p53, thus controlling its activity. Increased p53 levels transactivate the MDM2 promoter causing its upregulation. The translated protein then binds to p53 and transports it to the proteasome for ubiquitin-mediated degradation. The resultant lowered p53 levels then reduce the levels of Mdm2.
+PMID:17158541</edge>
+      <edge source="p53" target="Apoptosis" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>In response to genotoxic stress such as DNA damage, PUMA is transactivated by p53 (leading to apoptosis).
+PMID:19641508</edge>
+      <edge source="p53" target="PTEN" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>p53 induces transcription of the PTEN gene and elevates cellular levels of the PTEN protein, which in turn inhibits activation of Akt.
+PMID:12217521</edge>
+      <edge source="p53" target="GLUT1" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p53" target="Cell_Lactate" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p53" target="PDH" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="TGFBR" target="SMAD" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Smad-dependent gene expression can provoke p38 activation in response to TGFbeta. GADD45beta was identified as the TGFbeta-inducible gene whose expression activates the p38 pathway.
+PMID:21614932</edge>
+      <edge source="TGFBR" target="TAK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Activated TGFBR1/TGFBR2 complex attracts the TAB2/TAB3 proteins which promote activation of TAK1 (by phosphorylation), leading to activation of p38 and JNK.
+PMID:20060931</edge>
+      <edge source="TGFBR" target="GRB2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>TGF-beta-induced ShcA phosphorylation induces ShcA association with Grb2 and Sos, thereby initiating the well-characterised pathway linking receptor tyrosine kinases with Erk MAP kinases.
+PMID:17673906</edge>
+      <edge source="PG3" target="PG2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MCT1" target="Cell_Lactate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MCT1" target="LDHB" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MCT1" target="MCT4" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="FOS" target="AP1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>AP-1 is a heterodimer comprised of bZIP transcription factors, typically c-Jun and JunD, along with members of the fos (usually c-Fos) and ATF (usually ATF2) families. All bZIP transcription factors contain leucine zippers that enable homo- and heterodimerisation, and AP-1 components are organised into Jun-Jun, Jun-Fos, or Jun-ATF dimers.
+PMID:11274345</edge>
+      <edge source="F16BP" target="GA3P" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MSK" target="CREB" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MSK1 mediates the mitogen-stimulated phoshphorylation of CREB.
+PMID:15187187</edge>
+      <edge source="MSK" target="MYC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Translocation of ERK into the nucleus activates the mitogen activated and stress-activated protein kinase 1 (MSK1), a histone H3 kinase that can relax chromatin, thus making it more transcriptionally accessible. This alteration in the chromatin state induces MYC, a gene that encodes the c-Myc protein, a transcription factor that controls the cell cycle.
+PMID:17158541</edge>
+      <edge source="GAB1" target="PI3K" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Recruitment of PI 3-kinase by Gab1 results in a positive-feedback loop mediated by binding of the PH domain of Gab1 to the product of PI3-kinase activation, phosphatidylinositol-3,4,5-triphosphate.
+PMID:15199124</edge>
+      <edge source="MCT4" target="Lactate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MCT4" target="Proton" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="RAS" target="RAF" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Activated Ras recruits cytoplasmic Raf (MAPKKK) for activation (through phosphorylation). There are three mammalian serine/threonine Raf kinases: A-Raf, B-Raf, and Raf-1 (also known as C-Raf). All three Raf proteins share the same downstream MAPKK substrate mitogen activated protein kinase kinases 1,2 (MEK1,2).
+PMID:18039929</edge>
+      <edge source="RAS" target="MAP3K1_3" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>The GTP-dependent coupling of MEKK1 to Ras indicates that MEKK1 may be an effector for those agonists that recruit JNK through Ras-dependent mechanisms. MEKK1 selectively activates the endogenous JNK pathway. MEKK1 can activate MEK4 and MEK7 in vivo.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345</edge>
+      <edge source="RAS" target="PI3K" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>PI3K is a well characterised effector of RAS, through GRB2/SOS pathway.
+PMID:21779497
+</edge>
+      <edge source="G6P" target="F6P" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="AcetylCoA" target="TCA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="DUSP1" target="p38" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>DUSP1 preferentially inactivates JNK and p38.
+PMID:19436832</edge>
+      <edge source="DUSP1" target="JNK" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>DUSP1 preferentially inactivates JNK and p38.
+PMID:19436832</edge>
+      <edge source="MYC" target="p14" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MYC inhibits p16, whereas it activates p14.
+PMID:17158541</edge>
+      <edge source="MYC" target="Proliferation" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MYC contributes to E2F-induced cell cycle progression.
+PMID:11805123</edge>
+      <edge source="MYC" target="PDK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MYC" target="LDHA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MYC" target="GLUT1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p21" target="Proliferation" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Cell growth arrest is induced through cyclin-dependent kinase inhibitor p21 WAF1/CIP1.
+PMID:8614832</edge>
+      <edge source="p21" target="Growth_Arrest" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Cell growth arrest is induced through cyclin-dependent kinase inhibitor p21 WAF1/CIP1.
+PMID:8614832</edge>
+      <edge source="AP1" target="MEK1_2" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>AP-1 mediated gene expression inhibits ERK phosphorylation.
+PMID:18039929</edge>
+      <edge source="MCT4I" target="MCT4" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="MEK1_2" target="ERK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Once activated, Raf family members are capable of initiating the phosphorylation cascade, whereby Raf activates MEK, and MEK in turn activates ERK.
+PMID:17496910</edge>
+      <edge source="SOS" target="RAS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>The process of activating Ras requires the recruitment of proteins responsible for initiating GDP/GTP exchange to the membrane, such as SOS (son of sevenless).
+PMID:18039929</edge>
+      <edge source="SOS" target="PI3K" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>PI3K is a well characterised effector of RAS, through GRB2/SOS pathway.
+PMID:21779497
+</edge>
+      <edge source="glycoATP" target="ATP_Production_Rate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="RSK" target="FOS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Phosphorylation by both ERKs and their downstream RSKs can stabilise the c-Fos protein for several hours. The combination of these phosphorylations allows c-Fos sustained activity.
+PMID:16393692</edge>
+      <edge source="RSK" target="SOS" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>p90 Rsk-2 is involved in SOS phosphorylation and may be important in down-regulation of the growth factor response.
+PMID:9242373</edge>
+      <edge source="ELK1" target="FOS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>ELK1 induces c-fos expression.
+PMID:11274345</edge>
+      <edge source="GLUT1" target="Cell_Glucose" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p14" target="MDM2" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>The MDM2 gene is transcriptionally inhibited by p14.
+PMID:17158541</edge>
+      <edge source="AKT" target="FOXO3" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Phosphorylation of FOXO3 by Akt creates a binding site for the 14-3-3 family of proteins. The complex of FOXO3 and 14-3-3 is retained in the cytosol, blocking transcription of genes normally stimulated by FOXO3.
+PMID:12040186</edge>
+      <edge source="AKT" target="p21" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>p21 is a direct substrate of AKT and this may regulate the subcellular localisation of p21. Phosphorylation of p21 by AKT correlated with its exit from the nucleus and with increased cell cycle progression.
+PMID:11882383</edge>
+      <edge source="AKT" target="BCL2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Akt phosphorylation of the apoptosis-inducing protein Bad creates a binding site for 14-3-3 proteins and prevents Bad from binding to Bcl-2 family members Bcl-2 and Bcl-XL, thus releasing them for a cell survival response.
+PMID:12040186</edge>
+      <edge source="AKT" target="MYC" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Glycogen synthase kinase 3 (GSK3) is a target of Akt. This protein kinase is constitutively active in unstimulated cells and phosphorylates many proteins (including glycogen synthase, c-Myc, and cyclin D) to keep them in inactive states or promote their degradation. Phosphorylation of GSK3 (both alpha and beta isoforms) by Akt turns off the catalytic activity of this enzyme, resulting in the activation of pathways that are normally repressed by GSK3.
+PMID:12040186</edge>
+      <edge source="AKT" target="MDM2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Effective recruitment of Akt by appropriate survival signals may lead to activation of Mdm2, inactivation of p53, and eventually inhibition of p53-dependent apoptosis.
+PMID:11850850</edge>
+      <edge source="AKT" target="RAF" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Phosphorylation by Akt inhibits EGF-dependent activity of B-Raf and C-Raf.
+PMID:10869359</edge>
+      <edge source="AKT" target="p70" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="LDHB" target="glycoATP" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="LDHB" target="Pyruvate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="LDHB" target="PDH" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="SPRY" target="EGFR" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Spry is induced by activated ERK. It positively regulates EGFR signalling by sequestering Cbl (positive feedback in the model, from Spry to EGFR), whereas it negatively regulates FGFR signalling by sequestering Grb2 from FSR2 (negative feedback in the model, from Spry to FSR2).
+PMID:15173823</edge>
+      <edge source="SPRY" target="FRS2" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Spry is induced by activated ERK. It positively regulates EGFR signalling by sequestering Cbl (positive feedback in the model, from Spry to EGFR), whereas it negatively regulates FGFR signalling by sequestering Grb2 from FSR2 (negative feedback in the model, from Spry to FSR2).
+PMID:15173823</edge>
+      <edge source="JNK" target="ELK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>ELK1 is a nuclear JNK target.
+PMID:11274345</edge>
+      <edge source="JNK" target="ATF2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>JNK and p38 can both phosphorylate ATF2 at Thr69 and Ser71.
+PMID:11274345</edge>
+      <edge source="JNK" target="JUN" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>JNK can phosphorylate the c-Jun trans-activating domain at Ser63 and Ser73. JNKs, but not the ERKs or p38s, binds c-Jun quite strongly.
+PMID:11274345</edge>
+      <edge source="JNK" target="FOXO3" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>JNK phosphorylates MST1 at serine 82, which leads to the enhancement of MST1 activation. The activation of MST1 phosphorylates FOXO3 at serine 207 and promotes cell death.
+PMID:20028971</edge>
+      <edge source="MCT1_stimulus" target="MCT1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p38" target="PPP2CA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MEK is continuously dephosphorylated by PP2A (PPP2CA), whose activity is stimulated by p38: p38 activity increases the physical association between PP2A and MEK/ERK complex.
+PMID:18039929</edge>
+      <edge source="p38" target="MSK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MSK1 and MSK2 are potently activated (by phosphorylation) in vivo by ERK1/2 and p38 but not JNK.
+PMID:15187187</edge>
+      <edge source="p38" target="p53" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Activated p38 phosphorylates p53 at several residues, including Ser33, and thereby increases the transcriptional activity of p53. Activated p53 then induces apoptosis in cells that have suffered extensive DNA damage. When the intensity of the damage is moderate, however, the cell can repair the damage and escape apoptotic cell death by down-regulating p38-p53 signaling. Under these conditions, p53-induced Wip1 phosphatase interacts with activated p38 and selectively dephosphorylates p38 at the phospho-Thr180 residue, thereby reducing its kinase activity towards p53.
+PMID:21614932</edge>
+      <edge source="p38" target="MAX" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MAX is phosphorylated (and activated) by p38, through complex formation.
+PMID:11274345</edge>
+      <edge source="p38" target="ELK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>ELK1 is a nuclear p38 target.
+PMID:20506250
+</edge>
+      <edge source="p38" target="ATF2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>JNK and p38 can both phosphorylate ATF2 at Thr69 and Ser71.
+PMID:11274345</edge>
+      <edge source="MAP3K1_3" target="MEK1_2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345</edge>
+      <edge source="MAP3K1_3" target="JNK" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>The GTP-dependent coupling of MEKK1 to Ras indicates that MEKK1 may be an effector for those agonists that recruit JNK through Ras-dependent mechanisms. MEKK1 selectively activates the endogenous JNK pathway. MEKK1 can activate MEK4 and MEK7 in vivo.
+MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345</edge>
+      <edge source="MAP3K1_3" target="p38" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>MEKK2 and MEKK3 can activate JNK, p38 and ERK pathways.
+PMID:11274345</edge>
+      <edge source="FGFR" target="FRS2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>FGF stimulation leads to phosphorylation of Shp2 on a tyrosine residue that forms a complex with an additional molecule of Grb2. Grb2/Sos complexes are thus recruited directly and indirectly via Shp2 upon tyrosine phosphorylation of FRS2a in response to growth factor stimulation.
+PMID:11447289</edge>
+      <edge source="FGFR" target="PLCG" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Binding of FGF to FGFR leads to tyrosine phosphorylation of PLCgamma.
+PMID:1656221</edge>
+      <edge source="GRB2" target="GAB1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Grb2 recruits the docking protein Gab1, which is tyrosine phosphorylated by FGFR, leading to recruitment and activation of the PI3K-Akt cell survival pathway.
+EGF stimulates a cell survival pathway mediated by phosphoinositide 3-kinase (PI3K) and the protein kinase Akt by an indirect mechanism in which tyrosine phosphorylation of the docking protein Gab1 or ErbB3 by EGFR leads to recruitment and activation of PI3K.
+PMID:15567848</edge>
+      <edge source="GRB2" target="SOS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Sos is recruited from the cytosol to the plasma membrane as a result of its constitutive interaction with Grb2. It is in an autoinhibited state.
+PMID:17496910</edge>
+      <edge source="GRB2" target="FGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>FGF-induced tyrosine phosphorylation of FRS2 results in complex formation with the adaptor protein Grb2 bound to Cbl by means of its SH3 domains. FGF-induced ternary complex formation among FRS2, Grb2, and Cbl results in ubiquitination and degradation of FRS2 and FGF receptor (FGFR).
+PMID:11997436</edge>
+      <edge source="GRB2" target="EGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>The ubiquitin ligase Cbl interacts with EGFR directly and indirectly through Grb2, promoting ubiquitination and degradation of EGFR
+PMID:15567848</edge>
+      <edge source="GRB2" target="FRS2" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>FGF-induced tyrosine phosphorylation of FRS2 results in complex formation with the adaptor protein Grb2 bound to Cbl by means of its SH3 domains. FGF-induced ternary complex formation among FRS2, Grb2, and Cbl results in ubiquitination and degradation of FRS2 and FGF receptor (FGFR).
+PMID:11997436</edge>
+      <edge source="PI3K" target="PDK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Phosphatidylinositol-3,4,5-triphosphate (PIP3), the reaction product of PI 3-kinase, is responsible for activation of phosphoinositide-dependent kinase (PDK) and the antiapoptotic protein kinase Akt.
+PMID:15199124</edge>
+      <edge source="PI3K" target="GAB1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Recruitment of PI 3-kinase by Gab1 results in a positive-feedback loop mediated by binding of the PH domain of Gab1 to the product of PI3-kinase activation, phosphatidylinositol-3,4,5-triphosphate.
+PMID:15199124</edge>
+      <edge source="GADD45" target="MTK1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Expression of GADD45 genes in mammalian cells strongly activates co-expressed MTK1, as well as p38 and JNK, the MAPKs downstream of MTK1.
+PMID:21614932</edge>
+      <edge source="CREB" target="FOS" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>DUSP1, FOS and BCL2 are CREB target genes.
+PMID:19815709</edge>
+      <edge source="CREB" target="DUSP1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>&lt;probability p = 0.438 /&gt;
+
+
+
+DUSP1, FOS and BCL2 are CREB target genes.
+PMID:19815709</edge>
+      <edge source="CREB" target="BCL2" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>DUSP1, FOS and BCL2 are CREB target genes.
+PMID:19815709</edge>
+      <edge source="SMAD" target="GADD45" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>Smad-dependent gene expression can provoke p38 activation in response to TGFbeta. GADD45beta was identified as the TGFbeta-inducible gene whose expression activates the p38 pathway.
+PMID:21614932</edge>
+      <edge source="GLUT1I" target="GLUT1" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="F6P" target="F16BP" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="FGFRI" target="FGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="p70" target="Proliferation" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>PDK1 is a PI3K target, leading to activation of p70 and subsequent cell growth.
+PMID:12040186</edge>
+      <edge source="p70" target="HIF1" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="EGFR_stimulus" target="EGFR" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="BCL2" target="Apoptosis" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>Akt phosphorylation of the apoptosis-inducing protein Bad creates a binding site for 14-3-3 proteins and prevents Bad from binding to Bcl-2 family members Bcl-2 and Bcl-XL, thus releasing them for a cell survival response.
+PMID:12040186</edge>
+      <edge source="EGFRI_affinity" target="EGFR" sign="negative">
+         <data key="SIGN-OF-LINK">negative</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Pyruvate" target="Cell_Lactate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="Pyruvate" target="AcetylCoA" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>
+      <edge source="mitoATP" target="ATP_Production_Rate" sign="positive">
+         <data key="SIGN-OF-LINK">positive</data>
+         <data key="BREED">influences</data>
+      </edge>Logical model representing MAPK cascades activation following EGFR, FGFR3, TGFBR and DNA damage stimuli.
+Proliferation, Apoptosis and Growth arrest outputs (in blue) provide a readout of the contributions of the three main MAPK pathways (ERK, p38, JNK) to cell fate decision.
+Input signals are emphasised in pink, whereas the reference MAPK are emphasised in lila.</graph>
+</graphml>

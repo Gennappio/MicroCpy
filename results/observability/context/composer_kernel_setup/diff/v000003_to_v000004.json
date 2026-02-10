@@ -8,23 +8,6 @@
       "preview": "MockConfig(associations={}, thresholds={}, gene_network=None, time=MockTime(dt=1.0))",
       "truncated": false
     },
-    "population": {
-      "type": "MockPopulation",
-      "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={}), _ca...",
-      "truncated": true
-    },
-    "helpers": {
-      "type": "dict",
-      "preview": {},
-      "truncated": false,
-      "len": 0
-    },
-    "gene_networks": {
-      "type": "dict",
-      "preview": {},
-      "truncated": false,
-      "len": 0
-    },
     "num_cells": {
       "type": "number",
       "preview": 100,
@@ -32,8 +15,25 @@
     },
     "simulator": {
       "type": "MockSimulator",
-      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x10a43fef0>",
+      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x1304e7da0>",
       "truncated": false
+    },
+    "helpers": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
+    },
+    "population": {
+      "type": "MockPopulation",
+      "preview": "MockPopulation(state=MockPopulationState(cells={'cell_0': MockCell(id='cell_0', state=MockCellState(id='cell_0', position=MockPosition(x=0.0, y=0.0, z=0.0), phenotype='Quiescent', gene_states={}), _ca...",
+      "truncated": true
+    },
+    "gene_networks": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
     }
   },
   "removed": {},

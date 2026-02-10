@@ -1,0 +1,19 @@
+# Input conditions with concentrations for probabilistic simulator
+# For deterministic script: treats all non-zero as ON
+# For probabilistic script: GLUT1I and MCT1I use these as concentration values
+
+Oxygen_supply=ON
+Glucose_supply=ON
+MCT1_stimulus=ON
+Proton_level=OFF
+FGFR_stimulus=OFF
+EGFR_stimulus=ON
+cMET_stimulus=ON
+Growth_Inhibitor=OFF
+DNA_damage=OFF
+TGFBR_stimulus=OFF
+
+# Probabilistic inputs (only used by gene_network_netlogo_probability.py)
+# Values 0.0-1.0 represent concentration relative to threshold
+GLUT1I=0.7
+MCT1I=0.6

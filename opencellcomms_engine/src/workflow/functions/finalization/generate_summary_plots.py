@@ -41,10 +41,24 @@ def _generate_plots_to_directory(
 
     from visualization.auto_plotter import AutoPlotter
 
-    population = context['population']
-    simulator = context['simulator']
-    config: IConfig = context['config']
+    population = context.get('population')
+    simulator = context.get('simulator')
+    config: IConfig = context.get('config')
     results = context.get('results', {})
+
+    # Check if required components are available
+    if not simulator:
+        print(f"[WARNING] Simulator not available in context - skipping plot generation")
+        print(f"[WARNING] Available context keys: {list(context.keys())}")
+        return 0
+
+    if not population:
+        print(f"[WARNING] Population not available in context - skipping plot generation")
+        return 0
+
+    if not config:
+        print(f"[WARNING] Config not available in context - skipping plot generation")
+        return 0
 
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)

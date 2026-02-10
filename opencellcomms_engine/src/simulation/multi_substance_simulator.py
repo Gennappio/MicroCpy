@@ -27,7 +27,6 @@ except ImportError:
 # TODO: These config imports should be removed and passed as arguments instead
 from config.config import OpenCellCommsConfig, SubstanceConfig, ThresholdConfig
 from core.domain import MeshManager
-from interfaces.base import ISubstanceSimulator
 # Hook system removed - using direct function calls
 
 # Global debug switch - set to True to enable detailed logging
@@ -113,7 +112,7 @@ class MultiSubstanceState:
         
         return inputs
 
-class MultiSubstanceSimulator(ISubstanceSimulator):
+class MultiSubstanceSimulator:
     """Simulates multiple substances with their interactions"""
 
     def __init__(self, config: OpenCellCommsConfig, mesh_manager: MeshManager, verbose: bool = True):

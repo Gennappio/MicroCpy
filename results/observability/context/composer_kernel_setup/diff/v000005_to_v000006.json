@@ -19,14 +19,14 @@
       "truncated": false,
       "len": 4
     },
+    "gene_network_config": {
+      "type": "MinimalConfig",
+      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x13050ef90>",
+      "truncated": false
+    },
     "random_initialization": {
       "type": "boolean",
       "preview": true,
-      "truncated": false
-    },
-    "gene_network_config": {
-      "type": "MinimalConfig",
-      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x10a45b020>",
       "truncated": false
     }
   },

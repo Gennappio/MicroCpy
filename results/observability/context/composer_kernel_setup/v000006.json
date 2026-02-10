@@ -2,7 +2,7 @@
   "version": 6,
   "scopeKey": "composer:kernel_setup",
   "nodeId": "init_gene_networks",
-  "executionId": "eff82a7c-1051-4d67-a435-c6da407bdb63",
+  "executionId": "93328fdd-0f9f-418d-90d5-adedb07a0ec7",
   "keys": {
     "workflow_file": {
       "type": "string",
@@ -49,7 +49,7 @@
     },
     "resolve_path": {
       "type": "function",
-      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x10a4551c0>",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1304f91c0>",
       "truncated": false
     },
     "running_from_gui": {
@@ -121,7 +121,7 @@
     },
     "simulator": {
       "type": "MockSimulator",
-      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x10a43fef0>",
+      "preview": "<src.workflow.functions.gene_network._mock_helpers.MockSimulator object at 0x1304e7da0>",
       "truncated": false
     },
     "config": {
@@ -137,7 +137,7 @@
     },
     "gene_network_config": {
       "type": "MinimalConfig",
-      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x10a45b020>",
+      "preview": "<src.workflow.functions.gene_network.initialize_hierarchical_gene_networks.initialize_hierarchical_gene_networks.<locals>.MinimalConfig object at 0x13050ef90>",
       "truncated": false
     },
     "random_initialization": {
