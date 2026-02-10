@@ -1267,6 +1267,7 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
+            "param_necrosis_params",
             "param_necrosis_params"
           ]
         },
@@ -1294,8 +1295,8 @@
           "parameters": {},
           "enabled": false,
           "position": {
-            "x": -229.14666666666665,
-            "y": 309.75333333333333
+            "x": -8.23632183908046,
+            "y": 298.2774712643678
           },
           "description": "Mark cells as apoptotic based on gene network Apoptosis output",
           "custom_name": "",
@@ -1307,7 +1308,7 @@
           "function_name": "mark_proliferating_cells",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 400
@@ -1316,6 +1317,23 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
+        },
+        {
+          "id": "force_proliferating",
+          "function_name": "force_proliferating_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 500
+          },
+          "description": "Force cells as proliferating",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_activation_probability"
+          ]
         },
         {
           "id": "cell_division",
@@ -1342,8 +1360,8 @@
             "max_growth_arrest_steps": 100
           },
           "position": {
-            "x": 400,
-            "y": 200
+            "x": -512.3310344827587,
+            "y": 207.1724137931035
           }
         },
         {
@@ -1368,8 +1386,19 @@
             }
           ],
           "position": {
+            "x": -312.9379310344828,
+            "y": 108.60689655172405
+          }
+        },
+        {
+          "id": "param_activation_probability",
+          "label": "Activation Probability",
+          "parameters": {
+            "activation_probability": 1.0
+          },
+          "position": {
             "x": 400,
-            "y": 100
+            "y": 500
           }
         }
       ],
@@ -1378,6 +1407,7 @@
         "mark_growth_arrest",
         "mark_apoptotic",
         "mark_proliferating",
+        "force_proliferating",
         "cell_division"
       ],
       "input_parameters": []
