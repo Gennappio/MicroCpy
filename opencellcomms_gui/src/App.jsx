@@ -117,7 +117,8 @@ function App() {
             const workflowData = JSON.parse(event.target.result);
             // Pass file path for library path resolution (Phase 6)
             // Note: file.path is only available in Electron, not in browser
-            const filePath = file.path || null;
+            // Use file.name as fallback so Save button appears
+            const filePath = file.path || file.name;
             loadWorkflow(workflowData, filePath);
             alert(`Workflow "${workflowData.name}" loaded successfully!`);
           } catch (error) {
