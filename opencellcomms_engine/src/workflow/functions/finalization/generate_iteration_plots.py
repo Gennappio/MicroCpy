@@ -103,14 +103,15 @@ def generate_iteration_plots(
         return False
 
     # --- resolve output directory -----------------------------------------
-    # Prefer config.plots_dir  (timestamped: results/$timestamp/plots)
-    # so that INITIAL, ITER_*, and FINAL plots all live side-by-side.
-    if config and hasattr(config, 'plots_dir') and config.plots_dir:
-        output_path = Path(config.plots_dir)
-    elif 'plots_dir' in context:
+    # Use context['plots_dir'] set by executor (GUI-viewable subworkflow folder)
+    if 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:
-        output_path = Path('results/plots')
+        # Fallback to config.plots_dir or default
+        if config and hasattr(config, 'plots_dir') and config.plots_dir:
+            output_path = Path(config.plots_dir)
+        else:
+            output_path = Path('results/plots')
 
     output_path.mkdir(parents=True, exist_ok=True)
 

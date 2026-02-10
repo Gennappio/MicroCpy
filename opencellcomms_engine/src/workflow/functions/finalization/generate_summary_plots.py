@@ -152,14 +152,16 @@ def generate_summary_plots(
         marker = context['marker']
 
     # --- resolve output directory -----------------------------------------
-    # Prefer config.plots_dir (timestamped: results/$timestamp/plots)
-    config: Optional[IConfig] = context.get('config')
-    if config and hasattr(config, 'plots_dir') and config.plots_dir:
-        output_path = Path(config.plots_dir)
-    elif 'plots_dir' in context:
+    # Use context['plots_dir'] set by executor (GUI-viewable subworkflow folder)
+    if 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:
-        output_path = Path('results/plots')
+        # Fallback to config.plots_dir or default
+        config: Optional[IConfig] = context.get('config')
+        if config and hasattr(config, 'plots_dir') and config.plots_dir:
+            output_path = Path(config.plots_dir)
+        else:
+            output_path = Path('results/plots')
 
     running_from_gui = context.get('running_from_gui', False)
     mode = "GUI" if running_from_gui else "CLI"

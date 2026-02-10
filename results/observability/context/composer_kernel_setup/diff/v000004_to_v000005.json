@@ -1,8 +1,0 @@
-{
-  "fromVersion": 4,
-  "toVersion": 5,
-  "scopeKey": "composer:kernel_setup",
-  "added": {},
-  "removed": {},
-  "changed": {}
-}

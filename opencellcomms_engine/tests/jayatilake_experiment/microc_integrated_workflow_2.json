@@ -20,11 +20,11 @@
         "Setup_population": "subworkflow",
         "Initialize_gene_states": "subworkflow",
         "Generate_initial_plots": "subworkflow",
+        "Generate_loop_plots": "subworkflow",
         "microenvironment": "subworkflow",
         "intracellular": "subworkflow",
         "intercellular": "subworkflow",
         "Checkpoint": "subworkflow",
-        "Generate_loop_plots": "subworkflow",
         "Generate_final_plots": "subworkflow",
         "Summarize_simulation": "subworkflow"
       }
@@ -667,7 +667,6 @@
           "id": "param_associations_dict",
           "type": "dictParameterNode",
           "label": "Associations (Dict)",
-          "targetParam": "associations",
           "entries": [
             {
               "key": "Oxygen",
@@ -710,6 +709,7 @@
               }
             }
           ],
+          "targetParam": "associations",
           "position": {
             "x": 100,
             "y": 100
@@ -842,7 +842,7 @@
           "id": "param_checkpoint_file",
           "label": "Checkpoint File",
           "parameters": {
-            "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+            "file_path": "tests/jayatilake_experiment/initial_cells_100_center_1500.csv"
           },
           "position": {
             "x": 32.10482758620691,
