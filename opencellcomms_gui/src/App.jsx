@@ -192,21 +192,27 @@ function App() {
       const workflowData = exportWorkflow();
       const jsonContent = JSON.stringify(workflowData, null, 2);
 
+      console.log('[SAVE] Workflow data to save:', workflowData);
+      console.log('[SAVE] JSON content length:', jsonContent.length);
+
       // If we have a file handle from a previous save, use it
       if (fileHandle) {
         try {
+          console.log('[SAVE] Using existing file handle:', fileHandle.name);
           const writable = await fileHandle.createWritable();
           await writable.write(jsonContent);
           await writable.close();
+          console.log('[SAVE] Successfully wrote to file');
           alert(`Project saved successfully!\n\nFile: ${fileHandle.name}`);
           return;
         } catch (err) {
-          console.log('Could not write to existing handle, will prompt for new location');
+          console.log('[SAVE] Could not write to existing handle:', err);
         }
       }
 
       // Use File System Access API to let user pick save location
       if ('showSaveFilePicker' in window) {
+        console.log('[SAVE] Using File System Access API');
         try {
           const handle = await window.showSaveFilePicker({
             suggestedName: workflowFilePath || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`,
@@ -216,9 +222,13 @@ function App() {
             }]
           });
 
+          console.log('[SAVE] Got file handle:', handle.name);
+
           const writable = await handle.createWritable();
           await writable.write(jsonContent);
           await writable.close();
+
+          console.log('[SAVE] Successfully wrote to new file');
 
           // Store the handle for future saves
           setFileHandle(handle);
@@ -227,12 +237,14 @@ function App() {
           alert(`Project saved successfully!\n\nFile: ${handle.name}`);
         } catch (err) {
           if (err.name !== 'AbortError') {
-            console.error('Save failed:', err);
+            console.error('[SAVE] Save failed:', err);
             alert('Error saving project: ' + err.message);
+          } else {
+            console.log('[SAVE] User cancelled save dialog');
           }
-          // User cancelled - do nothing
         }
       } else {
+        console.log('[SAVE] File System Access API not available, using download fallback');
         // Fallback for browsers without File System Access API
         const blob = new Blob([jsonContent], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -244,6 +256,7 @@ function App() {
         alert('Project downloaded. Please replace the original file manually.');
       }
     } catch (error) {
+      console.error('[SAVE] Error:', error);
       alert('Error saving project: ' + error.message);
     }
   };
