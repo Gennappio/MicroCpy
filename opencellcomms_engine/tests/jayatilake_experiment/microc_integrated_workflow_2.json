@@ -1320,12 +1320,12 @@
         },
         {
           "id": "force_proliferating",
-          "function_name": "force_proliferating_cells",
+          "function_name": "force_proliferation",
           "function_file": "",
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
+            "x": 250,
             "y": 500
           },
           "description": "Force cells as proliferating",

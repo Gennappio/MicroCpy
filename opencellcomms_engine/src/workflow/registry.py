@@ -153,6 +153,7 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.intercellular.mark_growth_arrest_cells
     import src.workflow.functions.intercellular.mark_apoptotic_cells
     import src.workflow.functions.intercellular.mark_proliferating_cells
+    import src.workflow.functions.intercellular.force_proliferation
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
