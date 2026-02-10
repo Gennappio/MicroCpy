@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Plus, X, Edit2 } from 'lucide-react';
+import { Download, Upload, FileJson, Plus, X, Edit2, Save } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import WorkflowConsole from './components/WorkflowConsole';
@@ -20,6 +20,7 @@ function App() {
         loadWorkflow,
         exportWorkflow,
         setWorkflowFilePath,
+        workflowFilePath,
         addSubWorkflow,
         deleteSubWorkflow,
         renameSubWorkflow,
@@ -171,6 +172,70 @@ function App() {
     }
   };
 
+  const handleSaveWorkflow = async () => {
+    if (!workflowFilePath) {
+      alert('No project file path available. Use "Export Project" to save to a new location.');
+      return;
+    }
+
+    // Ask for confirmation before overwriting
+    const confirmed = window.confirm(
+      `Are you sure you want to overwrite the current project?\n\n` +
+      `File: ${workflowFilePath}\n\n` +
+      `This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const workflowData = exportWorkflow();
+      const jsonContent = JSON.stringify(workflowData, null, 2);
+
+      // Use the File System Access API if available (modern browsers)
+      if ('showSaveFilePicker' in window) {
+        // Try to write directly to the file
+        const response = await fetch('/api/save-workflow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            path: workflowFilePath,
+            content: jsonContent
+          })
+        });
+
+        if (response.ok) {
+          alert(`Project saved successfully!\n\nFile: ${workflowFilePath}`);
+        } else {
+          // Fallback to download if API fails
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = workflowFilePath.split('/').pop() || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert('Project exported as download (direct save not available in browser).');
+        }
+      } else {
+        // Fallback: download the file
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = workflowFilePath.split('/').pop() || `${workflow.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('Project exported as download (direct save not available in browser).');
+      }
+    } catch (error) {
+      alert('Error saving project: ' + error.message);
+    }
+  };
+
   const handleCreateSubWorkflow = () => {
     if (!newSubWorkflowName.trim()) {
       alert('Please enter a sub-workflow name');
@@ -235,6 +300,12 @@ function App() {
             <Upload size={16} />
             Import Project
           </button>
+          {workflowFilePath && (
+            <button className="btn btn-success" onClick={handleSaveWorkflow}>
+              <Save size={16} />
+              Save Project
+            </button>
+          )}
           <button className="btn btn-primary" onClick={handleExportWorkflow}>
             <Download size={16} />
             Export Project

@@ -77,6 +77,15 @@
   background: #4338ca;
 }
 
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
 /* View Tabs - Removed (no longer needed) */
 
 /* Stage Tabs */
