@@ -23,6 +23,10 @@ class IterationPlotter:
         """
         Initialize the iteration plotter.
         
+        NOTE: This class is no longer used by generate_iteration_plots (which
+        now delegates to AutoPlotter for identical formatting).  Kept for
+        backward compatibility or standalone usage.
+
         Args:
             config: Simulation configuration object
             plots_dir: Directory to save plots to

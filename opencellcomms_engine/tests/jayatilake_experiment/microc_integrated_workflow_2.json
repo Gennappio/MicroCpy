@@ -964,7 +964,7 @@
             "x": 200,
             "y": 100
           },
-          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate only)",
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []

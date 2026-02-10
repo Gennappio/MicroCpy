@@ -1,8 +1,16 @@
 """
 Generate summary plots workflow function.
 
-This function generates all automatic plots (substance heatmaps, cell distributions, etc.)
-at the end of the simulation. Supports both custom directory output and GUI-compatible output.
+Generates all automatic plots (substance heatmaps, cell distributions, etc.)
+using AutoPlotter.  Used for INITIAL and FINAL markers.
+
+Output directory resolution (CLI mode):
+  1. config.plots_dir   (timestamped: results/$timestamp/plots)   ← preferred
+  2. context['plots_dir']  (subworkflow-specific, set by executor)
+  3. 'results/plots'       (hard fallback)
+
+This ensures INITIAL, ITER_*, and FINAL plots all land in the same
+timestamped folder created by setup_simulation.
 """
 
 from typing import Dict, Any, Optional
@@ -20,18 +28,18 @@ def _generate_plots_to_directory(
     add_timestamp: bool = False,
 ) -> int:
     """
-    Internal helper to generate plots to a specific directory.
+    Internal helper: generate plots to a specific directory.
 
     Args:
-        context: Workflow context containing population, simulator, config, etc.
-        output_dir: Directory to write plots to
-        marker: String to append to filenames (e.g., "INITIAL", "FINAL")
-        substances_to_plot: Comma-separated list of substances to plot (empty = all)
-        clean_directory: If True, clean image files before writing new plots
-        add_timestamp: If True, append timestamp to filenames for debugging
+        context:            Workflow context (population, simulator, config, results …)
+        output_dir:         Directory to write plots to.
+        marker:             Appended to filenames (e.g. "INITIAL", "FINAL").
+        substances_to_plot: Comma-separated list (empty = all).
+        clean_directory:    Wipe image files before writing new plots.
+        add_timestamp:      Append HHMMSS to filenames for debugging.
 
     Returns:
-        Number of plots generated
+        Number of plots generated.
     """
     import sys
     from datetime import datetime
@@ -42,25 +50,23 @@ def _generate_plots_to_directory(
     from visualization.auto_plotter import AutoPlotter
 
     population = context.get('population')
-    simulator = context.get('simulator')
+    simulator  = context.get('simulator')
     config: IConfig = context.get('config')
-    results = context.get('results', {})
+    results    = context.get('results', {})
 
-    # Check if required components are available
+    # --- sanity checks ---------------------------------------------------
     if not simulator:
-        print(f"[WARNING] Simulator not available in context - skipping plot generation")
+        print("[WARNING] Simulator not available in context - skipping plot generation")
         print(f"[WARNING] Available context keys: {list(context.keys())}")
         return 0
-
     if not population:
-        print(f"[WARNING] Population not available in context - skipping plot generation")
+        print("[WARNING] Population not available in context - skipping plot generation")
         return 0
-
     if not config:
-        print(f"[WARNING] Config not available in context - skipping plot generation")
+        print("[WARNING] Config not available in context - skipping plot generation")
         return 0
 
-    # Create output directory if it doesn't exist
+    # Create output directory if needed
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Optionally clean the directory before writing new plots
@@ -94,13 +100,22 @@ def _generate_plots_to_directory(
 
 @register_function(
     display_name="Generate Summary Plots",
-    description="Generate summary plots. Uses context['plots_dir'] automatically (set by executor based on GUI/CLI mode).",
+    description="Generate summary plots (INITIAL / FINAL). "
+                "Output goes to config.plots_dir (timestamped results folder).",
     category="FINALIZATION",
     parameters=[
-        {"name": "marker", "type": "STRING", "description": "String to append to filenames (e.g., 'INITIAL', 'FINAL'). Leave empty for no marker.", "default": ""},
-        {"name": "substances_to_plot", "type": "STRING", "description": "Comma-separated list of substances to plot (e.g., 'Oxygen,Glucose,Lactate'). Leave empty for all substances.", "default": ""},
-        {"name": "clean_directory", "type": "BOOL", "description": "If true, remove existing plots before writing new ones", "default": False},
-        {"name": "add_timestamp", "type": "BOOL", "description": "If true, append timestamp (HHMMSS) to filenames for debugging", "default": False},
+        {"name": "marker", "type": "STRING",
+         "description": "Appended to filenames (e.g. 'INITIAL', 'FINAL'). "
+                        "Leave empty for no marker.", "default": ""},
+        {"name": "substances_to_plot", "type": "STRING",
+         "description": "Comma-separated substances to plot. "
+                        "Leave empty for all.", "default": ""},
+        {"name": "clean_directory", "type": "BOOL",
+         "description": "If true, remove existing plots before writing",
+         "default": False},
+        {"name": "add_timestamp", "type": "BOOL",
+         "description": "If true, append HHMMSS to filenames",
+         "default": False},
     ],
     inputs=["context"],
     outputs=[],
@@ -115,45 +130,43 @@ def generate_summary_plots(
     **kwargs
 ) -> bool:
     """
-    Generate summary plots in finalization stage.
+    Generate summary plots (typically INITIAL or FINAL).
 
-    This function generates all automatic plots (substance heatmaps, etc.)
-    Uses context['plots_dir'] which is automatically set by the executor
-    based on whether running from GUI or CLI.
+    Output directory: config.plots_dir  (the timestamped results folder
+    created by setup_simulation), so all plots end up together in
+    results/$timestamp/plots/heatmaps/.
 
     Args:
-        context: Workflow context containing population, simulator, config, etc.
-        marker: String to append to filenames (e.g., "INITIAL", "FINAL")
-        substances_to_plot: Comma-separated list of substances to plot (empty = all)
-        clean_directory: If True, remove existing plots before writing new ones
-        add_timestamp: If True, append timestamp (HHMMSS) to filenames for debugging
-        **kwargs: Additional parameters (ignored)
+        context:            Workflow context.
+        marker:             Appended to filenames ("INITIAL", "FINAL").
+        substances_to_plot: Comma-separated list (empty = all).
+        clean_directory:    Wipe image files from target dir first.
+        add_timestamp:      Append HHMMSS to filenames.
+        **kwargs:           Ignored.
 
     Returns:
-        True if successful, False otherwise
+        True on success, False on error.
     """
-    # If marker not provided as parameter, check context (passed from subworkflow call)
+    # If marker not provided as parameter, check context
     if not marker and 'marker' in context:
         marker = context['marker']
 
-    # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
-    # The executor sets plots_dir based on GUI/CLI mode automatically
-    if 'plots_dir' in context:
+    # --- resolve output directory -----------------------------------------
+    # Prefer config.plots_dir (timestamped: results/$timestamp/plots)
+    config: Optional[IConfig] = context.get('config')
+    if config and hasattr(config, 'plots_dir') and config.plots_dir:
+        output_path = Path(config.plots_dir)
+    elif 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:
-        # Fallback for legacy contexts without plots_dir
-        config: Optional[IConfig] = context.get('config')
-        if config and hasattr(config, 'plots_dir'):
-            output_path = Path(config.plots_dir)
-        else:
-            output_path = Path('results/plots')
+        output_path = Path('results/plots')
 
     running_from_gui = context.get('running_from_gui', False)
     mode = "GUI" if running_from_gui else "CLI"
     print(f"[WORKFLOW] Generating plots ({mode} mode) to: {output_path}")
 
-    marker_info = f" with marker '{marker}'" if marker else ""
-    timestamp_info = " with timestamp" if add_timestamp else ""
+    marker_info     = f" with marker '{marker}'" if marker else ""
+    timestamp_info  = " with timestamp" if add_timestamp else ""
     substances_info = f" for substances: {substances_to_plot}" if substances_to_plot else " for all substances"
     print(f"[WORKFLOW] Generating plots{marker_info}{timestamp_info}{substances_info}...")
 
@@ -163,7 +176,7 @@ def generate_summary_plots(
             marker=marker,
             substances_to_plot=substances_to_plot,
             clean_directory=clean_directory,
-            add_timestamp=add_timestamp
+            add_timestamp=add_timestamp,
         )
         print(f"[WORKFLOW] Generated {count} plots to {output_path}")
         return True
@@ -176,4 +189,3 @@ def generate_summary_plots(
         import traceback
         traceback.print_exc()
         return False
-

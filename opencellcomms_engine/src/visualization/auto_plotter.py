@@ -816,15 +816,16 @@ Substance Initial Values:
 
             print(f"   ✅ {substance_name} initial heatmap: {plot_path.name}")
 
-    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None, marker: str = "", substance_filter: List[str] = None):
+    def generate_all_plots(self, results: Dict[str, Any], simulator=None, population=None, marker: str = "", substance_filter: List[str] = None, title_suffix: str = ""):
         """Generate all plots automatically
 
         Args:
             results: Results dictionary with time series data
             simulator: Simulator instance for current state
             population: Population instance for cell positions
-            marker: String to append to filenames (e.g., "INITIAL", "FINAL")
+            marker: String to append to filenames (e.g., "INITIAL", "FINAL", "ITER_001")
             substance_filter: Optional list of substance names to plot (None = all)
+            title_suffix: String to append to plot titles (e.g., "[Iteration 3/5]")
         """
 
         marker_info = f" with marker '{marker}'" if marker else ""
@@ -892,7 +893,7 @@ Substance Initial Values:
 
                     plot_path = self.plot_substance_heatmap(
                         substance, concentrations, cell_positions, current_time, config_name, population,
-                        marker=marker
+                        marker=marker, title_suffix=title_suffix
                     )
                     generated_plots.append(plot_path)
                     print(f"   [OK] {substance} heatmap: {plot_path.name}")

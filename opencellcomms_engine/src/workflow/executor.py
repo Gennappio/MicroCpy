@@ -532,6 +532,14 @@ class WorkflowExecutor:
             for iteration in range(iterations):
                 call_info['iteration'] = iteration + 1
 
+                # Expose current iteration info in context so functions can read it
+                # (e.g. generate_iteration_plots uses this to label plots).
+                # Only set when actually looping (iterations > 1) to avoid
+                # overwriting the parent loop's counter in child subworkflows.
+                if iterations > 1:
+                    context['loop_iteration'] = iteration + 1       # 1-based
+                    context['loop_total_iterations'] = iterations
+
                 # Log timing for previous iteration if this is not the first
                 if iteration > 0 and iteration_start_time is not None:
                     elapsed = time.time() - iteration_start_time
