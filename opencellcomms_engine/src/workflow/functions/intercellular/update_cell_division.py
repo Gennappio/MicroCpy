@@ -197,10 +197,9 @@ def _find_daughter_position(parent_position, cell_radius: float):
 
 
 def _generate_cell_id(population):
-    """Generate a unique cell ID."""
-    existing_ids = set(population.state.cells.keys())
-    new_id = max(existing_ids) + 1 if existing_ids else 1
-    return new_id
+    """Generate a unique cell ID (UUID string)."""
+    import uuid
+    return str(uuid.uuid4())
 
 
 def _get_config_param(config, param_name: str, default_value):

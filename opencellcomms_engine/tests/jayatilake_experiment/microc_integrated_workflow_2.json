@@ -65,7 +65,7 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 50,
+          "iterations": 5,
           "parameters": {},
           "enabled": true,
           "position": {
@@ -842,7 +842,7 @@
           "id": "param_checkpoint_file",
           "label": "Checkpoint File",
           "parameters": {
-            "file_path": "tests/jayatilake_experiment/initial_cells_100_center_1500.csv"
+            "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
           },
           "position": {
             "x": 32.10482758620691,
@@ -958,7 +958,7 @@
           "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
-            "plot_interval": "5"
+            "plot_interval": "1"
           },
           "enabled": true,
           "position": {
@@ -1051,14 +1051,18 @@
           "id": "run_diffusion_coupled",
           "function_name": "run_diffusion_solver_coupled",
           "function_file": "",
-          "parameters": {},
+          "parameters": {
+            "lactate_conversion_factor": 1,
+            "glucose_conversion_factor": 100,
+            "oxygen_conversion_factor": 1
+          },
           "enabled": true,
           "position": {
             "x": 200,
             "y": 400
           },
           "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
-          "custom_name": "",
+          "custom_name": "run_diffusion_solver_coupled",
           "step_count": 1,
           "parameter_nodes": [
             "param_max_iterations",
@@ -1369,7 +1373,7 @@
           "id": "param_activation_probability",
           "label": "Activation Probability",
           "parameters": {
-            "activation_probability": "20"
+            "activation_probability": "2"
           },
           "position": {
             "x": -118.64275862068973,

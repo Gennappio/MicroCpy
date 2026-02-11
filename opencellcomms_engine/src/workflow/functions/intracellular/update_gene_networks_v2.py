@@ -75,8 +75,8 @@ def update_gene_networks_v2(
         #                 # print(f"[GENE_NETWORK_V2 DEBUG]   {substance_name}: {len(conc_grid)} positions, sample at {sample_pos} = {sample_val:.6f}")
         #     else:
         #         print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations is EMPTY!")
-        # except Exception as e:
-        #     print(f"[update_gene_networks_v2] Failed to get concentrations: {e}")
+        except Exception as e:
+            print(f"[update_gene_networks_v2] Failed to get concentrations: {e}")
 
     # DEBUG: Log associations
     # if associations:

@@ -501,9 +501,8 @@ class MultiSubstanceSimulator:
             #             print(f"[OXYGEN DEBUG] After solve:")
             #             print(f"   var min/max: {np.min(var.value):.6f} / {np.max(var.value):.6f} mM")
             #             print(f"   var mean: {np.mean(var.value):.6f} mM")
-            # except Exception as e:
-            #     print(f"FAILED!")
-            #     print(f"[ERROR] Error during {name} solve: {e}")
+            except Exception as e:
+                print(f"[ERROR] Error during {name} solve: {e}")
 
             # DEBUG: Show solver results for lactate
             # if name == 'Lactate':

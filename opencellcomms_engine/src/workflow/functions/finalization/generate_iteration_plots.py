@@ -96,6 +96,9 @@ def generate_iteration_plots(
         iteration = context.get('macrostep', context.get('step', 0))
 
     # --- check plot interval ----------------------------------------------
+    # Convert plot_interval to int (it may be passed as string from JSON)
+    plot_interval = int(plot_interval)
+    
     # Skip plotting if this iteration doesn't match the interval
     if plot_interval > 1 and iteration % plot_interval != 0:
         print(f"[WORKFLOW] Skipping plots for iteration {iteration} (plot_interval={plot_interval})")

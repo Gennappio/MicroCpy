@@ -1,7 +1,7 @@
 Oxygen_supply=ON
 Glucose_supply=ON
 MCT1_stimulus=ON
-Proton_level=OFF
+Proton_level=ON
 FGFR_stimulus=ON
 EGFR_stimulus=ON
 cMET_stimulus=ON
