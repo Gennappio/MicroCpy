@@ -35,6 +35,10 @@ from src.interfaces.base import IConfig
         {"name": "clean_directory", "type": "BOOL",
          "description": "If true, remove existing plots before writing new ones",
          "default": False},
+        {"name": "plot_interval", "type": "INT",
+         "description": "Plot every N iterations (e.g., 1=every iteration, 5=every 5th iteration, 10=every 10th). "
+                        "Set to 1 to plot every iteration.",
+         "default": 1},
     ],
     inputs=["context"],
     outputs=[],
@@ -44,6 +48,7 @@ def generate_iteration_plots(
     context: Dict[str, Any],
     substances_to_plot: str = "",
     clean_directory: bool = False,
+    plot_interval: int = 1,
     **kwargs
 ) -> bool:
     """
@@ -57,18 +62,17 @@ def generate_iteration_plots(
       - filename  → e.g. Oxygen_heatmap_t5.000_ITER_003.png
       - title     → e.g. "Oxygen Distribution at t = 5.000 [Iteration 3] ..."
 
-    Output directory: config.plots_dir  (the timestamped results folder
-    created by setup_simulation), so all plots (INITIAL, ITER_*, FINAL) end
-    up together in  results/$timestamp/plots/heatmaps/.
+    Output directory: context['plots_dir'] (GUI-viewable subworkflow folder).
 
     Args:
         context:            Workflow context.
         substances_to_plot: Comma-separated list (empty = all).
         clean_directory:    Wipe image files from the target dir first.
+        plot_interval:      Plot every N iterations (1=all, 5=every 5th, etc.).
         **kwargs:           Ignored.
 
     Returns:
-        True on success, False on error.
+        True on success, False on error (or skipped if not a plot iteration).
     """
     import sys
 
@@ -91,6 +95,12 @@ def generate_iteration_plots(
     if iteration == 0:
         iteration = context.get('macrostep', context.get('step', 0))
 
+    # --- check plot interval ----------------------------------------------
+    # Skip plotting if this iteration doesn't match the interval
+    if plot_interval > 1 and iteration % plot_interval != 0:
+        print(f"[WORKFLOW] Skipping plots for iteration {iteration} (plot_interval={plot_interval})")
+        return True  # Return success, just skipped
+    
     # --- sanity checks ----------------------------------------------------
     if not simulator:
         print("[WARNING] Simulator not available in context - skipping iteration plots")

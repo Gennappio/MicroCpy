@@ -404,8 +404,8 @@ def _collect_reaction_terms(population, substance_concentrations):
     for substance_name in substance_concentrations.keys():
         reaction_terms[substance_name] = {}
 
-    print(f"[DIFFUSION] Collecting reaction terms from {len(population.state.cells)} cells")
-    print(f"[DIFFUSION] Substances: {list(substance_concentrations.keys())}")
+    # print(f"[DIFFUSION] Collecting reaction terms from {len(population.state.cells)} cells")
+    # print(f"[DIFFUSION] Substances: {list(substance_concentrations.keys())}")
 
     cells_with_metabolism = 0
     cells_without_metabolism = 0
@@ -419,13 +419,13 @@ def _collect_reaction_terms(population, substance_concentrations):
 
         if not metabolic_state:
             cells_without_metabolism += 1
-            if cells_without_metabolism <= 3:
-                print(f"[DIFFUSION] Cell {cell_id} has NO metabolic_state (type={type(metabolic_state)})")
+            # if cells_without_metabolism <= 3:
+            #     print(f"[DIFFUSION] Cell {cell_id} has NO metabolic_state (type={type(metabolic_state)})")
             continue
 
         cells_with_metabolism += 1
-        if cells_with_metabolism <= 3:
-            print(f"[DIFFUSION] Cell {cell_id} metabolic_state: {metabolic_state}")
+        # if cells_with_metabolism <= 3:
+        #     print(f"[DIFFUSION] Cell {cell_id} metabolic_state: {metabolic_state}")
 
         # Get local environment
         local_env = {}
@@ -455,8 +455,8 @@ def _collect_reaction_terms(population, substance_concentrations):
                 reactions[substance_name] += value  # Production is positive
 
         # Log first cell's reactions for debugging
-        if cells_with_metabolism <= 1:
-            print(f"[DIFFUSION] Cell {cell_id} reactions built: {reactions}")
+        # if cells_with_metabolism <= 1:
+        #     print(f"[DIFFUSION] Cell {cell_id} reactions built: {reactions}")
 
         # Add cell's reactions to the grid
         for substance_name, rate in reactions.items():
@@ -465,13 +465,13 @@ def _collect_reaction_terms(population, substance_concentrations):
                     reaction_terms[substance_name][position] = 0.0
                 reaction_terms[substance_name][position] += rate
 
-    print(f"[DIFFUSION] Summary: {cells_with_metabolism} cells WITH metabolic_state, {cells_without_metabolism} cells WITHOUT")
+    # print(f"[DIFFUSION] Summary: {cells_with_metabolism} cells WITH metabolic_state, {cells_without_metabolism} cells WITHOUT")
 
     # Log total reaction rates per substance
     for substance_name, pos_rates in reaction_terms.items():
         total_rate = sum(pos_rates.values())
-        if abs(total_rate) > 1e-30:
-            print(f"[DIFFUSION] {substance_name} total reaction rate: {total_rate:.2e}")
+        # if abs(total_rate) > 1e-30:
+        #     print(f"[DIFFUSION] {substance_name} total reaction rate: {total_rate:.2e}")
 
     return reaction_terms
 

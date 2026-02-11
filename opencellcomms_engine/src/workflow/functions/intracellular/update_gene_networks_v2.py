@@ -67,20 +67,20 @@ def update_gene_networks_v2(
 
             # DEBUG: Log what keys we got and sample values
             if substance_concentrations:
-                print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations keys: {list(substance_concentrations.keys())}")
+                # print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations keys: {list(substance_concentrations.keys())}")
                 for substance_name, conc_grid in substance_concentrations.items():
                     if conc_grid:
                         sample_pos = next(iter(conc_grid.keys()))
                         sample_val = conc_grid[sample_pos]
-                        print(f"[GENE_NETWORK_V2 DEBUG]   {substance_name}: {len(conc_grid)} positions, sample at {sample_pos} = {sample_val:.6f}")
-            else:
-                print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations is EMPTY!")
-        except Exception as e:
-            print(f"[update_gene_networks_v2] Failed to get concentrations: {e}")
+        #                 # print(f"[GENE_NETWORK_V2 DEBUG]   {substance_name}: {len(conc_grid)} positions, sample at {sample_pos} = {sample_val:.6f}")
+        #     else:
+        #         print(f"[GENE_NETWORK_V2 DEBUG] substance_concentrations is EMPTY!")
+        # except Exception as e:
+        #     print(f"[update_gene_networks_v2] Failed to get concentrations: {e}")
 
     # DEBUG: Log associations
-    if associations:
-        print(f"[GENE_NETWORK_V2 DEBUG] associations: {associations}")
+    # if associations:
+    #     print(f"[GENE_NETWORK_V2 DEBUG] associations: {associations}")
     if thresholds:
         threshold_vals = {}
         for gene_name, thresh_config in thresholds.items():
@@ -88,7 +88,7 @@ def update_gene_networks_v2(
                 threshold_vals[gene_name] = thresh_config.threshold
             else:
                 threshold_vals[gene_name] = thresh_config
-        print(f"[GENE_NETWORK_V2 DEBUG] thresholds: {threshold_vals}")
+        # print(f"[GENE_NETWORK_V2 DEBUG] thresholds: {threshold_vals}")
 
     # Ensure propagation_steps is int
     propagation_steps = int(propagation_steps)
@@ -98,9 +98,9 @@ def update_gene_networks_v2(
     # =========================================================================
     gene_networks = context.get('gene_networks', {})
 
-    if not gene_networks:
-        print("[update_gene_networks_v2] No gene networks in context - run 'Initialize Gene Networks' first")
-        return
+    # if not gene_networks:
+    #     print("[update_gene_networks_v2] No gene networks in context - run 'Initialize Gene Networks' first")
+    #     return
 
     # =========================================================================
     # UPDATE EACH CELL

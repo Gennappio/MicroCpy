@@ -65,7 +65,7 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 5,
+          "iterations": 50,
           "parameters": {},
           "enabled": true,
           "position": {
@@ -957,7 +957,8 @@
           "function_name": "generate_iteration_plots",
           "function_file": "",
           "parameters": {
-            "substances_to_plot": "Oxygen,Glucose,Lactate"
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "plot_interval": "5"
           },
           "enabled": true,
           "position": {
@@ -965,7 +966,7 @@
             "y": 100
           },
           "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
-          "custom_name": "",
+          "custom_name": "generate_iteration_plots",
           "step_count": 1,
           "parameter_nodes": []
         }
@@ -1258,7 +1259,7 @@
           "function_name": "mark_necrotic_cells",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 100
@@ -1276,7 +1277,7 @@
           "function_name": "mark_growth_arrest_cells",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 200
@@ -1326,7 +1327,7 @@
           "enabled": true,
           "position": {
             "x": 250,
-            "y": 500
+            "y": 517.2358620689655
           },
           "description": "Force cells as proliferating",
           "custom_name": "",
@@ -1340,13 +1341,13 @@
           "function_name": "update_cell_division",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
-            "x": 200,
-            "y": 500
+            "x": -91.44275862068957,
+            "y": 684.8937931034483
           },
           "description": "Handle cell division for proliferating cells",
-          "custom_name": "",
+          "custom_name": "update_cell_division",
           "step_count": 1,
           "parameter_nodes": []
         }
@@ -1360,8 +1361,19 @@
             "max_growth_arrest_steps": 100
           },
           "position": {
-            "x": -512.3310344827587,
-            "y": 207.1724137931035
+            "x": -452.88240250130355,
+            "y": 340.93183575137755
+          }
+        },
+        {
+          "id": "param_activation_probability",
+          "label": "Activation Probability",
+          "parameters": {
+            "activation_probability": "20"
+          },
+          "position": {
+            "x": -118.64275862068973,
+            "y": 495.29931034482763
           }
         },
         {
@@ -1388,17 +1400,6 @@
           "position": {
             "x": -312.9379310344828,
             "y": 108.60689655172405
-          }
-        },
-        {
-          "id": "param_activation_probability",
-          "label": "Activation Probability",
-          "parameters": {
-            "activation_probability": 1.0
-          },
-          "position": {
-            "x": 400,
-            "y": 500
           }
         }
       ],

@@ -1235,13 +1235,13 @@ def should_update_diffusion(current_step: int, last_update: int, interval: int, 
     """
     # Always update at step 0 to ensure initial diffusion
     if current_step == 0:
-        print(f"[DIFFUSION] FORCING UPDATE at step 0")
+        # print(f"[DIFFUSION] FORCING UPDATE at step 0")
         return True
 
     # Use standard interval-based updates for other steps
     should_update = (current_step - last_update) >= interval
-    if should_update:
-        print(f"[DIFFUSION] UPDATE: step={current_step}, last={last_update}, interval={interval}")
+    # if should_update:
+    #     print(f"[DIFFUSION] UPDATE: step={current_step}, last={last_update}, interval={interval}")
     return should_update
 
 def should_update_intercellular(current_step: int, last_update: int, interval: int, state: Dict[str, Any]) -> bool:
