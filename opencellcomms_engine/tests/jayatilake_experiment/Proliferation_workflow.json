@@ -132,7 +132,7 @@
         {
           "id": "update_gene_networks",
           "function_name": "update_gene_networks_standalone",
-          "enabled": true,
+          "enabled": false,
           "description": "Propagate gene network for N steps (input nodes stay FIXED)",
           "parameters": {
             "propagation_steps": 500
@@ -152,8 +152,8 @@
         },
         {
           "id": "update_gene_networks_netlogo",
-          "function_name": "update_gene_networks_netlogo",
-          "enabled": false,
+          "function_name": "propagate_gene_networks_netlogo",
+          "enabled": true,
           "description": "Jayatilake graph walking propagation",
           "parameters": {
             "propagation_steps": 100,
@@ -164,7 +164,7 @@
       ],
       "subworkflow_calls": [],
       "parameters": [],
-      "execution_order": ["update_gene_networks", "update_gene_networks_hierarchical"],
+      "execution_order": ["update_gene_networks", "update_gene_networks_hierarchical", "update_gene_networks_netlogo"],
       "enabled": true
     },
     "analysis": {
