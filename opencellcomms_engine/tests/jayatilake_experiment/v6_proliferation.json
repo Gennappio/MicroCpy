@@ -322,6 +322,27 @@
       },
       "functions": [
         {
+          "id": "setup_domain",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {
+            "dimensions": 3,
+            "size_x": 100,
+            "size_y": 100,
+            "size_z": 100,
+            "cell_diameter_um": 10.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 100,
+            "y": 50
+          },
+          "description": "Initialize domain, config, and mesh_manager",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
           "id": "setup_pop",
           "function_name": "setup_population",
           "function_file": "",
@@ -372,6 +393,7 @@
         }
       ],
       "execution_order": [
+        "setup_domain",
         "setup_pop",
         "read_checkpoint"
       ],
