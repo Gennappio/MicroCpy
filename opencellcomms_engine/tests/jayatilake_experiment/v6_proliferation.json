@@ -305,6 +305,26 @@
       },
       "functions": [
         {
+          "id": "setup_simulation",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {
+            "name": "Gene Network Proliferation Test",
+            "dt": 0.1,
+            "output_dir": "results",
+            "verbose": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 50,
+            "y": 50
+          },
+          "description": "Initialize simulation config and output directories",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
           "id": "setup_domain",
           "function_name": "setup_domain",
           "function_file": "",
@@ -318,9 +338,9 @@
           "enabled": true,
           "position": {
             "x": 100,
-            "y": 50
+            "y": 100
           },
-          "description": "Initialize domain, config, and mesh_manager",
+          "description": "Initialize 3D domain and mesh_manager",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -335,8 +355,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 252.31946264379383,
-            "y": 68.85915829262981
+            "x": 150,
+            "y": 150
           },
           "description": "Initialize population with gene network support",
           "custom_name": "",
@@ -376,6 +396,7 @@
         }
       ],
       "execution_order": [
+        "setup_simulation",
         "setup_domain",
         "setup_pop",
         "read_checkpoint"
