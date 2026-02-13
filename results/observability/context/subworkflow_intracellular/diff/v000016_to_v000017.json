@@ -1,0 +1,33 @@
+{
+  "fromVersion": 16,
+  "toVersion": 17,
+  "scopeKey": "subworkflow:intracellular",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x127e53a60>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x157e940e0>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 7,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 8,
+        "truncated": false
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "fromVersion": 3,
+  "toVersion": 4,
+  "scopeKey": "subworkflow:Setup_population",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {},
+        "truncated": false,
+        "len": 0
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<BooleanNetwork>",
+          "cell_000001": "<BooleanNetwork>",
+          "cell_000002": "<BooleanNetwork>",
+          "...": "(997 more keys)"
+        },
+        "truncated": true,
+        "len": 1000
+      }
+    },
+    "population": {
+      "before": {
+        "type": "CellPopulation",
+        "preview": "<unrepresentable>",
+        "truncated": true
+      },
+      "after": {
+        "type": "CellPopulation",
+        "preview": "CellPopulation(cells=1000, generations=0, occupancy=17.78%)",
+        "truncated": false
+      }
+    }
+  }
+}

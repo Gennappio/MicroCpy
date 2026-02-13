@@ -1,0 +1,61 @@
+{
+  "fromVersion": 22,
+  "toVersion": 23,
+  "scopeKey": "subworkflow:Generate_loop_plots",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1693aafc0>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x16c48eca0>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 11,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 12,
+        "truncated": false
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1007,
+            "mitoATP_true": 13,
+            "glycoATP_true": 148,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1008,
+            "mitoATP_true": 102,
+            "glycoATP_true": 663,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      }
+    }
+  }
+}

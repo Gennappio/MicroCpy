@@ -1,0 +1,8 @@
+{
+  "fromVersion": 1,
+  "toVersion": 2,
+  "scopeKey": "subworkflow:Generate_initial_plots",
+  "added": {},
+  "removed": {},
+  "changed": {}
+}

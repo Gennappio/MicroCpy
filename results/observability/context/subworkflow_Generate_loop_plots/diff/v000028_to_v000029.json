@@ -1,0 +1,97 @@
+{
+  "fromVersion": 28,
+  "toVersion": 29,
+  "scopeKey": "subworkflow:Generate_loop_plots",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<BooleanNetwork>",
+          "cell_000001": "<BooleanNetwork>",
+          "cell_000002": "<BooleanNetwork>",
+          "...": "(1006 more keys)"
+        },
+        "truncated": true,
+        "len": 1009
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<BooleanNetwork>",
+          "cell_000001": "<BooleanNetwork>",
+          "cell_000002": "<BooleanNetwork>",
+          "...": "(1010 more keys)"
+        },
+        "truncated": true,
+        "len": 1013
+      }
+    },
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x16ece2e80>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x16946bd80>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 14,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 15,
+        "truncated": false
+      }
+    },
+    "population": {
+      "before": {
+        "type": "CellPopulation",
+        "preview": "CellPopulation(cells=1009, generations=0, occupancy=17.94%)",
+        "truncated": false
+      },
+      "after": {
+        "type": "CellPopulation",
+        "preview": "CellPopulation(cells=1013, generations=0, occupancy=18.01%)",
+        "truncated": false
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1009,
+            "mitoATP_true": 18,
+            "glycoATP_true": 15,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1009,
+            "mitoATP_true": 2,
+            "glycoATP_true": 108,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      }
+    }
+  }
+}

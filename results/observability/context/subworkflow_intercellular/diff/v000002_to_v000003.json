@@ -1,0 +1,61 @@
+{
+  "fromVersion": 2,
+  "toVersion": 3,
+  "scopeKey": "subworkflow:intercellular",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x127e1bba0>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x155b039c0>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 1,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 2,
+        "truncated": false
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1000,
+            "mitoATP_true": 1,
+            "glycoATP_true": 89,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1003,
+            "mitoATP_true": 95,
+            "glycoATP_true": 671,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "version": 2,
+  "scopeKey": "subworkflow:Setup_simulation",
+  "nodeId": "setup_sim",
+  "executionId": "86b0b289-6eab-4787-8892-c85b2262814c",
+  "keys": {
+    "workflow_file": {
+      "type": "string",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment/microc_integrated_workflow_2.json",
+      "truncated": false,
+      "len": 143
+    },
+    "subworkflow_name": {
+      "type": "string",
+      "preview": "Setup_simulation",
+      "truncated": false,
+      "len": 16
+    },
+    "subworkflow_kind": {
+      "type": "string",
+      "preview": "subworkflow",
+      "truncated": false,
+      "len": 11
+    },
+    "results_dir": {
+      "type": "Path",
+      "preview": "results",
+      "truncated": false
+    },
+    "subworkflow_results_dir": {
+      "type": "Path",
+      "preview": "results/subworkflows/Setup_simulation",
+      "truncated": false
+    },
+    "engine_root": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine",
+      "truncated": false
+    },
+    "project_root": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy",
+      "truncated": false
+    },
+    "workflow_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment",
+      "truncated": false
+    },
+    "resolve_path": {
+      "type": "function",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x117949f80>",
+      "truncated": false
+    },
+    "running_from_gui": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
+    "gui_root": {
+      "type": "null",
+      "preview": null,
+      "truncated": false
+    },
+    "gui_results_dir": {
+      "type": "null",
+      "preview": null,
+      "truncated": false
+    },
+    "output_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_simulation",
+      "truncated": false
+    },
+    "plots_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_simulation/plots",
+      "truncated": false
+    },
+    "data_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_simulation/data",
+      "truncated": false
+    },
+    "verbose": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
+    "dt": {
+      "type": "number",
+      "preview": 1.0,
+      "truncated": false
+    },
+    "simulation_params": {
+      "type": "dict",
+      "preview": {
+        "name": "MicroC Simulation",
+        "dt": 1,
+        "output_dir": "<PosixPath>",
+        "plots_dir": "<PosixPath>"
+      },
+      "truncated": false,
+      "len": 4
+    },
+    "results": {
+      "type": "dict",
+      "preview": {
+        "time": [],
+        "cell_count": [],
+        "substance_stats": {}
+      },
+      "truncated": false,
+      "len": 3
+    },
+    "helpers": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
+    },
+    "config": {
+      "type": "MinimalConfig",
+      "preview": "<src.workflow.functions.initialization.setup_simulation.setup_simulation.<locals>.MinimalConfig object at 0x11790f2c0>",
+      "truncated": false
+    }
+  }
+}

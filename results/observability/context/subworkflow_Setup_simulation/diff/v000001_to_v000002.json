@@ -1,0 +1,51 @@
+{
+  "fromVersion": 1,
+  "toVersion": 2,
+  "scopeKey": "subworkflow:Setup_simulation",
+  "added": {
+    "config": {
+      "type": "MinimalConfig",
+      "preview": "<src.workflow.functions.initialization.setup_simulation.setup_simulation.<locals>.MinimalConfig object at 0x11790f2c0>",
+      "truncated": false
+    },
+    "dt": {
+      "type": "number",
+      "preview": 1.0,
+      "truncated": false
+    },
+    "simulation_params": {
+      "type": "dict",
+      "preview": {
+        "name": "MicroC Simulation",
+        "dt": 1,
+        "output_dir": "<PosixPath>",
+        "plots_dir": "<PosixPath>"
+      },
+      "truncated": false,
+      "len": 4
+    },
+    "results": {
+      "type": "dict",
+      "preview": {
+        "time": [],
+        "cell_count": [],
+        "substance_stats": {}
+      },
+      "truncated": false,
+      "len": 3
+    },
+    "verbose": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
+    "helpers": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

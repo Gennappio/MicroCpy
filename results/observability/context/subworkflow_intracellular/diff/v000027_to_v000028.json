@@ -1,0 +1,37 @@
+{
+  "fromVersion": 27,
+  "toVersion": 28,
+  "scopeKey": "subworkflow:intracellular",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1008,
+            "mitoATP_true": 102,
+            "glycoATP_true": 663,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1008,
+            "mitoATP_true": 124,
+            "glycoATP_true": 188,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      }
+    }
+  }
+}

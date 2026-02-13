@@ -1,0 +1,45 @@
+{
+  "fromVersion": 29,
+  "toVersion": 30,
+  "scopeKey": "subworkflow:intercellular",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<BooleanNetwork>",
+          "cell_000001": "<BooleanNetwork>",
+          "cell_000002": "<BooleanNetwork>",
+          "...": "(1006 more keys)"
+        },
+        "truncated": true,
+        "len": 1009
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<BooleanNetwork>",
+          "cell_000001": "<BooleanNetwork>",
+          "cell_000002": "<BooleanNetwork>",
+          "...": "(1010 more keys)"
+        },
+        "truncated": true,
+        "len": 1013
+      }
+    },
+    "population": {
+      "before": {
+        "type": "CellPopulation",
+        "preview": "CellPopulation(cells=1009, generations=0, occupancy=17.94%)",
+        "truncated": false
+      },
+      "after": {
+        "type": "CellPopulation",
+        "preview": "CellPopulation(cells=1013, generations=0, occupancy=18.01%)",
+        "truncated": false
+      }
+    }
+  }
+}

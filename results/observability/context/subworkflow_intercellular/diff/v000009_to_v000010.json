@@ -1,0 +1,8 @@
+{
+  "fromVersion": 9,
+  "toVersion": 10,
+  "scopeKey": "subworkflow:intercellular",
+  "added": {},
+  "removed": {},
+  "changed": {}
+}

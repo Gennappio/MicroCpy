@@ -1,0 +1,61 @@
+{
+  "fromVersion": 10,
+  "toVersion": 11,
+  "scopeKey": "subworkflow:microenvironment",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x156d1a8e0>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x156cde5c0>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 5,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 6,
+        "truncated": false
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1005,
+            "mitoATP_true": 10,
+            "glycoATP_true": 13,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "gene_network": {
+            "cells_updated": 1005,
+            "mitoATP_true": 1,
+            "glycoATP_true": 90,
+            "propagation_steps": 500
+          }
+        },
+        "truncated": false,
+        "len": 1
+      }
+    }
+  }
+}
