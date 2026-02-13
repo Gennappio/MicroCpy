@@ -346,32 +346,60 @@
           "parameter_nodes": []
         },
         {
-          "id": "initialize_population",
-          "function_name": "initialize_population",
+          "id": "setup_pop",
+          "function_name": "setup_population",
           "function_file": "",
           "parameters": {
-            "num_cells": 1000,
-            "layout": "sphere",
-            "radius": 30.0,
-            "enable_gene_network": true
+            "enable_gene_network": true,
+            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
           },
           "enabled": true,
           "position": {
             "x": 150,
             "y": 150
           },
-          "description": "Create 1000 cells in sphere layout (30um radius)",
+          "description": "Initialize population with gene network support",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
+        },
+        {
+          "id": "read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Load 1000 cells from VTK checkpoint (3D format)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_checkpoint_file"
+          ]
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "param_checkpoint_file",
+          "name": "file_path",
+          "type": "STRING",
+          "value": "opencellcomms_engine/tests/jayatilake_experiment/checkpoint_1000_cells_3d.vtk",
+          "description": "Path to VTK checkpoint file (3D format with gene networks)",
+          "position": {
+            "x": 250,
+            "y": 150
+          }
+        }
+      ],
       "execution_order": [
         "setup_simulation",
         "setup_domain",
-        "initialize_population"
+        "setup_pop",
+        "read_checkpoint"
       ],
       "input_parameters": []
     }
