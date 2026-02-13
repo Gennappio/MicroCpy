@@ -44,8 +44,10 @@ from .apply_associations_to_inputs import apply_associations_to_inputs
 from .propagate_gene_networks_graph_walking import propagate_gene_networks_graph_walking
 from .update_gene_networks_standalone import update_gene_networks_standalone
 from .propagate_gene_networks import propagate_gene_networks
+from .propagate_gene_networks_netlogo import propagate_gene_networks_netlogo
 from .get_gene_network_states import get_gene_network_states, remove_gene_network
 from .print_gene_network_states import print_gene_network_states
+
 
 __all__ = [
     # Workflow functions
@@ -54,6 +56,7 @@ __all__ = [
     'set_gene_network_inputs',
     'apply_associations_to_inputs',
     'propagate_gene_networks_graph_walking',
+    'propagate_gene_networks_netlogo',
     'update_gene_networks_standalone',
     'propagate_gene_networks',
     'get_gene_network_states',
