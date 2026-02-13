@@ -65,7 +65,7 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 5,
+          "iterations": 15,
           "parameters": {},
           "enabled": true,
           "position": {
@@ -1058,8 +1058,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 400
+            "x": 124.58311818012515,
+            "y": 471.50637683662205
           },
           "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
           "custom_name": "run_diffusion_solver_coupled",
@@ -1127,8 +1127,8 @@
             "max_coupling_iterations": 10
           },
           "position": {
-            "x": 400,
-            "y": 400
+            "x": -123.20477082582028,
+            "y": 358.8873535765342
           }
         },
         {
