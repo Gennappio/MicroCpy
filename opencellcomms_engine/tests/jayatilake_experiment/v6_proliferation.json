@@ -364,42 +364,33 @@
           "parameter_nodes": []
         },
         {
-          "id": "read_checkpoint",
-          "function_name": "read_checkpoint",
+          "id": "initialize_population",
+          "function_name": "initialize_population",
           "function_file": "",
-          "parameters": {},
+          "parameters": {
+            "num_cells": 1000,
+            "layout": "sphere",
+            "radius": 30.0,
+            "enable_gene_network": true
+          },
           "enabled": true,
           "position": {
             "x": 200,
             "y": 200
           },
-          "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+          "description": "Create 1000 cells in sphere layout (30um radius)",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": [
-            "param_checkpoint_file"
-          ]
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [
-        {
-          "id": "param_checkpoint_file",
-          "label": "Checkpoint File",
-          "parameters": {
-            "file_path": "opencellcomms_engine/tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
-          },
-          "position": {
-            "x": -48.918650674662615,
-            "y": 192.51043478260874
-          }
-        }
-      ],
+      "parameters": [],
       "execution_order": [
         "setup_simulation",
         "setup_domain",
         "setup_pop",
-        "read_checkpoint"
+        "initialize_population"
       ],
       "input_parameters": []
     }
