@@ -346,24 +346,6 @@
           "parameter_nodes": []
         },
         {
-          "id": "setup_pop",
-          "function_name": "setup_population",
-          "function_file": "",
-          "parameters": {
-            "enable_gene_network": true,
-            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {
-            "x": 150,
-            "y": 150
-          },
-          "description": "Initialize population with gene network support",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
-        },
-        {
           "id": "initialize_population",
           "function_name": "initialize_population",
           "function_file": "",
@@ -375,8 +357,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 200
+            "x": 150,
+            "y": 150
           },
           "description": "Create 1000 cells in sphere layout (30um radius)",
           "custom_name": "",
@@ -389,7 +371,6 @@
       "execution_order": [
         "setup_simulation",
         "setup_domain",
-        "setup_pop",
         "initialize_population"
       ],
       "input_parameters": []
