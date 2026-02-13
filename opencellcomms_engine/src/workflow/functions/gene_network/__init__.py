@@ -42,7 +42,6 @@ from .initialize_gene_networks import initialize_gene_networks, get_gene_network
 from .initialize_hierarchical_gene_networks import initialize_hierarchical_gene_networks
 from .set_gene_network_inputs import set_gene_network_inputs
 from .apply_associations_to_inputs import apply_associations_to_inputs
-from .propagate_gene_networks_graph_walking import propagate_gene_networks_graph_walking
 from .update_gene_networks_standalone import update_gene_networks_standalone
 from .propagate_gene_networks import propagate_gene_networks
 from .propagate_and_update_gene_networks import propagate_and_update_gene_networks
@@ -58,7 +57,6 @@ __all__ = [
     'initialize_hierarchical_gene_networks',
     'set_gene_network_inputs',
     'apply_associations_to_inputs',
-    'propagate_gene_networks_graph_walking',
     'propagate_gene_networks_netlogo',
     'update_gene_networks_standalone',
     'propagate_gene_networks',

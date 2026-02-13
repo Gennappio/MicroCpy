@@ -204,37 +204,21 @@
       },
       "functions": [
         {
-          "id": "propagate_gene_networks",
-          "function_name": "propagate_gene_networks_graph_walking",
-          "function_file": "",
-          "parameters": {
-            "propagation_steps": 500,
-            "verbose": false
-          },
-          "enabled": true,
-          "position": {
-            "x": 200,
-            "y": 100
-          },
-          "description": "Graph walking propagation: follows network topology and signal chains. Fate nodes are transient triggers.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
-        },
-        {
           "id": "update_gene_networks_netlogo",
           "function_name": "propagate_gene_networks_netlogo",
           "function_file": "",
           "parameters": {
             "propagation_steps": 100,
-            "verbose": true
+            "reversible": true,
+            "verbose": true,
+            "debug_steps": false
           },
           "enabled": true,
           "position": {
             "x": 250,
             "y": 250
           },
-          "description": "Jayatilake graph walking propagation",
+          "description": "NetLogo-faithful graph walking propagation",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -243,7 +227,6 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "propagate_gene_networks",
         "update_gene_networks_netlogo"
       ],
       "input_parameters": []
