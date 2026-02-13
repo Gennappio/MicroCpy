@@ -39,11 +39,13 @@ from ._mock_helpers import (
 # Workflow functions (1 file = 1 function)
 from .initialize_population import initialize_population
 from .initialize_gene_networks import initialize_gene_networks, get_gene_network, set_gene_network
+from .initialize_hierarchical_gene_networks import initialize_hierarchical_gene_networks
 from .set_gene_network_inputs import set_gene_network_inputs
 from .apply_associations_to_inputs import apply_associations_to_inputs
 from .propagate_gene_networks_graph_walking import propagate_gene_networks_graph_walking
 from .update_gene_networks_standalone import update_gene_networks_standalone
 from .propagate_gene_networks import propagate_gene_networks
+from .propagate_and_update_gene_networks import propagate_and_update_gene_networks
 from .propagate_gene_networks_netlogo import propagate_gene_networks_netlogo
 from .get_gene_network_states import get_gene_network_states, remove_gene_network
 from .print_gene_network_states import print_gene_network_states
@@ -53,12 +55,14 @@ __all__ = [
     # Workflow functions
     'initialize_population',
     'initialize_gene_networks',
+    'initialize_hierarchical_gene_networks',
     'set_gene_network_inputs',
     'apply_associations_to_inputs',
     'propagate_gene_networks_graph_walking',
     'propagate_gene_networks_netlogo',
     'update_gene_networks_standalone',
     'propagate_gene_networks',
+    'propagate_and_update_gene_networks',
     'get_gene_network_states',
     'print_gene_network_states',
     # Helper functions
