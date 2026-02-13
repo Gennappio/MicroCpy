@@ -129,8 +129,8 @@ KEY BEHAVIORS (NetLogo-Faithful)
 3. TRANSIENT FATE NODES: Fate nodes always reset to false after evaluation
 4. REVERSIBLE MODE: Cell keeps updating until Necrosis (default)
    NON-REVERSIBLE MODE: Cell stops at first fate (--non-reversible flag)
-5. CELL ACTIONS LAYER: Optional simulation of proliferation/death events
-   (--apply-cell-actions flag)
+5. CELL ACTIONS LAYER: Optional phenotype evaluation at simulation end
+   (--apply-cell-actions flag) - checks fate only AFTER all graph walking
 
 ===============================================================================
 OUTPUT INTERPRETATION
@@ -624,36 +624,34 @@ class NetLogoFaithfulGeneNetwork:
 
     def apply_cell_actions(self, *, current_tick: int) -> Dict[str, bool]:
         """
-        Approximate the NetLogo intercellular 'cell actions' layer.
-
-        NetLogo references:
-        - Proliferation is acted upon in -PROLIFERATE-870 (do-every the-intercellular-step),
-          and then -RESET-FATE-145 sets my-fate nobody.
-        - Growth_Arrest countdown in -GROWTH-ARREST-10 and -GROWTH-ARREST-CYCLE-258:
-          Decrements my-growth-arrest-cycle each intercellular step. When it reaches 0,
-          -RESET-FATE-278 sets my-fate nobody.
-        - Apoptosis is acted upon in -APOPTOSIS-NECROSIS-100 by killing the cell (die).
-
-        Single-cell approximation:
-        - If fate == Proliferation: count event, reset fate to nobody.
-        - If fate == Growth_Arrest: decrement countdown, reset fate when countdown=0.
-        - If fate == Apoptosis or fate == Necrosis: mark dead.
+        Evaluate phenotype based on final fate at END of simulation.
+        
+        This is called ONCE after all graph walking completes, matching the NetLogo
+        approach where the network has time to stabilize before phenotype is evaluated.
+        
+        NetLogo timing:
+        - Gene network updates every 1 tick (graph walk)
+        - Apoptosis/proliferation checks every 100 ticks (intercellular step)
+        - This delay allows transient fates to revert before being acted upon
+        
+        In this simplified single-cell version:
+        - We let the network walk for all specified steps
+        - Then evaluate the FINAL fate to determine cell outcome
+        - This approximates the "network stabilization" behavior
+        
+        Returns:
+        - If fate == Proliferation: cell would divide
+        - If fate == Apoptosis or Necrosis: cell would die
+        - If fate == Growth_Arrest or nobody: cell survives but doesn't divide
         """
         proliferated = False
         died = False
 
-        # Proliferation consumption (NetLogo: -PROLIFERATE-870, -RESET-FATE-145)
+        # Proliferation
         if self.fate == "Proliferation":
             proliferated = True
-            self.fate = None
 
-        # Growth Arrest countdown (NetLogo: -GROWTH-ARREST-10, -GROWTH-ARREST-CYCLE-258, -RESET-FATE-278)
-        if self.fate == "Growth_Arrest":
-            self.growth_arrest_cycle -= 1
-            if self.growth_arrest_cycle <= 0:
-                self.fate = None  # Exit growth arrest
-
-        # Death (NetLogo: -APOPTOSIS-NECROSIS-100)
+        # Death
         if self.fate in ("Apoptosis", "Necrosis"):
             died = True
 
@@ -717,17 +715,16 @@ class NetLogoFaithfulGeneNetwork:
                 fate_events.append({'step': step, 'fate': fate_assigned})
             if fate_reverted:
                 fate_revert_events.append({'step': step})
-
-            if apply_cell_actions:
-                actions = self.apply_cell_actions(current_tick=current_tick)
-                if actions["proliferated"]:
-                    proliferation_events += 1
-                if actions["died"]:
-                    died = True
-                    stopped_early = True
-                    break
             
             steps_completed = step + 1
+        
+        # Apply cell actions ONCE at the end (not during simulation)
+        if apply_cell_actions:
+            actions = self.apply_cell_actions(current_tick=steps_completed)
+            if actions["proliferated"]:
+                proliferation_events += 1
+            if actions["died"]:
+                died = True
         
         # Compile results
         final_states = self.get_all_states()
@@ -1021,9 +1018,9 @@ Examples:
                        help='Growth arrest cycle max (NetLogo: the-growth-arrest-cycle = 3). '
                             'Number of intercellular steps before Growth_Arrest resets to nobody.')
     parser.add_argument('--apply-cell-actions', action='store_true',
-                       help='Apply a NetLogo-like cell-actions layer: Proliferation consumes fate and resets age; '
-                            'Growth_Arrest counts down and resets to nobody; '
-                            'Apoptosis/Necrosis stop the run as death. Helps compare to NetLogo cell-level metrics.')
+                       help='Evaluate phenotype at simulation end based on final fate. '
+                            'Proliferation = would divide, Apoptosis/Necrosis = would die. '
+                            'Helps compare outcomes to NetLogo population-level metrics.')
     parser.add_argument('--verbose', action='store_true', help='Verbose output')
     parser.add_argument('--debug-steps', action='store_true', help='Debug each step')
     parser.add_argument('--print-network', action='store_true', help='Print network structure')
