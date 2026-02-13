@@ -1,4 +1,4 @@
-Oxygen_supply=ON
+Oxygen_supply=OFF
 Glucose_supply=ON
 MCT1_stimulus=ON
 Proton_level=ON
@@ -8,3 +8,4 @@ cMET_stimulus=ON
 Growth_Inhibitor=OFF
 DNA_damage=OFF
 TGFBR_stimulus=OFF
+MCT1=ON
