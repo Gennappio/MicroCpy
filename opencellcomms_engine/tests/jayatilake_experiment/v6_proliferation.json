@@ -367,7 +367,9 @@
           "id": "read_checkpoint",
           "function_name": "read_checkpoint",
           "function_file": "",
-          "parameters": {},
+          "parameters": {
+            "file_path": "opencellcomms_engine/tests/jayatilake_experiment/checkpoint_1000_cells_3d.vtk"
+          },
           "enabled": true,
           "position": {
             "x": 200,
@@ -376,25 +378,11 @@
           "description": "Load 1000 cells from VTK checkpoint (3D format)",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": [
-            "param_checkpoint_file"
-          ]
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [
-        {
-          "id": "param_checkpoint_file",
-          "name": "file_path",
-          "type": "STRING",
-          "value": "opencellcomms_engine/tests/jayatilake_experiment/checkpoint_1000_cells_3d.vtk",
-          "description": "Path to VTK checkpoint file (3D format with gene networks)",
-          "position": {
-            "x": 250,
-            "y": 150
-          }
-        }
-      ],
+      "parameters": [],
       "execution_order": [
         "setup_simulation",
         "setup_domain",
