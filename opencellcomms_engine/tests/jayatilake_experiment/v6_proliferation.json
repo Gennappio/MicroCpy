@@ -1,0 +1,381 @@
+{
+  "version": "2.0",
+  "name": "Graph Walking Gene Network Benchmark v5 (Topology-Based Propagation)",
+  "description": "Gene network benchmark with GRAPH WALKING update mechanism. Follows network topology instead of random gene selection. kernel_setup → loop → analysis.",
+  "metadata": {
+    "author": "OpenCellComms Team",
+    "experiment": "Gene Network Benchmark v5 - Graph Walking",
+    "created": "2026-02-09",
+    "notes": "Implements graph walking propagation (matches gene_network_graph_walking.py): follows signal propagation chains through network topology, fate nodes are transient triggers that reset after firing, updates follow outgoing links from last visited node.",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "kernel_setup": "composer",
+        "loop": "subworkflow",
+        "analysis": "subworkflow",
+        "Setup_population": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer: kernel_setup → loop × 10 → analysis",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN COMPOSER",
+        "position": {
+          "x": 24.315068493150704,
+          "y": 22.260273972602704
+        },
+        "number_of_steps": 3
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_kernel_setup",
+          "type": "subworkflow_call",
+          "subworkflow_name": "kernel_setup",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 256.5068493150685,
+            "y": 33.219178082191775
+          },
+          "description": "Load kernel and setup all concrete classes",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_loop",
+          "type": "subworkflow_call",
+          "subworkflow_name": "loop",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Run gene network updates once (500 steps, comparable to standalone)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_analysis",
+          "type": "subworkflow_call",
+          "subworkflow_name": "analysis",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 300
+          },
+          "description": "Analyze and print results",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "call_kernel_setup",
+        "call_loop",
+        "call_analysis"
+      ],
+      "input_parameters": []
+    },
+    "kernel_setup": {
+      "description": "Load kernel and setup all concrete classes (one node per class)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-kernel-setup",
+        "type": "controller",
+        "label": "KERNEL SETUP",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "load_kernel",
+          "function_name": "load_kernel",
+          "function_file": "",
+          "parameters": {
+            "kernel_name": "biophysics"
+          },
+          "enabled": true,
+          "position": {
+            "x": 324.5173913043477,
+            "y": 53.00130434782608
+          },
+          "description": "Load biophysics kernel (registers core context keys)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init_gene_networks",
+          "function_name": "initialize_hierarchical_gene_networks",
+          "function_file": "",
+          "parameters": {
+            "bnd_file": "opencellcomms_engine/tests/jayatilake_experiment/jaya_microc.bnd",
+            "random_initialization": true,
+            "fate_hierarchy": "Necrosis,Apoptosis,Growth_Arrest,Proliferation"
+          },
+          "enabled": true,
+          "position": {
+            "x": 213.71434782608685,
+            "y": 413.7065217391306
+          },
+          "description": "Create HierarchicalBooleanNetwork concrete class per cell (with fate logic)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "set_inputs",
+          "function_name": "set_gene_network_inputs",
+          "function_file": "",
+          "parameters": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true,
+            "Proton_level": false,
+            "FGFR_stimulus": false,
+            "EGFR_stimulus": false,
+            "cMET_stimulus": false,
+            "Growth_Inhibitor": false,
+            "DNA_damage": false,
+            "TGFBR_stimulus": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 204,
+            "y": 586
+          },
+          "description": "Set fixed input nodes (stay FIXED during propagation)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [
+        {
+          "id": "subworkflow_Setup_population_1771000251318",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Setup_population",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 188.53347826086974,
+            "y": 311.4560869565217
+          },
+          "description": "",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "load_kernel",
+        "subworkflow_Setup_population_1771000251318",
+        "init_gene_networks",
+        "set_inputs"
+      ],
+      "input_parameters": []
+    },
+    "loop": {
+      "description": "Graph walking gene network propagation (follows topology, transient fate nodes)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-loop",
+        "type": "controller",
+        "label": "LOOP",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "propagate_gene_networks",
+          "function_name": "propagate_gene_networks_graph_walking",
+          "function_file": "",
+          "parameters": {
+            "propagation_steps": 500,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Graph walking propagation: follows network topology and signal chains. Fate nodes are transient triggers.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "update_gene_networks_netlogo",
+          "function_name": "propagate_gene_networks_netlogo",
+          "function_file": "",
+          "parameters": {
+            "propagation_steps": 100,
+            "verbose": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 250,
+            "y": 250
+          },
+          "description": "Jayatilake graph walking propagation",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "propagate_gene_networks",
+        "update_gene_networks_netlogo"
+      ],
+      "input_parameters": []
+    },
+    "analysis": {
+      "description": "Analyze and print gene network results",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-analysis",
+        "type": "controller",
+        "label": "ANALYSIS",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "print_results",
+          "function_name": "print_gene_network_states",
+          "function_file": "",
+          "parameters": {
+            "show_per_cell": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Print gene network statistics",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "generate_cell_plots",
+          "function_name": "generate_cell_plots",
+          "function_file": "",
+          "parameters": {
+            "show_per_cell": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 250,
+            "y": 200
+          },
+          "description": "generate_cell_plots",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "print_results",
+        "generate_cell_plots"
+      ],
+      "input_parameters": []
+    },
+    "Setup_population": {
+      "description": "Setup cell population with gene networks enabled",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-setup-population",
+        "type": "controller",
+        "label": "SETUP POPULATION",
+        "position": {
+          "x": -11.959130434782537,
+          "y": 43.8721739130435
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "setup_pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": true,
+            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
+          },
+          "enabled": true,
+          "position": {
+            "x": 252.31946264379383,
+            "y": 68.85915829262981
+          },
+          "description": "Initialize population with gene network support",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 200
+          },
+          "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "param_checkpoint_file"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "param_checkpoint_file",
+          "label": "Checkpoint File",
+          "parameters": {
+            "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+          },
+          "position": {
+            "x": -48.918650674662615,
+            "y": 192.51043478260874
+          }
+        }
+      ],
+      "execution_order": [
+        "setup_pop",
+        "read_checkpoint"
+      ],
+      "input_parameters": []
+    }
+  }
+}

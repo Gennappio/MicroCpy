@@ -124,6 +124,11 @@ def generate_cell_plots(
     
     config = context.get('config')
     
+    # Use context['plots_dir'] if available (for GUI integration)
+    if 'plots_dir' in context:
+        output_dir = context['plots_dir']
+        print(f"[CELL_PLOTS] Using plots_dir from context: {output_dir}")
+    
     # =========================================================================
     # EXTRACT CELL DATA
     # =========================================================================
