@@ -392,12 +392,12 @@ class CellPopulation(ICellPopulation):
         new_total_cells = self.state.total_cells
 
         for cell_info in cell_data:
-            # Ensure position is a clean tuple of floats (not numpy array)
+            # Ensure position is a clean tuple of ints (grid/logical positions must be int)
             raw_position = cell_info['position']
             if hasattr(raw_position, '__iter__'):
-                position = tuple(float(x) for x in raw_position)
+                position = tuple(int(round(x)) for x in raw_position)
             else:
-                position = (float(raw_position),)
+                position = (int(round(raw_position)),)
 
             # Ensure phenotype is a clean string
             phenotype = str(cell_info.get('phenotype', 'Growth_Arrest'))

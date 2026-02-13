@@ -871,10 +871,11 @@ class InitialStateManager:
             z_logical = z_shifted_um / cell_height_um
 
             # Convert 3D position to 2D if needed for 2D simulations
+            # Positions are integer grid coordinates (logical mesh positions)
             if self.config.domain.dimensions == 2:
-                pos = (float(x_logical), float(y_logical))  # Drop z coordinate
+                pos = (int(round(x_logical)), int(round(y_logical)))  # Drop z coordinate
             else:
-                pos = (float(x_logical), float(y_logical), float(z_logical))
+                pos = (int(round(x_logical)), int(round(y_logical)), int(round(z_logical)))
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
