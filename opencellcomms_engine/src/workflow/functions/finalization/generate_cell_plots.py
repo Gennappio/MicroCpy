@@ -124,10 +124,24 @@ def generate_cell_plots(
     
     config = context.get('config')
     
-    # Use context['plots_dir'] if available (for GUI integration)
-    if 'plots_dir' in context:
+    # PRIORITY 1: Use GUI results directory if available (for GUI integration)
+    # This allows the GUI to easily find and display plots
+    # Calculate absolute path to workspace root from this file's location
+    # This file is at: workspace_root/opencellcomms_engine/src/workflow/functions/finalization/generate_cell_plots.py
+    # So we need to go up 5 levels to reach workspace_root
+    workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
+    gui_results_dir = os.path.join(workspace_root, 'opencellcomms_gui', 'GUI_results')
+    
+    if os.path.exists(gui_results_dir):
+        output_dir = gui_results_dir
+        print(f"[CELL_PLOTS] Using GUI results directory: {output_dir}")
+    # PRIORITY 2: Use context['plots_dir'] if set by workflow executor
+    elif 'plots_dir' in context:
         output_dir = context['plots_dir']
         print(f"[CELL_PLOTS] Using plots_dir from context: {output_dir}")
+    # PRIORITY 3: Use provided output_dir parameter
+    else:
+        print(f"[CELL_PLOTS] Using parameter output_dir: {output_dir}")
     
     # =========================================================================
     # EXTRACT CELL DATA
