@@ -141,6 +141,15 @@
   flex-direction: column;
   overflow: hidden;
   background: white;
+  min-width: 0;
+}
+
+.results-console {
+  width: 480px;
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .viewer-header {

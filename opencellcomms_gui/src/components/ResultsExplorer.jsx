@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import WorkflowConsole from './WorkflowConsole';
 import './ResultsExplorer.css';
 
 const API_BASE_URL = 'http://localhost:5001';
@@ -186,6 +187,10 @@ function ResultsExplorer() {
             <p>Select a plot to view</p>
           </div>
         )}
+      </div>
+
+      <div className="results-console">
+        <WorkflowConsole workflowName="main" />
       </div>
     </div>
   );

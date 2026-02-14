@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { Download, Upload, FileJson, Plus, X, Edit2, Save } from 'lucide-react';
 import FunctionPalette from './components/FunctionPalette';
 import WorkflowCanvas from './components/WorkflowCanvas';
-import WorkflowConsole from './components/WorkflowConsole';
-import WorkflowResults from './components/WorkflowResults';
 import NodeInspector from './components/NodeInspector';
 import MainTabSelector from './components/MainTabSelector';
+import ResultsExplorer from './components/ResultsExplorer';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
@@ -34,7 +33,6 @@ function App() {
   // Resizable panel widths
   const [paletteWidth, setPaletteWidth] = useState(308);  // Increased by 10% (280 * 1.1 = 308)
   const [inspectorWidth, setInspectorWidth] = useState(320);
-  const [consoleWidth, setConsoleWidth] = useState(500);  // Increased by ~25% to shrink canvas
   const [isResizing, setIsResizing] = useState(null);
 
   // Resize handlers
@@ -59,10 +57,6 @@ function App() {
       } else if (isResizing === 'inspector') {
         const newWidth = Math.max(280, Math.min(600, window.innerWidth - e.clientX));
         setInspectorWidth(newWidth);
-      } else if (isResizing === 'console') {
-        // Console/Results: min 350px, max 800px for better flexibility
-        const newWidth = Math.max(350, Math.min(800, window.innerWidth - e.clientX));
-        setConsoleWidth(newWidth);
       }
     };
 
@@ -347,6 +341,9 @@ function App() {
         onTabChange={setCurrentMainTab}
       />
 
+      {/* === Workflow Designer View (Composers / Sub-workflows) === */}
+      {(currentMainTab === 'composers' || currentMainTab === 'subworkflows') && (
+        <>
           {/* Stage/Sub-workflow Tabs */}
           <div className="stage-tabs">
             {/* V2.0: Dynamic sub-workflow tabs filtered by kind */}
@@ -438,25 +435,18 @@ function App() {
 
           {/* Main Content - Responsive Grid Layout */}
           {(() => {
-            const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                               (currentStage === 'main' ? 'composer' : 'subworkflow');
-            const isComposer = currentKind === 'composer';
             const inspectorOpen = inspector.isOpen;
 
             // Build dynamic grid template
             const gridStyle = {};
-            if (isComposer && inspectorOpen) {
-              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${inspectorWidth}px ${consoleWidth}px`;
-            } else if (isComposer) {
-              gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${consoleWidth}px`;
-            } else if (inspectorOpen) {
+            if (inspectorOpen) {
               gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr ${inspectorWidth}px`;
             } else {
               gridStyle.gridTemplateColumns = `${paletteWidth}px 1fr`;
             }
 
             return (
-              <div className={`workflow-grid ${isComposer ? 'composer-layout' : 'subworkflow-layout'} ${inspectorOpen ? 'with-inspector' : ''}`} style={gridStyle}>
+              <div className={`workflow-grid ${inspectorOpen ? 'with-inspector' : ''}`} style={gridStyle}>
                 <div className="grid-palette">
                   <FunctionPalette currentStage={currentStage} />
                   <div className="resize-handle resize-handle-right" onMouseDown={handleMouseDown('palette')} />
@@ -464,20 +454,6 @@ function App() {
                 <div className="grid-canvas">
                   <WorkflowCanvas key={currentStage} stage={currentStage} />
                 </div>
-                {isComposer && (
-                  <>
-                    <div className="grid-console">
-                      <div className="resize-handle resize-handle-left" onMouseDown={handleMouseDown('console')} />
-                      <WorkflowConsole workflowName={currentStage} />
-                    </div>
-                    <div className="grid-results">
-                      <WorkflowResults
-                        subworkflowName={currentStage}
-                        subworkflowKind={currentKind}
-                      />
-                    </div>
-                  </>
-                )}
                 {/* Node Inspector - appears when open */}
                 {inspectorOpen && (
                   <div className="grid-inspector">
@@ -488,6 +464,15 @@ function App() {
               </div>
             );
           })()}
+        </>
+      )}
+
+      {/* === Results View === */}
+      {currentMainTab === 'results' && (
+        <div className="fullpage-content">
+          <ResultsExplorer />
+        </div>
+      )}
 
       {/* New Composer/Sub-workflow Dialog */}
       {showNewSubWorkflowDialog && (
@@ -546,4 +531,3 @@ function App() {
 }
 
 export default App;
-

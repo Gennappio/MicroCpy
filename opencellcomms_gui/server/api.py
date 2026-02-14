@@ -38,48 +38,26 @@ def get_engine_path():
 
 def setup_results_directories(workflow_data, gui_dir):
     """
-    Setup nested results directory structure according to v2.0 spec.
-
-    Creates:
-    - results/composers/<name>/ for each composer
-    - results/subworkflows/<name>/ for each subworkflow
+    Setup GUI_results directory for simulation output.
 
     Clears ALL existing results to implement overwrite semantics.
+    Images placed in GUI_results/ will be automatically visible in the Results tab.
 
     Args:
         workflow_data: Workflow JSON dict
-        gui_dir: Path to ABM_GUI directory (results are stored in GUI folder)
+        gui_dir: Path to opencellcomms_gui directory
     """
-    results_dir = gui_dir / "results"
-
-    # Get subworkflow kinds from metadata
-    subworkflow_kinds = workflow_data.get('metadata', {}).get('gui', {}).get('subworkflow_kinds', {})
+    results_dir = gui_dir / "GUI_results"
 
     # Clear the entire results directory (fresh start for each run)
     if results_dir.exists():
         shutil.rmtree(results_dir)
-        log_queue.put("[INFO] Cleared existing results directory\n")
+        log_queue.put("[INFO] Cleared existing GUI_results directory\n")
 
-    # Create base directories
-    composers_dir = results_dir / "composers"
-    subworkflows_dir = results_dir / "subworkflows"
-    composers_dir.mkdir(parents=True, exist_ok=True)
-    subworkflows_dir.mkdir(parents=True, exist_ok=True)
+    # Create the base results directory
+    results_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create directories for each subworkflow based on its kind
-    for subworkflow_name, subworkflow_data in workflow_data.get('subworkflows', {}).items():
-        kind = subworkflow_kinds.get(subworkflow_name,
-                                     'composer' if subworkflow_name == 'main' else 'subworkflow')
-
-        if kind == 'composer':
-            subworkflow_dir = composers_dir / subworkflow_name
-        else:
-            subworkflow_dir = subworkflows_dir / subworkflow_name
-
-        subworkflow_dir.mkdir(parents=True, exist_ok=True)
-        log_queue.put(f"[INFO] Created results directory: {subworkflow_dir.relative_to(gui_dir)}\n")
-
-    log_queue.put(f"[INFO] Results directory structure ready\n")
+    log_queue.put(f"[INFO] GUI_results directory ready\n")
 
 
 def stream_output(process, log_queue):
@@ -146,7 +124,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
         # === CLEAN ARCHITECTURE: Pass GUI results directory to engine ===
         # The engine will set context['gui_results_dir'] and context['running_from_gui']
         gui_dir = Path(__file__).parent.parent
-        gui_results_dir = gui_dir / "results"
+        gui_results_dir = gui_dir / "GUI_results"
 
         cmd = [
             sys.executable,
@@ -268,8 +246,8 @@ def run_simulation():
 
         log_queue.put(f"[INFO] Entry subworkflow: {entry_subworkflow} (composer)\n")
 
-    # Setup nested results directory structure (v2.0 spec)
-    # Results are stored in opencellcomms_gui/results/, not opencellcomms_engine/results/
+    # Setup GUI_results directory for simulation output
+    # Results are stored in opencellcomms_gui/GUI_results/
     try:
         gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
         setup_results_directories(workflow_data, gui_dir)
@@ -802,79 +780,85 @@ def upload_function_file():
 @app.route('/api/results/list', methods=['GET'])
 def list_results():
     """
-    List results for a specific subworkflow (v2.0 nested structure).
+    List all results from GUI_results/ directory.
 
-    Query params:
-        subworkflow_name: Name of the subworkflow
-        subworkflow_kind: 'composer' or 'subworkflow'
-        include_all: If 'true', include results from all subworkflows (default for composers)
+    Scans GUI_results/ for images. Top-level subdirectories become result groups.
+    Within each group, further subdirectories become categories.
+    Images placed directly in GUI_results/ go into a 'root' group.
+
+    Returns:
+        {success: true, results: [{name, timestamp, plots: [{name, path, category}]}]}
     """
     try:
-        # Results are stored in opencellcomms_gui/results/, not opencellcomms_engine/results/
         gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
-        results_dir = gui_dir / "results"
-
-        # Get query parameters
-        subworkflow_name = request.args.get('subworkflow_name', 'main')
-        subworkflow_kind = request.args.get('subworkflow_kind', 'composer')
-        include_all = request.args.get('include_all', 'true' if subworkflow_kind == 'composer' else 'false')
+        results_dir = gui_dir / "GUI_results"
 
         if not results_dir.exists():
-            return jsonify({'success': True, 'plots': []})
+            return jsonify({'success': True, 'results': []})
 
-        plots = []
+        IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp'}
 
-        def scan_directory(directory, category_prefix=""):
-            """Scan a directory for image files."""
-            found = []
+        def scan_for_plots(directory, gui_dir_ref):
+            """Recursively scan directory for image files, categorizing by subdirectory."""
+            plots = []
             if not directory.exists():
-                return found
-            for item in directory.iterdir():
+                return plots
+            for item in sorted(directory.iterdir()):
                 if item.is_dir():
-                    # Scan subdirectory
-                    for plot_file in sorted(item.glob('*.png')):
-                        cat = f"{category_prefix}{item.name}" if category_prefix else item.name
-                        found.append({
-                            'name': plot_file.name,
-                            'path': str(plot_file.relative_to(gui_dir)),
-                            'category': cat
-                        })
-                elif item.suffix.lower() == '.png':
-                    # Direct PNG file
-                    cat = category_prefix.rstrip('/') if category_prefix else 'default'
-                    found.append({
+                    # Subdirectory becomes a category
+                    for img_file in sorted(item.rglob('*')):
+                        if img_file.is_file() and img_file.suffix.lower() in IMAGE_EXTENSIONS:
+                            plots.append({
+                                'name': img_file.name,
+                                'path': str(img_file.relative_to(gui_dir_ref)),
+                                'category': item.name
+                            })
+                elif item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+                    plots.append({
                         'name': item.name,
-                        'path': str(item.relative_to(gui_dir)),
-                        'category': cat
+                        'path': str(item.relative_to(gui_dir_ref)),
+                        'category': 'general'
                     })
-            return found
+            return plots
 
-        if include_all == 'true':
-            # Scan all results directories (composers and subworkflows)
-            for kind_dir in ['composers', 'subworkflows']:
-                kind_path = results_dir / kind_dir
-                if kind_path.exists():
-                    for sw_dir in kind_path.iterdir():
-                        if sw_dir.is_dir():
-                            prefix = f"{kind_dir}/{sw_dir.name}/"
-                            plots.extend(scan_directory(sw_dir, prefix))
+        results = []
 
-            # Also scan root results directory for legacy images
-            plots.extend(scan_directory(results_dir, "root/"))
-        else:
-            # Only scan the specific subworkflow directory
-            kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
-            subworkflow_dir = results_dir / kind_plural / subworkflow_name
-            plots.extend(scan_directory(subworkflow_dir))
+        # Check for top-level subdirectories (each becomes a result group)
+        has_subdirs = any(item.is_dir() for item in results_dir.iterdir()
+                         if not item.name.startswith('.'))
 
-        # Sort plots by category and name
-        plots.sort(key=lambda p: (p['category'], p['name']))
+        if has_subdirs:
+            for item in sorted(results_dir.iterdir()):
+                if item.is_dir() and not item.name.startswith('.'):
+                    plots = scan_for_plots(item, gui_dir)
+                    if plots:
+                        # Try to extract timestamp from directory name
+                        timestamp = item.name if item.name[:8].isdigit() else ''
+                        results.append({
+                            'name': item.name,
+                            'timestamp': timestamp,
+                            'plots': plots
+                        })
+
+        # Also collect any images directly in GUI_results/
+        root_plots = []
+        for item in sorted(results_dir.iterdir()):
+            if item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+                root_plots.append({
+                    'name': item.name,
+                    'path': str(item.relative_to(gui_dir)),
+                    'category': 'general'
+                })
+        if root_plots:
+            results.append({
+                'name': 'Results',
+                'timestamp': '',
+                'plots': root_plots
+            })
 
         return jsonify({
             'success': True,
-            'plots': plots,
-            'subworkflow_name': subworkflow_name,
-            'subworkflow_kind': subworkflow_kind
+            'results': results
         })
 
     except Exception as e:
@@ -885,18 +869,23 @@ def list_results():
 def get_plot(plot_path):
     """Serve a plot image file with cache-busting headers."""
     try:
-        # Results are stored in ABM_GUI/results/, paths are relative to ABM_GUI
-        gui_dir = Path(__file__).parent.parent  # ABM_GUI directory
+        gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
         full_path = gui_dir / plot_path
 
         if not full_path.exists():
             return jsonify({'success': False, 'error': 'Plot not found'}), 404
 
-        if not full_path.suffix == '.png':
+        MIME_TYPES = {
+            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp',
+            '.webp': 'image/webp'
+        }
+        mime = MIME_TYPES.get(full_path.suffix.lower())
+        if not mime:
             return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
         # Send file with cache-busting headers to prevent browser caching
-        response = send_file(full_path, mimetype='image/png')
+        response = send_file(full_path, mimetype=mime)
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'

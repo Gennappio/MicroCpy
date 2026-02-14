@@ -27,22 +27,23 @@ function WorkflowResults({ subworkflowName, subworkflowKind }) {
     // Update timestamp to force image refresh
     setImageTimestamp(Date.now());
     try {
-      // Fetch results for this specific subworkflow (v2.0 nested structure)
-      const url = `${API_BASE_URL}/api/results/list?subworkflow_name=${encodeURIComponent(subworkflowName)}&subworkflow_kind=${encodeURIComponent(subworkflowKind)}`;
+      // Fetch results from GUI_results directory
+      const url = `${API_BASE_URL}/api/results/list`;
       console.log('[WorkflowResults] Fetching:', url);
       const res = await fetch(url);
       const data = await res.json();
       console.log('[WorkflowResults] Response:', data);
-      console.log('[WorkflowResults] Plots count:', data.plots?.length || 0);
 
       if (data.success) {
-        setAvailablePlots(data.plots || []);
-        console.log('[WorkflowResults] Set availablePlots:', data.plots?.length || 0);
+        // Flatten all plots from all result groups
+        const allPlots = (data.results || []).flatMap(r => r.plots || []);
+        console.log('[WorkflowResults] Plots count:', allPlots.length);
+        setAvailablePlots(allPlots);
 
         // Auto-select the first plot
-        if (data.plots && data.plots.length > 0) {
-          setSelectedPlot(data.plots[0]);
-          console.log('[WorkflowResults] Auto-selected first plot:', data.plots[0]?.name);
+        if (allPlots.length > 0) {
+          setSelectedPlot(allPlots[0]);
+          console.log('[WorkflowResults] Auto-selected first plot:', allPlots[0]?.name);
         } else {
           setSelectedPlot(null);
         }

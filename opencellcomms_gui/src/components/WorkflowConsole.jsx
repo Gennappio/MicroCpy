@@ -164,7 +164,7 @@ const WorkflowConsole = ({ workflowName }) => {
 
       // Add to displayed logs immediately (not buffered) for user feedback
       const timestamp = new Date().toLocaleTimeString();
-      setDisplayedLogs([{ type: 'info', message: `🚀 Running workflow from entry point: ${workflowName}`, timestamp }]);
+      setDisplayedLogs([{ type: 'info', message: `🚀 Starting simulation...`, timestamp }]);
 
       const response = await fetch(`${API_BASE_URL}/run`, {
         method: 'POST',
@@ -173,7 +173,7 @@ const WorkflowConsole = ({ workflowName }) => {
         },
         body: JSON.stringify({
           workflow: fullWorkflow,  // Send full workflow unchanged
-          entry_subworkflow: workflowName  // Specify entry point (Section 9.2)
+          entry_subworkflow: 'main'  // Always run from main entry point
         }),
       });
 

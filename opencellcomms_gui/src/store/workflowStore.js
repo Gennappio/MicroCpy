@@ -71,7 +71,7 @@ const useWorkflowStore = create((set, get) => ({
   // Current active subworkflow
   currentStage: 'main',
 
-  // Current main tab: 'composers' | 'subworkflows'
+  // Current main tab: 'composers' | 'subworkflows' | 'run_simulation' | 'results'
   currentMainTab: 'composers',
 
   // React Flow nodes and edges for each subworkflow
