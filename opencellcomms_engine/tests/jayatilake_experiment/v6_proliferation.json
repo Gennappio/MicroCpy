@@ -1,12 +1,12 @@
 {
   "version": "2.0",
-  "name": "Graph Walking Gene Network Benchmark v5 (Topology-Based Propagation)",
-  "description": "Gene network benchmark with GRAPH WALKING update mechanism. Follows network topology instead of random gene selection. kernel_setup → loop → analysis.",
+  "name": "NetLogo-Faithful Gene Network Workflow v6",
+  "description": "Gene network workflow replicating gene_network_netlogo_probability.py behavior. Uses NetLogo-faithful graph walking, probabilistic GLUT1I/MCT1I inputs, fate reversion.",
   "metadata": {
     "author": "OpenCellComms Team",
-    "experiment": "Gene Network Benchmark v5 - Graph Walking",
+    "experiment": "NetLogo-Faithful Gene Network v6",
     "created": "2026-02-09",
-    "notes": "Implements graph walking propagation (matches gene_network_graph_walking.py): follows signal propagation chains through network topology, fate nodes are transient triggers that reset after firing, updates follow outgoing links from last visited node.",
+    "notes": "Replicates gene_network_netlogo_probability.py: graph walking propagation, probabilistic inputs via Hill function, transient fate nodes, last-overwrite-wins fate logic, fate reversion.",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -119,28 +119,11 @@
         },
         {
           "id": "init_gene_networks",
-          "function_name": "initialize_hierarchical_gene_networks",
+          "function_name": "initialize_netlogo_gene_networks",
           "function_file": "",
           "parameters": {
             "bnd_file": "tests/jayatilake_experiment/jaya_microc.bnd",
             "random_initialization": true,
-            "fate_hierarchy": "Necrosis,Apoptosis,Growth_Arrest,Proliferation"
-          },
-          "enabled": true,
-          "position": {
-            "x": 213.71434782608685,
-            "y": 413.7065217391306
-          },
-          "description": "Create HierarchicalBooleanNetwork concrete class per cell (with fate logic)",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
-        },
-        {
-          "id": "set_inputs",
-          "function_name": "set_gene_network_inputs",
-          "function_file": "",
-          "parameters": {
             "Oxygen_supply": false,
             "Glucose_supply": true,
             "MCT1_stimulus": true,
@@ -150,14 +133,16 @@
             "cMET_stimulus": false,
             "Growth_Inhibitor": false,
             "DNA_damage": false,
-            "TGFBR_stimulus": false
+            "TGFBR_stimulus": false,
+            "GLUT1I_concentration": 0.0,
+            "MCT1I_concentration": 0.0
           },
           "enabled": true,
           "position": {
-            "x": 204,
-            "y": 586
+            "x": 213.71434782608685,
+            "y": 413.7065217391306
           },
-          "description": "Set fixed input nodes (stay FIXED during propagation)",
+          "description": "Create NetLogo-faithful gene networks with inputs and probabilistic activation",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -183,8 +168,7 @@
       "execution_order": [
         "load_kernel",
         "subworkflow_Setup_population_1771000251318",
-        "init_gene_networks",
-        "set_inputs"
+        "init_gene_networks"
       ],
       "input_parameters": []
     },

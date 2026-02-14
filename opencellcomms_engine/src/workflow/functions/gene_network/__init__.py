@@ -40,6 +40,7 @@ from ._mock_helpers import (
 from .initialize_population import initialize_population
 from .initialize_gene_networks import initialize_gene_networks, get_gene_network, set_gene_network
 from .initialize_hierarchical_gene_networks import initialize_hierarchical_gene_networks
+from .initialize_netlogo_gene_networks import initialize_netlogo_gene_networks
 from .set_gene_network_inputs import set_gene_network_inputs
 from .apply_associations_to_inputs import apply_associations_to_inputs
 from .update_gene_networks_standalone import update_gene_networks_standalone
@@ -55,6 +56,7 @@ __all__ = [
     'initialize_population',
     'initialize_gene_networks',
     'initialize_hierarchical_gene_networks',
+    'initialize_netlogo_gene_networks',
     'set_gene_network_inputs',
     'apply_associations_to_inputs',
     'propagate_gene_networks_netlogo',
