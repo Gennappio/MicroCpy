@@ -1,8 +1,0 @@
-{
-  "fromVersion": 2,
-  "toVersion": 3,
-  "scopeKey": "subworkflow:Summarize_simulation",
-  "added": {},
-  "removed": {},
-  "changed": {}
-}

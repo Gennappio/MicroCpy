@@ -1,8 +1,0 @@
-{
-  "fromVersion": 27,
-  "toVersion": 28,
-  "scopeKey": "subworkflow:microenvironment",
-  "added": {},
-  "removed": {},
-  "changed": {}
-}

@@ -1,8 +1,0 @@
-{
-  "fromVersion": 11,
-  "toVersion": 12,
-  "scopeKey": "subworkflow:Generate_loop_plots",
-  "added": {},
-  "removed": {},
-  "changed": {}
-}
