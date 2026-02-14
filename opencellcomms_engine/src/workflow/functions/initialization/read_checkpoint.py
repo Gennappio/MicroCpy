@@ -64,8 +64,19 @@ def read_checkpoint(
         # Fallback to local resolution for legacy contexts
         checkpoint_path = Path(file_path)
         if not checkpoint_path.is_absolute():
-            project_root = Path(__file__).parent.parent.parent.parent.parent
-            checkpoint_path = project_root / file_path
+            # Try relative to engine root (opencellcomms_engine/)
+            engine_root = Path(__file__).parent.parent.parent.parent.parent
+            candidate = engine_root / file_path
+            if candidate.exists():
+                checkpoint_path = candidate
+            else:
+                # Try relative to workspace root (MicroCpy/)
+                workspace_root = engine_root.parent
+                candidate = workspace_root / file_path
+                if candidate.exists():
+                    checkpoint_path = candidate
+                else:
+                    checkpoint_path = candidate  # Will fail with clear error
 
     if not checkpoint_path.exists():
         print(f"[ERROR] Checkpoint file not found: {checkpoint_path}")

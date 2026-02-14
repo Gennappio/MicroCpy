@@ -69,14 +69,30 @@ def initialize_hierarchical_gene_networks(
         # Parse fate hierarchy
         fate_hierarchy_list = [fate.strip() for fate in fate_hierarchy.split(',')]
         
-        # Find the BND file
-        bnd_path = Path(bnd_file)
-        if not bnd_path.exists():
-            # Try tests directory as fallback
-            bnd_path = Path("tests") / bnd_file
+        # Find the BND file using context['resolve_path'] if available
+        if 'resolve_path' in context:
+            bnd_path = context['resolve_path'](bnd_file)
+        else:
+            bnd_path = Path(bnd_file)
+            if not bnd_path.exists():
+                # Try relative to engine root
+                engine_root = Path(__file__).parent.parent.parent.parent
+                candidate = engine_root / bnd_file
+                if candidate.exists():
+                    bnd_path = candidate
+                else:
+                    # Try relative to workspace root
+                    workspace_root = engine_root.parent
+                    candidate = workspace_root / bnd_file
+                    if candidate.exists():
+                        bnd_path = candidate
+                    else:
+                        # Try tests directory as final fallback
+                        bnd_path = Path("tests") / bnd_file
         
         if not bnd_path.exists():
             print(f"[ERROR] BND file not found: {bnd_file}")
+            print(f"   Tried: {bnd_file}, engine_root/{bnd_file}, workspace_root/{bnd_file}")
             return False
         
         # Create config for gene network
