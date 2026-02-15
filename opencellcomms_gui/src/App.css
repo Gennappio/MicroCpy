@@ -92,6 +92,21 @@
   opacity: 0.6;
 }
 
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-danger:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* View Tabs - Removed (no longer needed) */
 
 /* Stage Tabs */

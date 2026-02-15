@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowConsole.css';
@@ -22,6 +22,8 @@ const WorkflowConsole = ({ workflowName }) => {
   const logsEndRef = useRef(null);
   const eventSourceRef = useRef(null);
   const badgePollingRef = useRef(null);
+  // Ref to hold the true current buffer - avoids stale closure issues in SSE handler
+  const bufferedLogsRef = useRef([]);
 
   // Use store for persistent logs per workflow (keeping for compatibility)
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
@@ -68,16 +70,22 @@ const WorkflowConsole = ({ workflowName }) => {
   }, []);
 
   // Add a log to the buffer (not displayed immediately)
-  const addToBuffer = (type, message) => {
+  // Uses ref as source of truth to avoid stale closure in SSE handler
+  const addToBuffer = useCallback((type, message) => {
     const timestamp = new Date().toLocaleTimeString();
-    setBufferedLogs(prev => [...prev, { type, message, timestamp }]);
-  };
+    const newLog = { type, message, timestamp };
+    bufferedLogsRef.current = [...bufferedLogsRef.current, newLog];
+    setBufferedLogs([...bufferedLogsRef.current]);
+  }, []);
 
   // Refresh: move buffered logs to displayed logs
-  const handleRefresh = () => {
-    setDisplayedLogs(prev => [...prev, ...bufferedLogs]);
+  const handleRefresh = useCallback(() => {
+    const logsToMove = bufferedLogsRef.current;
+    if (logsToMove.length === 0) return;
+    setDisplayedLogs(prev => [...prev, ...logsToMove]);
+    bufferedLogsRef.current = [];
     setBufferedLogs([]);
-  };
+  }, []);
 
   const connectToLogStream = () => {
     try {
@@ -148,6 +156,7 @@ const WorkflowConsole = ({ workflowName }) => {
     // Clear both displayed and buffered logs
     setDisplayedLogs([]);
     setBufferedLogs([]);
+    bufferedLogsRef.current = [];
     clearLogs(workflowName);  // Also clear store for compatibility
     clearObservabilityState();  // Clear previous run's observability data
 
@@ -253,22 +262,25 @@ const WorkflowConsole = ({ workflowName }) => {
             )}
           </button>
 
-          {!isRunning ? (
-            <button
-              className="btn-run-console"
-              onClick={handleRun}
-              disabled={!isConnected}
-              title="Run workflow"
-            >
-              <Play size={14} />
-              Run
-            </button>
-          ) : (
-            <button className="btn-stop-console" onClick={handleStop} title="Stop workflow">
-              <Square size={14} />
-              Stop
-            </button>
-          )}
+          <button
+            className="btn-run-console"
+            onClick={handleRun}
+            disabled={!isConnected || isRunning}
+            title={isRunning ? 'Simulation is running' : 'Run workflow'}
+          >
+            <Play size={14} />
+            Run
+          </button>
+
+          <button
+            className="btn-stop-console"
+            onClick={handleStop}
+            disabled={!isRunning}
+            title={isRunning ? 'Stop workflow' : 'No simulation running'}
+          >
+            <Square size={14} />
+            Stop
+          </button>
         </div>
       </div>
 

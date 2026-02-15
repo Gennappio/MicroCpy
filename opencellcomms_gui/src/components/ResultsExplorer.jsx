@@ -78,7 +78,7 @@ function ResultsExplorer() {
       const hour = timestamp.substring(9, 11);
       const minute = timestamp.substring(11, 13);
       const second = timestamp.substring(13, 15);
-      
+
       const date = new Date(year, month - 1, day, hour, minute, second);
       return date.toLocaleString();
     }
