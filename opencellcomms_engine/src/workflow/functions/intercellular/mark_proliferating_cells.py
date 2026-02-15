@@ -35,10 +35,12 @@ def mark_proliferating_cells(
     Mark cells as proliferating based on gene network Proliferation output.
 
     For each cell:
-    1. Skip cells already in Necrosis, Apoptosis, or Growth_Arrest
-    2. Check if Proliferation gene is ON in gene_states
-    3. If yes, mark cell phenotype as 'Proliferation'
-    4. If no, mark cell phenotype as 'Quiescence' (default)
+    1. Check if Proliferation gene is ON in gene_states
+    2. If yes, mark cell phenotype as 'Proliferation' (overwrites previous phenotype)
+    3. If no, mark cell phenotype as 'Quiescence' (default)
+    
+    Note: Proliferation phenotype overwrites Growth_Arrest and Apoptosis.
+    This follows the principle that proliferating cells override other states.
 
     Args:
         context: Workflow execution context containing:
@@ -66,25 +68,21 @@ def mark_proliferating_cells(
     updated_cells = {}
     proliferating_count = 0
     quiescent_count = 0
-    skipped_count = 0
-
-    # Phenotypes that should not be changed by this function
-    # Note: Apoptotic cells are removed, so we only skip Necrosis and Growth_Arrest
-    inactive_phenotypes = {'Necrosis', 'Growth_Arrest'}
+    overwritten_count = 0
 
     for cell_id, cell in population.state.cells.items():
-        # Skip cells in inactive states (Necrosis, Growth_Arrest)
-        if cell.state.phenotype in inactive_phenotypes:
-            skipped_count += 1
-            updated_cells[cell_id] = cell
-            continue
+        # Store old phenotype for logging
+        old_phenotype = cell.state.phenotype
 
         # Check gene network state for Proliferation
         gene_states = cell.state.gene_states
         if gene_states.get('Proliferation', False):
-            # Mark as proliferating
+            # Mark as proliferating (overwrites any previous phenotype)
             if cell.state.phenotype != 'Proliferation':
                 cell.state = cell.state.with_updates(phenotype='Proliferation')
+                if old_phenotype in {'Growth_Arrest', 'Apoptosis'}:
+                    overwritten_count += 1
+                    print(f"  [PROLIFERATION-OVERWRITE] Cell {cell_id[:8]}: {old_phenotype} -> Proliferation")
             proliferating_count += 1
         else:
             # Default to quiescence
@@ -98,10 +96,8 @@ def mark_proliferating_cells(
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
-    total = proliferating_count + quiescent_count
-    if total > 0:
-        print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
-              f"Quiescent: {quiescent_count}, Skipped (inactive): {skipped_count}")
+    print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
+          f"Quiescent: {quiescent_count}, Overwritten: {overwritten_count}")
 
     # Log population count at end
     final_count = len(population.state.cells)
@@ -112,6 +108,6 @@ def mark_proliferating_cells(
     context['changes']['proliferation'] = {
         'proliferating': proliferating_count,
         'quiescent': quiescent_count,
-        'skipped_inactive': skipped_count
+        'overwritten': overwritten_count
     }
 

@@ -101,24 +101,21 @@ def _should_divide(cell, atp_threshold: float, max_atp_rate: float, cell_cycle_t
     Returns:
         True if cell should divide, False otherwise
     """
-    # Check age
-    if cell.state.age < cell_cycle_time:
-        return False
-
+ 
     # Check phenotype
     if cell.state.phenotype != 'Proliferation':
         return False
 
     # Check ATP rate
-    metabolic_state = cell.state.metabolic_state
-    if not metabolic_state:
-        return False
+    # metabolic_state = cell.state.metabolic_state
+    # if not metabolic_state:
+    #     return False
 
-    atp_rate = metabolic_state.get('atp_rate', 0.0)
-    atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0.0
+    # atp_rate = metabolic_state.get('atp_rate', 0.0)
+    # atp_rate_normalized = atp_rate / max_atp_rate if max_atp_rate > 0 else 0.0
 
-    if atp_rate_normalized <= atp_threshold:
-        return False
+    # if atp_rate_normalized <= atp_threshold:
+    #     return False
 
     return True
 

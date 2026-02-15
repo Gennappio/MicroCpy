@@ -52,12 +52,12 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 1,
+          "iterations": 100,
           "parameters": {},
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 161.5
           },
           "description": "Run gene network updates once (500 steps, comparable to standalone)",
           "parameter_nodes": []
@@ -134,8 +134,8 @@
             "Growth_Inhibitor": false,
             "DNA_damage": false,
             "TGFBR_stimulus": false,
-            "GLUT1I_concentration": 0.0,
-            "MCT1I_concentration": 0.0
+            "GLUT1I_concentration": 0,
+            "MCT1I_concentration": 0
           },
           "enabled": true,
           "position": {
@@ -199,10 +199,87 @@
           },
           "enabled": true,
           "position": {
-            "x": 250,
-            "y": 250
+            "x": 415.3188976377953,
+            "y": 35.114173228346374
           },
           "description": "NetLogo-faithful graph walking propagation",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "mark_proliferating_cells_1771168154618",
+          "function_name": "mark_proliferating_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": -159.98425196850394,
+            "y": 499.5374015748031
+          },
+          "description": "Mark cells as proliferating based on gene network Proliferation output",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "update_cell_division_1771168166835",
+          "function_name": "update_cell_division",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 236.5,
+            "y": 559.75
+          },
+          "description": "Handle cell division based on ATP and cell cycle",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "mark_growth_arrest_cells_1771168182533",
+          "function_name": "mark_growth_arrest_cells",
+          "function_file": "",
+          "parameters": {
+            "max_growth_arrest_steps": 100
+          },
+          "enabled": true,
+          "position": {
+            "x": -134.21259842519686,
+            "y": 354.84055118110234
+          },
+          "description": "Track and manage cells in Growth_Arrest state with time limit",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "mark_apoptotic_cells_1771168234335",
+          "function_name": "mark_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 370.1338582677165,
+            "y": 239.09645669291336
+          },
+          "description": "Mark cells with Apoptosis gene ON (sets phenotype to 'Apoptosis')",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "remove_apoptotic_cells_1771168234336",
+          "function_name": "remove_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 360,
+            "y": 640
+          },
+          "description": "Remove cells marked with Apoptosis phenotype from population",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -211,7 +288,12 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "update_gene_networks_netlogo"
+        "update_gene_networks_netlogo",
+        "mark_apoptotic_cells_1771168234335",
+        "mark_growth_arrest_cells_1771168182533",
+        "mark_proliferating_cells_1771168154618",
+        "update_cell_division_1771168166835",
+        "remove_apoptotic_cells_1771168234336"
       ],
       "input_parameters": []
     },
@@ -318,7 +400,7 @@
             "size_x": 200,
             "size_y": 200,
             "size_z": 200,
-            "cell_height": 5.0
+            "cell_height": 5
           },
           "enabled": true,
           "position": {

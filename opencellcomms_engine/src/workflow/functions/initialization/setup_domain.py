@@ -85,8 +85,8 @@ def setup_domain(
             cell_height=Length(cell_height, "um")
         )
         
-        # Create mesh manager
-        mesh_manager = MeshManager(config.domain)
+        # Create mesh manager (verbose=False to reduce log noise)
+        mesh_manager = MeshManager(config.domain, verbose=False)
         context['mesh_manager'] = mesh_manager
 
         # Create multi-substance simulator

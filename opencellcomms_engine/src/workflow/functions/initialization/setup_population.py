@@ -57,7 +57,7 @@ def setup_population(
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Setting up cell population and gene network")
+    # print(f"[WORKFLOW] Setting up cell population and gene network")
     
     try:
         from src.biology.gene_network import BooleanNetwork
@@ -77,10 +77,8 @@ def setup_population(
         if 'resolve_path' in context:
             resolve_path = context['resolve_path']
             custom_functions_path = resolve_path(custom_functions_module)
-            if custom_functions_path.exists():
-                print(f"   [+] Resolved custom functions path: {custom_functions_path}")
-            else:
-                print(f"   [!] WARNING: Custom functions file not found: {custom_functions_module}")
+            if not custom_functions_path.exists():
+                print(f"   [WARNING] Custom functions file not found: {custom_functions_module}")
         else:
             # Fallback to local resolution for legacy contexts
             custom_functions_path = Path(custom_functions_module)
@@ -98,7 +96,6 @@ def setup_population(
                     if resolved_path.exists():
                         custom_functions_path = resolved_path
                         resolved = True
-                        print(f"   [+] Resolved custom functions path (workflow-relative): {custom_functions_path}")
 
                 # Strategy 2: Relative to project root directory
                 if not resolved:
@@ -106,7 +103,6 @@ def setup_population(
                     if resolved_path.exists():
                         custom_functions_path = resolved_path
                         resolved = True
-                        print(f"   [+] Resolved custom functions path (project-root-relative): {custom_functions_path}")
 
                 # Strategy 3: Search in tests/ directory and subdirectories
                 if not resolved:
@@ -116,18 +112,14 @@ def setup_population(
                             if found_path.is_file():
                                 custom_functions_path = found_path
                                 resolved = True
-                                print(f"   [+] Resolved custom functions path (found in tests/): {custom_functions_path}")
                                 break
 
                 if not resolved:
-                    print(f"   [!] WARNING: Custom functions file not found at any location")
-                    print(f"       Tried: workflow-relative, project-root-relative, tests/**/{custom_functions_module}")
+                    print(f"   [WARNING] Custom functions file not found at any location")
 
         # Verify the path exists
         if not custom_functions_path.exists():
-            print(f"   [!] ERROR: Custom functions file does not exist: {custom_functions_path}")
-        else:
-            print(f"   [+] Custom functions file exists: {custom_functions_path}")
+            print(f"   [ERROR] Custom functions file does not exist: {custom_functions_path}")
 
         config.custom_functions_path = str(custom_functions_path.absolute())
         context['custom_functions_path'] = str(custom_functions_path.absolute())
@@ -135,15 +127,8 @@ def setup_population(
         # Create gene network
         if enable_gene_network:
             gene_network = BooleanNetwork(config=config)
-            print(f"   [+] Created gene network with {len(gene_network.nodes)} nodes")
-            if 'glycoATP' in gene_network.nodes:
-                print(f"   [+] glycoATP node: FOUND")
-            else:
-                print(f"   [!] glycoATP node: NOT FOUND!")
-                print(f"       Available nodes: {list(gene_network.nodes.keys())[:15]}...")
         else:
             gene_network = None
-            print(f"   [+] Gene network disabled")
         
         context['gene_network'] = gene_network
 

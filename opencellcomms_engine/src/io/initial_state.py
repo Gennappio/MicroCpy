@@ -57,7 +57,7 @@ class VTKCellLoader:
 
     def _load_vtk_file(self):
         """Parse VTK file to extract cell positions and size"""
-        print(f"[VTK] Loading VTK cell positions from {self.file_path}")
+        # print(f"[VTK] Loading VTK cell positions from {self.file_path}")
 
         with open(self.file_path, 'r') as f:
             lines = f.readlines()
@@ -78,7 +78,7 @@ class VTKCellLoader:
             if line.startswith('POINTS'):
                 points_section = True
                 num_points = int(line.split()[1])
-                print(f"[*] Found {num_points} points in VTK file")
+                # print(f"[*] Found {num_points} points in VTK file")
                 i += 1
                 continue
 
@@ -88,7 +88,7 @@ class VTKCellLoader:
                 cells_section = True
                 num_cells = int(line.split()[1])
                 self.cell_count = num_cells
-                print(f"[*] Found {num_cells} cells in VTK file")
+                # print(f"[*] Found {num_cells} cells in VTK file")
                 i += 1
                 continue
 
@@ -159,7 +159,7 @@ class VTKCellLoader:
 
         elif cell_type == 'point':
             # Handle point cells (1 vertex each) - assume spherical cells
-            print(f"[*] Detected point cells (spherical), estimating cell size from point distribution")
+            # print(f"[*] Detected point cells (spherical), estimating cell size from point distribution")
 
             for cell_type, cell_vertices in connectivity:
                 if cell_type != 'point':
@@ -187,15 +187,13 @@ class VTKCellLoader:
                     # Use median distance as cell size estimate
                     median_distance = np.median(distances)
                     edge_lengths = [median_distance] * len(cell_centers)
-                    print(f"[*] Estimated cell size from point spacing: {median_distance*1e6:.2f} um")
+                    pass  # print(f"[*] Estimated cell size from point spacing: {median_distance*1e6:.2f} um")
                 else:
                     # Fallback: assume 10 um cells
                     edge_lengths = [10e-6] * len(cell_centers)
-                    print(f"[*] Using fallback cell size: 10.0 um")
             else:
                 # Single cell or no cells - use fallback
                 edge_lengths = [10e-6] * len(cell_centers)
-                print(f"[*] Using fallback cell size: 10.0 um")
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}")
 
@@ -205,7 +203,7 @@ class VTKCellLoader:
             avg_edge_length_m = sum(edge_lengths) / len(edge_lengths)
             self.cell_size_um = avg_edge_length_m * 1e6  # Convert to micrometers
 
-            print(f"[*] Detected biological cell size: {self.cell_size_um:.2f} um")
+            # print(f"[*] Detected biological cell size: {self.cell_size_um:.2f} um")
 
             # Convert cell centers to biological grid coordinates
             # Preserve centered positioning (don't shift to positive values)
@@ -218,8 +216,8 @@ class VTKCellLoader:
                 bio_z = center[2] / cell_size_m
                 self.cell_positions.append((bio_x, bio_y, bio_z))
 
-        print(f"[+] Loaded {len(self.cell_positions)} cell positions")
-        print(f"[+] Biological cell size: {self.cell_size_um:.2f} um")
+        # print(f"[+] Loaded {len(self.cell_positions)} cell positions")
+        # print(f"[+] Biological cell size: {self.cell_size_um:.2f} um")
 
     def get_cell_positions(self) -> List[Tuple[float, float, float]]:
         """Get cell positions in biological grid coordinates"""
@@ -636,13 +634,13 @@ class InitialStateManager:
                 # Check if description line contains metadata (genes= and phenotypes=)
                 if len(lines) >= 2 and "|" in lines[1] and "genes=" in lines[1] and "phenotypes=" in lines[1]:
                     # This is an enhanced VTK domain file
-                    print(f"[VTK] Detected enhanced VTK domain file")
+                    # print(f"[VTK] Detected enhanced VTK domain file")
                     return self._load_enhanced_vtk_domain(file_path)
         except Exception as e:
-            print(f"[DEBUG] Enhanced VTK loading failed: {e}")
+            pass  # Fall through to basic VTK loading
 
         # Fall back to basic VTK loading
-        print(f"[VTK] Using basic VTK loading (legacy format)")
+        # print(f"[VTK] Using basic VTK loading (legacy format)")
         return self._load_basic_vtk_file(file_path)
 
     def _load_enhanced_vtk_domain(self, file_path: Path) -> Tuple[List[Dict[str, Any]], float]:
@@ -807,7 +805,7 @@ class InitialStateManager:
         positions = vtk_loader.get_cell_positions()
         cell_size_um = vtk_loader.get_cell_size_um()
 
-        print(f"[INFO] Basic VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
+        # print(f"[INFO] Basic VTK file info: {len(positions)} cells, {cell_size_um:.2f} um cell size")
 
         if not positions:
             print("[!] No cells in VTK file")
@@ -841,11 +839,11 @@ class InitialStateManager:
             # Calculate domain center for positioning
             domain_center_um = domain_size_um / 2
 
-            print(f"[INFO] VTK physical ranges (um): X({x_min_um:.1f}, {x_max_um:.1f}), Y({y_min_um:.1f}, {y_max_um:.1f}), Z({z_min_um:.1f}, {z_max_um:.1f})")
-            print(f"[INFO] VTK center (um): ({x_center_um:.1f}, {y_center_um:.1f}, {z_center_um:.1f})")
-            print(f"[INFO] Domain center (um): {domain_center_um:.1f}")
-            print(f"[INFO] Cell height: {cell_height_um} um")
-            print(f"[INFO] Logical grid bounds: (0, {grid_max})")
+            # print(f"[INFO] VTK physical ranges (um): X({x_min_um:.1f}, {x_max_um:.1f}), Y({y_min_um:.1f}, {y_max_um:.1f}), Z({z_min_um:.1f}, {z_max_um:.1f})")
+            # print(f"[INFO] VTK center (um): ({x_center_um:.1f}, {y_center_um:.1f}, {z_center_um:.1f})")
+            # print(f"[INFO] Domain center (um): {domain_center_um:.1f}")
+            # print(f"[INFO] Cell height: {cell_height_um} um")
+            # print(f"[INFO] Logical grid bounds: (0, {grid_max})")
         else:
             x_center_um = y_center_um = z_center_um = 0
             domain_center_um = domain_size_um / 2
@@ -901,8 +899,8 @@ class InitialStateManager:
                 'tq_wait_time': 0.0  # Default wait time
             })
 
-        print(f"[OK] Successfully loaded {len(cell_init_data)} cells from basic VTK file")
-        print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
+        # print(f"[OK] Successfully loaded {len(cell_init_data)} cells from basic VTK file")
+        # print(f"[OK] Detected biological cell size: {cell_size_um:.2f} um")
 
         return cell_init_data, cell_size_um
     

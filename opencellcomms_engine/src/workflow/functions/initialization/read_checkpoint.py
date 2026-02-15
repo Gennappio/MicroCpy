@@ -54,7 +54,7 @@ def read_checkpoint(
         print("[ERROR] Population and config must be set up before reading checkpoint")
         return False
 
-    print(f"[WORKFLOW] Reading checkpoint from: {file_path}")
+    # print(f"[WORKFLOW] Reading checkpoint from: {file_path}")
 
     # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
     if 'resolve_path' in context:
@@ -96,12 +96,10 @@ def read_checkpoint(
             print(f"[ERROR] No cell data loaded from checkpoint")
             return False
 
-        print(f"[WORKFLOW] Loaded {len(cell_data)} cells from checkpoint (cell size: {cell_size_um:.2f} um)")
-
         # Initialize cells in population
         cells_loaded = population.initialize_cells(cell_data)
 
-        print(f"[WORKFLOW] Successfully initialized {cells_loaded} cells from checkpoint")
+        print(f"[CHECKPOINT] Loaded {cells_loaded} cells")
         return True
 
     except Exception as e:

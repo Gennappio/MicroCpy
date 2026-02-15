@@ -1,11 +1,13 @@
 """
-Mark and track cells in Growth_Arrest state.
+Mark cells in Growth_Arrest state based on gene network output.
 
-This function tracks how long cells have been in Growth_Arrest state using
-a counter stored in the mutable context. Cells in Growth_Arrest are like
-necrotic cells - they do nothing (no metabolism, no gene network updates).
+This function marks cells as 'Growth_Arrest' phenotype when the Growth_Arrest
+gene is ON. It also tracks how long cells have been in Growth_Arrest state
+using a counter stored in the mutable context.
 
-When the growth arrest time expires, cells can transition to another state.
+Cells in Growth_Arrest are like necrotic cells - they do nothing (no metabolism,
+no gene network updates). When the growth arrest time expires, cells remain
+arrested (permanent arrest).
 
 ================================================================================
 ARCHITECTURE: Context-Based Function Pattern
@@ -40,12 +42,13 @@ def mark_growth_arrest_cells(
     **kwargs
 ) -> None:
     """
-    Track and manage cells in Growth_Arrest state.
+    Mark and track cells in Growth_Arrest state.
 
     For each cell:
-    1. If phenotype is Growth_Arrest, increment counter
-    2. If counter exceeds max_growth_arrest_steps, cell stays arrested (permanent)
-    3. If phenotype changes from Growth_Arrest, reset counter
+    1. Check if Growth_Arrest gene is ON in gene_states
+    2. If yes, set phenotype to 'Growth_Arrest' and increment counter
+    3. If counter exceeds max_growth_arrest_steps, cell stays arrested (permanent)
+    4. If phenotype changes from Growth_Arrest, reset counter
 
     Counters are stored in context['growth_arrest_counters'] dict.
 
@@ -79,17 +82,26 @@ def mark_growth_arrest_cells(
     counters = context['growth_arrest_counters']
 
     # =========================================================================
-    # UPDATE GROWTH ARREST COUNTERS
+    # MARK AND UPDATE GROWTH ARREST CELLS
     # =========================================================================
     updated_cells = {}
     cells_in_arrest = 0
     cells_expired = 0
     cells_exited = 0
+    cells_newly_marked = 0
 
     for cell_id, cell in population.state.cells.items():
-        phenotype = cell.state.phenotype
+        # Check gene network state for Growth_Arrest
+        gene_states = cell.state.gene_states
+        old_phenotype = cell.state.phenotype
 
-        if phenotype == 'Growth_Arrest':
+        if gene_states.get('Growth_Arrest', False):
+            # Mark as Growth_Arrest if not already
+            if old_phenotype != 'Growth_Arrest':
+                cell.state = cell.state.with_updates(phenotype='Growth_Arrest')
+                cells_newly_marked += 1
+                print(f"  [GROWTH_ARREST-MARK] Cell {cell_id[:8]}: {old_phenotype} -> Growth_Arrest")
+            
             # Cell is in Growth_Arrest - increment counter
             if cell_id not in counters:
                 counters[cell_id] = 0
@@ -103,7 +115,7 @@ def mark_growth_arrest_cells(
                 # Could transition to Necrosis or Quiescence here if desired
 
         else:
-            # Cell is not in Growth_Arrest
+            # Cell is not in Growth_Arrest gene state
             if cell_id in counters:
                 # Cell exited Growth_Arrest - reset counter
                 del counters[cell_id]
@@ -111,14 +123,13 @@ def mark_growth_arrest_cells(
 
         updated_cells[cell_id] = cell
 
-    # Update population state (no changes to cells, just tracking)
+    # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
-    if cells_in_arrest > 0 or cells_exited > 0:
-        print(f"[GROWTH_ARREST] In arrest: {cells_in_arrest}, "
-              f"Expired (>={max_growth_arrest_steps} steps): {cells_expired}, "
-              f"Exited: {cells_exited}")
+    if cells_in_arrest > 0 or cells_exited > 0 or cells_newly_marked > 0:
+        print(f"[GROWTH_ARREST] In arrest: {cells_in_arrest}, Newly marked: {cells_newly_marked}, "
+              f"Expired (>={max_growth_arrest_steps} steps): {cells_expired}, Exited: {cells_exited}")
 
     # Log population count at end
     final_count = len(population.state.cells)
@@ -128,6 +139,7 @@ def mark_growth_arrest_cells(
     context['changes'] = context.get('changes', {})
     context['changes']['growth_arrest'] = {
         'cells_in_arrest': cells_in_arrest,
+        'newly_marked': cells_newly_marked,
         'cells_expired': cells_expired,
         'cells_exited': cells_exited,
         'max_steps': max_growth_arrest_steps,

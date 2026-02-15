@@ -259,32 +259,31 @@ class CellPopulation(ICellPopulation):
 
     def _load_custom_functions(self, custom_functions_module):
         """Load custom functions from module"""
-        print(f"[POPULATION DEBUG] _load_custom_functions called with: {custom_functions_module}")
+        # print(f"[POPULATION DEBUG] _load_custom_functions called with: {custom_functions_module}")
         if custom_functions_module is None:
-            print(f"[POPULATION DEBUG] custom_functions_module is None, returning None")
+            # print(f"[POPULATION DEBUG] custom_functions_module is None, returning None")
             return None
 
         try:
             if isinstance(custom_functions_module, str):
                 # Load from file path
-                print(f"[POPULATION DEBUG] Loading from file path: {custom_functions_module}")
+                # print(f"[POPULATION DEBUG] Loading from file path: {custom_functions_module}")
                 spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_module)
-                print(f"[POPULATION DEBUG] spec = {spec}")
+                # print(f"[POPULATION DEBUG] spec = {spec}")
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
-                    has_gcc = hasattr(module, 'get_cell_color')
-                    print(f"[POPULATION DEBUG] Module loaded successfully! has_get_cell_color={has_gcc}")
+                    # has_gcc = hasattr(module, 'get_cell_color')
+                    # print(f"[POPULATION DEBUG] Module loaded successfully! has_get_cell_color={has_gcc}")
                     return module
                 else:
-                    print(f"[POPULATION DEBUG] ERROR: spec or spec.loader is None!")
+                    print(f"[ERROR] Could not load custom functions: spec or loader is None")
                     return None
             else:
                 # Already a module
-                print(f"[POPULATION DEBUG] Already a module: {custom_functions_module}")
                 return custom_functions_module
         except Exception as e:
-            print(f"Warning: Could not load custom functions: {e}")
+            print(f"[WARNING] Could not load custom functions: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -474,14 +473,11 @@ class CellPopulation(ICellPopulation):
                 total_cells=new_total_cells
             )
 
-        # Print summary
-        print(f"[OK] Initialized {cells_added}/{len(cell_data)} cells (batched)")
-
         # Print warnings only if there were issues
         if skipped_occupied > 0:
-            print(f"[WARNING] Skipped {skipped_occupied} cells with occupied positions")
+            print(f"[WARNING] Skipped {skipped_occupied}/{len(cell_data)} cells with occupied positions")
         if skipped_invalid > 0:
-            print(f"[WARNING] Skipped {skipped_invalid} cells with invalid positions")
+            print(f"[WARNING] Skipped {skipped_invalid}/{len(cell_data)} cells with invalid positions")
         if skipped_limit:
             print(f"[WARNING] Population limit reached during initialization")
 

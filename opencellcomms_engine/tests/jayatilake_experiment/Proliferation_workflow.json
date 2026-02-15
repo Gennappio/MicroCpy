@@ -186,8 +186,19 @@
             "show_per_cell": false
           },
           "position": {"x": 200, "y": 100}
+        }, 
+        {
+          "id": "generate_cell_plots",
+          "function_name": "generate_cell_plots",
+          "enabled": true,
+          "description": "generate_cell_plots",
+          "parameters": {
+            "show_per_cell": false
+          },
+          "position": {"x": 200, "y": 100}
         }
       ],
+      
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": ["print_results"],

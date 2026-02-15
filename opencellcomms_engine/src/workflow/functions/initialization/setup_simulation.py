@@ -18,6 +18,7 @@ from src.workflow.logging import log, log_always
     parameters=[
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "OpenCellComms Simulation"},
         {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
+        {"name": "dimensions", "type": "INT", "description": "Domain dimensions (2 or 3)", "default": 3},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
         {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
@@ -29,6 +30,7 @@ def setup_simulation(
     context: Dict[str, Any],
     name: str = "OpenCellComms Simulation",
     dt: float = 0.1,
+    dimensions: int = 3,
     output_dir: str = "results",
     verbose: Optional[bool] = None,
     **kwargs
@@ -49,6 +51,7 @@ def setup_simulation(
         context: Workflow context
         name: Simulation name
         dt: Timestep size (hours)
+        dimensions: Domain dimensions (2 or 3)
         output_dir: Base output directory
         **kwargs: Additional parameters
 
@@ -66,13 +69,15 @@ def setup_simulation(
         plots_dir = timestamped_dir / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
 
-        # Set dt in context so the engine uses it
+        # Set dt and dimensions in context so other functions can use them
         context['dt'] = float(dt)
+        context['dimensions'] = int(dimensions)
 
         # Store simulation parameters in context (for later use)
         context['simulation_params'] = {
             'name': name,
             'dt': dt,
+            'dimensions': dimensions,
             'output_dir': timestamped_dir,
             'plots_dir': plots_dir,
         }
@@ -134,8 +139,13 @@ def setup_simulation(
                 )
                 # Set default initial state config
                 self.initial_state = InitialStateConfig()
+                # Create minimal domain object to store dimensions
+                # (will be fully populated by setup_domain)
+                class MinimalDomain:
+                    def __init__(self):
+                        self.dimensions = dimensions
+                self.domain = MinimalDomain()
                 # These will be set by other setup functions:
-                self.domain = None
                 self.substances = {}
                 self.associations = {}
                 self.thresholds = {}

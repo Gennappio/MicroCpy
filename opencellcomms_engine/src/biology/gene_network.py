@@ -325,7 +325,7 @@ class BooleanNetwork(IGeneNetwork):
 
     def _create_minimal_network(self):
         """Create minimal network - only essential nodes for basic functionality"""
-        print("[WARNING]  Using minimal gene network - configure via config.py for full functionality")
+        # print("[WARNING]  Using minimal gene network - configure via config.py for full functionality")
 
         # Minimal input nodes
         essential_inputs = [
@@ -362,7 +362,7 @@ class BooleanNetwork(IGeneNetwork):
         self.input_nodes = set(essential_inputs)
         self.output_nodes = set(essential_outputs)
 
-        print(f"[+] Created minimal gene network: {len(essential_inputs)} inputs, {len(essential_outputs)} outputs")
+        # print(f"[+] Created minimal gene network: {len(essential_inputs)} inputs, {len(essential_outputs)} outputs")
     
     def fix_node(self, node_name: str, state: bool):
         """Fix a node to a specific state - IDENTICAL to gene_simulator.py"""

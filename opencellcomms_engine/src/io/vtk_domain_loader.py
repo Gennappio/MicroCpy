@@ -29,7 +29,7 @@ class VTKDomainLoader:
         Returns:
             Dict containing positions, gene_states, phenotypes, metabolism, metadata
         """
-        print(f"[VTK] Loading complete domain from {vtk_path}")
+        # print(f"[VTK] Loading complete domain from {vtk_path}")
 
         with open(vtk_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
@@ -173,10 +173,10 @@ class VTKDomainLoader:
             'phenotype_types': phenotype_types
         }
 
-        print(f"[+] Loaded domain: {len(cell_positions)} cells")
-        print(f"    Cell size: {metadata.get('biocell_grid_size_um', 'unknown')} um")
-        print(f"    Gene nodes: {len(gene_nodes)}")
-        print(f"    Phenotypes: {len(set(phenotypes))} types")
+        # print(f"[+] Loaded domain: {len(cell_positions)} cells")
+        # print(f"    Cell size: {metadata.get('biocell_grid_size_um', 'unknown')} um")
+        # print(f"    Gene nodes: {len(gene_nodes)}")
+        # print(f"    Phenotypes: {len(set(phenotypes))} types")
 
         return result
 

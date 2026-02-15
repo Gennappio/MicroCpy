@@ -1,11 +1,11 @@
 """
-Mark and remove apoptotic cells based on gene network Apoptosis output.
+Mark apoptotic cells based on gene network Apoptosis output.
 
-This function checks each cell's gene network state and removes cells
-where the Apoptosis gene is ON.
+This function checks each cell's gene network state and marks cells
+as 'Apoptosis' phenotype when the Apoptosis gene is ON.
 
-Apoptotic cells are REMOVED from the population (programmed cell death
-with clearance), unlike necrotic cells which remain as debris.
+Apoptotic cells are marked but NOT removed here. Use remove_apoptotic_cells
+to actually remove marked cells from the population.
 
 ================================================================================
 ARCHITECTURE: Context-Based Function Pattern
@@ -19,8 +19,8 @@ from src.interfaces.base import ICellPopulation
 
 
 @register_function(
-    display_name="Mark and Remove Apoptotic Cells",
-    description="Mark and remove cells with Apoptosis gene ON (programmed cell death)",
+    display_name="Mark Apoptotic Cells",
+    description="Mark cells with Apoptosis gene ON (sets phenotype to 'Apoptosis')",
     category="INTERCELLULAR",
     parameters=[],
     inputs=["context"],
@@ -32,12 +32,12 @@ def mark_apoptotic_cells(
     **kwargs
 ) -> None:
     """
-    Mark and remove apoptotic cells based on gene network Apoptosis output.
+    Mark apoptotic cells based on gene network Apoptosis output.
 
     For each cell:
     1. Check if Apoptosis gene is ON in gene_states
-    2. If yes, REMOVE the cell from population
-    3. Apoptotic cells are cleared (unlike necrotic cells which remain)
+    2. If yes, set phenotype to 'Apoptosis'
+    3. Cells remain in population until remove_apoptotic_cells is called
 
     Args:
         context: Workflow execution context containing:
@@ -60,39 +60,41 @@ def mark_apoptotic_cells(
         return
 
     # =========================================================================
-    # REMOVE APOPTOTIC CELLS
+    # MARK APOPTOTIC CELLS
     # =========================================================================
-    initial_count = len(population.state.cells)
     updated_cells = {}
-    removed_count = 0
-    removed_cell_ids = []
+    marked_count = 0
+    marked_cell_ids = []
 
     for cell_id, cell in population.state.cells.items():
         # Check gene network state for Apoptosis
         gene_states = cell.state.gene_states
         if gene_states.get('Apoptosis', False):
-            # Remove apoptotic cell (don't add to updated_cells)
-            removed_count += 1
-            removed_cell_ids.append(cell_id[:8])  # Store short ID for logging
-            print(f"  [APOPTOSIS-DEATH] Removing cell {cell_id[:8]} at {cell.state.position} (Apoptosis gene ON)")
-            continue
+            # Mark cell as apoptotic
+            if cell.state.phenotype != 'Apoptosis':
+                cell.state = cell.state.with_updates(phenotype='Apoptosis')
+                marked_count += 1
+                marked_cell_ids.append(cell_id[:8])
+                print(f"  [APOPTOSIS-MARK] Marking cell {cell_id[:8]} at {cell.state.position} (Apoptosis gene ON)")
 
-        # Keep non-apoptotic cells
         updated_cells[cell_id] = cell
 
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
     # Log summary
-    final_count = len(updated_cells)
-    print(f"[APOPTOSIS] Cell count: {initial_count} -> {final_count} (removed {removed_count})")
-    if removed_count > 0:
-        print(f"[APOPTOSIS] Removed cells: {', '.join(removed_cell_ids)}")
+    if marked_count > 0:
+        print(f"[APOPTOSIS] Marked {marked_count} cells as apoptotic")
+        print(f"[APOPTOSIS] Marked cells: {', '.join(marked_cell_ids)}")
+
+    # Log population count at end
+    final_count = len(population.state.cells)
+    print(f"[APOPTOSIS-END] Population count: {final_count} cells")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
     context['changes']['apoptosis'] = {
-        'removed': removed_count,
-        'remaining': len(updated_cells)
+        'marked': marked_count,
+        'total_cells': final_count
     }
 
