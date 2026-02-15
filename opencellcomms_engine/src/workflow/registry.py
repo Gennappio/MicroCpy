@@ -129,6 +129,7 @@ def get_default_registry() -> FunctionRegistry:
 
     # Import kernel loading functions
     import src.workflow.functions.initialization.load_kernel
+    import src.workflow.functions.initialization.store_simulation_dimensions
 
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
