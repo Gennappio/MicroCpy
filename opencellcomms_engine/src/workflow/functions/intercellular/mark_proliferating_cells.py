@@ -34,14 +34,18 @@ def mark_proliferating_cells(
     """
     Mark cells as proliferating based on gene network Proliferation output.
 
+    This is the LAST marking function in the cycle and acts as the final arbiter.
+
     For each cell:
     1. Check if Proliferation gene is ON in gene_states
-    2. If yes, mark cell phenotype as 'Proliferation' (overwrites previous phenotype)
-    3. If no, leave phenotype unchanged (preserves Apoptosis/Growth_Arrest marks)
-    
-    Note: Proliferation phenotype overwrites Growth_Arrest and Apoptosis.
-    This follows the principle that proliferating cells override other states.
-    Cells without any marked phenotype default to 'Quiescence'.
+    2. If yes → phenotype = 'Proliferation' (overwrites any previous phenotype)
+    3. If no  → check if an earlier marker (Apoptosis/Growth_Arrest) was set:
+       - If yes → keep that phenotype (respect earlier marking functions)
+       - If no  → reset to 'Quiescent' (no active fate this cycle → no action)
+
+    The Quiescent reset is critical: without it, stale phenotypes from previous
+    iterations would persist and cause cells to keep dividing/dying even when
+    the gene network no longer supports that fate.
 
     Args:
         context: Workflow execution context containing:
@@ -70,6 +74,12 @@ def mark_proliferating_cells(
     proliferating_count = 0
     overwritten_count = 0
     unchanged_count = 0
+    quiescent_count = 0
+
+    # Phenotypes that were set by earlier marking functions in THIS cycle
+    # (mark_apoptotic_cells, mark_growth_arrest_cells).
+    # These should NOT be overwritten to Quiescent.
+    active_fate_phenotypes = {'Apoptosis', 'Growth_Arrest'}
 
     for cell_id, cell in population.state.cells.items():
         # Store old phenotype for logging
@@ -81,14 +91,21 @@ def mark_proliferating_cells(
             # Mark as proliferating (overwrites any previous phenotype)
             if cell.state.phenotype != 'Proliferation':
                 cell.state = cell.state.with_updates(phenotype='Proliferation')
-                if old_phenotype in {'Growth_Arrest', 'Apoptosis'}:
+                if old_phenotype in active_fate_phenotypes:
                     overwritten_count += 1
                     print(f"  [PROLIFERATION-OVERWRITE] Cell {cell_id[:8]}: {old_phenotype} -> Proliferation")
             proliferating_count += 1
         else:
-            # If Proliferation gene is OFF, leave phenotype unchanged
-            # This preserves Apoptosis/Growth_Arrest marks from previous functions
-            unchanged_count += 1
+            # Proliferation gene is OFF.
+            # If cell was already marked Apoptosis/Growth_Arrest by earlier
+            # marking functions in this cycle, keep that phenotype.
+            # Otherwise reset to Quiescent (no active fate → no action).
+            if cell.state.phenotype not in active_fate_phenotypes:
+                if cell.state.phenotype != 'Quiescent':
+                    cell.state = cell.state.with_updates(phenotype='Quiescent')
+                quiescent_count += 1
+            else:
+                unchanged_count += 1
 
         updated_cells[cell_id] = cell
 
@@ -97,7 +114,8 @@ def mark_proliferating_cells(
 
     # Log summary
     print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
-          f"Unchanged: {unchanged_count}, Overwritten: {overwritten_count}")
+          f"Quiescent: {quiescent_count}, "
+          f"Kept(Apoptosis/GA): {unchanged_count}, Overwritten: {overwritten_count}")
 
     # Log population count at end
     final_count = len(population.state.cells)
@@ -107,6 +125,7 @@ def mark_proliferating_cells(
     context['changes'] = context.get('changes', {})
     context['changes']['proliferation'] = {
         'proliferating': proliferating_count,
+        'quiescent': quiescent_count,
         'unchanged': unchanged_count,
         'overwritten': overwritten_count
     }

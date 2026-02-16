@@ -34,7 +34,12 @@ def mark_apoptotic_cells(
     """
     Mark apoptotic cells based on gene network Apoptosis output.
 
+    This is the FIRST marking function in the cycle.  It resets ALL cell
+    phenotypes to 'Quiescent' before applying marks, preventing stale
+    phenotypes from previous iterations from carrying over.
+
     For each cell:
+    0. Reset phenotype to 'Quiescent' (clear stale state)
     1. Check if Apoptosis gene is ON in gene_states
     2. If yes, set phenotype to 'Apoptosis'
     3. Cells remain in population until remove_apoptotic_cells is called
@@ -60,6 +65,17 @@ def mark_apoptotic_cells(
         return
 
     # =========================================================================
+    # RESET ALL PHENOTYPES TO QUIESCENT
+    # =========================================================================
+    # This is the FIRST marking function in the cycle.  We reset every cell to
+    # Quiescent so that stale phenotypes from the previous iteration do not
+    # carry over.  Subsequent marking functions (Growth_Arrest, Proliferation)
+    # will overwrite Quiescent when their respective gene is active.
+    for cell in population.state.cells.values():
+        if cell.state.phenotype != 'Quiescent':
+            cell.state = cell.state.with_updates(phenotype='Quiescent')
+
+    # =========================================================================
     # MARK APOPTOTIC CELLS
     # =========================================================================
     updated_cells = {}
@@ -71,11 +87,9 @@ def mark_apoptotic_cells(
         gene_states = cell.state.gene_states
         if gene_states.get('Apoptosis', False):
             # Mark cell as apoptotic
-            if cell.state.phenotype != 'Apoptosis':
-                cell.state = cell.state.with_updates(phenotype='Apoptosis')
-                marked_count += 1
-                marked_cell_ids.append(cell_id[:8])
-                print(f"  [APOPTOSIS-MARK] Marking cell {cell_id[:8]} at {cell.state.position} (Apoptosis gene ON)")
+            cell.state = cell.state.with_updates(phenotype='Apoptosis')
+            marked_count += 1
+            marked_cell_ids.append(cell_id[:8])
 
         updated_cells[cell_id] = cell
 

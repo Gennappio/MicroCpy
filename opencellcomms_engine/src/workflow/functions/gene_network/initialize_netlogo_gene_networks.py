@@ -198,6 +198,13 @@ def initialize_netlogo_gene_networks(
         }
         context['gene_network_inputs'] = input_states
 
+        # Store concentration parameters so daughter cells created during
+        # division can reuse the same probabilistic activation settings.
+        context['gene_network_init_params'] = {
+            'MCT1I_concentration': MCT1I_concentration,
+            'GLUT1I_concentration': GLUT1I_concentration,
+        }
+
         # =================================================================
         # 4. CREATE GENE NETWORK PER CELL
         # =================================================================

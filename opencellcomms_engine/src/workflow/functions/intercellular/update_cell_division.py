@@ -19,6 +19,7 @@ import random
 from src.workflow.decorators import register_function
 from src.interfaces.base import ICellPopulation, IConfig
 from src.biology.cell import Cell
+from src.biology.gene_network import HierarchicalBooleanNetwork
 
 
 @register_function(
@@ -171,33 +172,43 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
         )
         updated_cells[cell_id] = parent_cell
 
-        # Create new daughter cell with same properties as parent
+        # Generate new cell ID first (needed for gene network mapping)
+        new_cell_id = _generate_cell_id(population)
+
+        # Create a FRESH gene network for the daughter cell.
+        # In NetLogo (and the population benchmark), daughter cells start with
+        # random gene states, new random thresholds, and fate=None.
+        # They do NOT inherit the parent's gene network state.
+        daughter_gene_states = {}
+        if gene_networks and cell_id in gene_networks:
+            daughter_gn = _create_fresh_daughter_network(context)
+            if daughter_gn is not None:
+                gene_networks[new_cell_id] = daughter_gn
+                # Read the fresh gene states from the daughter's network
+                daughter_gene_states = {
+                    name: node.current_state
+                    for name, node in daughter_gn.nodes.items()
+                }
+
+        # Create new daughter cell (Quiescent — no fate yet)
         daughter_cell = Cell(
             position=daughter_position,
-            phenotype=parent_cell.state.phenotype,
+            phenotype='Quiescent',
             custom_functions_module=parent_cell.custom_functions
         )
-        
-        # Copy parent's state to daughter (age=0, division_count=0)
+
+        # Set daughter state: fresh gene states, age=0, division_count=0
         daughter_cell.state = daughter_cell.state.with_updates(
             age=0.0,
             division_count=0,
-            gene_states=parent_cell.state.gene_states.copy(),
+            gene_states=daughter_gene_states if daughter_gene_states else parent_cell.state.gene_states.copy(),
             metabolic_state=parent_cell.state.metabolic_state.copy()
         )
 
-        # Generate new cell ID
-        new_cell_id = _generate_cell_id(population)
         new_cells[new_cell_id] = daughter_cell
 
         # Mark position as occupied
         occupied_positions.add(daughter_position)
-        
-        # Clone parent's gene network for daughter cell (if gene networks are enabled)
-        if gene_networks and cell_id in gene_networks:
-            parent_gn = gene_networks[cell_id]
-            daughter_gn = parent_gn.copy()  # BooleanNetwork has a copy() method
-            gene_networks[new_cell_id] = daughter_gn
 
     # Update population with new and updated cells
     initial_count = len(population.state.cells)
@@ -211,6 +222,95 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
               f"(added {len(new_cells)} daughter cells, {failed_divisions} failed)")
     elif failed_divisions > 0:
         print(f"[DIVISION] No divisions completed ({failed_divisions} failed - no free neighbour)")
+
+
+def _create_fresh_daughter_network(context: Dict[str, Any]):
+    """
+    Create a fresh gene network for a daughter cell, matching NetLogo behaviour.
+
+    In NetLogo (and the population benchmark), daughter cells start with:
+    - Fate nodes → False
+    - Gene nodes → random True/False
+    - fate = None  (no fate assigned yet)
+    - last_node = random input node
+    - cell_ran1, cell_ran2 = new random values (cell-to-cell variability)
+    - Input states applied (with probabilistic activation for GLUT1I/MCT1I)
+
+    This mirrors ``Cell.reset(random_init=True)`` + ``Cell.set_input_states()``
+    in gene_network_population_simulator.py.
+
+    Args:
+        context: Workflow context containing 'gene_network_config',
+                 'gene_network_inputs', and optionally concentration parameters.
+
+    Returns:
+        A fully initialised HierarchicalBooleanNetwork, or None on failure.
+    """
+    FATE_NODE_NAMES = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
+
+    gn_config = context.get('gene_network_config')
+    if gn_config is None:
+        return None
+
+    random_init = context.get('random_initialization', True)
+    fate_hierarchy = context.get('fate_hierarchy',
+                                 ["Necrosis", "Apoptosis", "Growth_Arrest", "Proliferation"])
+    input_states = context.get('gene_network_inputs', {})
+
+    try:
+        daughter_gn = HierarchicalBooleanNetwork(
+            config=gn_config,
+            fate_hierarchy=fate_hierarchy,
+        )
+
+        # Reset node states (benchmark: reset())
+        for node in daughter_gn.nodes.values():
+            if node.is_input:
+                continue
+            elif node.name in FATE_NODE_NAMES:
+                node.current_state = False
+                node.next_state = False
+            else:
+                state = random.choice([True, False]) if random_init else False
+                node.current_state = state
+                node.next_state = state
+
+        # Build output links for graph walking
+        from src.workflow.functions.gene_network.initialize_netlogo_gene_networks import (
+            _build_output_links, _apply_input_states,
+        )
+        _build_output_links(daughter_gn)
+        daughter_gn._output_links_built = True
+
+        # New per-cell random thresholds
+        daughter_gn._cell_ran1 = random.random()
+        daughter_gn._cell_ran2 = random.random()
+
+        # Graph walking start: random input node
+        input_node_names = [n for n, nd in daughter_gn.nodes.items() if nd.is_input]
+        if input_node_names:
+            daughter_gn._last_node = random.choice(input_node_names)
+        else:
+            daughter_gn._last_node = random.choice(list(daughter_gn.nodes.keys()))
+
+        daughter_gn._fate = None
+
+        # Apply input states (with probabilistic activation)
+        # Retrieve concentration values stored during initialization
+        init_params = context.get('gene_network_init_params', {})
+        MCT1I_conc = init_params.get('MCT1I_concentration', 0.0)
+        GLUT1I_conc = init_params.get('GLUT1I_concentration', 0.0)
+        _apply_input_states(
+            daughter_gn, input_states,
+            MCT1I_concentration=MCT1I_conc,
+            GLUT1I_concentration=GLUT1I_conc,
+        )
+
+        return daughter_gn
+
+    except Exception as e:
+        print(f"[DIVISION] WARNING: Failed to create fresh daughter network: {e}")
+        return None
 
 
 def _find_daughter_position(parent_position, occupied_positions, domain_bounds,
