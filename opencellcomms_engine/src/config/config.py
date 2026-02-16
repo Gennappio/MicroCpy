@@ -5,7 +5,7 @@ import yaml
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from core.units import Length, Concentration
-from interfaces.base import IConfig
+from src.interfaces.base import IConfig
 
 @dataclass
 class DomainConfig:

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Any, Union, Tuple
 import uuid
 
-from interfaces.base import ICell
+from src.interfaces.base import ICell
 # Import custom functions directly
 import importlib.util
 from pathlib import Path

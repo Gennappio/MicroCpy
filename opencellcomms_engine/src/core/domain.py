@@ -5,7 +5,7 @@ from fipy import Grid2D, Grid3D
 
 from config.config import DomainConfig
 from core.units import Length, UnitValidator
-from interfaces.base import IMeshManager
+from src.interfaces.base import IMeshManager
 
 class DomainError(Exception):
     """Raised when domain configuration is invalid"""

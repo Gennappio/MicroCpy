@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Add interfaces to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from interfaces.base import ITimescaleOrchestrator
+from src.interfaces.base import ITimescaleOrchestrator
 import importlib.util
 
 # Add config to path

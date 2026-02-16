@@ -11,7 +11,7 @@ import os
 import time
 from pathlib import Path
 
-from interfaces.base import ICellPopulation
+from src.interfaces.base import ICellPopulation
 from .cell import Cell, CellState
 from .gene_network import BooleanNetwork
 import importlib.util

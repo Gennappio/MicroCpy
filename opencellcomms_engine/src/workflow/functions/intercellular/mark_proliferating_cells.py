@@ -37,10 +37,11 @@ def mark_proliferating_cells(
     For each cell:
     1. Check if Proliferation gene is ON in gene_states
     2. If yes, mark cell phenotype as 'Proliferation' (overwrites previous phenotype)
-    3. If no, mark cell phenotype as 'Quiescence' (default)
+    3. If no, leave phenotype unchanged (preserves Apoptosis/Growth_Arrest marks)
     
     Note: Proliferation phenotype overwrites Growth_Arrest and Apoptosis.
     This follows the principle that proliferating cells override other states.
+    Cells without any marked phenotype default to 'Quiescence'.
 
     Args:
         context: Workflow execution context containing:
@@ -67,8 +68,8 @@ def mark_proliferating_cells(
     # =========================================================================
     updated_cells = {}
     proliferating_count = 0
-    quiescent_count = 0
     overwritten_count = 0
+    unchanged_count = 0
 
     for cell_id, cell in population.state.cells.items():
         # Store old phenotype for logging
@@ -85,10 +86,9 @@ def mark_proliferating_cells(
                     print(f"  [PROLIFERATION-OVERWRITE] Cell {cell_id[:8]}: {old_phenotype} -> Proliferation")
             proliferating_count += 1
         else:
-            # Default to quiescence
-            if cell.state.phenotype != 'Quiescence':
-                cell.state = cell.state.with_updates(phenotype='Quiescence')
-            quiescent_count += 1
+            # If Proliferation gene is OFF, leave phenotype unchanged
+            # This preserves Apoptosis/Growth_Arrest marks from previous functions
+            unchanged_count += 1
 
         updated_cells[cell_id] = cell
 
@@ -97,7 +97,7 @@ def mark_proliferating_cells(
 
     # Log summary
     print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
-          f"Quiescent: {quiescent_count}, Overwritten: {overwritten_count}")
+          f"Unchanged: {unchanged_count}, Overwritten: {overwritten_count}")
 
     # Log population count at end
     final_count = len(population.state.cells)
@@ -107,7 +107,7 @@ def mark_proliferating_cells(
     context['changes'] = context.get('changes', {})
     context['changes']['proliferation'] = {
         'proliferating': proliferating_count,
-        'quiescent': quiescent_count,
+        'unchanged': unchanged_count,
         'overwritten': overwritten_count
     }
 

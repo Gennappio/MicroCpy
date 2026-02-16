@@ -179,8 +179,13 @@ def run_simulation():
     """Start a new simulation (Section 9.2: supports entry_subworkflow parameter)"""
     global simulation_thread, is_running
 
+    # Check if the process is actually still alive; reset stale flag if not
     if is_running:
-        return jsonify({'error': 'Simulation already running'}), 400
+        if simulation_process is not None and simulation_process.poll() is not None:
+            # Process has already exited but flag was not cleared
+            is_running = False
+        else:
+            return jsonify({'error': 'Simulation already running'}), 400
 
     data = request.json
     workflow_data = data.get('workflow')   # Workflow definition is required

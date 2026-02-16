@@ -12,7 +12,7 @@ import os
 import random
 import re
 
-from interfaces.base import IGeneNetwork
+from src.interfaces.base import IGeneNetwork
 
 
 class BooleanExpression:
@@ -745,6 +745,26 @@ class HierarchicalBooleanNetwork(BooleanNetwork):
         # Copy fate state
         new_network.effective_fate = self.effective_fate
         new_network.fate_fire_counts = self.fate_fire_counts.copy()
+
+        # Copy NetLogo-specific graph walking attributes (if present)
+        # These are dynamically added by initialize_netlogo_gene_networks
+        if hasattr(self, '_fate'):
+            new_network._fate = self._fate
+        if hasattr(self, '_last_node'):
+            new_network._last_node = self._last_node
+        if hasattr(self, '_cell_ran1'):
+            new_network._cell_ran1 = random.random()  # New random threshold for daughter
+        if hasattr(self, '_cell_ran2'):
+            new_network._cell_ran2 = random.random()  # New random threshold for daughter
+        if hasattr(self, '_output_links_built'):
+            new_network._output_links_built = False  # Will be rebuilt on first propagation
+
+        # Copy output links on nodes (if present)
+        for name, node in self.nodes.items():
+            if hasattr(node, 'outputs') and name in new_network.nodes:
+                new_network.nodes[name].outputs = node.outputs.copy()
+            if hasattr(self, '_output_links_built') and self._output_links_built:
+                new_network._output_links_built = True
 
         return new_network
 

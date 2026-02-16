@@ -125,6 +125,22 @@ def propagate_gene_networks_netlogo(
 
         cells_with_gn += 1
 
+        # === ENSURE NETLOGO ATTRIBUTES EXIST ===
+        # These are dynamically added by initialize_netlogo_gene_networks.
+        # Daughter cells (from division) may not have them if copy() was used.
+        if not hasattr(cell_gn, '_fate'):
+            cell_gn._fate = None
+        if not hasattr(cell_gn, '_last_node'):
+            input_nodes = [n for n, nd in cell_gn.nodes.items() if nd.is_input]
+            cell_gn._last_node = random.choice(input_nodes) if input_nodes else random.choice(list(cell_gn.nodes.keys()))
+        if not hasattr(cell_gn, '_cell_ran1'):
+            cell_gn._cell_ran1 = random.random()
+        if not hasattr(cell_gn, '_cell_ran2'):
+            cell_gn._cell_ran2 = random.random()
+        if not hasattr(cell_gn, '_output_links_built') or not cell_gn._output_links_built:
+            _build_output_links(cell_gn)
+            cell_gn._output_links_built = True
+
         # === TRACK STATISTICS ===
         fate_fires = 0
         fate_reverts = 0
@@ -169,9 +185,20 @@ def propagate_gene_networks_netlogo(
             name: node.current_state
             for name, node in cell_gn.nodes.items()
         }
+        # Fate nodes are transient triggers in the NetLogo model: they reset
+        # to False after evaluation (line 1568).  However, the determined fate
+        # is stored in cell_gn._fate.  We write it back into gene_states so
+        # downstream marking functions can read it via gene_states[<fate>].
+        if cell_gn._fate and cell_gn._fate in gene_states:
+            gene_states[cell_gn._fate] = True
+
+        # NOTE: We only update gene_states here, not phenotype.
+        # Phenotype will be set by downstream marking functions:
+        # - mark_apoptotic_cells
+        # - mark_growth_arrest_cells
+        # - mark_proliferating_cells
         cell.state = cell.state.with_updates(
             gene_states=gene_states,
-            phenotype=final_fate,
         )
 
     # =========================================================================
@@ -334,3 +361,29 @@ def _netlogo_influence_link_end(gene_network, source_name: str, target_name: str
             print(f"      Gene/Input → continue from: {gene_network._last_node}")
     
     return fate_assigned, fate_reverted
+
+
+# =============================================================================
+# HELPER: BUILD OUTPUT LINKS (for networks missing graph connectivity)
+# =============================================================================
+def _build_output_links(gene_network) -> None:
+    """
+    Build output links (which nodes depend on each node) for graph walking.
+
+    For each node, find all nodes whose inputs list mentions it.
+    This creates the directed edges needed for graph walking.
+
+    After this call every node has a ``node.outputs: Set[str]`` attribute.
+    """
+    for node in gene_network.nodes.values():
+        if not hasattr(node, 'outputs'):
+            node.outputs = set()
+
+    for node_name, node in gene_network.nodes.items():
+        if node.is_input or not node.update_function:
+            continue
+
+        dependencies = node.inputs if isinstance(node.inputs, set) else set(node.inputs)
+        for dep_name in dependencies:
+            if dep_name in gene_network.nodes:
+                gene_network.nodes[dep_name].outputs.add(node_name)

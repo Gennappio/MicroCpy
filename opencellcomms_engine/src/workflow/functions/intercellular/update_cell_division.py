@@ -18,6 +18,7 @@ from typing import Dict, Any, Optional
 import random
 from src.workflow.decorators import register_function
 from src.interfaces.base import ICellPopulation, IConfig
+from src.biology.cell import Cell
 
 
 @register_function(
@@ -75,6 +76,9 @@ def update_cell_division(
     cell_cycle_time = _get_config_param(config, 'cell_cycle_time', 240.0)
     cell_radius = _get_config_param(config, 'cell_radius', 10.0)
 
+    # Get simulation dimensions (2D or 3D) from context
+    dimensions = context.get('dimensions', 3)
+
     # Collect cells that should divide
     cells_to_divide = []
 
@@ -85,7 +89,7 @@ def update_cell_division(
 
     # Perform divisions
     if cells_to_divide:
-        _perform_divisions(population, cells_to_divide, cell_radius, config)
+        _perform_divisions(population, cells_to_divide, cell_radius, config, context, dimensions)
 
 
 def _should_divide(cell, atp_threshold: float, max_atp_rate: float, cell_cycle_time: float) -> bool:
@@ -120,7 +124,8 @@ def _should_divide(cell, atp_threshold: float, max_atp_rate: float, cell_cycle_t
     return True
 
 
-def _perform_divisions(population, cells_to_divide, cell_radius: float, config):
+def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
+                       context: Dict[str, Any] = None, dimensions: int = 3):
     """
     Perform cell divisions by creating daughter cells.
 
@@ -129,28 +134,70 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config):
         cells_to_divide: List of (cell_id, cell) tuples
         cell_radius: Cell radius for placement
         config: Configuration object
+        context: Workflow context (for gene networks)
+        dimensions: Simulation dimensions (2 or 3)
     """
     new_cells = {}
     updated_cells = {}
+    failed_divisions = 0
+
+    # Get gene networks from context if available
+    gene_networks = context.get('gene_networks', {}) if context else {}
+
+    # Build spatial map of occupied positions for collision detection
+    occupied_positions = {cell.state.position for cell in population.state.cells.values()}
+
+    # Get domain bounds from config
+    domain_bounds = _get_domain_bounds(config)
 
     for cell_id, parent_cell in cells_to_divide:
-        # Reset parent age
-        parent_cell.state = parent_cell.state.with_updates(age=0.0)
+        # Try to find a valid neighbour position for the daughter cell
+        daughter_position = _find_daughter_position(
+            parent_cell.state.position,
+            occupied_positions,
+            domain_bounds,
+            dimensions
+        )
+
+        # If no valid position found, skip this division
+        if daughter_position is None:
+            failed_divisions += 1
+            continue
+
+        # Reset parent age and increment division count
+        parent_cell.state = parent_cell.state.with_updates(
+            age=0.0,
+            division_count=parent_cell.state.division_count + 1
+        )
         updated_cells[cell_id] = parent_cell
 
-        # Create daughter cell
-        daughter_position = _find_daughter_position(parent_cell.state.position, cell_radius)
-
-        # Clone parent cell
-        daughter_cell = parent_cell.clone()
-        daughter_cell.state = daughter_cell.state.with_updates(
+        # Create new daughter cell with same properties as parent
+        daughter_cell = Cell(
             position=daughter_position,
-            age=0.0
+            phenotype=parent_cell.state.phenotype,
+            custom_functions_module=parent_cell.custom_functions
+        )
+        
+        # Copy parent's state to daughter (age=0, division_count=0)
+        daughter_cell.state = daughter_cell.state.with_updates(
+            age=0.0,
+            division_count=0,
+            gene_states=parent_cell.state.gene_states.copy(),
+            metabolic_state=parent_cell.state.metabolic_state.copy()
         )
 
         # Generate new cell ID
         new_cell_id = _generate_cell_id(population)
         new_cells[new_cell_id] = daughter_cell
+
+        # Mark position as occupied
+        occupied_positions.add(daughter_position)
+        
+        # Clone parent's gene network for daughter cell (if gene networks are enabled)
+        if gene_networks and cell_id in gene_networks:
+            parent_gn = gene_networks[cell_id]
+            daughter_gn = parent_gn.copy()  # BooleanNetwork has a copy() method
+            gene_networks[new_cell_id] = daughter_gn
 
     # Update population with new and updated cells
     initial_count = len(population.state.cells)
@@ -160,37 +207,134 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config):
 
     # Log cell count change
     if final_count != initial_count:
-        print(f"[DIVISION] Cell count: {initial_count} -> {final_count} (added {len(new_cells)} daughter cells)")
+        print(f"[DIVISION] Cell count: {initial_count} -> {final_count} "
+              f"(added {len(new_cells)} daughter cells, {failed_divisions} failed)")
+    elif failed_divisions > 0:
+        print(f"[DIVISION] No divisions completed ({failed_divisions} failed - no free neighbour)")
 
 
-def _find_daughter_position(parent_position, cell_radius: float):
+def _find_daughter_position(parent_position, occupied_positions, domain_bounds,
+                           dimensions: int = 3):
     """
-    Find a position for the daughter cell near the parent.
+    Find first available neighbour position on the integer grid around the parent.
+
+    Uses context['dimensions'] to decide 2D (8 neighbours, x-y only) or
+    3D (26 neighbours, x-y-z).  This is the single source of truth for
+    whether the simulation is 2D or 3D -- never the tuple length of the
+    parent position.
 
     Args:
-        parent_position: Parent cell position (x, y) or (x, y, z)
-        cell_radius: Cell radius
+        parent_position: Parent cell position (always a tuple of ints)
+        occupied_positions: Set of currently occupied grid positions
+        domain_bounds: Dict with 'xmin', 'xmax', 'ymin', 'ymax', 'zmin', 'zmax'
+        dimensions: Simulation dimensions (2 or 3)
 
     Returns:
-        Daughter cell position
+        First available (int tuple) position, or None if all spaces are taken
     """
-    # Random angle for 2D placement
-    angle = random.uniform(0, 2 * 3.14159)
-    distance = cell_radius * 2.0  # Place at 2x radius distance
+    if dimensions == 2:
+        # 2D: 8 neighbours in the x-y plane.  z is kept from parent.
+        offsets_2d = [
+            (-1, -1), (-1, 0), (-1, 1),
+            ( 0, -1),          ( 0, 1),
+            ( 1, -1), ( 1, 0), ( 1, 1),
+        ]
+        # Shuffle so we don't always prefer the same direction
+        random.shuffle(offsets_2d)
 
-    if len(parent_position) == 2:
-        # 2D case
-        x, y = parent_position
-        dx = distance * random.choice([-1, 1])
-        dy = distance * random.choice([-1, 1])
-        return (x + dx, y + dy)
+        px, py = int(parent_position[0]), int(parent_position[1])
+        pz = int(parent_position[2]) if len(parent_position) > 2 else 0
+
+        for di, dj in offsets_2d:
+            cx, cy = px + di, py + dj
+            # Build candidate with same dimensionality as parent
+            if len(parent_position) > 2:
+                candidate = (cx, cy, pz)  # z unchanged in 2D sim
+            else:
+                candidate = (cx, cy)
+
+            if candidate in occupied_positions:
+                continue
+            if not _is_within_bounds(candidate, domain_bounds):
+                continue
+            return candidate
+
     else:
-        # 3D case
-        x, y, z = parent_position
-        dx = distance * random.choice([-1, 1])
-        dy = distance * random.choice([-1, 1])
-        dz = distance * random.choice([-1, 1])
-        return (x + dx, y + dy, z + dz)
+        # 3D: 26 neighbours
+        offsets_3d = []
+        for di in [-1, 0, 1]:
+            for dj in [-1, 0, 1]:
+                for dk in [-1, 0, 1]:
+                    if di == 0 and dj == 0 and dk == 0:
+                        continue
+                    offsets_3d.append((di, dj, dk))
+        random.shuffle(offsets_3d)
+
+        px = int(parent_position[0])
+        py = int(parent_position[1])
+        pz = int(parent_position[2]) if len(parent_position) > 2 else 0
+
+        for di, dj, dk in offsets_3d:
+            candidate = (px + di, py + dj, pz + dk)
+            if candidate in occupied_positions:
+                continue
+            if not _is_within_bounds(candidate, domain_bounds):
+                continue
+            return candidate
+
+    return None  # Completely surrounded
+
+
+def _is_within_bounds(position, domain_bounds) -> bool:
+    """
+    Check if a position is within domain bounds.
+
+    Args:
+        position: Position tuple (x, y) or (x, y, z)
+        domain_bounds: Dict with 'xmin', 'xmax', 'ymin', 'ymax', 'zmin', 'zmax'
+
+    Returns:
+        True if within bounds
+    """
+    x, y = position[0], position[1]
+    if not (domain_bounds['xmin'] <= x <= domain_bounds['xmax']):
+        return False
+    if not (domain_bounds['ymin'] <= y <= domain_bounds['ymax']):
+        return False
+    if len(position) > 2:
+        z = position[2]
+        if not (domain_bounds['zmin'] <= z <= domain_bounds['zmax']):
+            return False
+    return True
+
+
+def _get_domain_bounds(config) -> Dict[str, int]:
+    """
+    Extract domain bounds from config.
+
+    Returns:
+        Dict with xmin, xmax, ymin, ymax, zmin, zmax
+    """
+    if config and hasattr(config, 'domain') and config.domain:
+        domain = config.domain
+        is_3d = hasattr(domain, 'nz') and domain.nz is not None
+        # Use biological grid size based on cell_height
+        cell_height_um = domain.cell_height.micrometers if hasattr(domain.cell_height, 'micrometers') else float(domain.cell_height)
+        xmax = int(domain.size_x.micrometers / cell_height_um) - 1 if hasattr(domain.size_x, 'micrometers') else 39
+        ymax = int(domain.size_y.micrometers / cell_height_um) - 1 if hasattr(domain.size_y, 'micrometers') else 39
+        zmax = int(domain.size_z.micrometers / cell_height_um) - 1 if (is_3d and hasattr(domain.size_z, 'micrometers')) else 39
+        return {
+            'xmin': 0, 'xmax': xmax,
+            'ymin': 0, 'ymax': ymax,
+            'zmin': 0, 'zmax': zmax,
+        }
+
+    # Fallback: generous bounds
+    return {
+        'xmin': 0, 'xmax': 999,
+        'ymin': 0, 'ymax': 999,
+        'zmin': 0, 'zmax': 999,
+    }
 
 
 def _generate_cell_id(population):

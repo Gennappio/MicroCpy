@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Optional, Any
 import numpy as np
 from fipy import CellVariable, DiffusionTerm, ImplicitSourceTerm, Viewer
 from fipy.solvers import LinearLUSolver
-from interfaces.base import ISubstanceSimulator
+from src.interfaces.base import ISubstanceSimulator
 from core.domain import MeshManager
 from config.config import SubstanceConfig
 
