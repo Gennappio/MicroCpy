@@ -65,13 +65,18 @@ def remove_apoptotic_cells(
     removed_count = 0
     removed_cell_ids = []
 
+    # Get gene networks dict to clean up orphaned networks
+    gene_networks = context.get('gene_networks', {})
+
     for cell_id, cell in population.state.cells.items():
         # Check if cell is marked as apoptotic
         if cell.state.phenotype == 'Apoptosis':
             # Remove apoptotic cell (don't add to updated_cells)
             removed_count += 1
             removed_cell_ids.append(cell_id[:8])  # Store short ID for logging
-            print(f"  [APOPTOSIS-REMOVE] Removing cell {cell_id[:8]} at {cell.state.position} (phenotype: Apoptosis)")
+            # Also remove the gene network for this cell
+            if cell_id in gene_networks:
+                del gene_networks[cell_id]
             continue
 
         # Keep non-apoptotic cells
