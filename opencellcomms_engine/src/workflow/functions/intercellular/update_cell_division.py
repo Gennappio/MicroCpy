@@ -151,6 +151,8 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
     # Get domain bounds from config
     domain_bounds = _get_domain_bounds(config)
 
+    growth_arrest_blocked = 0
+
     for cell_id, parent_cell in cells_to_divide:
         # Try to find a valid neighbour position for the daughter cell
         daughter_position = _find_daughter_position(
@@ -160,44 +162,73 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
             dimensions
         )
 
-        # If no valid position found, skip this division
+        # =====================================================================
+        # NO SPACE → NetLogo's -TURN-QUIESCENCE-3
+        # Parent switches to Growth_Arrest with cycle = 3
+        # =====================================================================
         if daughter_position is None:
             failed_divisions += 1
+            growth_arrest_blocked += 1
+            parent_cell.state = parent_cell.state.with_updates(
+                phenotype='Growth_Arrest'
+            )
+            # Reset fate on the gene network object
+            parent_gn = gene_networks.get(cell_id) if gene_networks else None
+            if parent_gn is not None:
+                parent_gn._fate = "Growth_Arrest"
+                if hasattr(parent_gn, '_growth_arrest_cycle'):
+                    parent_gn._growth_arrest_cycle = 3
+            # Track in growth arrest counters
+            ga_counters = context.get('growth_arrest_counters', {})
+            ga_counters[cell_id] = 3
+            context['growth_arrest_counters'] = ga_counters
+            updated_cells[cell_id] = parent_cell
             continue
 
-        # Reset parent age and increment division count
+        # =====================================================================
+        # SPACE FOUND → Division succeeds
+        # =====================================================================
+
+        # --- RESET PARENT (NetLogo's -RESET-FATE-145) ---
+        # After successful division:
+        #   my-fate = nobody
+        #   my-cell-age = ticks  (age reset)
+        #   my-cell-ran1 = random-float 1.0
+        #   my-cell-ran2 = random-float 1.0
         parent_cell.state = parent_cell.state.with_updates(
             age=0.0,
+            phenotype='Quiescent',
             division_count=parent_cell.state.division_count + 1
         )
+        parent_gn = gene_networks.get(cell_id) if gene_networks else None
+        if parent_gn is not None:
+            parent_gn._fate = None
+            parent_gn._cell_ran1 = random.random()
+            parent_gn._cell_ran2 = random.random()
         updated_cells[cell_id] = parent_cell
 
-        # Generate new cell ID first (needed for gene network mapping)
+        # --- CREATE DAUGHTER ---
         new_cell_id = _generate_cell_id(population)
 
         # Create a FRESH gene network for the daughter cell.
-        # In NetLogo (and the population benchmark), daughter cells start with
-        # random gene states, new random thresholds, and fate=None.
-        # They do NOT inherit the parent's gene network state.
+        # In NetLogo, daughter cells get a completely new gene network
+        # (random gene states, new random thresholds, fate=None).
         daughter_gene_states = {}
         if gene_networks and cell_id in gene_networks:
             daughter_gn = _create_fresh_daughter_network(context)
             if daughter_gn is not None:
                 gene_networks[new_cell_id] = daughter_gn
-                # Read the fresh gene states from the daughter's network
                 daughter_gene_states = {
                     name: node.current_state
                     for name, node in daughter_gn.nodes.items()
                 }
 
-        # Create new daughter cell (Quiescent — no fate yet)
         daughter_cell = Cell(
             position=daughter_position,
             phenotype='Quiescent',
             custom_functions_module=parent_cell.custom_functions
         )
 
-        # Set daughter state: fresh gene states, age=0, division_count=0
         daughter_cell.state = daughter_cell.state.with_updates(
             age=0.0,
             division_count=0,
@@ -217,11 +248,12 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
     final_count = len(all_cells)
 
     # Log cell count change
-    if final_count != initial_count:
+    if final_count != initial_count or failed_divisions > 0:
         print(f"[DIVISION] Cell count: {initial_count} -> {final_count} "
-              f"(added {len(new_cells)} daughter cells, {failed_divisions} failed)")
+              f"(+{len(new_cells)} daughters, "
+              f"{failed_divisions} blocked → {growth_arrest_blocked} Growth_Arrest)")
     elif failed_divisions > 0:
-        print(f"[DIVISION] No divisions completed ({failed_divisions} failed - no free neighbour)")
+        print(f"[DIVISION] No divisions completed ({failed_divisions} blocked → Growth_Arrest)")
 
 
 def _create_fresh_daughter_network(context: Dict[str, Any]):
