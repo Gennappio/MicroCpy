@@ -106,3 +106,13 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 - `MicroCpy/opencellcomms_engine/README.md` — Engine overview
 - `MicroCpy/opencellcomms_engine/GETTING_STARTED.md` — Tutorial
 - `MicroCpy/opencellcomms_engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
+
+## Adding a new function
+
+1. Create a new file in `opencellcomms_engine/src/workflow/functions/<category>/`
+2. Write the function and decorator
+3. Import the function in `opencellcomms_engine/src/workflow/functions/<category>/__init__.py`
+4. Import the module in `opencellcomms_engine/src/workflow/registry.py`
+5. Restart the backend server
+6. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
+7. if needed look for the CREATING_FUNCTIONS.md in `MicroCpy/docs/CREATING_FUNCTIONS.md`
