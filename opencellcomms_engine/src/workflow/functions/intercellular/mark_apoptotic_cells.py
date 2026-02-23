@@ -96,6 +96,8 @@ def mark_apoptotic_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
+    final_count = len(population.state.cells)
+
     if marked_count > 0:
         print(f"[APOPTOSIS] Marked {marked_count} cells as apoptotic")
 
