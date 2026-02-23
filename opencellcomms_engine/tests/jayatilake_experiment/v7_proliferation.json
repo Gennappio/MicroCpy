@@ -27,8 +27,8 @@
         "type": "controller",
         "label": "MAIN COMPOSER",
         "position": {
-          "x": 24.315068493150704,
-          "y": 22.260273972602704
+          "x": 42.321647104456815,
+          "y": -90.84705803360211
         },
         "number_of_steps": 3
       },
@@ -42,8 +42,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 256.5068493150685,
-            "y": 32.719178082191775
+            "x": 256.0068493150685,
+            "y": -14.885878834035609
           },
           "description": "Load kernel and setup all concrete classes",
           "parameter_nodes": []
@@ -52,12 +52,12 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 7,
+          "iterations": 1000,
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 161.5
+            "x": 200.51703135765388,
+            "y": 123.23967953362074
           },
           "description": "Run gene network updates once (500 steps, comparable to standalone)",
           "parameter_nodes": []
@@ -109,8 +109,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 324.5173913043477,
-            "y": 53.00130434782608
+            "x": 206.86284584980228,
+            "y": 146.78391304347826
           },
           "description": "Load biophysics kernel (registers core context keys)",
           "custom_name": "",
@@ -124,7 +124,7 @@
           "parameters": {
             "bnd_file": "tests/jayatilake_experiment/jaya_microc.bnd",
             "random_initialization": true,
-            "Oxygen_supply": false,
+            "Oxygen_supply": "true",
             "Glucose_supply": true,
             "MCT1_stimulus": true,
             "Proton_level": false,
@@ -140,10 +140,10 @@
           "enabled": true,
           "position": {
             "x": 213.71434782608685,
-            "y": 413.7065217391306
+            "y": 458.0401185770752
           },
           "description": "Create NetLogo-faithful gene networks with inputs and probabilistic activation",
-          "custom_name": "",
+          "custom_name": "initialize_netlogo_gene_networks",
           "step_count": 1,
           "parameter_nodes": []
         }
@@ -157,8 +157,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 188.53347826086974,
-            "y": 310.5233627182471
+            "x": 200.4694466403164,
+            "y": 322.4593310976937
           },
           "description": "",
           "parameter_nodes": []
@@ -193,9 +193,13 @@
           "function_file": "",
           "parameters": {
             "propagation_steps": 100,
-            "reversible": true,
-            "verbose": true,
-            "debug_steps": false
+            "reversible": false,
+            "verbose": false,
+            "debug_steps": false,
+            "oscillation": false,
+            "oscillation_period": 500,
+            "ran_refresh": false,
+            "diffusion_step": 250
           },
           "enabled": true,
           "position": {
@@ -261,8 +265,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 370.1338582677165,
-            "y": 239.09645669291336
+            "x": 365.67180321468084,
+            "y": 343.21107459708026
           },
           "description": "Mark cells with Apoptosis gene ON (sets phenotype to 'Apoptosis')",
           "custom_name": "",
@@ -364,8 +368,8 @@
         "type": "controller",
         "label": "SETUP POPULATION",
         "position": {
-          "x": -11.959130434782537,
-          "y": 43.8721739130435
+          "x": -156.95913043478254,
+          "y": 4.372173913043497
         },
         "number_of_steps": 1
       },
@@ -379,7 +383,7 @@
             "dt": 0.1,
             "dimensions": 2,
             "output_dir": "results",
-            "verbose": true
+            "verbose": false
           },
           "enabled": true,
           "position": {
@@ -438,7 +442,7 @@
           "function_name": "generate_initial_cells",
           "function_file": "",
           "parameters": {
-            "num_cells": 1000,
+            "num_cells": "100",
             "file_path": "tests/jayatilake_experiment/generated_sphere_1000.vtk"
           },
           "enabled": true,
@@ -447,7 +451,7 @@
             "y": 200
           },
           "description": "Generate 1000 cells packed in a sphere at integer positions",
-          "custom_name": "",
+          "custom_name": "generate_initial_cells",
           "step_count": 1,
           "parameter_nodes": []
         },
@@ -460,8 +464,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 250,
-            "y": 250
+            "x": 308.23046357623787,
+            "y": 374.41570482546075
           },
           "description": "Load generated cells from VTK checkpoint into population",
           "custom_name": "",
