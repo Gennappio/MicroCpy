@@ -123,19 +123,7 @@
           "function_file": "",
           "parameters": {
             "bnd_file": "tests/jayatilake_experiment/jaya_microc.bnd",
-            "random_initialization": true,
-            "Oxygen_supply": "true",
-            "Glucose_supply": true,
-            "MCT1_stimulus": true,
-            "Proton_level": false,
-            "FGFR_stimulus": false,
-            "EGFR_stimulus": false,
-            "cMET_stimulus": false,
-            "Growth_Inhibitor": false,
-            "DNA_damage": false,
-            "TGFBR_stimulus": false,
-            "GLUT1I_concentration": 0,
-            "MCT1I_concentration": 0
+            "random_initialization": true
           },
           "enabled": true,
           "position": {
@@ -145,7 +133,7 @@
           "description": "Create NetLogo-faithful gene networks with inputs and probabilistic activation",
           "custom_name": "initialize_netlogo_gene_networks",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": ["param_input_states", "param_concentrations"]
         }
       ],
       "subworkflow_calls": [
@@ -164,7 +152,44 @@
           "parameter_nodes": []
         }
       ],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "param_input_states",
+          "type": "dictParameterNode",
+          "label": "Input States",
+          "targetParam": "input_states",
+          "entries": [
+            {"key": "Oxygen_supply", "valueType": "bool", "value": true},
+            {"key": "Glucose_supply", "valueType": "bool", "value": true},
+            {"key": "MCT1_stimulus", "valueType": "bool", "value": true},
+            {"key": "Proton_level", "valueType": "bool", "value": false},
+            {"key": "FGFR_stimulus", "valueType": "bool", "value": false},
+            {"key": "EGFR_stimulus", "valueType": "bool", "value": false},
+            {"key": "cMET_stimulus", "valueType": "bool", "value": false},
+            {"key": "Growth_Inhibitor", "valueType": "bool", "value": false},
+            {"key": "DNA_damage", "valueType": "bool", "value": false},
+            {"key": "TGFBR_stimulus", "valueType": "bool", "value": false}
+          ],
+          "position": {
+            "x": -50,
+            "y": 400
+          }
+        },
+        {
+          "id": "param_concentrations",
+          "type": "dictParameterNode",
+          "label": "Concentrations",
+          "targetParam": "concentrations",
+          "entries": [
+            {"key": "GLUT1I_concentration", "valueType": "float", "value": 0},
+            {"key": "MCT1I_concentration", "valueType": "float", "value": 0}
+          ],
+          "position": {
+            "x": -50,
+            "y": 550
+          }
+        }
+      ],
       "execution_order": [
         "load_kernel",
         "subworkflow_Setup_population_1771000251318",

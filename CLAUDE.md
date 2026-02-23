@@ -112,6 +112,13 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 - `MicroCpy/opencellcomms_engine/GETTING_STARTED.md` — Tutorial
 - `MicroCpy/opencellcomms_engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
 
+## Workflow JSON & GUI Readability
+
+- **Never inline complex values** (dicts, lists) directly in a function node's `"parameters"`. They render as unreadable flat strings in the GUI.
+- **Use `dictParameterNode`** for dict-typed parameters: create a node in the subworkflow's `"parameters"` array with `target_param` pointing to the function parameter name, and link it via `"parameter_nodes"` on the function node. Same for `listParameterNode`.
+- **Prefer DICT parameters over many individual BOOL/FLOAT parameters** in `@register_function`. A single `"type": "DICT"` is more flexible and renders as an editable table in the GUI.
+- **Design for the GUI first.** A scientist must be able to read and modify parameters visually. If it's not readable in the canvas, it's wrong.
+
 ## Adding a new function
 
 1. Create a new file in `opencellcomms_engine/src/workflow/functions/<category>/`

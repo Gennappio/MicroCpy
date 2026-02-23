@@ -47,7 +47,7 @@ PSEUDOCODE:
         context['gene_networks'][cell_id] = gn
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import random as _random
 from src.workflow.decorators import register_function
@@ -55,6 +55,15 @@ from src.workflow.decorators import register_function
 
 # Fate node names matching NetLogo's Output-Fate kind
 FATE_NODE_NAMES = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
+
+
+def _to_bool(val) -> bool:
+    """Convert a value to bool, handling strings from the GUI ("true"/"false")."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ('true', '1', 'on', 'yes')
+    return bool(val)
 
 
 @register_function(
@@ -66,22 +75,34 @@ FATE_NODE_NAMES = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
          "default": "gene_network.bnd"},
         {"name": "random_initialization", "type": "BOOL",
          "description": "Random initialization for non-input, non-fate nodes", "default": True},
-        # --- Input node states ---
-        {"name": "Oxygen_supply", "type": "BOOL", "description": "Oxygen supply", "default": True},
-        {"name": "Glucose_supply", "type": "BOOL", "description": "Glucose supply", "default": True},
-        {"name": "MCT1_stimulus", "type": "BOOL", "description": "MCT1 stimulus", "default": False},
-        {"name": "Proton_level", "type": "BOOL", "description": "Proton level", "default": False},
-        {"name": "FGFR_stimulus", "type": "BOOL", "description": "FGFR stimulus", "default": False},
-        {"name": "EGFR_stimulus", "type": "BOOL", "description": "EGFR stimulus", "default": False},
-        {"name": "cMET_stimulus", "type": "BOOL", "description": "cMET stimulus", "default": False},
-        {"name": "Growth_Inhibitor", "type": "BOOL", "description": "Growth inhibitor", "default": False},
-        {"name": "DNA_damage", "type": "BOOL", "description": "DNA damage", "default": False},
-        {"name": "TGFBR_stimulus", "type": "BOOL", "description": "TGFBR stimulus", "default": False},
-        # --- Probabilistic input concentrations ---
-        {"name": "GLUT1I_concentration", "type": "FLOAT",
-         "description": "GLUT1I concentration for Hill function (0=OFF, >0 = probabilistic)", "default": 0.0},
-        {"name": "MCT1I_concentration", "type": "FLOAT",
-         "description": "MCT1I concentration for Hill function (0=OFF, >0 = probabilistic)", "default": 0.0},
+        # --- Input node states (single DICT) ---
+        {
+            "name": "input_states",
+            "type": "DICT",
+            "description": "Dict mapping input node names to boolean ON/OFF values",
+            "default": {
+                "Oxygen_supply": True,
+                "Glucose_supply": True,
+                "MCT1_stimulus": False,
+                "Proton_level": False,
+                "FGFR_stimulus": False,
+                "EGFR_stimulus": False,
+                "cMET_stimulus": False,
+                "Growth_Inhibitor": False,
+                "DNA_damage": False,
+                "TGFBR_stimulus": False,
+            }
+        },
+        # --- Probabilistic input concentrations (single DICT) ---
+        {
+            "name": "concentrations",
+            "type": "DICT",
+            "description": "Dict mapping substance names to float concentrations for Hill function (0=OFF)",
+            "default": {
+                "GLUT1I_concentration": 0.0,
+                "MCT1I_concentration": 0.0,
+            }
+        },
     ],
     outputs=["gene_network"],
     cloneable=False,
@@ -91,21 +112,9 @@ def initialize_netlogo_gene_networks(
     context: Dict[str, Any],
     bnd_file: str = "gene_network.bnd",
     random_initialization: bool = True,
-    # Input node states (standard boolean)
-    Oxygen_supply: bool = True,
-    Glucose_supply: bool = True,
-    MCT1_stimulus: bool = False,
-    Proton_level: bool = False,
-    FGFR_stimulus: bool = False,
-    EGFR_stimulus: bool = False,
-    cMET_stimulus: bool = False,
-    Growth_Inhibitor: bool = False,
-    DNA_damage: bool = False,
-    TGFBR_stimulus: bool = False,
-    # Probabilistic input concentrations
-    GLUT1I_concentration: float = 0.0,
-    MCT1I_concentration: float = 0.0,
-    **kwargs
+    input_states: Union[Dict, List, str] = None,
+    concentrations: Union[Dict, List, str] = None,
+    **kwargs  # catches legacy individual params for backwards compat
 ) -> bool:
     """
     Create and attach NetLogo-faithful gene networks to all cells.
@@ -120,9 +129,9 @@ def initialize_netlogo_gene_networks(
         context: Workflow context (must contain 'population')
         bnd_file: Path to BND file defining the network topology
         random_initialization: Randomize non-input, non-fate nodes
-        Oxygen_supply .. TGFBR_stimulus: Boolean input node states
-        GLUT1I_concentration: Concentration for Hill function (0 = OFF)
-        MCT1I_concentration: Concentration for Hill function (0 = OFF)
+        input_states: Dict mapping input node names to boolean ON/OFF values
+        concentrations: Dict mapping substance names to float concentrations
+                        for Hill function (0 = OFF)
 
     Returns:
         True if successful, False otherwise
@@ -184,26 +193,46 @@ def initialize_netlogo_gene_networks(
         # =================================================================
         # 3. COLLECT INPUT STATES
         # =================================================================
-        input_states: Dict[str, bool] = {
-            'Oxygen_supply': Oxygen_supply,
-            'Glucose_supply': Glucose_supply,
-            'MCT1_stimulus': MCT1_stimulus,
-            'Proton_level': Proton_level,
-            'FGFR_stimulus': FGFR_stimulus,
-            'EGFR_stimulus': EGFR_stimulus,
-            'cMET_stimulus': cMET_stimulus,
-            'Growth_Inhibitor': Growth_Inhibitor,
-            'DNA_damage': DNA_damage,
-            'TGFBR_stimulus': TGFBR_stimulus,
-        }
+        # Accept DICT parameter or fall back to individual kwargs (backwards compat)
+        if input_states is None:
+            known_inputs = ['Oxygen_supply', 'Glucose_supply', 'MCT1_stimulus',
+                            'Proton_level', 'FGFR_stimulus', 'EGFR_stimulus',
+                            'cMET_stimulus', 'Growth_Inhibitor', 'DNA_damage',
+                            'TGFBR_stimulus']
+            if any(name in kwargs for name in known_inputs):
+                # Legacy individual parameters passed via kwargs
+                input_states = {}
+                for name in known_inputs:
+                    if name in kwargs:
+                        input_states[name] = _to_bool(kwargs[name])
+            else:
+                # Use defaults
+                input_states = {
+                    'Oxygen_supply': True, 'Glucose_supply': True,
+                    'MCT1_stimulus': False, 'Proton_level': False,
+                    'FGFR_stimulus': False, 'EGFR_stimulus': False,
+                    'cMET_stimulus': False, 'Growth_Inhibitor': False,
+                    'DNA_damage': False, 'TGFBR_stimulus': False,
+                }
+        else:
+            # Ensure values are booleans (GUI may send strings)
+            input_states = {k: _to_bool(v) for k, v in input_states.items()}
+
         context['gene_network_inputs'] = input_states
 
         # Store concentration parameters so daughter cells created during
         # division can reuse the same probabilistic activation settings.
-        context['gene_network_init_params'] = {
-            'MCT1I_concentration': MCT1I_concentration,
-            'GLUT1I_concentration': GLUT1I_concentration,
-        }
+        if concentrations is None:
+            concentrations = {
+                'MCT1I_concentration': float(kwargs.get('MCT1I_concentration', 0.0)),
+                'GLUT1I_concentration': float(kwargs.get('GLUT1I_concentration', 0.0)),
+            }
+        else:
+            concentrations = {k: float(v) for k, v in concentrations.items()}
+
+        MCT1I_concentration = concentrations.get('MCT1I_concentration', 0.0)
+        GLUT1I_concentration = concentrations.get('GLUT1I_concentration', 0.0)
+        context['gene_network_init_params'] = concentrations
 
         # =================================================================
         # 4. CREATE GENE NETWORK PER CELL
