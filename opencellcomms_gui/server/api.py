@@ -7,6 +7,7 @@ Provides endpoints for running simulations and streaming logs in real-time
 import os
 import sys
 import json
+import signal
 import subprocess
 import threading
 import queue
@@ -26,6 +27,9 @@ simulation_process = None
 simulation_thread = None
 log_queue = queue.Queue()
 is_running = False
+
+# PID file for cross-refresh / cross-restart recovery
+PID_FILE = Path(__file__).parent / ".current_process.pid"
 
 
 def get_engine_path():
@@ -98,6 +102,7 @@ def stream_output(process, log_queue):
     
     global is_running
     is_running = False
+    PID_FILE.unlink(missing_ok=True)
 
 
 def run_simulation_async(workflow_path, entry_subworkflow=None):
@@ -147,6 +152,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
         log_queue.put("[INFO] Starting OpenCellComms simulation...\n")
 
         # Start subprocess with correct working directory
+        # start_new_session=True creates a new process group so we can kill the entire tree
         simulation_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -154,9 +160,13 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             text=True,
             bufsize=1,
             universal_newlines=True,
-            cwd=str(engine_dir)  # Set working directory to opencellcomms_engine
+            cwd=str(engine_dir),  # Set working directory to opencellcomms_engine
+            start_new_session=True  # New session = new process group (enables os.killpg)
         )
-        
+
+        # Persist PID for cross-refresh / cross-restart recovery
+        PID_FILE.write_text(str(simulation_process.pid))
+
         # Stream output
         stream_output(simulation_process, log_queue)
         
@@ -293,23 +303,64 @@ def run_simulation():
 def stop_simulation():
     """Stop the running simulation"""
     global simulation_process, is_running
-    
-    if not is_running or not simulation_process:
+
+    # Gate on process liveness, not is_running flag (survives page refresh)
+    if simulation_process is None or simulation_process.poll() is not None:
         return jsonify({'error': 'No simulation running'}), 400
-    
+
     try:
-        simulation_process.terminate()
+        os.killpg(os.getpgid(simulation_process.pid), signal.SIGTERM)
         simulation_process.wait(timeout=5)
         log_queue.put("[STOP] Simulation stopped by user\n")
         is_running = False
+        PID_FILE.unlink(missing_ok=True)
         return jsonify({'status': 'stopped'})
     except subprocess.TimeoutExpired:
-        simulation_process.kill()
+        try:
+            os.killpg(os.getpgid(simulation_process.pid), signal.SIGKILL)
+        except (ProcessLookupError, OSError):
+            pass
         log_queue.put("[STOP] Simulation forcefully killed\n")
         is_running = False
+        PID_FILE.unlink(missing_ok=True)
         return jsonify({'status': 'killed'})
+    except (ProcessLookupError, OSError):
+        # Process already gone
+        is_running = False
+        PID_FILE.unlink(missing_ok=True)
+        return jsonify({'status': 'stopped'})
     except Exception as e:
         return jsonify({'error': f'Failed to stop simulation: {e}'}), 500
+
+
+@app.route('/api/force-kill', methods=['POST'])
+def force_kill():
+    """Kill any running process — works even after page refresh or server restart"""
+    global is_running, simulation_process
+    pid = None
+
+    # Try in-memory process first
+    if simulation_process is not None and simulation_process.poll() is None:
+        pid = simulation_process.pid
+    # Fall back to PID file (survives Flask restarts)
+    elif PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+        except ValueError:
+            pass
+
+    if pid is None:
+        return jsonify({'error': 'No process found'}), 404
+
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        pass  # Already dead
+
+    PID_FILE.unlink(missing_ok=True)
+    is_running = False
+    log_queue.put("[STOP] Process forcefully killed\n")
+    return jsonify({'status': 'killed', 'pid': pid})
 
 
 @app.route('/api/logs', methods=['GET'])
