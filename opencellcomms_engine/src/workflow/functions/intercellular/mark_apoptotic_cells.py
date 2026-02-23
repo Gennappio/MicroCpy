@@ -96,14 +96,8 @@ def mark_apoptotic_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
-    # Log summary
     if marked_count > 0:
         print(f"[APOPTOSIS] Marked {marked_count} cells as apoptotic")
-        print(f"[APOPTOSIS] Marked cells: {', '.join(marked_cell_ids)}")
-
-    # Log population count at end
-    final_count = len(population.state.cells)
-    print(f"[APOPTOSIS-END] Population count: {final_count} cells")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})

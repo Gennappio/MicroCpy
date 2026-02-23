@@ -85,11 +85,9 @@ def remove_apoptotic_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
-    # Log summary
     final_count = len(updated_cells)
-    print(f"[REMOVE-APOPTOSIS] Cell count: {initial_count} -> {final_count} (removed {removed_count})")
     if removed_count > 0:
-        print(f"[REMOVE-APOPTOSIS] Removed cells: {', '.join(removed_cell_ids)}")
+        print(f"[REMOVE-APOPTOSIS] Removed {removed_count} cells. Population: {initial_count} -> {final_count}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})

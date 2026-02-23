@@ -93,7 +93,6 @@ def mark_proliferating_cells(
                 cell.state = cell.state.with_updates(phenotype='Proliferation')
                 if old_phenotype in active_fate_phenotypes:
                     overwritten_count += 1
-                    print(f"  [PROLIFERATION-OVERWRITE] Cell {cell_id[:8]}: {old_phenotype} -> Proliferation")
             proliferating_count += 1
         else:
             # Proliferation gene is OFF.
@@ -112,14 +111,9 @@ def mark_proliferating_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
-    # Log summary
-    print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
-          f"Quiescent: {quiescent_count}, "
-          f"Kept(Apoptosis/GA): {unchanged_count}, Overwritten: {overwritten_count}")
-
-    # Log population count at end
-    final_count = len(population.state.cells)
-    print(f"[PROLIFERATING-END] Population count: {final_count} cells")
+    if proliferating_count > 0:
+        print(f"[PROLIFERATION] Proliferating: {proliferating_count}, "
+              f"Quiescent: {quiescent_count}, Overwritten: {overwritten_count}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})

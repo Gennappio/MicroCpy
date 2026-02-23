@@ -100,7 +100,6 @@ def mark_growth_arrest_cells(
             if old_phenotype != 'Growth_Arrest':
                 cell.state = cell.state.with_updates(phenotype='Growth_Arrest')
                 cells_newly_marked += 1
-                print(f"  [GROWTH_ARREST-MARK] Cell {cell_id[:8]}: {old_phenotype} -> Growth_Arrest")
             
             # Cell is in Growth_Arrest - increment counter
             if cell_id not in counters:
@@ -126,14 +125,10 @@ def mark_growth_arrest_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
-    # Log summary
-    if cells_in_arrest > 0 or cells_exited > 0 or cells_newly_marked > 0:
-        print(f"[GROWTH_ARREST] In arrest: {cells_in_arrest}, Newly marked: {cells_newly_marked}, "
-              f"Expired (>={max_growth_arrest_steps} steps): {cells_expired}, Exited: {cells_exited}")
-
-    # Log population count at end
-    final_count = len(population.state.cells)
-    print(f"[GROWTH-ARREST-END] Population count: {final_count} cells")
+    # Log only when something actually changed
+    if cells_newly_marked > 0 or cells_exited > 0:
+        print(f"[GROWTH_ARREST] Newly marked: {cells_newly_marked}, "
+              f"Exited: {cells_exited}, In arrest: {cells_in_arrest}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
