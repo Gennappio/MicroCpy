@@ -1,0 +1,212 @@
+{
+  "version": "2.0",
+  "name": "Graph Walking Gene Network Benchmark v5 (Topology-Based Propagation)",
+  "description": "Gene network benchmark with GRAPH WALKING update mechanism. Follows network topology instead of random gene selection. kernel_setup → loop → analysis.",
+  "metadata": {
+    "author": "OpenCellComms Team",
+    "experiment": "Gene Network Benchmark v5 - Graph Walking",
+    "created": "2026-02-09",
+    "notes": "Implements graph walking propagation (matches gene_network_graph_walking.py): follows signal propagation chains through network topology, fate nodes are transient triggers that reset after firing, updates follow outgoing links from last visited node.",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "kernel_setup": "composer",
+        "loop": "subworkflow",
+        "analysis": "subworkflow"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Main composer: kernel_setup → loop × 10 → analysis",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "label": "MAIN COMPOSER",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 3
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "call_kernel_setup",
+          "subworkflow_name": "kernel_setup",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Load kernel and setup all concrete classes",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "call_loop",
+          "subworkflow_name": "loop",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Run gene network updates once (500 steps, comparable to standalone)",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "call_analysis",
+          "subworkflow_name": "analysis",
+          "iterations": 1,
+          "enabled": true,
+          "description": "Analyze and print results",
+          "parameters": {},
+          "context_mapping": {},
+          "position": {"x": 200, "y": 300}
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["call_kernel_setup", "call_loop", "call_analysis"],
+      "enabled": true
+    },
+    "kernel_setup": {
+      "description": "Load kernel and setup all concrete classes (one node per class)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-kernel-setup",
+        "label": "KERNEL SETUP",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "load_kernel",
+          "function_name": "load_kernel",
+          "enabled": true,
+          "description": "Load biophysics kernel (registers core context keys)",
+          "parameters": {
+            "kernel_name": "biophysics"
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "init_population",
+          "function_name": "initialize_population",
+          "enabled": true,
+          "description": "Create CellPopulation concrete class (N cells, no gene networks yet)",
+          "parameters": {
+            "num_cells": 100
+          },
+          "position": {"x": 200, "y": 200}
+        },
+        {
+          "id": "init_gene_networks",
+          "function_name": "initialize_hierarchical_gene_networks",
+          "enabled": true,
+          "description": "Create HierarchicalBooleanNetwork concrete class per cell (with fate logic)",
+          "parameters": {
+            "bnd_file": "opencellcomms_engine/tests/jayatilake_experiment/jaya_microc.bnd",
+            "random_initialization": true,
+            "fate_hierarchy": "Necrosis,Apoptosis,Growth_Arrest,Proliferation"
+          },
+          "position": {"x": 200, "y": 300}
+        },
+        {
+          "id": "set_inputs",
+          "function_name": "set_gene_network_inputs",
+          "enabled": true,
+          "description": "Set fixed input nodes (stay FIXED during propagation)",
+          "parameters": {
+            "Oxygen_supply": false,
+            "Glucose_supply": true,
+            "MCT1_stimulus": true,
+            "Proton_level": false,
+            "FGFR_stimulus": false,
+            "EGFR_stimulus": false,
+            "cMET_stimulus": false,
+            "Growth_Inhibitor": false,
+            "DNA_damage": false,
+            "TGFBR_stimulus": false
+          },
+          "position": {"x": 200, "y": 400}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["load_kernel", "init_population", "init_gene_networks", "set_inputs"],
+      "enabled": true
+    },
+    "loop": {
+      "description": "Graph walking gene network propagation (follows topology, transient fate nodes)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-loop",
+        "label": "LOOP",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "propagate_gene_networks",
+          "function_name": "propagate_gene_networks_graph_walking",
+          "enabled": true,
+          "description": "Graph walking propagation: follows network topology and signal chains. Fate nodes are transient triggers.",
+          "parameters": {
+            "propagation_steps": 500,
+            "verbose": false
+          },
+          "position": {"x": 200, "y": 100}
+        },
+        {
+          "id": "update_gene_networks_netlogo",
+          "function_name": "propagate_gene_networks_netlogo",
+          "enabled": true,
+          "description": "Jayatilake graph walking propagation",
+          "parameters": {
+            "propagation_steps": 100,
+            "verbose": true
+          },
+          "position": {"x": 250, "y": 250}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["propagate_gene_networks", "update_gene_networks_netlogo"],
+      "enabled": true
+    },
+    "analysis": {
+      "description": "Analyze and print gene network results",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-analysis",
+        "label": "ANALYSIS",
+        "position": {"x": 50, "y": 50},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "print_results",
+          "function_name": "print_gene_network_states",
+          "enabled": true,
+          "description": "Print gene network statistics",
+          "parameters": {
+            "show_per_cell": false
+          },
+          "position": {"x": 200, "y": 100}
+        }, 
+        {
+          "id": "generate_cell_plots",
+          "function_name": "generate_cell_plots",
+          "enabled": true,
+          "description": "generate_cell_plots",
+          "parameters": {
+            "show_per_cell": false
+          },
+          "position": {"x": 250, "y": 200}
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["print_results", "generate_cell_plots"],
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "fromVersion": 53,
+  "toVersion": 54,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "growth_arrest_counters": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000006": 4,
+          "cell_000095": 4,
+          "cell_000128": 4,
+          "...": "(226 more keys)"
+        },
+        "truncated": true,
+        "len": 229
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000006": 5,
+          "cell_000095": 5,
+          "cell_000128": 5,
+          "...": "(237 more keys)"
+        },
+        "truncated": true,
+        "len": 240
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 27,
+            "total_cells": 912
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 212,
+            "newly_marked": 212,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 212
+          },
+          "proliferation": {
+            "proliferating": 38,
+            "quiescent": 641,
+            "unchanged": 246,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 34,
+            "remaining": 912
+          }
+        },
+        "truncated": false,
+        "len": 4
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 27,
+            "total_cells": 912
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 240,
+            "newly_marked": 240,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 240
+          },
+          "proliferation": {
+            "proliferating": 38,
+            "quiescent": 641,
+            "unchanged": 246,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 34,
+            "remaining": 912
+          }
+        },
+        "truncated": false,
+        "len": 4
+      }
+    }
+  }
+}

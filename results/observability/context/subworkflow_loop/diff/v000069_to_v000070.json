@@ -1,0 +1,57 @@
+{
+  "fromVersion": 69,
+  "toVersion": 70,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<HierarchicalBooleanNetwork>",
+          "cell_000001": "<HierarchicalBooleanNetwork>",
+          "cell_000002": "<HierarchicalBooleanNetwork>",
+          "...": "(902 more keys)"
+        },
+        "truncated": true,
+        "len": 905
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<HierarchicalBooleanNetwork>",
+          "cell_000001": "<HierarchicalBooleanNetwork>",
+          "cell_000002": "<HierarchicalBooleanNetwork>",
+          "...": "(916 more keys)"
+        },
+        "truncated": true,
+        "len": 919
+      }
+    },
+    "growth_arrest_counters": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000006": 6,
+          "cell_000095": 6,
+          "cell_000128": 6,
+          "...": "(255 more keys)"
+        },
+        "truncated": true,
+        "len": 258
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000006": 6,
+          "cell_000095": 6,
+          "cell_000128": 6,
+          "...": "(264 more keys)"
+        },
+        "truncated": true,
+        "len": 267
+      }
+    }
+  }
+}

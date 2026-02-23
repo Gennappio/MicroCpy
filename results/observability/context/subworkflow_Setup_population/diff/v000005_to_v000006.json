@@ -1,0 +1,31 @@
+{
+  "fromVersion": 5,
+  "toVersion": 6,
+  "scopeKey": "subworkflow:Setup_population",
+  "added": {
+    "gene_network": {
+      "type": "BooleanNetwork",
+      "preview": "BooleanNetwork(nodes=7, inputs=3, outputs=4)",
+      "truncated": false
+    },
+    "population": {
+      "type": "CellPopulation",
+      "preview": "<unrepresentable>",
+      "truncated": true
+    },
+    "gene_networks": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
+    },
+    "custom_functions_path": {
+      "type": "string",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py",
+      "truncated": false,
+      "len": 149
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

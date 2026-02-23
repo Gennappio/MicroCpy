@@ -1,0 +1,93 @@
+{
+  "fromVersion": 83,
+  "toVersion": 84,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "gene_networks": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<HierarchicalBooleanNetwork>",
+          "cell_000001": "<HierarchicalBooleanNetwork>",
+          "cell_000002": "<HierarchicalBooleanNetwork>",
+          "...": "(916 more keys)"
+        },
+        "truncated": true,
+        "len": 919
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "cell_000000": "<HierarchicalBooleanNetwork>",
+          "cell_000001": "<HierarchicalBooleanNetwork>",
+          "cell_000002": "<HierarchicalBooleanNetwork>",
+          "...": "(903 more keys)"
+        },
+        "truncated": true,
+        "len": 906
+      }
+    },
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 13,
+            "total_cells": 902
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 273,
+            "newly_marked": 273,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 273
+          },
+          "proliferation": {
+            "proliferating": 22,
+            "quiescent": 594,
+            "unchanged": 286,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 17,
+            "remaining": 902
+          }
+        },
+        "truncated": false,
+        "len": 4
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 13,
+            "total_cells": 902
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 273,
+            "newly_marked": 273,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 273
+          },
+          "proliferation": {
+            "proliferating": 22,
+            "quiescent": 594,
+            "unchanged": 286,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 13,
+            "remaining": 906
+          }
+        },
+        "truncated": false,
+        "len": 4
+      }
+    }
+  }
+}

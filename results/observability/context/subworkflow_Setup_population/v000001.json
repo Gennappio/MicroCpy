@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "scopeKey": "subworkflow:Setup_population",
+  "nodeId": "setup_simulation",
+  "executionId": null,
+  "keys": {
+    "workflow_file": {
+      "type": "string",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment/v7_proliferation.json",
+      "truncated": false,
+      "len": 131
+    },
+    "subworkflow_name": {
+      "type": "string",
+      "preview": "Setup_population",
+      "truncated": false,
+      "len": 16
+    },
+    "subworkflow_kind": {
+      "type": "string",
+      "preview": "subworkflow",
+      "truncated": false,
+      "len": 11
+    },
+    "results_dir": {
+      "type": "Path",
+      "preview": "results",
+      "truncated": false
+    },
+    "subworkflow_results_dir": {
+      "type": "Path",
+      "preview": "results/subworkflows/Setup_population",
+      "truncated": false
+    },
+    "engine_root": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine",
+      "truncated": false
+    },
+    "project_root": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy",
+      "truncated": false
+    },
+    "workflow_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/tests/jayatilake_experiment",
+      "truncated": false
+    },
+    "resolve_path": {
+      "type": "function",
+      "preview": "<function create_path_resolver.<locals>.resolve_path at 0x112217ec0>",
+      "truncated": false
+    },
+    "running_from_gui": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
+    "gui_root": {
+      "type": "null",
+      "preview": null,
+      "truncated": false
+    },
+    "gui_results_dir": {
+      "type": "null",
+      "preview": null,
+      "truncated": false
+    },
+    "output_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_population",
+      "truncated": false
+    },
+    "plots_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_population/plots",
+      "truncated": false
+    },
+    "data_dir": {
+      "type": "Path",
+      "preview": "/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/results/subworkflows/Setup_population/data",
+      "truncated": false
+    },
+    "verbose": {
+      "type": "boolean",
+      "preview": false,
+      "truncated": false
+    },
+    "kernel_type": {
+      "type": "string",
+      "preview": "biophysics",
+      "truncated": false,
+      "len": 10
+    },
+    "result": {
+      "type": "boolean",
+      "preview": true,
+      "truncated": false
+    }
+  }
+}

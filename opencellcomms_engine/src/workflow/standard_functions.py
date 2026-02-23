@@ -51,6 +51,7 @@ from src.workflow.functions.finalization import (
     generate_initial_plots,
     generate_summary_plots,
     generate_iteration_plots,
+    generate_atp_plots,
 )
 
 from src.workflow.functions.debug.debug_dummy_functions import (

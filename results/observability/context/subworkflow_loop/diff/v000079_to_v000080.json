@@ -1,0 +1,69 @@
+{
+  "fromVersion": 79,
+  "toVersion": 80,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "changes": {
+      "before": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 13,
+            "total_cells": 902
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 273,
+            "newly_marked": 273,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 273
+          },
+          "proliferation": {
+            "proliferating": 23,
+            "quiescent": 607,
+            "unchanged": 275,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 17,
+            "remaining": 902
+          }
+        },
+        "truncated": false,
+        "len": 4
+      },
+      "after": {
+        "type": "dict",
+        "preview": {
+          "apoptosis": {
+            "marked": 13,
+            "total_cells": 902
+          },
+          "growth_arrest": {
+            "cells_in_arrest": 273,
+            "newly_marked": 273,
+            "cells_expired": 0,
+            "cells_exited": 0,
+            "max_steps": 100,
+            "total_tracked": 273
+          },
+          "proliferation": {
+            "proliferating": 22,
+            "quiescent": 594,
+            "unchanged": 286,
+            "overwritten": 0
+          },
+          "remove_apoptosis": {
+            "removed": 17,
+            "remaining": 902
+          }
+        },
+        "truncated": false,
+        "len": 4
+      }
+    }
+  }
+}

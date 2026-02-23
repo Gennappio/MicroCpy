@@ -1,0 +1,33 @@
+{
+  "fromVersion": 24,
+  "toVersion": 25,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {
+    "resolve_path": {
+      "before": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x12482c7c0>",
+        "truncated": false
+      },
+      "after": {
+        "type": "function",
+        "preview": "<function create_path_resolver.<locals>.resolve_path at 0x1248e9260>",
+        "truncated": false
+      }
+    },
+    "loop_iteration": {
+      "before": {
+        "type": "number",
+        "preview": 2,
+        "truncated": false
+      },
+      "after": {
+        "type": "number",
+        "preview": 3,
+        "truncated": false
+      }
+    }
+  }
+}

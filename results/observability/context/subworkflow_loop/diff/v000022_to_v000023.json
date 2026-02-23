@@ -1,0 +1,8 @@
+{
+  "fromVersion": 22,
+  "toVersion": 23,
+  "scopeKey": "subworkflow:loop",
+  "added": {},
+  "removed": {},
+  "changed": {}
+}

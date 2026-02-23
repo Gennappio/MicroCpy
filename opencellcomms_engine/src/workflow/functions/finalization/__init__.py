@@ -9,6 +9,7 @@ from .generate_initial_plots import generate_initial_plots
 from .generate_summary_plots import generate_summary_plots
 from .generate_iteration_plots import generate_iteration_plots
 from .generate_cell_plots import generate_cell_plots
+from .generate_atp_plots import generate_atp_plots
 from .print_simulation_summary import print_simulation_summary
 from .save_simulation_data import save_simulation_data
 from .save_checkpoint import save_checkpoint
@@ -21,6 +22,7 @@ __all__ = [
     'generate_initial_plots',
     'generate_summary_plots',
     'generate_cell_plots',
+    'generate_atp_plots',
     'generate_iteration_plots',
     'print_simulation_summary',
     'save_simulation_data',

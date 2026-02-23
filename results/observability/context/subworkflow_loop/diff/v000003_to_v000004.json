@@ -1,0 +1,20 @@
+{
+  "fromVersion": 3,
+  "toVersion": 4,
+  "scopeKey": "subworkflow:loop",
+  "added": {
+    "changes": {
+      "type": "dict",
+      "preview": {
+        "apoptosis": {
+          "marked": 72,
+          "total_cells": 1000
+        }
+      },
+      "truncated": false,
+      "len": 1
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

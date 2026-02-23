@@ -1,0 +1,52 @@
+{
+  "fromVersion": 1,
+  "toVersion": 2,
+  "scopeKey": "subworkflow:Setup_population",
+  "added": {
+    "helpers": {
+      "type": "dict",
+      "preview": {},
+      "truncated": false,
+      "len": 0
+    },
+    "config": {
+      "type": "MinimalConfig",
+      "preview": "<src.workflow.functions.initialization.setup_simulation.setup_simulation.<locals>.MinimalConfig object at 0x11223b500>",
+      "truncated": false
+    },
+    "dt": {
+      "type": "number",
+      "preview": 0.1,
+      "truncated": false
+    },
+    "simulation_params": {
+      "type": "dict",
+      "preview": {
+        "name": "Gene Network Proliferation Test",
+        "dt": 0.1,
+        "dimensions": 2,
+        "output_dir": "<PosixPath>",
+        "plots_dir": "<PosixPath>"
+      },
+      "truncated": false,
+      "len": 5
+    },
+    "results": {
+      "type": "dict",
+      "preview": {
+        "time": [],
+        "cell_count": [],
+        "substance_stats": {}
+      },
+      "truncated": false,
+      "len": 3
+    },
+    "dimensions": {
+      "type": "number",
+      "preview": 2,
+      "truncated": false
+    }
+  },
+  "removed": {},
+  "changed": {}
+}

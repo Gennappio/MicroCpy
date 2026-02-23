@@ -125,10 +125,19 @@ def mark_growth_arrest_cells(
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells)
 
-    # Log only when something actually changed
-    if cells_newly_marked > 0 or cells_exited > 0:
-        print(f"[GROWTH_ARREST] Newly marked: {cells_newly_marked}, "
-              f"Exited: {cells_exited}, In arrest: {cells_in_arrest}")
+    # Periodic progress log (every 100 iterations)
+    if 'iteration_counter' not in context:
+        context['iteration_counter'] = 0
+    context['iteration_counter'] += 1
+
+    if context['iteration_counter'] % 100 == 0:
+        total_cells = len(updated_cells)
+        print(f"[PROGRESS] Iteration {context['iteration_counter']}: "
+              f"{total_cells} cells, {cells_in_arrest} in arrest")
+
+    # Log only when cells exit arrest (rare, meaningful event)
+    if cells_exited > 0:
+        print(f"[GROWTH_ARREST] Exited: {cells_exited}, In arrest: {cells_in_arrest}")
 
     # Store changes in context for GUI display
     context['changes'] = context.get('changes', {})
