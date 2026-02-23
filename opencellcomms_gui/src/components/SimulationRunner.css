@@ -142,6 +142,17 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+.btn-force-kill {
+  background: #f97316;
+  color: white;
+}
+
+.btn-force-kill:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
 .config-input-section {
   padding: 16px 20px;
   background: #f9fafb;

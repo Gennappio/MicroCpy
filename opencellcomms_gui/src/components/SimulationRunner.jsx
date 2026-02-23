@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, Trash2 } from 'lucide-react';
+import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, Trash2, Zap } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './SimulationRunner.css';
 
@@ -29,15 +29,41 @@ const SimulationRunner = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // Connect to log stream on mount
+  // Connect to log stream on mount and sync running state
   useEffect(() => {
     connectToLogStream();
     checkServerHealth();
-    
+    checkStatus();
+
     return () => {
       disconnectFromLogStream();
     };
   }, []);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/status`);
+      const data = await res.json();
+      if (data.running) setIsRunning(true);
+    } catch (err) {
+      // Server may not be available yet
+    }
+  };
+
+  const handleForceKill = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/force-kill`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        setIsRunning(false);
+        addLog('warning', '⚡ Process forcefully killed');
+      } else {
+        addLog('error', `❌ Force kill failed: ${data.error}`);
+      }
+    } catch (err) {
+      addLog('error', `❌ Force kill error: ${err.message}`);
+    }
+  };
 
   const checkServerHealth = async () => {
     try {
@@ -242,6 +268,15 @@ const SimulationRunner = () => {
               Stop
             </button>
           )}
+
+          <button
+            className="btn btn-force-kill"
+            onClick={handleForceKill}
+            title="Kill any running process (even after page refresh)"
+          >
+            <Zap size={16} />
+            Force Kill
+          </button>
         </div>
       </div>
 

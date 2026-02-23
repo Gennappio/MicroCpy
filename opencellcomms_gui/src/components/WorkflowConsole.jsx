@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw } from 'lucide-react';
+import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw, Zap } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowConsole.css';
 
@@ -60,9 +60,10 @@ const WorkflowConsole = ({ workflowName }) => {
     }
   }, [isRunning, fetchAllBadgeStats]);
 
-  // Connect to log stream on mount
+  // Connect to log stream on mount and sync running state
   useEffect(() => {
     connectToLogStream();
+    checkStatus();
 
     return () => {
       disconnectFromLogStream();
@@ -86,6 +87,34 @@ const WorkflowConsole = ({ workflowName }) => {
     bufferedLogsRef.current = [];
     setBufferedLogs([]);
   }, []);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/status`);
+      const data = await res.json();
+      if (data.running) setIsRunning(true);
+    } catch (err) {
+      // Server may not be available yet
+    }
+  };
+
+  const handleForceKill = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/force-kill`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        setIsRunning(false);
+        const timestamp = new Date().toLocaleTimeString();
+        setDisplayedLogs(prev => [...prev, { type: 'warning', message: '⚡ Process forcefully killed', timestamp }]);
+      } else {
+        const timestamp = new Date().toLocaleTimeString();
+        setDisplayedLogs(prev => [...prev, { type: 'error', message: `❌ Force kill failed: ${data.error}`, timestamp }]);
+      }
+    } catch (err) {
+      const timestamp = new Date().toLocaleTimeString();
+      setDisplayedLogs(prev => [...prev, { type: 'error', message: `❌ Force kill error: ${err.message}`, timestamp }]);
+    }
+  };
 
   const connectToLogStream = () => {
     try {
@@ -280,6 +309,15 @@ const WorkflowConsole = ({ workflowName }) => {
           >
             <Square size={14} />
             Stop
+          </button>
+
+          <button
+            className="btn-force-kill-console"
+            onClick={handleForceKill}
+            title="Kill any running process (even after page refresh)"
+          >
+            <Zap size={14} />
+            Force Kill
           </button>
         </div>
       </div>

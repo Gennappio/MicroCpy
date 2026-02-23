@@ -50,7 +50,8 @@
 
 .btn-run-console,
 .btn-stop-console,
-.btn-refresh-console {
+.btn-refresh-console,
+.btn-force-kill-console {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -110,6 +111,16 @@
   background: #4b5563;
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.btn-force-kill-console {
+  background: #f97316;
+  color: white;
+}
+
+.btn-force-kill-console:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
 }
 
 /* Pending logs badge */
