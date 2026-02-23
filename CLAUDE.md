@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Purpose of the software
+The software is a multi-scale cellular simulation platform for biological systems. The idea is to easily create workflows for simulating biological systems. The software is designed to be used with the GUI, but can also be used with the command line. The GUI is a visual workflow designer that allows users to create and edit workflows without writing code. The command line interface allows users to run workflows and simulations. The software is designed to be used by biologists and biologist developers. The software is not designed to be used only by software developers but to enhanvce software developers-biologists cooperation. 
+The idea is to make agent based models easy to understand, share, run and modify. The main objective is to have a platfomr where verify biological hypotheses.
+A scientist must be capable to understand mechanism tested from the GUI. The code must be mostly visible and understandable from the GUI. Once tested, designed and validate, the code can be run by CLI.
+
 ## Repository Structure
 
 This repo contains `MicroCpy/` as a git submodule (currently on the `Abstraction` branch). All real work happens inside `MicroCpy/`. The outer repo (`MicroCpy3D`) just tracks submodule state.
