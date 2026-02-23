@@ -543,12 +543,16 @@ class WorkflowExecutor:
                 # Log timing for previous iteration if this is not the first
                 if iteration > 0 and iteration_start_time is not None:
                     elapsed = time.time() - iteration_start_time
-                    print(f"[WORKFLOW] Iteration {iteration}/{iterations} completed in {elapsed:.1f}s")
+                    report_every = max(1, iterations // 10)
+                    if iteration % report_every == 0:
+                        print(f"[WORKFLOW] Iteration {iteration}/{iterations} completed in {elapsed:.1f}s")
 
                 iteration_start_time = time.time()
 
                 if iterations > 1:
-                    print(f"\n[WORKFLOW] ========== Iteration {iteration + 1}/{iterations}: '{subworkflow_name}' ==========")
+                    report_every = max(1, iterations // 10)
+                    if iteration == 0 or (iteration + 1) % report_every == 0:
+                        print(f"[WORKFLOW] ========== Iteration {iteration + 1}/{iterations}: '{subworkflow_name}' ==========")
                 else:
                     print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}'")
 
