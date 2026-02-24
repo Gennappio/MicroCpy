@@ -1,12 +1,12 @@
 {
   "version": "2.0",
   "name": "v7 MicroC Integrated Workflow",
-  "description": "Multi-scale simulation with NetLogo-faithful gene networks. Bridge: substances → apply_associations_to_inputs → propagate_gene_networks_netlogo.",
+  "description": "Multi-scale simulation with NetLogo-faithful gene networks. Bridge: substances \u2192 apply_associations_to_inputs \u2192 propagate_gene_networks_netlogo.",
   "metadata": {
     "author": "OpenCellComms Team",
     "experiment": "v7 Multi-Scale Simulation with NetLogo Gene Networks",
     "created": "2026-02-24",
-    "notes": "Three composers (Initialization, Loop, Finalization). Three-layer separation: microenvironment → translation function → intracellular. NetLogo-faithful graph walking for gene network propagation.",
+    "notes": "Three composers (Initialization, Loop, Finalization). Three-layer separation: microenvironment \u2192 translation function \u2192 intracellular. NetLogo-faithful graph walking for gene network propagation.",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -31,7 +31,7 @@
   },
   "subworkflows": {
     "main": {
-      "description": "Main composer: initialization -> loop × N -> finalization",
+      "description": "Main composer: initialization -> loop \u00d7 N -> finalization",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -55,7 +55,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 100
+            "y": 50
           },
           "description": "Initialize simulation: domain, substances, gene network, population",
           "parameter_nodes": []
@@ -68,8 +68,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 199.48219944082007,
-            "y": 250
+            "x": 200,
+            "y": 150
           },
           "description": "Main simulation loop: microenvironment -> intracellular -> intercellular",
           "parameter_nodes": []
@@ -83,7 +83,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 400
+            "y": 250
           },
           "description": "Finalize: generate plots and save data",
           "parameter_nodes": []
@@ -122,7 +122,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 100
+            "y": 50
           },
           "description": "Setup simulation and domain",
           "parameter_nodes": []
@@ -135,8 +135,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 201.72956521739138,
-            "y": 200
+            "x": 200,
+            "y": 150
           },
           "description": "Add all substances with diffusion and reaction parameters",
           "parameter_nodes": []
@@ -150,7 +150,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 300
+            "y": 250
           },
           "description": "Setup substance-to-gene associations (bridge 1)",
           "parameter_nodes": []
@@ -164,7 +164,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 400
+            "y": 350
           },
           "description": "Setup population and load cells with gene networks",
           "parameter_nodes": []
@@ -178,7 +178,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 500
+            "y": 450
           },
           "description": "Create NetLogo-faithful gene networks for all cells",
           "parameter_nodes": []
@@ -206,7 +206,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 600
+            "y": 650
           },
           "description": "Generate initial state plots",
           "parameter_nodes": []
@@ -249,7 +249,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 100
+            "y": 50
           },
           "description": "Stage 1: Solve diffusion-reaction equations",
           "parameter_nodes": []
@@ -263,7 +263,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 250
+            "y": 150
           },
           "description": "Stage 2: Gene network + metabolism (bridges)",
           "parameter_nodes": []
@@ -277,7 +277,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 400
+            "y": 250
           },
           "description": "Stage 3: Cell division, apoptosis, necrosis",
           "parameter_nodes": []
@@ -291,7 +291,7 @@
           "enabled": false,
           "position": {
             "x": 200,
-            "y": 550
+            "y": 350
           },
           "description": "Stage 4: Save checkpoints (gene networks, substances)",
           "parameter_nodes": []
@@ -305,7 +305,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 700
+            "y": 450
           },
           "description": "Stage 5: Generate plots for this iteration",
           "parameter_nodes": []
@@ -346,7 +346,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 100
+            "y": 50
           },
           "description": "Generate final state plots",
           "parameter_nodes": []
@@ -360,7 +360,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 250
+            "y": 150
           },
           "description": "Print summary and save simulation data",
           "parameter_nodes": []
@@ -396,7 +396,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 50
+            "y": 100
           },
           "description": "Initialize simulation infrastructure",
           "custom_name": "",
@@ -416,7 +416,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 150
+            "y": 220
           },
           "description": "Define 2D spatial domain",
           "custom_name": "",
@@ -440,8 +440,8 @@
             "name": "MicroC Simulation"
           },
           "position": {
-            "x": 400,
-            "y": 50
+            "x": -300,
+            "y": 100
           }
         },
         {
@@ -451,8 +451,8 @@
             "total_steps": 100
           },
           "position": {
-            "x": 550,
-            "y": 50
+            "x": -300,
+            "y": 200
           }
         },
         {
@@ -462,8 +462,8 @@
             "dt": 1
           },
           "position": {
-            "x": 700,
-            "y": 50
+            "x": -300,
+            "y": 300
           }
         },
         {
@@ -473,8 +473,8 @@
             "output_dir": "results"
           },
           "position": {
-            "x": 850,
-            "y": 50
+            "x": -300,
+            "y": 400
           }
         },
         {
@@ -484,30 +484,30 @@
             "dimensions": 2
           },
           "position": {
-            "x": 400,
-            "y": 150
+            "x": -300,
+            "y": 500
           }
         },
         {
           "id": "param_domain_size_x",
-          "label": "Size X (μm)",
+          "label": "Size X (\u03bcm)",
           "parameters": {
             "size_x": 1500
           },
           "position": {
-            "x": 550,
-            "y": 150
+            "x": -300,
+            "y": 600
           }
         },
         {
           "id": "param_domain_size_y",
-          "label": "Size Y (μm)",
+          "label": "Size Y (\u03bcm)",
           "parameters": {
             "size_y": 1500
           },
           "position": {
-            "x": 700,
-            "y": 150
+            "x": -300,
+            "y": 700
           }
         },
         {
@@ -517,8 +517,8 @@
             "nx": 50
           },
           "position": {
-            "x": 850,
-            "y": 150
+            "x": -300,
+            "y": 800
           }
         },
         {
@@ -528,19 +528,19 @@
             "ny": 50
           },
           "position": {
-            "x": 1000,
-            "y": 150
+            "x": -300,
+            "y": 900
           }
         },
         {
           "id": "param_domain_cell_height",
-          "label": "Cell Height (μm)",
+          "label": "Cell Height (\u03bcm)",
           "parameters": {
             "cell_height": 20
           },
           "position": {
-            "x": 1150,
-            "y": 150
+            "x": -300,
+            "y": 1000
           }
         }
       ],
@@ -572,7 +572,7 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 400,
+            "x": 200,
             "y": 100
           },
           "description": "Configure all 8 substances for diffusion-reaction",
@@ -602,7 +602,7 @@
           ],
           "targetParam": "substances",
           "position": {
-            "x": 100,
+            "x": -300,
             "y": 100
           }
         }
@@ -634,7 +634,7 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 400,
+            "x": 200,
             "y": 100
           },
           "description": "Configure all substance-to-gene associations",
@@ -681,7 +681,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "cMET_stimulus",
-                "threshold": 0.000001
+                "threshold": 1e-06
               }
             },
             {
@@ -689,13 +689,13 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "EGFR_stimulus",
-                "threshold": 0.000001
+                "threshold": 1e-06
               }
             }
           ],
           "targetParam": "associations",
           "position": {
-            "x": 100,
+            "x": -300,
             "y": 100
           }
         }
@@ -746,7 +746,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 220
           },
           "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
           "custom_name": "",
@@ -765,8 +765,8 @@
             "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
           },
           "position": {
-            "x": 32.10482758620691,
-            "y": 200
+            "x": -300,
+            "y": 100
           }
         }
       ],
@@ -936,7 +936,7 @@
           "enabled": false,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 220
           },
           "description": "STANDARD solver - may produce negative concentrations. DISABLED.",
           "custom_name": "",
@@ -955,7 +955,7 @@
           "enabled": false,
           "position": {
             "x": 200,
-            "y": 300
+            "y": 340
           },
           "description": "CLAMPED solver - clamps negative concentrations to zero after solving. Simple fix.",
           "custom_name": "",
@@ -978,8 +978,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 124.58311818012515,
-            "y": 471.50637683662205
+            "x": 200,
+            "y": 460
           },
           "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
           "custom_name": "run_diffusion_solver_coupled",
@@ -1003,18 +1003,18 @@
             "max_iterations": 1000
           },
           "position": {
-            "x": 400,
-            "y": 200
+            "x": -300,
+            "y": 100
           }
         },
         {
           "id": "param_tolerance",
           "label": "Tolerance",
           "parameters": {
-            "tolerance": 0.000001
+            "tolerance": 1e-06
           },
           "position": {
-            "x": 550,
+            "x": -300,
             "y": 200
           }
         },
@@ -1025,8 +1025,8 @@
             "solver_type": "steady_state"
           },
           "position": {
-            "x": 700,
-            "y": 200
+            "x": -300,
+            "y": 300
           }
         },
         {
@@ -1036,8 +1036,8 @@
             "min_concentration": 0
           },
           "position": {
-            "x": 400,
-            "y": 300
+            "x": -300,
+            "y": 400
           }
         },
         {
@@ -1047,8 +1047,8 @@
             "max_coupling_iterations": 10
           },
           "position": {
-            "x": -123.20477082582028,
-            "y": 358.8873535765342
+            "x": -300,
+            "y": 500
           }
         },
         {
@@ -1058,19 +1058,19 @@
             "coupling_tolerance": 0.0001
           },
           "position": {
-            "x": 550,
-            "y": 400
+            "x": -300,
+            "y": 600
           }
         },
         {
           "id": "param_relaxation_factor",
-          "label": "Relaxation Factor (α)",
+          "label": "Relaxation Factor (\u03b1)",
           "parameters": {
             "relaxation_factor": 0.7
           },
           "position": {
-            "x": 700,
-            "y": 400
+            "x": -300,
+            "y": 700
           }
         }
       ],
@@ -1122,7 +1122,7 @@
           "enabled": false,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 220
           },
           "description": "FIXED V2: Properly propagates gene networks using NetLogo-style updates. Logs mitoATP/glycoATP. DISABLED.",
           "custom_name": "",
@@ -1139,9 +1139,9 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 300
+            "y": 340
           },
-          "description": "Translate substance concentrations → gene input states via associations",
+          "description": "Translate substance concentrations \u2192 gene input states via associations",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -1163,7 +1163,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 400
+            "y": 460
           },
           "description": "NetLogo-faithful graph walking gene network propagation",
           "custom_name": "",
@@ -1180,7 +1180,7 @@
             "propagation_steps": 20
           },
           "position": {
-            "x": 400,
+            "x": -300,
             "y": 100
           }
         },
@@ -1191,7 +1191,7 @@
             "propagation_steps": 500
           },
           "position": {
-            "x": 400,
+            "x": -300,
             "y": 200
           }
         }
@@ -1245,7 +1245,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 220
           },
           "description": "Track cells in Growth_Arrest state with time limit",
           "custom_name": "",
@@ -1261,8 +1261,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": -8.23632183908046,
-            "y": 298.2774712643678
+            "x": 200,
+            "y": 340
           },
           "description": "Mark cells as apoptotic based on gene network Apoptosis output",
           "custom_name": "",
@@ -1277,7 +1277,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 400
+            "y": 460
           },
           "description": "Mark cells as Proliferation or Quiescence based on gene network",
           "custom_name": "",
@@ -1291,8 +1291,8 @@
           "parameters": {},
           "enabled": false,
           "position": {
-            "x": 250,
-            "y": 517.2358620689655
+            "x": 200,
+            "y": 580
           },
           "description": "Force cells as proliferating",
           "custom_name": "",
@@ -1308,8 +1308,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": -91.44275862068957,
-            "y": 684.8937931034483
+            "x": 200,
+            "y": 700
           },
           "description": "Handle cell division for proliferating cells",
           "custom_name": "update_cell_division",
@@ -1324,7 +1324,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 500
+            "y": 820
           },
           "description": "Remove cells with Apoptosis phenotype from population",
           "custom_name": "",
@@ -1341,8 +1341,8 @@
             "max_growth_arrest_steps": 100
           },
           "position": {
-            "x": -452.88240250130355,
-            "y": 340.93183575137755
+            "x": -300,
+            "y": 100
           }
         },
         {
@@ -1352,8 +1352,8 @@
             "activation_probability": "2"
           },
           "position": {
-            "x": -118.64275862068973,
-            "y": 495.29931034482763
+            "x": -300,
+            "y": 200
           }
         },
         {
@@ -1378,8 +1378,8 @@
             }
           ],
           "position": {
-            "x": -312.9379310344828,
-            "y": 108.60689655172405
+            "x": -300,
+            "y": 300
           }
         }
       ],
@@ -1416,7 +1416,7 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 300,
+            "x": 200,
             "y": 100
           },
           "description": "Save cell positions and gene states to CSV (same format as read_checkpoint)",
@@ -1436,7 +1436,7 @@
             "interval": 10
           },
           "position": {
-            "x": 50,
+            "x": -300,
             "y": 100
           }
         }
@@ -1471,8 +1471,8 @@
           },
           "enabled": true,
           "position": {
-            "x": 190.5,
-            "y": 171
+            "x": 200,
+            "y": 100
           },
           "description": "Generate final state visualization",
           "custom_name": "",
@@ -1525,7 +1525,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 200
+            "y": 220
           },
           "description": "Save simulation data to files",
           "custom_name": "",
