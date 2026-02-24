@@ -5,6 +5,7 @@ import WorkflowCanvas from './components/WorkflowCanvas';
 import NodeInspector from './components/NodeInspector';
 import MainTabSelector from './components/MainTabSelector';
 import ResultsExplorer from './components/ResultsExplorer';
+import ParametersDashboard from './components/ParametersDashboard';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
@@ -86,6 +87,8 @@ function App() {
 
   // When main tab changes, switch to first available subworkflow of that kind
   useEffect(() => {
+    if (currentMainTab === 'parameters' || currentMainTab === 'results') return;
+
     const subworkflowsOfCurrentKind = Object.keys(workflow.subworkflows || {}).filter((name) => {
       const kind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
                   (name === 'main' ? 'composer' : 'subworkflow');
@@ -465,6 +468,13 @@ function App() {
             );
           })()}
         </>
+      )}
+
+      {/* === Parameters Dashboard View === */}
+      {currentMainTab === 'parameters' && (
+        <div className="fullpage-content">
+          <ParametersDashboard />
+        </div>
       )}
 
       {/* === Results View === */}

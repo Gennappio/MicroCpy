@@ -1,0 +1,480 @@
+/* ParametersDashboard.css */
+
+.parameters-dashboard {
+  height: 100%;
+  overflow-y: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 24px;
+}
+
+/* Header */
+.parameters-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #334155;
+}
+
+.parameters-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.parameters-count {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-left: auto;
+  background: #1e293b;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* Empty state */
+.parameters-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 40px;
+  color: #64748b;
+}
+
+.parameters-empty h2 {
+  margin: 16px 0 8px;
+  color: #94a3b8;
+  font-size: 18px;
+}
+
+.parameters-empty p {
+  margin: 0 0 16px;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.parameters-empty ol {
+  text-align: left;
+  max-width: 360px;
+  line-height: 1.8;
+  color: #94a3b8;
+}
+
+/* Content */
+.parameters-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Kind section (Composers / Sub-workflows) */
+.param-kind-section {
+  border-left: 3px solid var(--kind-accent, #3b82f6);
+  border-radius: 4px;
+}
+
+.param-kind-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #1e293b;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--kind-accent, #3b82f6);
+}
+
+.param-kind-header:hover {
+  background: #263548;
+}
+
+.param-kind-label {
+  flex: 1;
+}
+
+/* Stage section */
+.param-stage-section {
+  margin-left: 12px;
+  border-left: 1px solid #334155;
+}
+
+.param-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #162032;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.param-stage-header:hover {
+  background: #1c2a3f;
+}
+
+.param-stage-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.param-goto-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.param-goto-btn:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+/* Function section */
+.param-function-section {
+  margin-left: 16px;
+  background: #1e293b;
+  border-radius: 6px;
+  margin: 4px 4px 4px 16px;
+  overflow: hidden;
+}
+
+.param-function-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  background: #1e293b;
+  border-bottom: 1px solid #0f172a;
+}
+
+.param-function-header:hover {
+  background: #263548;
+}
+
+.param-function-label {
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.param-function-name {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+/* Parameter entries */
+.param-entries {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.param-entry {
+  background: #0f172a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid #1e293b;
+}
+
+.param-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.param-name {
+  font-weight: 500;
+  font-size: 13px;
+  color: #f1f5f9;
+}
+
+.param-node-type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.param-node-type-badge.parameterNode {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.param-node-type-badge.listParameterNode {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.param-node-type-badge.dictParameterNode {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+}
+
+.param-target-name {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+  margin-left: auto;
+}
+
+/* Editors */
+.param-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Simple parameter editor */
+.param-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.param-field-label {
+  font-size: 12px;
+  color: #94a3b8;
+  min-width: 120px;
+  font-family: monospace;
+}
+
+.param-empty {
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+}
+
+/* Inputs */
+.param-input {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.param-input:focus {
+  border-color: #f59e0b;
+}
+
+.param-input-number {
+  width: 120px;
+}
+
+.param-input-text {
+  flex: 1;
+  min-width: 100px;
+}
+
+.param-input-key {
+  width: 120px;
+}
+
+.param-input-type {
+  width: 80px;
+  cursor: pointer;
+}
+
+.param-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.param-checkbox {
+  accent-color: #f59e0b;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* List editor */
+.param-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.param-type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.param-type-badge.list {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.param-type-badge.dict {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+}
+
+.param-count {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.param-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-list-index {
+  font-size: 11px;
+  color: #475569;
+  min-width: 20px;
+  text-align: right;
+  font-family: monospace;
+}
+
+/* Dict editor */
+.param-dict-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-dict-header-row {
+  display: grid;
+  grid-template-columns: 120px 80px 1fr 28px;
+  gap: 8px;
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.param-dict-row {
+  display: grid;
+  grid-template-columns: 120px 80px 1fr 28px;
+  gap: 8px;
+  align-items: center;
+}
+
+.param-complex-value-placeholder {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Dict entry block — wraps the row + any nested sub-editor */
+.param-dict-entry-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Nested list editor inside a dict entry */
+.param-dict-nested-list {
+  margin-left: 128px; /* align under value column (120px key + 8px gap) */
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Nested JSON editor inside a dict entry */
+.param-dict-nested-json {
+  margin-left: 128px;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid #334155;
+}
+
+.param-input-json {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #e2e8f0;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+  width: 100%;
+  resize: vertical;
+  min-height: 48px;
+  transition: border-color 0.15s;
+}
+
+.param-input-json:focus {
+  border-color: #f59e0b;
+}
+
+/* Action buttons */
+.param-row-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.param-row-action:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.param-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-top: 4px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px dashed #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.param-add-btn:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+  border-color: #475569;
+}

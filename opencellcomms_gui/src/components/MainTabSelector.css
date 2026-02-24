@@ -58,6 +58,17 @@
   border-bottom-color: #3b82f6;
 }
 
+/* Parameters tab accent */
+.main-tab.parameters-tab.active {
+  color: #f59e0b;
+  border-bottom-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.main-tab.parameters-tab.active:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
 /* Results tab accent */
 .main-tab.results-tab.active {
   color: #3b82f6;
