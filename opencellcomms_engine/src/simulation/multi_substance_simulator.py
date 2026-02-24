@@ -574,76 +574,68 @@ class MultiSubstanceSimulator:
 
         # Process positions (minimal logging to avoid output flooding)
         for position, reactions in substance_reactions.items():
-            # Handle both 2D and 3D positions
+            # Handle both 2D and 3D positions, but domain may be 2D or 3D
             if len(position) == 2:
                 x_pos, y_pos = position
-
-                # Detect position unit and convert to FiPy grid indices
-                # Positions can be in: meters, micrometers, or biological grid indices
-                domain_x_m = self.config.domain.size_x.meters  # e.g., 0.0015m = 1500um
-                domain_y_m = self.config.domain.size_y.meters
-                domain_x_um = self.config.domain.size_x.micrometers
-                domain_y_um = self.config.domain.size_y.micrometers
-
-                # Calculate ACTUAL biological grid size from config (domain_size / cell_height)
-                # This is the grid used by CellPopulation for cell positions
-                cell_height_um = self.config.domain.cell_height.micrometers
-                bio_grid_nx = int(domain_x_um / cell_height_um)  # e.g., 1500/20 = 75
-                bio_grid_ny = int(domain_y_um / cell_height_um)
-
-                # Calculate scale factors from biological grid to FiPy grid
-                scale_x = nx / bio_grid_nx  # e.g., 50/75 = 0.667
-                scale_y = ny / bio_grid_ny
-
-                # Heuristic to detect position unit:
-                # - If position < bio_grid_size (e.g., 75), it's a biological grid index
-                # - If position < domain_um (e.g., 1500), it's in micrometers
-                # - Otherwise, it's in meters
-
-                if x_pos < bio_grid_nx and y_pos < bio_grid_ny:
-                    # Biological grid indices - scale to FiPy grid
-                    x = int(x_pos * scale_x)
-                    y = int(y_pos * scale_y)
-                elif x_pos < domain_x_um and y_pos < domain_y_um:
-                    # Positions in micrometers - convert to grid indices
-                    x = int(x_pos / (domain_x_um / nx))
-                    y = int(y_pos / (domain_y_um / ny))
-                else:
-                    # Positions in meters - convert to grid indices
-                    dx = domain_x_m / nx
-                    dy = domain_y_m / ny
-                    x = int(x_pos / dx)
-                    y = int(y_pos / dy)
-
-                z = 0  # Default for 2D
-
-                if 0 <= x < nx and 0 <= y < ny:
-                    # Convert to FiPy index - use correct formula for 3D mesh even with 2D position
-                    if self.config.domain.dimensions == 3:
-                        # For 3D mesh: x * ny * nz + y * nz + z (z=0 for 2D positions)
-                        fipy_idx = x * ny * nz + y * nz + z
-                    else:
-                        # For 2D mesh: x * ny + y
-                        fipy_idx = x * ny + y
-                else:
-                    continue
+                z_pos = None
             else:
+                # 3D position - may still be used with 2D domain (just ignore z)
                 x_pos, y_pos, z_pos = position
 
-                # Convert physical coordinates (meters) to grid indices
-                dx = self.config.domain.size_x.meters / nx
-                dy = self.config.domain.size_y.meters / ny
-                dz = self.config.domain.size_z.meters / nz
+            # Detect position unit and convert to FiPy grid indices
+            # Positions can be in: meters, micrometers, or biological grid indices
+            domain_x_m = self.config.domain.size_x.meters  # e.g., 0.0015m = 1500um
+            domain_y_m = self.config.domain.size_y.meters
+            domain_x_um = self.config.domain.size_x.micrometers
+            domain_y_um = self.config.domain.size_y.micrometers
 
+            # Calculate ACTUAL biological grid size from config (domain_size / cell_height)
+            # This is the grid used by CellPopulation for cell positions
+            cell_height_um = self.config.domain.cell_height.micrometers
+            bio_grid_nx = int(domain_x_um / cell_height_um)  # e.g., 1500/20 = 75
+            bio_grid_ny = int(domain_y_um / cell_height_um)
+
+            # Calculate scale factors from biological grid to FiPy grid
+            scale_x = nx / bio_grid_nx  # e.g., 50/75 = 0.667
+            scale_y = ny / bio_grid_ny
+
+            # Heuristic to detect position unit:
+            # - If position < bio_grid_size (e.g., 75), it's a biological grid index
+            # - If position < domain_um (e.g., 1500), it's in micrometers
+            # - Otherwise, it's in meters
+
+            if x_pos < bio_grid_nx and y_pos < bio_grid_ny:
+                # Biological grid indices - scale to FiPy grid
+                x = int(x_pos * scale_x)
+                y = int(y_pos * scale_y)
+            elif x_pos < domain_x_um and y_pos < domain_y_um:
+                # Positions in micrometers - convert to grid indices
+                x = int(x_pos / (domain_x_um / nx))
+                y = int(y_pos / (domain_y_um / ny))
+            else:
+                # Positions in meters - convert to grid indices
+                dx = domain_x_m / nx
+                dy = domain_y_m / ny
                 x = int(x_pos / dx)
                 y = int(y_pos / dy)
-                z = int(z_pos / dz)
 
-                if 0 <= x < nx and 0 <= y < ny and 0 <= z < nz:
-                    # Convert to FiPy index for 3D (Fortran/column-major order)
+            z = 0  # Default for 2D
+
+            if 0 <= x < nx and 0 <= y < ny:
+                # Convert to FiPy index - use correct formula based on domain dimensions
+                if self.config.domain.dimensions == 3:
+                    # For 3D mesh: x * ny * nz + y * nz + z
+                    if z_pos is not None:
+                        # 3D position for 3D domain
+                        dz = self.config.domain.size_z.meters / nz
+                        z = int(z_pos / dz)
+                    # else: z already set to 0
                     fipy_idx = x * ny * nz + y * nz + z
                 else:
-                    continue
+                    # For 2D mesh: x * ny + y (ignore z even if provided)
+                    fipy_idx = x * ny + y
+            else:
+                continue
 
             # Get reaction rate for this substance (from custom metabolism function)
             # Some substances may not have reactions defined (e.g., EGF, TGFA)

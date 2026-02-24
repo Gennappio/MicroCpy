@@ -312,8 +312,11 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
 
         debug_cells_processed += 1
 
-        # Get cell position and convert to grid coordinates
-        cell_x, cell_y = cell.state.position
+        # Get cell position and convert to grid coordinates (support both 2D and 3D)
+        if len(cell.state.position) == 2:
+            cell_x, cell_y = cell.state.position
+        else:
+            cell_x, cell_y, _ = cell.state.position  # 3D: extract x, y, ignore z
         phys_x = cell_x * cell_size_um
         phys_y = cell_y * cell_size_um
         grid_x = int(phys_x / grid_spacing_x)

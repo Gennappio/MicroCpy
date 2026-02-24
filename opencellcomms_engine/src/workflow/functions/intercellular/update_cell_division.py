@@ -244,7 +244,7 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
     # Update population with new and updated cells
     initial_count = len(population.state.cells)
     all_cells = {**population.state.cells, **updated_cells, **new_cells}
-    population.state = population.state.with_updates(cells=all_cells)
+    population.state = population.state.with_updates(cells=all_cells, total_cells=len(all_cells))
     final_count = len(all_cells)
 
     # Log cell count change

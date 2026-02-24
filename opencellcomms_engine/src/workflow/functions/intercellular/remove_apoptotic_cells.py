@@ -83,7 +83,7 @@ def remove_apoptotic_cells(
         updated_cells[cell_id] = cell
 
     # Update population state
-    population.state = population.state.with_updates(cells=updated_cells)
+    population.state = population.state.with_updates(cells=updated_cells, total_cells=len(updated_cells))
 
     final_count = len(updated_cells)
     if removed_count > 0:
