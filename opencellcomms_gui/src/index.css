@@ -58,7 +58,14 @@ code {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #4f46e5;
+  stroke: #f59e0b !important;
+  stroke-width: 4 !important;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+/* Wider invisible hit area so edges are easier to click */
+.react-flow__edge-interaction {
+  stroke-width: 20 !important;
 }
 
 .react-flow__controls {

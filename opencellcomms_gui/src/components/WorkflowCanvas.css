@@ -21,3 +21,8 @@
   z-index: 5 !important;
 }
 
+/* Selected edge appears above other edges */
+.react-flow__edge.selected {
+  z-index: 10 !important;
+}
+
