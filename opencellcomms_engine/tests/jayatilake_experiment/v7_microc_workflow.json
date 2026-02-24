@@ -1,12 +1,12 @@
 {
   "version": "2.0",
   "name": "v7 MicroC Integrated Workflow",
-  "description": "Multi-scale simulation with NetLogo-faithful gene networks. Bridge: substances \u2192 apply_associations_to_inputs \u2192 propagate_gene_networks_netlogo.",
+  "description": "Multi-scale simulation with NetLogo-faithful gene networks. Bridge: substances → apply_associations_to_inputs → propagate_gene_networks_netlogo.",
   "metadata": {
     "author": "OpenCellComms Team",
     "experiment": "v7 Multi-Scale Simulation with NetLogo Gene Networks",
     "created": "2026-02-24",
-    "notes": "Three composers (Initialization, Loop, Finalization). Three-layer separation: microenvironment \u2192 translation function \u2192 intracellular. NetLogo-faithful graph walking for gene network propagation.",
+    "notes": "Three composers (Initialization, Loop, Finalization). Three-layer separation: microenvironment → translation function → intracellular. NetLogo-faithful graph walking for gene network propagation.",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -31,7 +31,7 @@
   },
   "subworkflows": {
     "main": {
-      "description": "Main composer: initialization -> loop \u00d7 N -> finalization",
+      "description": "Main composer: initialization -> loop × N -> finalization",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -39,8 +39,8 @@
         "type": "controller",
         "label": "MAIN COMPOSER",
         "position": {
-          "x": 50,
-          "y": 50
+          "x": 223.3738095235782,
+          "y": -62.66168127885949
         },
         "number_of_steps": 3
       },
@@ -382,8 +382,8 @@
         "type": "controller",
         "label": "SETUP SIMULATION",
         "position": {
-          "x": 50,
-          "y": 50
+          "x": 62,
+          "y": -46
         },
         "number_of_steps": 1
       },
@@ -415,8 +415,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 220
+            "x": 387.12462415015443,
+            "y": 338.18397314746596
           },
           "description": "Define 2D spatial domain",
           "custom_name": "",
@@ -427,7 +427,8 @@
             "param_domain_size_y",
             "param_domain_nx",
             "param_domain_ny",
-            "param_domain_cell_height"
+            "param_domain_cell_height",
+            "param_1771966627094"
           ]
         }
       ],
@@ -490,7 +491,7 @@
         },
         {
           "id": "param_domain_size_x",
-          "label": "Size X (\u03bcm)",
+          "label": "Size X (μm)",
           "parameters": {
             "size_x": 1500
           },
@@ -501,7 +502,7 @@
         },
         {
           "id": "param_domain_size_y",
-          "label": "Size Y (\u03bcm)",
+          "label": "Size Y (μm)",
           "parameters": {
             "size_y": 1500
           },
@@ -534,13 +535,24 @@
         },
         {
           "id": "param_domain_cell_height",
-          "label": "Cell Height (\u03bcm)",
+          "label": "Cell Height (μm)",
           "parameters": {
             "cell_height": 20
           },
           "position": {
             "x": -300,
             "y": 1000
+          }
+        },
+        {
+          "id": "param_1771966627094",
+          "label": "verbose",
+          "parameters": {
+            "verbose": "false"
+          },
+          "position": {
+            "x": 237.34594565930774,
+            "y": 767.3174701048952
           }
         }
       ],
@@ -681,7 +693,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "cMET_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             },
             {
@@ -689,7 +701,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "EGFR_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             }
           ],
@@ -1011,7 +1023,7 @@
           "id": "param_tolerance",
           "label": "Tolerance",
           "parameters": {
-            "tolerance": 1e-06
+            "tolerance": 0.000001
           },
           "position": {
             "x": -300,
@@ -1064,7 +1076,7 @@
         },
         {
           "id": "param_relaxation_factor",
-          "label": "Relaxation Factor (\u03b1)",
+          "label": "Relaxation Factor (α)",
           "parameters": {
             "relaxation_factor": 0.7
           },
@@ -1141,7 +1153,7 @@
             "x": 200,
             "y": 340
           },
-          "description": "Translate substance concentrations \u2192 gene input states via associations",
+          "description": "Translate substance concentrations → gene input states via associations",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
