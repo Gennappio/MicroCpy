@@ -20,6 +20,8 @@
         "Init_gene_networks": "subworkflow",
         "Generate_initial_plots": "subworkflow",
         "Generate_loop_plots": "subworkflow",
+        "Generate_loop_plots_pre_micro": "subworkflow",
+        "Generate_loop_plots_post_micro": "subworkflow",
         "microenvironment": "subworkflow",
         "intracellular": "subworkflow",
         "intercellular": "subworkflow",
@@ -241,6 +243,20 @@
       "functions": [],
       "subworkflow_calls": [
         {
+          "id": "call_generate_plots_loop_pre_micro",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Generate_loop_plots_pre_micro",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 50
+          },
+          "description": "Generate plots BEFORE microenvironment stage",
+          "parameter_nodes": []
+        },
+        {
           "id": "call_microenvironment",
           "type": "subworkflow_call",
           "subworkflow_name": "microenvironment",
@@ -249,9 +265,23 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 50
+            "y": 150
           },
           "description": "Stage 1: Solve diffusion-reaction equations",
+          "parameter_nodes": []
+        },
+        {
+          "id": "call_generate_plots_loop_post_micro",
+          "type": "subworkflow_call",
+          "subworkflow_name": "Generate_loop_plots_post_micro",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 250
+          },
+          "description": "Generate plots AFTER microenvironment stage",
           "parameter_nodes": []
         },
         {
@@ -263,7 +293,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 150
+            "y": 350
           },
           "description": "Stage 2: Gene network + metabolism (bridges)",
           "parameter_nodes": []
@@ -277,7 +307,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 250
+            "y": 450
           },
           "description": "Stage 3: Cell division, apoptosis, necrosis",
           "parameter_nodes": []
@@ -291,7 +321,7 @@
           "enabled": false,
           "position": {
             "x": 200,
-            "y": 350
+            "y": 550
           },
           "description": "Stage 4: Save checkpoints (gene networks, substances)",
           "parameter_nodes": []
@@ -305,7 +335,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 450
+            "y": 650
           },
           "description": "Stage 5: Generate plots for this iteration",
           "parameter_nodes": []
@@ -313,7 +343,9 @@
       ],
       "parameters": [],
       "execution_order": [
+        "call_generate_plots_loop_pre_micro",
         "call_microenvironment",
+        "call_generate_plots_loop_post_micro",
         "call_intracellular",
         "call_intercellular",
         "call_checkpoint",
@@ -890,7 +922,8 @@
           "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
-            "plot_interval": "5"
+            "plot_interval": "5",
+            "use_config_plots_dir": "true"
           },
           "enabled": true,
           "position": {
@@ -907,6 +940,92 @@
       "parameters": [],
       "execution_order": [
         "gen_loop_plots"
+      ],
+      "input_parameters": []
+    },
+    "Generate_loop_plots_pre_micro": {
+      "description": "Generate plots BEFORE microenvironment stage (same output dir as loop plots, with _pre_micro suffix)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-loop-plots-pre-micro",
+        "type": "controller",
+        "label": "GENERATE LOOP PLOTS PRE MICRO",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gen_loop_plots_pre_micro",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "plot_interval": "5",
+            "plot_name_suffix": "_pre_micro",
+            "use_config_plots_dir": "true"
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Generate iteration-specific plots BEFORE microenvironment (Oxygen, Glucose, Lactate) using AutoPlotter",
+          "custom_name": "generate_iteration_plots_pre_micro",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gen_loop_plots_pre_micro"
+      ],
+      "input_parameters": []
+    },
+    "Generate_loop_plots_post_micro": {
+      "description": "Generate plots AFTER microenvironment stage (same output dir as loop plots, with _post_micro suffix)",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-generate-loop-plots-post-micro",
+        "type": "controller",
+        "label": "GENERATE LOOP PLOTS POST MICRO",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gen_loop_plots_post_micro",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "plot_interval": "5",
+            "plot_name_suffix": "_post_micro",
+            "use_config_plots_dir": "true"
+          },
+          "enabled": true,
+          "position": {
+            "x": 200,
+            "y": 100
+          },
+          "description": "Generate iteration-specific plots AFTER microenvironment (Oxygen, Glucose, Lactate) using AutoPlotter",
+          "custom_name": "generate_iteration_plots_post_micro",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gen_loop_plots_post_micro"
       ],
       "input_parameters": []
     },
