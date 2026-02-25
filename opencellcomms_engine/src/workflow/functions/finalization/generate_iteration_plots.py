@@ -39,6 +39,15 @@ from src.interfaces.base import IConfig
          "description": "Plot every N iterations (e.g., 1=every iteration, 5=every 5th iteration, 10=every 10th). "
                         "Set to 1 to plot every iteration.",
          "default": 1},
+        {"name": "plot_name_suffix", "type": "STRING",
+         "description": "Suffix appended to plot filenames and titles (e.g. '_pre_micro', '_post_micro'). "
+                        "Leave empty for no suffix.",
+         "default": ""},
+        {"name": "use_config_plots_dir", "type": "BOOL",
+         "description": "If true, always use config.plots_dir (shared timestamped folder) instead of "
+                        "the subworkflow-specific plots_dir. Useful when multiple plot sub-workflows "
+                        "should write to the same directory.",
+         "default": False},
     ],
     inputs=["context"],
     outputs=[],
@@ -49,6 +58,8 @@ def generate_iteration_plots(
     substances_to_plot: str = "",
     clean_directory: bool = False,
     plot_interval: int = 1,
+    plot_name_suffix: str = "",
+    use_config_plots_dir: bool = False,
     **kwargs
 ) -> bool:
     """
@@ -69,6 +80,7 @@ def generate_iteration_plots(
         substances_to_plot: Comma-separated list (empty = all).
         clean_directory:    Wipe image files from the target dir first.
         plot_interval:      Plot every N iterations (1=all, 5=every 5th, etc.).
+        plot_name_suffix:   Suffix appended to marker and title (e.g. '_pre_micro').
         **kwargs:           Ignored.
 
     Returns:
@@ -95,9 +107,10 @@ def generate_iteration_plots(
     if iteration == 0:
         iteration = context.get('macrostep', context.get('step', 0))
 
-    # --- check plot interval ----------------------------------------------
-    # Convert plot_interval to int (it may be passed as string from JSON)
+    # --- coerce string parameters from JSON --------------------------------
     plot_interval = int(plot_interval)
+    if isinstance(use_config_plots_dir, str):
+        use_config_plots_dir = use_config_plots_dir.lower() in ('true', '1', 'yes')
     
     # Skip plotting if this iteration doesn't match the interval
     if plot_interval > 1 and iteration % plot_interval != 0:
@@ -116,8 +129,11 @@ def generate_iteration_plots(
         return False
 
     # --- resolve output directory -----------------------------------------
-    # Use context['plots_dir'] set by executor (GUI-viewable subworkflow folder)
-    if 'plots_dir' in context:
+    # When use_config_plots_dir is set, skip the subworkflow-specific path
+    # and use the shared timestamped config.plots_dir instead.
+    if use_config_plots_dir and config and hasattr(config, 'plots_dir') and config.plots_dir:
+        output_path = Path(config.plots_dir)
+    elif 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:
         # Fallback to config.plots_dir or default
@@ -142,8 +158,8 @@ def generate_iteration_plots(
         substance_list = [s.strip() for s in substances_to_plot.split(',') if s.strip()]
 
     # --- build marker & title suffix --------------------------------------
-    marker       = f"ITER_{iteration:03d}"
-    title_suffix = f"[Iteration {iteration}]"
+    marker       = f"ITER_{iteration:03d}{plot_name_suffix}"
+    title_suffix = f"[Iteration {iteration}{' ' + plot_name_suffix.strip('_') if plot_name_suffix else ''}]"
 
     substance_info = f" ({', '.join(substance_list)})" if substance_list else " (all substances)"
     print(f"[WORKFLOW] Generating iteration {iteration} plots{substance_info}")
