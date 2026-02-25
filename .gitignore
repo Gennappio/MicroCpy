@@ -196,6 +196,7 @@ cython_debug/
 # Simulation results and outputs (generated at runtime)
 opencellcomms_engine/results/
 opencellcomms_gui/results/
+opencellcomms_gui/GUI_results/
 
 # Legacy/duplicate directories (if present)
 microc-2.0/results/
