@@ -43,11 +43,11 @@ from src.interfaces.base import IConfig
          "description": "Suffix appended to plot filenames and titles (e.g. '_pre_micro', '_post_micro'). "
                         "Leave empty for no suffix.",
          "default": ""},
-        {"name": "use_config_plots_dir", "type": "BOOL",
-         "description": "If true, always use config.plots_dir (shared timestamped folder) instead of "
-                        "the subworkflow-specific plots_dir. Useful when multiple plot sub-workflows "
-                        "should write to the same directory.",
-         "default": False},
+        {"name": "redirect_to_subworkflow", "type": "STRING",
+         "description": "Write plots into a different subworkflow's output directory. "
+                        "Set to the target subworkflow name (e.g. 'Generate_loop_plots') so that "
+                        "multiple plot nodes share one folder. Leave empty to use this node's own folder.",
+         "default": ""},
     ],
     inputs=["context"],
     outputs=[],
@@ -59,7 +59,7 @@ def generate_iteration_plots(
     clean_directory: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
-    use_config_plots_dir: bool = False,
+    redirect_to_subworkflow: str = "",
     **kwargs
 ) -> bool:
     """
@@ -80,8 +80,9 @@ def generate_iteration_plots(
         substances_to_plot: Comma-separated list (empty = all).
         clean_directory:    Wipe image files from the target dir first.
         plot_interval:      Plot every N iterations (1=all, 5=every 5th, etc.).
-        plot_name_suffix:   Suffix appended to marker and title (e.g. '_pre_micro').
-        **kwargs:           Ignored.
+        plot_name_suffix:         Suffix appended to marker and title (e.g. '_pre_micro').
+        redirect_to_subworkflow:  Write into a different subworkflow's plots dir.
+        **kwargs:                 Ignored.
 
     Returns:
         True on success, False on error (or skipped if not a plot iteration).
@@ -109,8 +110,6 @@ def generate_iteration_plots(
 
     # --- coerce string parameters from JSON --------------------------------
     plot_interval = int(plot_interval)
-    if isinstance(use_config_plots_dir, str):
-        use_config_plots_dir = use_config_plots_dir.lower() in ('true', '1', 'yes')
     
     # Skip plotting if this iteration doesn't match the interval
     if plot_interval > 1 and iteration % plot_interval != 0:
@@ -129,10 +128,20 @@ def generate_iteration_plots(
         return False
 
     # --- resolve output directory -----------------------------------------
-    # When use_config_plots_dir is set, skip the subworkflow-specific path
-    # and use the shared timestamped config.plots_dir instead.
-    if use_config_plots_dir and config and hasattr(config, 'plots_dir') and config.plots_dir:
-        output_path = Path(config.plots_dir)
+    # When redirect_to_subworkflow is set, compute the target subworkflow's
+    # plots_dir by replacing the current subworkflow name in the path.
+    # Executor sets paths differently for GUI vs CLI:
+    #   GUI: plots_dir = .../subworkflows/<name>          (no /plots suffix)
+    #   CLI: plots_dir = .../subworkflows/<name>/plots    (has /plots suffix)
+    if redirect_to_subworkflow and 'plots_dir' in context:
+        current_plots = Path(context['plots_dir'])
+        running_from_gui = context.get('running_from_gui', False)
+        if running_from_gui:
+            # GUI: replace the last path component (subworkflow name)
+            output_path = current_plots.parent / redirect_to_subworkflow
+        else:
+            # CLI: replace second-to-last component, keep 'plots' leaf
+            output_path = current_plots.parent.parent / redirect_to_subworkflow / current_plots.name
     elif 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:
