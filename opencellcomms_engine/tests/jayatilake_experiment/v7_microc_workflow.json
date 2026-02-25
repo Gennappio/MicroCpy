@@ -922,8 +922,7 @@
           "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
-            "plot_interval": "5",
-            "use_config_plots_dir": "true"
+            "plot_interval": "5"
           },
           "enabled": true,
           "position": {
@@ -966,7 +965,7 @@
             "substances_to_plot": "Oxygen,Glucose,Lactate",
             "plot_interval": "5",
             "plot_name_suffix": "_pre_micro",
-            "use_config_plots_dir": "true"
+            "redirect_to_subworkflow": "Generate_loop_plots"
           },
           "enabled": true,
           "position": {
@@ -1009,7 +1008,7 @@
             "substances_to_plot": "Oxygen,Glucose,Lactate",
             "plot_interval": "5",
             "plot_name_suffix": "_post_micro",
-            "use_config_plots_dir": "true"
+            "redirect_to_subworkflow": "Generate_loop_plots"
           },
           "enabled": true,
           "position": {
