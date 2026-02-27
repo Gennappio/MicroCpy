@@ -41,8 +41,8 @@
         "type": "controller",
         "label": "MAIN COMPOSER",
         "position": {
-          "x": 223.3738095235782,
-          "y": -62.66168127885949
+          "x": 395.0646585250106,
+          "y": -88.22823965306846
         },
         "number_of_steps": 3
       },
@@ -57,7 +57,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 50
+            "y": 27
           },
           "description": "Initialize simulation: domain, substances, gene network, population",
           "parameter_nodes": []
@@ -66,12 +66,12 @@
           "id": "call_loop",
           "type": "subworkflow_call",
           "subworkflow_name": "loop",
-          "iterations": 15,
+          "iterations": 100,
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 150
+            "x": 321.9911738788053,
+            "y": 168.03671388007552
           },
           "description": "Main simulation loop: microenvironment -> intracellular -> intercellular",
           "parameter_nodes": []
@@ -85,7 +85,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 250
+            "y": 334.5
           },
           "description": "Finalize: generate plots and save data",
           "parameter_nodes": []
@@ -165,8 +165,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 350
+            "x": 205.41964461994075,
+            "y": 349.22576505429413
           },
           "description": "Setup population and load cells with gene networks",
           "parameter_nodes": []
@@ -179,8 +179,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 450
+            "x": -208.02181638696942,
+            "y": 432.192596248766
           },
           "description": "Create NetLogo-faithful gene networks for all cells",
           "parameter_nodes": []
@@ -248,7 +248,7 @@
           "subworkflow_name": "Generate_loop_plots_pre_micro",
           "iterations": 1,
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 50
@@ -276,7 +276,7 @@
           "subworkflow_name": "Generate_loop_plots_post_micro",
           "iterations": 1,
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 200,
             "y": 250
@@ -293,7 +293,7 @@
           "enabled": true,
           "position": {
             "x": 200,
-            "y": 350
+            "y": 349.15538005922997
           },
           "description": "Stage 2: Gene network + metabolism (bridges)",
           "parameter_nodes": []
@@ -616,8 +616,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 200,
-            "y": 100
+            "x": 68.5,
+            "y": 168.5
           },
           "description": "Configure all 8 substances for diffusion-reaction",
           "custom_name": "",
@@ -635,9 +635,9 @@
           "label": "Substances (JSON)",
           "listType": "string",
           "items": [
-            "{\"name\":\"Oxygen\",\"diffusion_coeff\":1.0e-9,\"production_rate\":0.0,\"uptake_rate\":3.0e-17,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-15,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-11,\"production_rate\":3.0e-15,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":1.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-11,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
             "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
             "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
             "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
@@ -922,7 +922,7 @@
           "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
-            "plot_interval": "5"
+            "plot_interval": "1"
           },
           "enabled": true,
           "position": {
@@ -1103,7 +1103,7 @@
           "function_file": "",
           "parameters": {
             "lactate_conversion_factor": 1,
-            "glucose_conversion_factor": 100,
+            "glucose_conversion_factor": 1,
             "oxygen_conversion_factor": 1
           },
           "enabled": true,
@@ -1281,14 +1281,15 @@
           "function_name": "propagate_gene_networks_netlogo",
           "function_file": "",
           "parameters": {
-            "propagation_steps": 500,
+            "propagation_steps": "5",
             "reversible": false,
             "verbose": false,
             "debug_steps": false,
             "oscillation": false,
-            "oscillation_period": 500,
+            "oscillation_period": "100",
             "ran_refresh": false,
-            "diffusion_step": 250
+            "diffusion_step": 0,
+            "reset_fate": true
           },
           "enabled": true,
           "position": {
@@ -1296,7 +1297,7 @@
             "y": 460
           },
           "description": "NetLogo-faithful graph walking gene network propagation",
-          "custom_name": "",
+          "custom_name": "propagate_gene_networks_netlogo",
           "step_count": 1,
           "parameter_nodes": []
         }

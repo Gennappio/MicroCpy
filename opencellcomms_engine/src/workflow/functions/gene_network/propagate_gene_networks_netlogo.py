@@ -88,6 +88,10 @@ _DELAYED_ON_INPUTS  = {'cMET_stimulus'}
         {"name": "diffusion_step", "type": "INT",
          "description": "Steps between input refresh (default: 250)",
          "default": 250},
+        {"name": "reset_fate", "type": "BOOL",
+         "description": "Clear _fate before propagation so cells are re-evaluated every call "
+                        "(use when apply_associations provides fresh inputs each loop iteration)",
+         "default": False},
     ],
     inputs=["context"],
     outputs=[],
@@ -104,6 +108,7 @@ def propagate_gene_networks_netlogo(
     oscillation_period: int = 500,
     ran_refresh: bool = False,
     diffusion_step: int = 250,
+    reset_fate: bool = False,
     **kwargs
 ) -> bool:
     """
@@ -125,6 +130,7 @@ def propagate_gene_networks_netlogo(
         oscillation_period: ON/OFF period in steps
         ran_refresh: Re-randomize _cell_ran1/_cell_ran2 at each diffusion_step
         diffusion_step: Steps between input refresh
+        reset_fate: Clear _fate before propagation so cells are re-evaluated
 
     Returns:
         True if successful, False otherwise
@@ -177,6 +183,18 @@ def propagate_gene_networks_netlogo(
             continue
         _ensure_netlogo_attrs(cell_gn)
         active_cells.append((cell_id, cell, cell_gn))
+
+    # =========================================================================
+    # RESET FATE (allow re-evaluation when spatial inputs change each iteration)
+    # =========================================================================
+    if reset_fate:
+        fates_cleared = 0
+        for _cell_id, _cell, cell_gn in active_cells:
+            if cell_gn._fate is not None:
+                fates_cleared += 1
+                cell_gn._fate = None
+        if verbose and fates_cleared > 0:
+            print(f"   [+] reset_fate: cleared _fate on {fates_cleared}/{len(active_cells)} cells")
 
     # =========================================================================
     # STEP-OUTER / CELL-INNER PROPAGATION LOOP

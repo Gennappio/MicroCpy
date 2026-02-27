@@ -421,7 +421,32 @@ class WorkflowExecutor:
                         traceback.print_exc()
 
         return context
-    
+
+    @staticmethod
+    def _coerce_parameters(kwargs: Dict[str, Any], metadata) -> Dict[str, Any]:
+        """Coerce parameter values to their declared types from @register_function.
+
+        The GUI may save INT/FLOAT/BOOL values as strings. This method converts
+        them back using the ParameterDefinition type metadata.
+        """
+        if not metadata or not metadata.parameters:
+            return kwargs
+        type_map = {p.name: p.type for p in metadata.parameters}
+        for key, value in list(kwargs.items()):
+            ptype = type_map.get(key)
+            if ptype is None or not isinstance(value, str):
+                continue
+            try:
+                if ptype.value == 'int':
+                    kwargs[key] = int(float(value))
+                elif ptype.value == 'float':
+                    kwargs[key] = float(value)
+                elif ptype.value == 'bool':
+                    kwargs[key] = value.lower() in ('true', '1', 'yes')
+            except (ValueError, AttributeError):
+                pass  # leave as-is if conversion fails
+        return kwargs
+
     def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any], stage: 'WorkflowStage') -> Optional[Dict[str, Any]]:
         """
         Execute a single workflow function.
@@ -456,6 +481,9 @@ class WorkflowExecutor:
         for key, value in merged_params.items():
             if key not in metadata_fields:
                 kwargs[key] = value
+
+        # Coerce string values to declared parameter types (GUI may save as strings)
+        self._coerce_parameters(kwargs, metadata)
 
         # Add context data based on function inputs
         if metadata:
@@ -685,6 +713,9 @@ class WorkflowExecutor:
         for key, value in merged_params.items():
             if key not in metadata_fields:
                 kwargs[key] = value
+
+        # Coerce string values to declared parameter types (GUI may save as strings)
+        self._coerce_parameters(kwargs, metadata)
 
         # === OBSERVABILITY: Take before snapshot ===
         before_version = None

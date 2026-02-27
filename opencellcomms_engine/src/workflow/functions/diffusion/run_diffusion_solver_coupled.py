@@ -78,21 +78,28 @@ DEBUG_COUPLED_SOLVER = False
             "name": "oxygen_conversion_factor",
             "type": "FLOAT",
             "description": "Oxygen consumption conversion factor (multiplier)",
-            "default": 0.5,
+            "default": 1.0,
             "min_value": 0.0
         },
         {
             "name": "glucose_conversion_factor",
             "type": "FLOAT",
             "description": "Glucose consumption conversion factor (multiplier)",
-            "default": 100000.0,
+            "default": 1.0,
             "min_value": 0.0
         },
         {
             "name": "lactate_conversion_factor",
             "type": "FLOAT",
             "description": "Lactate production conversion factor (multiplier)",
-            "default": 5.0,
+            "default": 1.0,
+            "min_value": 0.0
+        },
+        {
+            "name": "oxygen_consumption_multiplier",
+            "type": "FLOAT",
+            "description": "Multiplier for mitoATP oxygen consumption (replaces hardcoded 50x)",
+            "default": 1.0,
             "min_value": 0.0
         },
         {
@@ -114,9 +121,10 @@ def run_diffusion_solver_coupled(
     max_coupling_iterations: int = 10,
     coupling_tolerance: float = 1e-4,
     relaxation_factor: float = 0.7,
-    oxygen_conversion_factor: float = 0.5,
+    oxygen_conversion_factor: float = 1.0,
     glucose_conversion_factor: float = 1.0,
-    lactate_conversion_factor: float = 5.0,
+    lactate_conversion_factor: float = 1.0,
+    oxygen_consumption_multiplier: float = 1.0,
     verbose: Optional[bool] = None,
     **kwargs
 ) -> None:
@@ -141,6 +149,7 @@ def run_diffusion_solver_coupled(
         oxygen_conversion_factor: Multiplier for oxygen consumption rates
         glucose_conversion_factor: Multiplier for glucose consumption rates
         lactate_conversion_factor: Multiplier for lactate production rates
+        oxygen_consumption_multiplier: Multiplier for mitoATP oxygen consumption rate
         verbose: Enable detailed logging (None = use global setting)
         **kwargs: Additional parameters
 
@@ -181,6 +190,7 @@ def run_diffusion_solver_coupled(
         # Step 2: Recalculate metabolism based on current concentrations
         _recalculate_metabolism(context, simulator, population, config,
                                 oxygen_conversion_factor, glucose_conversion_factor, lactate_conversion_factor,
+                                oxygen_consumption_multiplier=oxygen_consumption_multiplier,
                                 verbose=verbose)
 
         # Step 3: Collect reaction terms and solve diffusion
@@ -222,9 +232,10 @@ def run_diffusion_solver_coupled(
 
 
 def _recalculate_metabolism(context: Dict[str, Any], simulator, population, config,
-                           oxygen_conversion_factor: float = 0.5,
-                           glucose_conversion_factor: float = 100000.0,
-                           lactate_conversion_factor: float = 5.0,
+                           oxygen_conversion_factor: float = 1.0,
+                           glucose_conversion_factor: float = 1.0,
+                           lactate_conversion_factor: float = 1.0,
+                           oxygen_consumption_multiplier: float = 1.0,
                            verbose: Optional[bool] = None) -> None:
     """
     Recalculate cell metabolism based on current concentrations.
@@ -368,7 +379,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         lactate_consumption = 0.0
 
         if mito_atp:
-            oxygen_consumption += 50*vmax_oxygen * oxygen_mm
+            oxygen_consumption += vmax_oxygen * oxygen_consumption_multiplier * oxygen_mm
             glucose_consumption += (vmax_oxygen / 6.0) * glucose_mm * oxygen_mm
             lactate_consumption += (vmax_oxygen * 2.0 / 6.0) * lactate_mm * oxygen_mm
 
