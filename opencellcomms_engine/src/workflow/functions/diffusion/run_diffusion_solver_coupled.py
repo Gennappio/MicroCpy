@@ -6,14 +6,17 @@ solving to prevent negative concentrations. The key insight is that Michaelis-Me
 kinetics naturally reduce consumption as concentration approaches zero, but this
 only works if metabolism is recalculated during the solve.
 
-Algorithm (Picard iteration):
+Algorithm (Picard iteration with reaction-term under-relaxation):
 1. Calculate metabolism based on current concentrations
-2. Solve steady-state diffusion with these reaction rates
-3. Check convergence: if max(|new - old|) < tolerance, done
-4. Apply under-relaxation: c_next = α * c_new + (1-α) * c_old
-5. Repeat from step 1
+2. Collect reaction terms from cells
+3. Blend reaction terms: r_next = α * r_new + (1-α) * r_old
+4. Solve steady-state diffusion with blended reaction rates
+5. Check convergence: if max(|new - old|) < tolerance, done
+6. Repeat from step 1
 
-Under-relaxation (0 < α < 1) improves stability by damping oscillations.
+Under-relaxation (0 < α < 1) is applied to source/reaction terms rather than
+concentrations. This is the standard Picard fix for oscillatory instability
+in coupled PDE-ODE systems.
 """
 
 from typing import Dict, Any, Tuple, Optional
@@ -170,9 +173,9 @@ def run_diffusion_solver_coupled(
         run_diffusion_solver(context, max_iterations, tolerance, solver_type, **kwargs)
         return
 
-    log(context, f"Starting iterative coupling (max {max_coupling_iterations} iterations, "
-                 f"α={relaxation_factor}, tol={coupling_tolerance})",
-        prefix="[COUPLED]", node_verbose=verbose)
+    log_always(f"Starting iterative coupling (max {max_coupling_iterations} iterations, "
+               f"α={relaxation_factor}, tol={coupling_tolerance})",
+        prefix="[COUPLED]")
 
     # Configure solver parameters
     if hasattr(simulator, 'set_solver_params'):
@@ -182,7 +185,9 @@ def run_diffusion_solver_coupled(
             solver_type=solver_type
         )
 
-    # Main coupling loop
+    # Main coupling loop with reaction-term under-relaxation
+    old_reactions = None
+
     for coupling_iter in range(max_coupling_iterations):
         # Step 1: Store old concentrations for convergence check
         old_concentrations = _get_concentration_snapshot(simulator)
@@ -193,34 +198,50 @@ def run_diffusion_solver_coupled(
                                 oxygen_consumption_multiplier=oxygen_consumption_multiplier,
                                 verbose=verbose)
 
-        # Step 3: Collect reaction terms and solve diffusion
-        position_reactions = _collect_reactions_from_cells(population, simulator, context, verbose=verbose)
+        # Step 3: Collect reaction terms from cells
+        new_reactions = _collect_reactions_from_cells(population, simulator, context, verbose=verbose)
+
+        # Step 4: Blend reaction terms (under-relaxation on source terms)
+        if old_reactions is not None and relaxation_factor < 1.0:
+            position_reactions = _blend_reactions(old_reactions, new_reactions, relaxation_factor)
+            log_always(f"Blended reaction terms with α={relaxation_factor}",
+                prefix="[COUPLED]")
+        else:
+            position_reactions = new_reactions
+        old_reactions = new_reactions  # store unblended for next iteration
+
+        # Step 5: Solve diffusion with (blended) reaction terms
         simulator.update(position_reactions)
 
-        # Step 4: Get new concentrations and check convergence
+        # Step 5b: Clamp negatives before convergence check (prevents unphysical state propagation)
+        _clamp_negative_concentrations(simulator, context, verbose=verbose)
+
+        # Step 6: Get new concentrations and check convergence
         new_concentrations = _get_concentration_snapshot(simulator)
         max_change = _compute_max_change(old_concentrations, new_concentrations)
 
-        log(context, f"Iteration {coupling_iter + 1}: max change = {max_change:.4e}",
-            prefix="[COUPLED]", node_verbose=verbose)
+        log_always(f"Iteration {coupling_iter + 1}: max change = {max_change:.4e}",
+            prefix="[COUPLED]")
         if 'Oxygen' in simulator.state.substances:
             oxygen_conc = simulator.state.substances['Oxygen'].concentrations
-            log(context, f"Oxygen after iteration {coupling_iter + 1}: min={oxygen_conc.min():.6f}, max={oxygen_conc.max():.6f} mM",
-                prefix="[COUPLED]", node_verbose=verbose)
+            log_always(f"Oxygen after iteration {coupling_iter + 1}: min={oxygen_conc.min():.6f}, max={oxygen_conc.max():.6f} mM",
+                prefix="[COUPLED]")
 
         if max_change < coupling_tolerance:
-            log(context, f"Converged after {coupling_iter + 1} iterations",
-                prefix="[COUPLED]", node_verbose=verbose)
+            log_always(f"Converged after {coupling_iter + 1} iterations",
+                prefix="[COUPLED]")
             break
 
-        # Step 5: Apply under-relaxation (blend old and new)
+        # Step 7: Apply concentration relaxation if not converged (belt and suspenders)
         if relaxation_factor < 1.0 and coupling_iter < max_coupling_iterations - 1:
             _apply_relaxation(simulator, old_concentrations, new_concentrations, relaxation_factor)
+            log_always(f"Applied concentration relaxation (α={relaxation_factor})",
+                prefix="[COUPLED]")
 
     else:
-        log(context, f"WARNING: Did not converge after {max_coupling_iterations} iterations "
-                     f"(final max_change={max_change:.4e})",
-            prefix="[COUPLED]", node_verbose=verbose)
+        log_always(f"WARNING: Did not converge after {max_coupling_iterations} iterations "
+                   f"(final max_change={max_change:.4e})",
+            prefix="[COUPLED]")
 
     # Final check for any remaining negative values (safety clamp)
     _clamp_negative_concentrations(simulator, context, verbose=verbose)
@@ -228,7 +249,7 @@ def run_diffusion_solver_coupled(
     # Log population count at end
     if population is not None:
         final_count = len(population.state.cells)
-        log(context, f"Population count: {final_count} cells", prefix="[COUPLED-END]", node_verbose=verbose)
+        log_always(f"Population count: {final_count} cells", prefix="[COUPLED-END]")
 
 
 def _recalculate_metabolism(context: Dict[str, Any], simulator, population, config,
@@ -277,9 +298,9 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
 
     # Get metabolism parameters from context
     custom_params = context.get('custom_parameters', {})
-    vmax_oxygen = custom_params.get('oxygen_vmax', 1.0e-16)
+    vmax_oxygen = custom_params.get('oxygen_vmax', 3.0e-17)   # NetLogo: 3.0e-17 mol/s/cell
     vmax_glucose = custom_params.get('glucose_vmax', 3.0e-15)
-    km_oxygen = custom_params.get('KO2', 0.01)
+    km_oxygen = custom_params.get('KO2', 0.005)              # NetLogo: the-optimal-oxygen = 0.005 mM
     km_glucose = custom_params.get('KG', 0.5)
     km_lactate = custom_params.get('KL', 1.0)
     max_atp = custom_params.get('max_atp', 30.0)
@@ -475,6 +496,35 @@ def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any]
     log(context, f"Unique positions with reactions: {len(position_reactions)}", prefix="[REACTIONS]", node_verbose=verbose)
 
     return position_reactions
+
+
+def _blend_reactions(
+    old_reactions: Dict[Tuple, Dict[str, float]],
+    new_reactions: Dict[Tuple, Dict[str, float]],
+    alpha: float
+) -> Dict[Tuple, Dict[str, float]]:
+    """Blend reaction terms: blended = α * new + (1-α) * old.
+
+    Positions only in new (new cells) use new values directly.
+    Positions only in old (removed cells) are dropped.
+    """
+    blended = {}
+
+    for pos, new_subs in new_reactions.items():
+        if pos in old_reactions:
+            old_subs = old_reactions[pos]
+            blended[pos] = {}
+            # Blend substances present in both
+            all_substances = set(new_subs.keys()) | set(old_subs.keys())
+            for sub in all_substances:
+                new_val = new_subs.get(sub, 0.0)
+                old_val = old_subs.get(sub, 0.0)
+                blended[pos][sub] = alpha * new_val + (1 - alpha) * old_val
+        else:
+            # New position (new cell) — use new values directly
+            blended[pos] = dict(new_subs)
+
+    return blended
 
 
 def _get_concentration_snapshot(simulator) -> Dict[str, np.ndarray]:
