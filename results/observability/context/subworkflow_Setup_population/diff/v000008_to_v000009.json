@@ -1,8 +1,0 @@
-{
-  "fromVersion": 8,
-  "toVersion": 9,
-  "scopeKey": "subworkflow:Setup_population",
-  "added": {},
-  "removed": {},
-  "changed": {}
-}

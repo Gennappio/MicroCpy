@@ -105,7 +105,7 @@ def stream_output(process, log_queue):
     PID_FILE.unlink(missing_ok=True)
 
 
-def run_simulation_async(workflow_path, entry_subworkflow=None):
+def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=None):
     """Run OpenCellComms workflow in background thread (workflow-only mode)"""
     global simulation_process, is_running
 
@@ -128,8 +128,9 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
 
         # === CLEAN ARCHITECTURE: Pass GUI results directory to engine ===
         # The engine will set context['gui_results_dir'] and context['running_from_gui']
-        gui_dir = Path(__file__).parent.parent
-        gui_results_dir = gui_dir / "GUI_results"
+        if gui_results_dir is None:
+            gui_dir = Path(__file__).parent.parent
+            gui_results_dir = gui_dir / "GUI_results"
 
         cmd = [
             sys.executable,
@@ -137,7 +138,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None):
             "--workflow",
             workflow_path,
             "--gui-results-dir",
-            str(gui_results_dir.absolute()),
+            str(Path(gui_results_dir).absolute()),
         ]
 
         # Add entry_subworkflow parameter if specified (Section 9.2)
@@ -200,6 +201,7 @@ def run_simulation():
     data = request.json
     workflow_data = data.get('workflow')   # Workflow definition is required
     entry_subworkflow = data.get('entry_subworkflow', 'main')  # Default to 'main'
+    run_label = data.get('run_label')  # Optional label for planner multi-run
 
     # Must have a workflow definition
     if not workflow_data:
@@ -265,14 +267,31 @@ def run_simulation():
     # Results are stored in opencellcomms_gui/GUI_results/
     try:
         gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
-        setup_results_directories(workflow_data, gui_dir)
+        if run_label:
+            # Planner multi-run: create labeled subdirectory, only clear that subdir
+            results_dir = gui_dir / "GUI_results" / run_label
+            if results_dir.exists():
+                shutil.rmtree(results_dir)
+                log_queue.put(f"[INFO] Cleared GUI_results/{run_label} directory\n")
+            results_dir.mkdir(parents=True, exist_ok=True)
+            log_queue.put(f"[INFO] GUI_results/{run_label} directory ready\n")
+        else:
+            setup_results_directories(workflow_data, gui_dir)
     except Exception as e:
         error_msg = f'Failed to setup results directories: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 500
 
+    # Inject run_label into workflow metadata so the engine can use it for output paths
+    if run_label:
+        if 'metadata' not in workflow_data:
+            workflow_data['metadata'] = {}
+        workflow_data['metadata']['run_label'] = run_label
+        log_queue.put(f"[INFO] Run label: {run_label}\n")
+
     # Save workflow to temporary file
-    workflow_path = "/tmp/opencellcomms_workflow.json"
+    safe_label = run_label.replace(' ', '_').replace('/', '_') if run_label else ''
+    workflow_path = f"/tmp/opencellcomms_workflow_{safe_label}.json" if run_label else "/tmp/opencellcomms_workflow.json"
     try:
         with open(workflow_path, 'w') as f:
             json.dump(workflow_data, f, indent=2)
@@ -283,11 +302,17 @@ def run_simulation():
     while not log_queue.empty():
         log_queue.get()
 
+    # Determine results directory (labeled subdirectory for planner runs)
+    gui_results_dir_for_run = None
+    if run_label:
+        gui_dir_for_run = Path(__file__).parent.parent
+        gui_results_dir_for_run = str(gui_dir_for_run / "GUI_results" / run_label)
+
     # Start simulation in background thread
     is_running = True
     simulation_thread = threading.Thread(
         target=run_simulation_async,
-        args=(workflow_path, entry_subworkflow)  # Pass entry_subworkflow
+        args=(workflow_path, entry_subworkflow, gui_results_dir_for_run)
     )
     simulation_thread.daemon = True
     simulation_thread.start()

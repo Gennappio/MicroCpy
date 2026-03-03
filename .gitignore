@@ -194,6 +194,7 @@ cython_debug/
 .cursorindexingignore
 
 # Simulation results and outputs (generated at runtime)
+results/
 opencellcomms_engine/results/
 opencellcomms_gui/results/
 opencellcomms_gui/GUI_results/

@@ -18,7 +18,7 @@ const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictPar
  * ParametersDashboard - Centralized view of all connected parameter nodes
  * across all subworkflows, with inline editing.
  */
-function ParametersDashboard() {
+function ParametersDashboard({ overrideData, onUpdateParam }) {
   const {
     workflow,
     stageNodes,
@@ -115,6 +115,11 @@ function ParametersDashboard() {
   // Update a parameterNode's data
   const updateParamNodeData = useCallback(
     (stageName, paramNodeId, updater) => {
+      if (onUpdateParam) {
+        // Planner mode: delegate to parent (never touches canvas)
+        onUpdateParam(paramNodeId, updater);
+        return;
+      }
       const nodes = stageNodes[stageName] || [];
       const updatedNodes = nodes.map((n) => {
         if (n.id !== paramNodeId) return n;
@@ -122,7 +127,7 @@ function ParametersDashboard() {
       });
       setStageNodes(stageName, updatedNodes);
     },
-    [stageNodes, setStageNodes]
+    [stageNodes, setStageNodes, onUpdateParam]
   );
 
   // Navigate to canvas
@@ -440,7 +445,9 @@ function ParametersDashboard() {
 
   // Render a single parameter entry
   const renderParamEntry = (entry) => {
-    const { stageName, paramNodeId, paramNodeType, paramName, paramNodeData } = entry;
+    const { stageName, paramNodeId, paramNodeType, paramName } = entry;
+    // Use override data if available, otherwise fall back to canvas node data
+    const paramNodeData = overrideData ? (overrideData[paramNodeId] || entry.paramNodeData) : entry.paramNodeData;
     return (
       <div key={paramNodeId} className="param-entry">
         <div className="param-entry-header">

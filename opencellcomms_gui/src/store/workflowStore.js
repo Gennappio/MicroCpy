@@ -20,6 +20,7 @@ import {
   createLibrarySlice,
   createWorkflowIOSlice,
   createLogSlice,
+  createPlannerSlice,
 } from './slices';
 
 /**
@@ -71,7 +72,7 @@ const useWorkflowStore = create((set, get) => ({
   // Current active subworkflow
   currentStage: 'main',
 
-  // Current main tab: 'composers' | 'subworkflows' | 'parameters' | 'results'
+  // Current main tab: 'composers' | 'subworkflows' | 'planner' | 'results'
   currentMainTab: 'composers',
 
   // React Flow nodes and edges for each subworkflow
@@ -116,6 +117,9 @@ const useWorkflowStore = create((set, get) => ({
 
   // Logs: simulation logs, workflow logs, call stack logs
   ...createLogSlice(set, get),
+
+  // Planner: multiple parameter configurations
+  ...createPlannerSlice(set, get),
 }));
 
 export default useWorkflowStore;

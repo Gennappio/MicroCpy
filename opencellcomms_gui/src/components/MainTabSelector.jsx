@@ -1,4 +1,4 @@
-import { Layers, Workflow, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Layers, Workflow, BarChart3, ListChecks } from 'lucide-react';
 import './MainTabSelector.css';
 
 /**
@@ -25,14 +25,14 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
         </button>
       </div>
 
-      {/* Parameters */}
+      {/* Planner */}
       <div className="main-tab-group">
         <button
-          className={`main-tab parameters-tab ${currentMainTab === 'parameters' ? 'active' : ''}`}
-          onClick={() => onTabChange('parameters')}
+          className={`main-tab planner-tab ${currentMainTab === 'planner' ? 'active' : ''}`}
+          onClick={() => onTabChange('planner')}
         >
-          <SlidersHorizontal size={18} />
-          <span>Parameters</span>
+          <ListChecks size={18} />
+          <span>Planner</span>
         </button>
       </div>
 

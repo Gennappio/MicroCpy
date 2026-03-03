@@ -1,0 +1,184 @@
+/* PlannerView - Multi-tab parameter configuration */
+
+.planner-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0f172a;
+}
+
+/* ===== Tab Bar ===== */
+.planner-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.planner-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.planner-add-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+}
+
+.planner-tabs-scroll {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  padding: 0 4px;
+}
+
+.planner-tabs-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.planner-tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.planner-tabs-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+/* ===== Individual Tab ===== */
+.planner-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.planner-tab:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.planner-tab.active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.planner-tab.disabled {
+  opacity: 0.5;
+}
+
+.planner-tab.disabled .planner-tab-name {
+  text-decoration: line-through;
+}
+
+/* Toggle eye icon */
+.planner-tab-toggle {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 2px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.planner-tab-toggle:hover {
+  opacity: 1;
+}
+
+/* Tab name */
+.planner-tab-name {
+  user-select: none;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Rename input */
+.planner-tab-rename-input {
+  background: #0f172a;
+  border: 1px solid #f59e0b;
+  border-radius: 3px;
+  color: #f8fafc;
+  font-size: 12px;
+  padding: 2px 4px;
+  width: 100px;
+  outline: none;
+}
+
+/* Delete button */
+.planner-tab-delete {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 2px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all 0.15s;
+}
+
+.planner-tab-delete:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+/* ===== Content Area ===== */
+.planner-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ===== Empty State ===== */
+.planner-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 40px;
+  color: #64748b;
+  text-align: center;
+}
+
+.planner-empty h2 {
+  color: #94a3b8;
+  font-size: 18px;
+  margin: 0;
+}
+
+.planner-empty p {
+  max-width: 420px;
+  line-height: 1.6;
+  font-size: 13px;
+  margin: 0;
+}

@@ -302,6 +302,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       stageEdges: newStageEdges,
       currentStage: 'main'
     }));
+
+    // Always sync planner tabs: restore from loaded workflow or clear stale state
+    const plannerData = workflowJson.metadata?.gui?.planner?.tabs;
+    get().setPlannerTabs(Array.isArray(plannerData) ? plannerData : []);
   },
 
   // Export workflow to JSON (V2-only)
@@ -482,6 +486,22 @@ export const createWorkflowIOSlice = (set, get) => ({
           ...lib,
           path: pathUtils.makeRelative(lib.path, workflowDir)
         }));
+    }
+
+    // Include planner tabs in exported metadata
+    const { plannerTabs } = state;
+    if (plannerTabs && plannerTabs.length > 0) {
+      exportedMetadata.gui = {
+        ...exportedMetadata.gui,
+        planner: {
+          tabs: plannerTabs.map((t) => ({
+            id: t.id,
+            name: t.name,
+            enabled: t.enabled,
+            parameterOverrides: t.parameterOverrides,
+          })),
+        },
+      };
     }
 
     return {

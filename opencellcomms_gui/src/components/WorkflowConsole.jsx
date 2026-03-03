@@ -24,12 +24,15 @@ const WorkflowConsole = ({ workflowName }) => {
   const badgePollingRef = useRef(null);
   // Ref to hold the true current buffer - avoids stale closure issues in SSE handler
   const bufferedLogsRef = useRef([]);
+  // Ref for resolving per-tab run completion (used in sequential planner runs)
+  const completionResolverRef = useRef(null);
 
   // Use store for persistent logs per workflow (keeping for compatibility)
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
   const fetchAllBadgeStats = useWorkflowStore((state) => state.fetchAllBadgeStats);
   const clearObservabilityState = useWorkflowStore((state) => state.clearObservabilityState);
+  const getActivePlannerTabs = useWorkflowStore((state) => state.getActivePlannerTabs);
 
   // Auto-scroll to bottom when displayed logs change (after refresh)
   useEffect(() => {
@@ -139,7 +142,13 @@ const WorkflowConsole = ({ workflowName }) => {
 
           // Check for completion - fetch final badge stats
           if (data.type === 'complete' || data.type === 'error') {
-            setIsRunning(false);
+            if (completionResolverRef.current) {
+              // Sequential planner run: resolve the per-tab promise
+              completionResolverRef.current(data.type);
+              completionResolverRef.current = null;
+            } else {
+              setIsRunning(false);
+            }
             // Fetch final badge stats after a small delay to ensure files are written
             setTimeout(() => {
               fetchAllBadgeStats();
@@ -178,6 +187,40 @@ const WorkflowConsole = ({ workflowName }) => {
     }
   };
 
+  /**
+   * Apply planner tab overrides to an exported workflow JSON.
+   * Replaces parameter node data in subworkflows[*].parameters[] with override values.
+   */
+  const applyOverridesToWorkflow = (workflow, overrides) => {
+    const patched = JSON.parse(JSON.stringify(workflow));
+    for (const swName of Object.keys(patched.subworkflows)) {
+      const sw = patched.subworkflows[swName];
+      if (!sw.parameters) continue;
+      sw.parameters = sw.parameters.map((param) => {
+        const override = overrides[param.id];
+        if (!override) return param;
+        // Merge override data into the parameter node
+        const merged = { ...param };
+        if (override.parameters !== undefined) merged.parameters = override.parameters;
+        if (override.items !== undefined) merged.items = override.items;
+        if (override.entries !== undefined) merged.entries = override.entries;
+        if (override.listType !== undefined) merged.listType = override.listType;
+        return merged;
+      });
+    }
+    return patched;
+  };
+
+  /**
+   * Wait for the current run to finish (complete or error) via SSE.
+   * Returns a promise that resolves when the SSE handler receives a terminal event.
+   */
+  const waitForRunCompletion = () => {
+    return new Promise((resolve) => {
+      completionResolverRef.current = resolve;
+    });
+  };
+
   const handleRun = async () => {
     if (isRunning) return;
 
@@ -191,41 +234,108 @@ const WorkflowConsole = ({ workflowName }) => {
 
     try {
       const fullWorkflow = exportWorkflow();
-
-      // Section 9.2: Send full workflow with entry_subworkflow parameter
-      // No need to rename or modify the workflow structure
       const activeSubworkflow = fullWorkflow.subworkflows[workflowName];
 
       if (!activeSubworkflow) {
         throw new Error(`Subworkflow '${workflowName}' not found`);
       }
 
-      // Add to displayed logs immediately (not buffered) for user feedback
-      const timestamp = new Date().toLocaleTimeString();
-      setDisplayedLogs([{ type: 'info', message: `🚀 Starting simulation...`, timestamp }]);
-
-      const response = await fetch(`${API_BASE_URL}/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          workflow: fullWorkflow,  // Send full workflow unchanged
-          entry_subworkflow: 'main'  // Always run from main entry point
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start workflow');
-      }
-
+      const activeTabs = getActivePlannerTabs();
       setIsRunning(true);
-      setDisplayedLogs(prev => [...prev, { type: 'info', message: `✓ Workflow execution started`, timestamp: new Date().toLocaleTimeString() }]);
+
+      if (activeTabs.length === 0) {
+        // No planner tabs: run once with current canvas values (backward compat)
+        const timestamp = new Date().toLocaleTimeString();
+        setDisplayedLogs([{ type: 'info', message: `🚀 Starting simulation...`, timestamp }]);
+
+        const response = await fetch(`${API_BASE_URL}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workflow: fullWorkflow,
+            entry_subworkflow: 'main',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to start workflow');
+        }
+
+        setDisplayedLogs(prev => [...prev, {
+          type: 'info',
+          message: `✓ Workflow execution started`,
+          timestamp: new Date().toLocaleTimeString(),
+        }]);
+        // isRunning will be set to false by SSE handler on complete/error
+
+      } else {
+        // Sequential planner run: execute each active tab
+        const timestamp = new Date().toLocaleTimeString();
+        setDisplayedLogs([{
+          type: 'info',
+          message: `🚀 Starting ${activeTabs.length} planner configuration(s)...`,
+          timestamp,
+        }]);
+
+        for (let i = 0; i < activeTabs.length; i++) {
+          const tab = activeTabs[i];
+          const tabWorkflow = applyOverridesToWorkflow(fullWorkflow, tab.parameterOverrides);
+
+          setDisplayedLogs(prev => [...prev, {
+            type: 'info',
+            message: `▶ [${i + 1}/${activeTabs.length}] Running "${tab.name}"...`,
+            timestamp: new Date().toLocaleTimeString(),
+          }]);
+
+          const response = await fetch(`${API_BASE_URL}/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workflow: tabWorkflow,
+              entry_subworkflow: 'main',
+              run_label: tab.name,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            setDisplayedLogs(prev => [...prev, {
+              type: 'error',
+              message: `❌ "${tab.name}" failed to start: ${errorData.error || 'Unknown error'}`,
+              timestamp: new Date().toLocaleTimeString(),
+            }]);
+            continue; // Try next tab
+          }
+
+          // Wait for this run to complete via SSE
+          const result = await waitForRunCompletion();
+
+          setDisplayedLogs(prev => [...prev, {
+            type: result === 'complete' ? 'info' : 'error',
+            message: result === 'complete'
+              ? `✓ "${tab.name}" completed`
+              : `✗ "${tab.name}" finished with errors`,
+            timestamp: new Date().toLocaleTimeString(),
+          }]);
+        }
+
+        setDisplayedLogs(prev => [...prev, {
+          type: 'info',
+          message: `✓ All planner configurations finished`,
+          timestamp: new Date().toLocaleTimeString(),
+        }]);
+        setIsRunning(false);
+      }
 
     } catch (err) {
       setError(err.message);
-      setDisplayedLogs(prev => [...prev, { type: 'error', message: `❌ Failed to start: ${err.message}`, timestamp: new Date().toLocaleTimeString() }]);
+      setIsRunning(false);
+      setDisplayedLogs(prev => [...prev, {
+        type: 'error',
+        message: `❌ Failed to start: ${err.message}`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
     }
   };
 
