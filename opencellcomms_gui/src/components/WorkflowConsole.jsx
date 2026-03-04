@@ -26,6 +26,8 @@ const WorkflowConsole = ({ workflowName }) => {
   const bufferedLogsRef = useRef([]);
   // Ref for resolving per-tab run completion (used in sequential planner runs)
   const completionResolverRef = useRef(null);
+  // Ref to track whether a flush is already scheduled (throttle state updates)
+  const flushScheduledRef = useRef(false);
 
   // Use store for persistent logs per workflow (keeping for compatibility)
   const clearLogs = useWorkflowStore((state) => state.clearWorkflowLogs);
@@ -45,7 +47,7 @@ const WorkflowConsole = ({ workflowName }) => {
       // Start polling every 2 seconds
       const pollInterval = setInterval(() => {
         fetchAllBadgeStats();
-      }, 2000);
+      }, 10000);
       badgePollingRef.current = pollInterval;
 
       return () => {
@@ -73,13 +75,20 @@ const WorkflowConsole = ({ workflowName }) => {
     };
   }, []);
 
-  // Add a log to the buffer (not displayed immediately)
-  // Uses ref as source of truth to avoid stale closure in SSE handler
+  // Add a log to the buffer (not displayed immediately).
+  // Uses ref as source of truth to avoid stale closure in SSE handler.
+  // Batches React state updates: at most one setBufferedLogs per 150 ms regardless
+  // of how many SSE messages arrive, preventing thousands of re-renders per second.
   const addToBuffer = useCallback((type, message) => {
     const timestamp = new Date().toLocaleTimeString();
-    const newLog = { type, message, timestamp };
-    bufferedLogsRef.current = [...bufferedLogsRef.current, newLog];
-    setBufferedLogs([...bufferedLogsRef.current]);
+    bufferedLogsRef.current.push({ type, message, timestamp }); // O(1), no spread
+    if (!flushScheduledRef.current) {
+      flushScheduledRef.current = true;
+      setTimeout(() => {
+        setBufferedLogs([...bufferedLogsRef.current]); // one spread per 150 ms max
+        flushScheduledRef.current = false;
+      }, 150);
+    }
   }, []);
 
   // Refresh: move buffered logs to displayed logs

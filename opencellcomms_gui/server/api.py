@@ -400,30 +400,37 @@ def stream_logs():
         
         while True:
             try:
-                # Try to get log from queue (non-blocking with timeout)
-                try:
-                    log_line = log_queue.get(timeout=1)
-                    
-                    # Parse log type
-                    log_type = 'info'
-                    if log_line.startswith('[ERROR]'):
-                        log_type = 'error'
-                    elif log_line.startswith('[COMPLETE]'):
-                        log_type = 'complete'
-                    elif log_line.startswith('[FAILED]'):
-                        log_type = 'error'
-                    elif log_line.startswith('[STOP]'):
-                        log_type = 'warning'
-                    
-                    # Send log as SSE
-                    yield f"data: {json.dumps({'type': log_type, 'message': log_line})}\n\n"
-                    
-                except queue.Empty:
-                    # Send heartbeat every 15 seconds to keep connection alive
+                # Drain up to 50 messages from the queue within a 50 ms window.
+                # This caps SSE delivery to ~20 bursts/sec regardless of log volume,
+                # preventing the browser from being flooded with individual SSE events.
+                batch = []
+                deadline = time.time() + 0.05
+                while time.time() < deadline and len(batch) < 50:
+                    try:
+                        batch.append(log_queue.get_nowait())
+                    except queue.Empty:
+                        break
+
+                if batch:
+                    last_heartbeat = time.time()
+                    for log_line in batch:
+                        log_type = 'info'
+                        if log_line.startswith('[ERROR]'):
+                            log_type = 'error'
+                        elif log_line.startswith('[COMPLETE]'):
+                            log_type = 'complete'
+                        elif log_line.startswith('[FAILED]'):
+                            log_type = 'error'
+                        elif log_line.startswith('[STOP]'):
+                            log_type = 'warning'
+                        yield f"data: {json.dumps({'type': log_type, 'message': log_line})}\n\n"
+                else:
+                    # Idle: send heartbeat if needed, then sleep to avoid busy-wait
                     if time.time() - last_heartbeat > 15:
                         yield f"data: {json.dumps({'type': 'heartbeat', 'message': ''})}\n\n"
                         last_heartbeat = time.time()
-                    
+                    time.sleep(0.05)
+
             except GeneratorExit:
                 # Client disconnected
                 break

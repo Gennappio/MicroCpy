@@ -25,3 +25,7 @@ dist-ssr
 
 # Simulation results (generated at runtime, overwrite semantics)
 results/
+
+# Server runtime artifacts
+server/.current_process.pid
+server/server.log
