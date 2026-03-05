@@ -28,6 +28,858 @@
         "Checkpoint": "subworkflow",
         "Generate_final_plots": "subworkflow",
         "Summarize_simulation": "subworkflow"
+      },
+      "planner": {
+        "tabs": [
+          {
+            "id": "planner-tab-1772636446988-1",
+            "name": "Run 1",
+            "enabled": false,
+            "parameterOverrides": {
+              "param_sim_name": {
+                "label": "Simulation Name",
+                "parameters": {
+                  "name": "MicroC Simulation"
+                }
+              },
+              "param_sim_total_steps": {
+                "label": "Total Steps",
+                "parameters": {
+                  "total_steps": 100
+                }
+              },
+              "param_sim_dt": {
+                "label": "Time Step (dt)",
+                "parameters": {
+                  "dt": 1
+                }
+              },
+              "param_sim_output_dir": {
+                "label": "Output Directory",
+                "parameters": {
+                  "output_dir": "results"
+                }
+              },
+              "param_domain_dimensions": {
+                "label": "Dimensions",
+                "parameters": {
+                  "dimensions": 2
+                }
+              },
+              "param_domain_size_x": {
+                "label": "Size X (μm)",
+                "parameters": {
+                  "size_x": 1500
+                }
+              },
+              "param_domain_size_y": {
+                "label": "Size Y (μm)",
+                "parameters": {
+                  "size_y": 1500
+                }
+              },
+              "param_domain_nx": {
+                "label": "Grid NX",
+                "parameters": {
+                  "nx": 50
+                }
+              },
+              "param_domain_ny": {
+                "label": "Grid NY",
+                "parameters": {
+                  "ny": 50
+                }
+              },
+              "param_domain_cell_height": {
+                "label": "Cell Height (μm)",
+                "parameters": {
+                  "cell_height": 20
+                }
+              },
+              "param_1771966627094": {
+                "label": "verbose",
+                "parameters": {
+                  "verbose": "false"
+                }
+              },
+              "param_substances_list": {
+                "label": "Substances (JSON)",
+                "listType": "string",
+                "items": [
+                  "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-13,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+                ],
+                "targetParam": "substances"
+              },
+              "param_associations_dict": {
+                "label": "Associations (Dict)",
+                "entries": [
+                  {
+                    "key": "Oxygen",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Oxygen_supply",
+                      "threshold": 0.022
+                    }
+                  },
+                  {
+                    "key": "Glucose",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Glucose_supply",
+                      "threshold": 2
+                    }
+                  },
+                  {
+                    "key": "Lactate",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "MCT1_stimulus",
+                      "threshold": 1.5
+                    }
+                  },
+                  {
+                    "key": "HGF",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "cMET_stimulus",
+                      "threshold": 0.000001
+                    }
+                  },
+                  {
+                    "key": "TGFA",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "EGFR_stimulus",
+                      "threshold": 0.000001
+                    }
+                  }
+                ],
+                "targetParam": "associations"
+              },
+              "param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+                }
+              },
+              "param_max_iterations": {
+                "label": "Max Iterations",
+                "parameters": {
+                  "max_iterations": 1000
+                }
+              },
+              "param_tolerance": {
+                "label": "Tolerance",
+                "parameters": {
+                  "tolerance": 0.000001
+                }
+              },
+              "param_solver_type": {
+                "label": "Solver Type",
+                "parameters": {
+                  "solver_type": "steady_state"
+                }
+              },
+              "param_min_concentration": {
+                "label": "Min Concentration (Clamp)",
+                "parameters": {
+                  "min_concentration": 0
+                }
+              },
+              "param_max_coupling_iterations": {
+                "label": "Max Coupling Iterations",
+                "parameters": {
+                  "max_coupling_iterations": 10
+                }
+              },
+              "param_coupling_tolerance": {
+                "label": "Coupling Tolerance",
+                "parameters": {
+                  "coupling_tolerance": 0.0001
+                }
+              },
+              "param_relaxation_factor": {
+                "label": "Relaxation Factor (α)",
+                "parameters": {
+                  "relaxation_factor": 0.7
+                }
+              },
+              "param_gene_propagation_steps": {
+                "label": "Propagation Steps (OLD)",
+                "parameters": {
+                  "propagation_steps": 20
+                }
+              },
+              "param_gene_propagation_steps_v2": {
+                "label": "Propagation Steps (V2)",
+                "parameters": {
+                  "propagation_steps": 500
+                }
+              },
+              "param_max_growth_arrest_steps": {
+                "label": "Max Growth Arrest Steps",
+                "parameters": {
+                  "max_growth_arrest_steps": 100
+                }
+              },
+              "param_activation_probability": {
+                "label": "Activation Probability",
+                "parameters": {
+                  "activation_probability": "2"
+                }
+              },
+              "param_checkpoint_interval": {
+                "label": "Checkpoint Interval",
+                "parameters": {
+                  "interval": 10
+                }
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1772640395459-2",
+            "name": "less_Ox_diffusion",
+            "enabled": false,
+            "parameterOverrides": {
+              "param_sim_name": {
+                "label": "Simulation Name",
+                "parameters": {
+                  "name": "MicroC Simulation"
+                }
+              },
+              "param_sim_total_steps": {
+                "label": "Total Steps",
+                "parameters": {
+                  "total_steps": 100
+                }
+              },
+              "param_sim_dt": {
+                "label": "Time Step (dt)",
+                "parameters": {
+                  "dt": 1
+                }
+              },
+              "param_sim_output_dir": {
+                "label": "Output Directory",
+                "parameters": {
+                  "output_dir": "results"
+                }
+              },
+              "param_domain_dimensions": {
+                "label": "Dimensions",
+                "parameters": {
+                  "dimensions": 2
+                }
+              },
+              "param_domain_size_x": {
+                "label": "Size X (μm)",
+                "parameters": {
+                  "size_x": 1500
+                }
+              },
+              "param_domain_size_y": {
+                "label": "Size Y (μm)",
+                "parameters": {
+                  "size_y": 1500
+                }
+              },
+              "param_domain_nx": {
+                "label": "Grid NX",
+                "parameters": {
+                  "nx": 50
+                }
+              },
+              "param_domain_ny": {
+                "label": "Grid NY",
+                "parameters": {
+                  "ny": 50
+                }
+              },
+              "param_domain_cell_height": {
+                "label": "Cell Height (μm)",
+                "parameters": {
+                  "cell_height": 20
+                }
+              },
+              "param_1771966627094": {
+                "label": "verbose",
+                "parameters": {
+                  "verbose": "false"
+                }
+              },
+              "param_substances_list": {
+                "label": "Substances (JSON)",
+                "listType": "string",
+                "items": [
+                  "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-12,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+                ],
+                "targetParam": "substances"
+              },
+              "param_associations_dict": {
+                "label": "Associations (Dict)",
+                "entries": [
+                  {
+                    "key": "Oxygen",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Oxygen_supply",
+                      "threshold": 0.022
+                    }
+                  },
+                  {
+                    "key": "Glucose",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Glucose_supply",
+                      "threshold": 2
+                    }
+                  },
+                  {
+                    "key": "Lactate",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "MCT1_stimulus",
+                      "threshold": 1.5
+                    }
+                  },
+                  {
+                    "key": "HGF",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "cMET_stimulus",
+                      "threshold": 0.000001
+                    }
+                  },
+                  {
+                    "key": "TGFA",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "EGFR_stimulus",
+                      "threshold": 0.000001
+                    }
+                  }
+                ],
+                "targetParam": "associations"
+              },
+              "param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+                }
+              },
+              "param_max_iterations": {
+                "label": "Max Iterations",
+                "parameters": {
+                  "max_iterations": 1000
+                }
+              },
+              "param_tolerance": {
+                "label": "Tolerance",
+                "parameters": {
+                  "tolerance": 0.000001
+                }
+              },
+              "param_solver_type": {
+                "label": "Solver Type",
+                "parameters": {
+                  "solver_type": "steady_state"
+                }
+              },
+              "param_min_concentration": {
+                "label": "Min Concentration (Clamp)",
+                "parameters": {
+                  "min_concentration": 0
+                }
+              },
+              "param_max_coupling_iterations": {
+                "label": "Max Coupling Iterations",
+                "parameters": {
+                  "max_coupling_iterations": 10
+                }
+              },
+              "param_coupling_tolerance": {
+                "label": "Coupling Tolerance",
+                "parameters": {
+                  "coupling_tolerance": 0.0001
+                }
+              },
+              "param_relaxation_factor": {
+                "label": "Relaxation Factor (α)",
+                "parameters": {
+                  "relaxation_factor": 0.7
+                }
+              },
+              "param_gene_propagation_steps": {
+                "label": "Propagation Steps (OLD)",
+                "parameters": {
+                  "propagation_steps": 20
+                }
+              },
+              "param_gene_propagation_steps_v2": {
+                "label": "Propagation Steps (V2)",
+                "parameters": {
+                  "propagation_steps": 500
+                }
+              },
+              "param_max_growth_arrest_steps": {
+                "label": "Max Growth Arrest Steps",
+                "parameters": {
+                  "max_growth_arrest_steps": 100
+                }
+              },
+              "param_activation_probability": {
+                "label": "Activation Probability",
+                "parameters": {
+                  "activation_probability": "2"
+                }
+              },
+              "param_checkpoint_interval": {
+                "label": "Checkpoint Interval",
+                "parameters": {
+                  "interval": 10
+                }
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1772640433898-3",
+            "name": "less_Ox_diff_less_O_uptk",
+            "enabled": false,
+            "parameterOverrides": {
+              "param_sim_name": {
+                "label": "Simulation Name",
+                "parameters": {
+                  "name": "MicroC Simulation"
+                }
+              },
+              "param_sim_total_steps": {
+                "label": "Total Steps",
+                "parameters": {
+                  "total_steps": 100
+                }
+              },
+              "param_sim_dt": {
+                "label": "Time Step (dt)",
+                "parameters": {
+                  "dt": 1
+                }
+              },
+              "param_sim_output_dir": {
+                "label": "Output Directory",
+                "parameters": {
+                  "output_dir": "results"
+                }
+              },
+              "param_domain_dimensions": {
+                "label": "Dimensions",
+                "parameters": {
+                  "dimensions": 2
+                }
+              },
+              "param_domain_size_x": {
+                "label": "Size X (μm)",
+                "parameters": {
+                  "size_x": 1500
+                }
+              },
+              "param_domain_size_y": {
+                "label": "Size Y (μm)",
+                "parameters": {
+                  "size_y": 1500
+                }
+              },
+              "param_domain_nx": {
+                "label": "Grid NX",
+                "parameters": {
+                  "nx": 50
+                }
+              },
+              "param_domain_ny": {
+                "label": "Grid NY",
+                "parameters": {
+                  "ny": 50
+                }
+              },
+              "param_domain_cell_height": {
+                "label": "Cell Height (μm)",
+                "parameters": {
+                  "cell_height": 20
+                }
+              },
+              "param_1771966627094": {
+                "label": "verbose",
+                "parameters": {
+                  "verbose": "false"
+                }
+              },
+              "param_substances_list": {
+                "label": "Substances (JSON)",
+                "listType": "string",
+                "items": [
+                  "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-12,\"production_rate\":0.0,\"uptake_rate\":3.0e-16,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+                ],
+                "targetParam": "substances"
+              },
+              "param_associations_dict": {
+                "label": "Associations (Dict)",
+                "entries": [
+                  {
+                    "key": "Oxygen",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Oxygen_supply",
+                      "threshold": 0.022
+                    }
+                  },
+                  {
+                    "key": "Glucose",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Glucose_supply",
+                      "threshold": 2
+                    }
+                  },
+                  {
+                    "key": "Lactate",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "MCT1_stimulus",
+                      "threshold": 1.5
+                    }
+                  },
+                  {
+                    "key": "HGF",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "cMET_stimulus",
+                      "threshold": 0.000001
+                    }
+                  },
+                  {
+                    "key": "TGFA",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "EGFR_stimulus",
+                      "threshold": 0.000001
+                    }
+                  }
+                ],
+                "targetParam": "associations"
+              },
+              "param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+                }
+              },
+              "param_max_iterations": {
+                "label": "Max Iterations",
+                "parameters": {
+                  "max_iterations": 1000
+                }
+              },
+              "param_tolerance": {
+                "label": "Tolerance",
+                "parameters": {
+                  "tolerance": 0.000001
+                }
+              },
+              "param_solver_type": {
+                "label": "Solver Type",
+                "parameters": {
+                  "solver_type": "steady_state"
+                }
+              },
+              "param_min_concentration": {
+                "label": "Min Concentration (Clamp)",
+                "parameters": {
+                  "min_concentration": 0
+                }
+              },
+              "param_max_coupling_iterations": {
+                "label": "Max Coupling Iterations",
+                "parameters": {
+                  "max_coupling_iterations": 10
+                }
+              },
+              "param_coupling_tolerance": {
+                "label": "Coupling Tolerance",
+                "parameters": {
+                  "coupling_tolerance": 0.0001
+                }
+              },
+              "param_relaxation_factor": {
+                "label": "Relaxation Factor (α)",
+                "parameters": {
+                  "relaxation_factor": 0.7
+                }
+              },
+              "param_gene_propagation_steps": {
+                "label": "Propagation Steps (OLD)",
+                "parameters": {
+                  "propagation_steps": 20
+                }
+              },
+              "param_gene_propagation_steps_v2": {
+                "label": "Propagation Steps (V2)",
+                "parameters": {
+                  "propagation_steps": 500
+                }
+              },
+              "param_max_growth_arrest_steps": {
+                "label": "Max Growth Arrest Steps",
+                "parameters": {
+                  "max_growth_arrest_steps": 100
+                }
+              },
+              "param_activation_probability": {
+                "label": "Activation Probability",
+                "parameters": {
+                  "activation_probability": "2"
+                }
+              },
+              "param_checkpoint_interval": {
+                "label": "Checkpoint Interval",
+                "parameters": {
+                  "interval": 10
+                }
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1772641215656-2",
+            "name": "more_Ox_diff_more_Ox_up",
+            "enabled": true,
+            "parameterOverrides": {
+              "param_sim_name": {
+                "label": "Simulation Name",
+                "parameters": {
+                  "name": "MicroC Simulation"
+                }
+              },
+              "param_sim_total_steps": {
+                "label": "Total Steps",
+                "parameters": {
+                  "total_steps": 100
+                }
+              },
+              "param_sim_dt": {
+                "label": "Time Step (dt)",
+                "parameters": {
+                  "dt": 1
+                }
+              },
+              "param_sim_output_dir": {
+                "label": "Output Directory",
+                "parameters": {
+                  "output_dir": "results"
+                }
+              },
+              "param_domain_dimensions": {
+                "label": "Dimensions",
+                "parameters": {
+                  "dimensions": 2
+                }
+              },
+              "param_domain_size_x": {
+                "label": "Size X (μm)",
+                "parameters": {
+                  "size_x": 1500
+                }
+              },
+              "param_domain_size_y": {
+                "label": "Size Y (μm)",
+                "parameters": {
+                  "size_y": 1500
+                }
+              },
+              "param_domain_nx": {
+                "label": "Grid NX",
+                "parameters": {
+                  "nx": 50
+                }
+              },
+              "param_domain_ny": {
+                "label": "Grid NY",
+                "parameters": {
+                  "ny": 50
+                }
+              },
+              "param_domain_cell_height": {
+                "label": "Cell Height (μm)",
+                "parameters": {
+                  "cell_height": 20
+                }
+              },
+              "param_1771966627094": {
+                "label": "verbose",
+                "parameters": {
+                  "verbose": "false"
+                }
+              },
+              "param_substances_list": {
+                "label": "Substances (JSON)",
+                "listType": "string",
+                "items": [
+                  "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-10,\"production_rate\":0.0,\"uptake_rate\":3.0e-13,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+                ],
+                "targetParam": "substances"
+              },
+              "param_associations_dict": {
+                "label": "Associations (Dict)",
+                "entries": [
+                  {
+                    "key": "Oxygen",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Oxygen_supply",
+                      "threshold": 0.022
+                    }
+                  },
+                  {
+                    "key": "Glucose",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Glucose_supply",
+                      "threshold": 2
+                    }
+                  },
+                  {
+                    "key": "Lactate",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "MCT1_stimulus",
+                      "threshold": 1.5
+                    }
+                  },
+                  {
+                    "key": "HGF",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "cMET_stimulus",
+                      "threshold": 0.000001
+                    }
+                  },
+                  {
+                    "key": "TGFA",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "EGFR_stimulus",
+                      "threshold": 0.000001
+                    }
+                  }
+                ],
+                "targetParam": "associations"
+              },
+              "param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+                }
+              },
+              "param_max_iterations": {
+                "label": "Max Iterations",
+                "parameters": {
+                  "max_iterations": 1000
+                }
+              },
+              "param_tolerance": {
+                "label": "Tolerance",
+                "parameters": {
+                  "tolerance": 0.000001
+                }
+              },
+              "param_solver_type": {
+                "label": "Solver Type",
+                "parameters": {
+                  "solver_type": "steady_state"
+                }
+              },
+              "param_min_concentration": {
+                "label": "Min Concentration (Clamp)",
+                "parameters": {
+                  "min_concentration": 0
+                }
+              },
+              "param_max_coupling_iterations": {
+                "label": "Max Coupling Iterations",
+                "parameters": {
+                  "max_coupling_iterations": 10
+                }
+              },
+              "param_coupling_tolerance": {
+                "label": "Coupling Tolerance",
+                "parameters": {
+                  "coupling_tolerance": 0.0001
+                }
+              },
+              "param_relaxation_factor": {
+                "label": "Relaxation Factor (α)",
+                "parameters": {
+                  "relaxation_factor": 0.7
+                }
+              },
+              "param_gene_propagation_steps": {
+                "label": "Propagation Steps (OLD)",
+                "parameters": {
+                  "propagation_steps": 20
+                }
+              },
+              "param_gene_propagation_steps_v2": {
+                "label": "Propagation Steps (V2)",
+                "parameters": {
+                  "propagation_steps": 500
+                }
+              },
+              "param_max_growth_arrest_steps": {
+                "label": "Max Growth Arrest Steps",
+                "parameters": {
+                  "max_growth_arrest_steps": 100
+                }
+              },
+              "param_activation_probability": {
+                "label": "Activation Probability",
+                "parameters": {
+                  "activation_probability": "2"
+                }
+              },
+              "param_checkpoint_interval": {
+                "label": "Checkpoint Interval",
+                "parameters": {
+                  "interval": 10
+                }
+              }
+            }
+          }
+        ]
       }
     }
   },
