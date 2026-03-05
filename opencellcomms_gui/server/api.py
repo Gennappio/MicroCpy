@@ -15,6 +15,7 @@ import time
 import shutil
 import ast
 import inspect
+import tempfile
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
@@ -291,7 +292,7 @@ def run_simulation():
 
     # Save workflow to temporary file
     safe_label = run_label.replace(' ', '_').replace('/', '_') if run_label else ''
-    workflow_path = f"/tmp/opencellcomms_workflow_{safe_label}.json" if run_label else "/tmp/opencellcomms_workflow.json"
+    workflow_path = str(Path(tempfile.gettempdir()) / (f"opencellcomms_workflow_{safe_label}.json" if run_label else "opencellcomms_workflow.json"))
     try:
         with open(workflow_path, 'w') as f:
             json.dump(workflow_data, f, indent=2)
