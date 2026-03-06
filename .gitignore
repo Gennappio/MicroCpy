@@ -201,3 +201,5 @@ opencellcomms_gui/GUI_results/
 
 # Legacy/duplicate directories (if present)
 microc-2.0/results/
+microc-2.0/plots/
+microc-2.0/tools/
