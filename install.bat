@@ -2,6 +2,9 @@
 REM OpenCellComms Installation Script for Windows
 REM This script sets up the complete development environment
 
+REM Always run from the directory where this script lives
+cd /d "%~dp0"
+
 echo ================================================================
 echo           OpenCellComms Installation Script
 echo ================================================================
@@ -29,14 +32,15 @@ if %ERRORLEVEL% neq 0 (
 for /f "tokens=1" %%i in ('node --version 2^>^&1') do set NODE_VERSION=%%i
 echo [OK] Node.js found: %NODE_VERSION%
 
-REM Check npm
-npm --version >nul 2>&1
+REM Check npm (must use CALL with .cmd files or the parent batch exits silently)
+call npm.cmd --version >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [X] npm not found. Please install npm 7 or higher.
+    echo [X] npm not found. Please install Node.js/npm 7 or higher.
+    echo     Download from: https://nodejs.org/
     pause
     exit /b 1
 )
-for /f "tokens=1" %%i in ('npm --version 2^>^&1') do set NPM_VERSION=%%i
+for /f "tokens=1" %%i in ('call npm.cmd --version 2^>^&1') do set NPM_VERSION=%%i
 echo [OK] npm found: %NPM_VERSION%
 
 echo.
@@ -74,7 +78,7 @@ echo Installing GUI dependencies...
 
 REM Install GUI dependencies
 cd opencellcomms_gui
-call npm install >nul 2>&1
+call npm.cmd install >nul 2>&1
 echo [OK] GUI dependencies installed
 
 cd ..

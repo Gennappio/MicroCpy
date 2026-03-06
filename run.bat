@@ -40,7 +40,7 @@ echo [OK] Backend server started
 
 REM Start React frontend in a new window
 echo [...] Starting frontend server...
-start "OpenCellComms Frontend" cmd /k "cd /d %SCRIPT_DIR%opencellcomms_gui && npm run dev"
+start "OpenCellComms Frontend" cmd /k "cd /d %SCRIPT_DIR%opencellcomms_gui && call npm.cmd run dev"
 
 REM Wait for frontend to start
 timeout /t 3 /nobreak >nul
