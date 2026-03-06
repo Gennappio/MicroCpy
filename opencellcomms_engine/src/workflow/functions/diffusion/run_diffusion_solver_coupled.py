@@ -305,6 +305,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     km_lactate = custom_params.get('KL', 1.0)
     max_atp = custom_params.get('max_atp', 30.0)
     proton_coeff = custom_params.get('proton_coefficient', 0.01)
+    glyco_oxygen_ratio = custom_params.get('glyco_oxygen_ratio', 0.5)
 
     # Get grid parameters for coordinate conversion
     cell_size_um = 20.0  # Default cell size
@@ -405,7 +406,8 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
             lactate_consumption += (vmax_oxygen * 2.0 / 6.0) * lactate_mm * oxygen_mm
 
         if glyco_atp:
-            glucose_consumption_glyco = (vmax_glucose / 6.0) * glucose_mm * max(0.1, oxygen_mm)
+            oxygen_consumption += vmax_oxygen * glyco_oxygen_ratio * oxygen_mm
+            glucose_consumption_glyco = (vmax_oxygen / 6.0) * (max_atp / 2.0) * glucose_mm
             glucose_consumption += glucose_consumption_glyco
             lactate_production += glucose_consumption_glyco * 3.0
 

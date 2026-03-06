@@ -47,9 +47,16 @@ Lac_consumption = (Vmax_O2 * 2 / 6) * MM(Lac, KL) * MM(O2, KO2)
 ### Glycolysis (glycoATP = true)
 
 ```
-Glc_consumption_glyco = (Vmax_Glc / 6) * MM(Glc, KG) * max(0.1, MM(O2, KO2))
+O2_consumption        = Vmax_O2 * the-glyco-oxygen * MM(O2, KO2)
+Glc_consumption_glyco = (Vmax_O2 / 6) * (max_atp / 2) * MM(Glc, KG)
 Lac_production        = Glc_consumption_glyco * 3
 ```
+
+> **Note:** O2 consumption and glucose uptake are computed in **separate code sections**
+> in the NetLogo model. Oxygen consumption is applied as a sink term in the diffusion
+> equation (lines 2769-2848), weighted by `the-glyco-oxygen` (default 0.5) for glycoATP
+> cells. Glucose uptake (lines 3159-3160) has **no oxygen Monod term** — this is the
+> Warburg effect: glycolytic cells consume glucose independently of oxygen availability.
 
 ## Diffusion Scheme
 
