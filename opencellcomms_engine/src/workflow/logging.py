@@ -5,7 +5,16 @@ This module provides a consistent logging interface for workflow functions
 with support for global and per-node verbosity control.
 """
 
+import sys
 from typing import Dict, Any, Optional
+
+
+def _safe_print(text: str) -> None:
+    """Print text, replacing characters that the console encoding cannot handle."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode(sys.stdout.encoding or 'utf-8', errors='replace').decode(sys.stdout.encoding or 'utf-8', errors='replace'))
 
 
 def should_log(context: Dict[str, Any], node_verbose: Optional[bool] = None) -> bool:
@@ -40,9 +49,9 @@ def log(context: Dict[str, Any], message: str,
     """
     if should_log(context, node_verbose):
         if prefix:
-            print(f"{prefix} {message}")
+            _safe_print(f"{prefix} {message}")
         else:
-            print(message)
+            _safe_print(message)
 
 
 def log_debug(context: Dict[str, Any], message: str, 
@@ -69,9 +78,9 @@ def log_always(message: str, prefix: str = "") -> None:
         prefix: Prefix for the message (e.g., "[ERROR]")
     """
     if prefix:
-        print(f"{prefix} {message}")
+        _safe_print(f"{prefix} {message}")
     else:
-        print(message)
+        _safe_print(message)
 
 
 def cli_log(context: Dict[str, Any], message: str,
@@ -92,9 +101,9 @@ def cli_log(context: Dict[str, Any], message: str,
     if not context.get('running_from_gui', False):
         if should_log(context, node_verbose):
             if prefix:
-                print(f"{prefix} {message}")
+                _safe_print(f"{prefix} {message}")
             else:
-                print(message)
+                _safe_print(message)
 
 
 def gui_log(context: Dict[str, Any], message: str,
@@ -115,7 +124,7 @@ def gui_log(context: Dict[str, Any], message: str,
     if context.get('running_from_gui', False):
         if should_log(context, node_verbose):
             if prefix:
-                print(f"{prefix} {message}")
+                _safe_print(f"{prefix} {message}")
             else:
-                print(message)
+                _safe_print(message)
 
