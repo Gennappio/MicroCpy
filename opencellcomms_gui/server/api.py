@@ -23,6 +23,24 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
+IS_WINDOWS = sys.platform == 'win32'
+
+
+def _kill_process_tree(pid, force=False):
+    """Kill a process and all its children. Works on Windows, macOS, and Linux."""
+    if IS_WINDOWS:
+        # taskkill /T kills the entire process tree, /F forces it
+        subprocess.run(
+            ['taskkill', '/T', '/F', '/PID', str(pid)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    else:
+        sig = signal.SIGKILL if force else signal.SIGTERM
+        try:
+            os.killpg(os.getpgid(pid), sig)
+        except (ProcessLookupError, OSError):
+            pass
+
 # Global state for simulation process
 simulation_process = None
 simulation_thread = None
@@ -154,17 +172,21 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
         log_queue.put("[INFO] Starting OpenCellComms simulation...\n")
 
         # Start subprocess with correct working directory
-        # start_new_session=True creates a new process group so we can kill the entire tree
-        simulation_process = subprocess.Popen(
-            cmd,
+        # Create a new process group so we can kill the entire tree
+        popen_kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
             universal_newlines=True,
-            cwd=str(engine_dir),  # Set working directory to opencellcomms_engine
-            start_new_session=True  # New session = new process group (enables os.killpg)
+            cwd=str(engine_dir),
         )
+        if IS_WINDOWS:
+            popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            popen_kwargs['start_new_session'] = True
+
+        simulation_process = subprocess.Popen(cmd, **popen_kwargs)
 
         # Persist PID for cross-refresh / cross-restart recovery
         PID_FILE.write_text(str(simulation_process.pid))
@@ -335,17 +357,14 @@ def stop_simulation():
         return jsonify({'error': 'No simulation running'}), 400
 
     try:
-        os.killpg(os.getpgid(simulation_process.pid), signal.SIGTERM)
+        _kill_process_tree(simulation_process.pid, force=False)
         simulation_process.wait(timeout=5)
         log_queue.put("[STOP] Simulation stopped by user\n")
         is_running = False
         PID_FILE.unlink(missing_ok=True)
         return jsonify({'status': 'stopped'})
     except subprocess.TimeoutExpired:
-        try:
-            os.killpg(os.getpgid(simulation_process.pid), signal.SIGKILL)
-        except (ProcessLookupError, OSError):
-            pass
+        _kill_process_tree(simulation_process.pid, force=True)
         log_queue.put("[STOP] Simulation forcefully killed\n")
         is_running = False
         PID_FILE.unlink(missing_ok=True)
@@ -378,10 +397,7 @@ def force_kill():
     if pid is None:
         return jsonify({'error': 'No process found'}), 404
 
-    try:
-        os.killpg(os.getpgid(pid), signal.SIGKILL)
-    except (ProcessLookupError, OSError):
-        pass  # Already dead
+    _kill_process_tree(pid, force=True)
 
     PID_FILE.unlink(missing_ok=True)
     is_running = False

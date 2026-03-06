@@ -5,6 +5,7 @@ Run all OpenCellComms tools and simulations via command line flags
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,9 +21,13 @@ def run_tool(tool_path, args=None):
     print("-" * 80)
     sys.stdout.flush()
 
+    # Ensure subprocess can print Unicode (e.g. Greek letters) on Windows
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
     try:
         # Stream output in real-time instead of capturing it
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, env=env)
         print("-" * 80)
         print(f"[+] {tool_path.name} completed successfully")
         return True
