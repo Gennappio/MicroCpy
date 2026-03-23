@@ -41,7 +41,8 @@ def export_vtk_checkpoint(
         population = context.get('population')
         simulator = context.get('simulator')
         config: Optional[IConfig] = context.get('config')
-        step = context.get('step', 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
         if not all([population, simulator, config]):
             print("[VTK] Error: Missing required objects in context (population, simulator, config)")

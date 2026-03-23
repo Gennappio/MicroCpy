@@ -67,7 +67,8 @@ def export_final_state(
         population: ICellPopulation = context['population']
         simulator: ISubstanceSimulator = context['simulator']
         config: IConfig = context['config']
-        step = context.get('step', 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
         # === CLEAN ARCHITECTURE: Use context paths (set by executor) ===
         if 'output_dir' in context:

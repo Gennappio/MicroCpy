@@ -136,7 +136,8 @@ def run_diffusion_solver(
     simulator: Optional[ISubstanceSimulator] = context.get('simulator')
     population: Optional[ICellPopulation] = context.get('population')  # May be None - that's OK
     config: Optional[IConfig] = context.get('config')
-    dt = context.get('dt', 0.1)
+    _clock = context.get('clock')
+    dt = _clock.dt if _clock is not None else context.get('dt', 0.1)
 
     # =========================================================================
     # VALIDATE REQUIRED CORE ITEMS

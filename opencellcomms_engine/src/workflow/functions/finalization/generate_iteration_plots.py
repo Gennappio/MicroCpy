@@ -103,10 +103,12 @@ def generate_iteration_plots(
     results          = context.get('results', {})
 
     # The executor sets loop_iteration (1-based) for every sub-workflow
-    # iteration.  Fall back to macrostep / step for legacy callers.
+    # iteration.  Fall back to clock.step for legacy callers.
     iteration = context.get('loop_iteration', 0)
     if iteration == 0:
-        iteration = context.get('macrostep', context.get('step', 0))
+        _clock = context.get('clock')
+        _clock_step = _clock.step if _clock is not None else 0
+        iteration = context.get('macrostep', _clock_step)
 
     # --- coerce string parameters from JSON --------------------------------
     plot_interval = int(plot_interval)

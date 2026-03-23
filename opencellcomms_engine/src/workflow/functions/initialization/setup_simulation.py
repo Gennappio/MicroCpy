@@ -69,8 +69,9 @@ def setup_simulation(
         plots_dir = timestamped_dir / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
 
-        # Set dt and dimensions in context so other functions can use them
-        context['dt'] = float(dt)
+        # Store dimensions in context so other functions can use them.
+        # Note: dt is intentionally NOT written as a flat key here — it lives on
+        # context['clock'] (set by configure_time_and_steps or the engine).
         context['dimensions'] = int(dimensions)
 
         # Store simulation parameters in context (for later use)

@@ -42,7 +42,8 @@ def export_csv_checkpoint(
         population = context.get('population')
         simulator = context.get('simulator')
         config: Optional[IConfig] = context.get('config')
-        step = context.get('step', 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
         if not all([population, simulator, config]):
             print("[CSV] Error: Missing required objects in context (population, simulator, config)")
@@ -125,7 +126,8 @@ def export_csv_cells(
 
         population = context.get('population')
         config: Optional[IConfig] = context.get('config')
-        step = context.get('step', 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
         if not all([population, config]):
             print("[CSV] Error: Missing required objects in context (population, config)")
@@ -189,7 +191,8 @@ def export_csv_substances(
 
         simulator = context.get('simulator')
         config: Optional[IConfig] = context.get('config')
-        step = context.get('step', 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
         if not all([simulator, config]):
             print("[CSV] Error: Missing required objects in context (simulator, config)")
@@ -265,7 +268,8 @@ def export_csv_checkpoint_conditional(
 	    """
 	    try:
 	        config: Optional[IConfig] = context.get('config')
-	        step = context.get('step', 0)
+	        _clock = context.get('clock')
+	        step = _clock.step if _clock is not None else 0
 
 	        if not config:
 	            print("[CSV] Error: Missing config in context")

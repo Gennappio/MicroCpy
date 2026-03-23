@@ -34,9 +34,9 @@ def _log_debug(stage: str, function_name: str, context: Optional[Dict[str, Any]]
     """
     base = message or f"[DEBUG WORKFLOW] stage='{stage}', function='{function_name}'"
 
-    # Include step information if available in context
-    if isinstance(context, dict) and "current_step" in context:
-        base = f"{base}, step={context['current_step']}"
+    # Include step information if available in context via clock
+    if isinstance(context, dict) and context.get('clock') is not None:
+        base = f"{base}, step={context['clock'].step}"
 
     print(base)
 
@@ -306,10 +306,11 @@ def debug_generate_image(context: Optional[Dict[str, Any]] = None, message: str 
         print(f"[DEBUG GENERATE IMAGE] Missing dependency: {e}")
         return False
 
-    # Get step info
+    # Get step info via clock
     step = 0
     if isinstance(context, dict):
-        step = context.get("current_step", 0)
+        _clock = context.get('clock')
+        step = _clock.step if _clock is not None else 0
 
     # Generate timestamp - MUST be fresh on each call
     now = datetime.datetime.now()
