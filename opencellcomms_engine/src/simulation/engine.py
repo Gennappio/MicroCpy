@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 
 from .orchestrator import TimescaleOrchestrator
+from .clock import SimulationClock
 
 
 @dataclass
@@ -139,26 +140,28 @@ class SimulationEngine:
             and len(macrostep_stage.get_enabled_functions_in_order()) > 0
         )
 
+        # Create SimulationClock ONCE — mutated in-place each iteration.
+        clock = SimulationClock(dt=dt, num_steps=num_steps)
+
+        # Build execution context ONCE and reuse it throughout the simulation.
+        # Functions read step/time/dt via context['clock']; the engine updates
+        # clock.step in-place rather than rebuilding the context every iteration.
+        context = self._build_context(clock=clock)
+        context["_executor"] = self.workflow_executor
+
         # Execute initialization stage once at the beginning (unless already done externally)
         if not self.skip_workflow_init and self.workflow.get_stage("initialization"):
             print(f"[WORKFLOW] Executing initialization stage...")
-            context = self._build_context(step=0, dt=dt)
-            # Expose the workflow executor in the context so initialization
-            # functions can, if needed, schedule additional workflow stages
-            # or access executor utilities.
-            context["_executor"] = self.workflow_executor
             self.workflow_executor.execute_initialization(context)
 
         for step in range(num_steps):
+            # Advance clock in-place — no context rebuild needed.
+            clock.step = step
+            # Refresh substance concentrations (fast accessor, not a full rebuild).
+            context['substance_concentrations'] = self.simulator.get_substance_concentrations()
+
             # Decide which processes to update
             updates = self.orchestrator.step(step)
-
-            # Build execution context for workflow functions
-            context = self._build_context(step=step, dt=dt)
-            # Provide the workflow executor in the context so macrostep utility
-            # nodes (intracellular_step, microenvironment_step, intercellular_step)
-            # can call back into the executor to run entire stages when used.
-            context["_executor"] = self.workflow_executor
 
             if has_macro:
                 # Use macrostep stage - user has full control over execution order.
@@ -172,35 +175,24 @@ class SimulationEngine:
 
                 # Intracellular stage (fast)
                 if updates["intracellular"]:
-                    # Execute ONLY workflow intracellular stage
-                    # User has full control over what happens
                     stage = self.workflow.get_stage("intracellular")
                     if stage and stage.enabled:
                         self.workflow_executor.execute_intracellular(context)
 
                 # Diffusion/Microenvironment stage (medium)
                 if updates["diffusion"]:
-                    # Execute ONLY workflow diffusion/microenvironment stage
-                    # User has full control over what happens
-                    # Try microenvironment first (preferred name), fall back to diffusion (legacy)
                     stage = self.workflow.get_stage("microenvironment") or self.workflow.get_stage("diffusion")
                     if stage and stage.enabled:
                         self.workflow_executor.execute_diffusion(context)
 
                 # Intercellular stage (slow)
                 if updates["intercellular"]:
-                    # Execute ONLY workflow intercellular stage
-                    # User has full control over what happens
                     stage = self.workflow.get_stage("intercellular")
                     if stage and stage.enabled:
                         self.workflow_executor.execute_intercellular(context)
             else:
                 # Macrostep stage exists but is disabled or has no enabled
-                # functions. In the new semantics, intracellular,
-                # microenvironment and intercellular stages are *only* allowed
-                # to run when orchestrated via macrostep. Therefore, when
-                # macrostep is present but disabled/empty, we deliberately
-                # skip these stages entirely here.
+                # functions — skip I/M/I entirely.
                 if step == 0 and verbose:
                     print(
                         "[WORKFLOW] Macrostep stage exists but is disabled or empty - "
@@ -209,29 +201,20 @@ class SimulationEngine:
                     )
 
             # Collect data for standard finalization functions (plots, summaries)
-            # This ensures that standard workflow functions like generate_summary_plots work
             if step % self.config.output.save_data_interval == 0:
-                current_time = step * dt
-                results.time.append(current_time)
+                results.time.append(clock.time)
                 results.substance_stats.append(self.simulator.get_summary_statistics())
                 results.cell_counts.append(self.population.get_population_statistics())
 
-            # NOTE: Export of cell states and substance fields (CSV/VTK) is now handled
-            # by workflow functions, not hardcoded here. This allows full user control
-            # over when and how exports happen via the workflow definition.
-
             if verbose and (step + 1) % max(1, num_steps // 10) == 0:
-                # Lightweight progress
                 print(f"[ENGINE] Step {step + 1}/{num_steps} ({(step + 1) / num_steps * 100:.1f}%)")
 
         # Execute finalization stage once at the end
         if self.workflow.get_stage("finalization"):
             print(f"[WORKFLOW] Executing finalization stage...")
-            context = self._build_context(step=num_steps, dt=dt)
-            # Expose the executor here as well for any advanced finalization
-            # functions that might want to inspect or trigger workflow stages.
-            context["_executor"] = self.workflow_executor
-            # Add results to context for finalization functions (convert to dict for compatibility)
+            # Advance clock to num_steps (post-loop position) for finalization.
+            clock.step = num_steps
+            # Add results to context for finalization functions.
             context["results"] = {
                 "time": results.time,
                 "substance_stats": results.substance_stats,
@@ -243,16 +226,18 @@ class SimulationEngine:
 
         return results
 
-    def _build_context(self, step: int, dt: float) -> Dict[str, Any]:
+    def _build_context(self, clock: SimulationClock) -> Dict[str, Any]:
         """
         Build execution context for workflow functions.
         Provides all the data and helper functions that workflow functions might need.
+
+        The clock object is placed in context['clock'] and mutated in-place by
+        the engine each iteration — no need to rebuild the context dict per step.
         """
         return {
-            # Simulation state
-            'step': step,
-            'dt': dt,
-            'time': step * dt,
+            # Clock — single source of truth for step/time/dt.
+            # Read clock.step, clock.time, clock.dt in workflow functions.
+            'clock': clock,
 
             # Core objects (full access for maximum flexibility)
             'population': self.population,
@@ -260,13 +245,13 @@ class SimulationEngine:
             'gene_network': self.gene_network,
             'config': self.config,
 
-            # Convenience data
+            # Convenience data (refreshed in-place each iteration by the engine loop)
             'substance_concentrations': self.simulator.get_substance_concentrations(),
 
             # Helper functions for common operations
             'helpers': {
                 # Intracellular helpers
-                'update_intracellular': lambda: self.population.update_intracellular_processes(dt),
+                'update_intracellular': lambda: self.population.update_intracellular_processes(clock.dt),
                 'update_gene_networks': lambda: self.population.update_gene_networks(
                     self.simulator.get_substance_concentrations()
                 ),

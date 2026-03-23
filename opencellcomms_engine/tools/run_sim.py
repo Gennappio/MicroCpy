@@ -1508,6 +1508,10 @@ def run_workflow_mode(args):
             for macro_step in range(num_macro_steps):
                 if num_macro_steps > 1:
                     print(f"[WORKFLOW] Macrostep iteration {macro_step + 1}/{num_macro_steps}")
+                # Keep clock.step in sync if a clock is present (workflow-only mode).
+                _clock = context.get('clock')
+                if _clock is not None:
+                    _clock.step = macro_step
                 context = executor.execute_macrostep(context)
 
             # Execute finalization stage after macrostep

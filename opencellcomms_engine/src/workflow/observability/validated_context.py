@@ -30,11 +30,13 @@ WRITE_POLICY_MUTABLE = "mutable"
 # These are keys provided by the simulation engine that should be protected
 DEFAULT_CORE_KEYS: Dict[str, str] = {
     # Write-once keys (initialized once, then protected)
-    # These can be set by setup_simulation or by SimulationEngine, but not changed after
-    'step': WRITE_POLICY_WRITE_ONCE,
-    'dt': WRITE_POLICY_WRITE_ONCE,
-    'time': WRITE_POLICY_WRITE_ONCE,
-    'current_step': WRITE_POLICY_WRITE_ONCE,
+    # These can be set by setup_simulation or by SimulationEngine, but not changed after.
+    #
+    # NOTE: 'step', 'dt', 'time', 'current_step' have been removed.
+    # Time/step state now lives on context['clock'] (a SimulationClock object).
+    # Read clock.step, clock.time, clock.dt from workflow functions.
+    # The engine mutates clock.step in-place — the key binding 'clock' is protected.
+    'clock': WRITE_POLICY_WRITE_ONCE,
     'population': WRITE_POLICY_WRITE_ONCE,
     'simulator': WRITE_POLICY_WRITE_ONCE,
     'gene_network': WRITE_POLICY_WRITE_ONCE,

@@ -392,7 +392,17 @@ def configure_time_and_steps(
 
         total_steps = macrosteps_int * steps_per_macro_int
 
-        # Store in context so run_workflow_mode / SimulationEngine can see them
+        # Create or update SimulationClock so all functions have a single
+        # authoritative source for dt / step / time in workflow-only mode.
+        from src.simulation.clock import SimulationClock
+        if 'clock' not in context:
+            context['clock'] = SimulationClock(dt=dt_value, num_steps=total_steps)
+        else:
+            _clock = context['clock']
+            _clock.dt = dt_value
+            _clock.num_steps = total_steps
+
+        # Also store flat keys so legacy code and run_workflow_mode can find them.
         context["dt"] = dt_value
         context["macrosteps"] = macrosteps_int
         context["steps_per_macrostep"] = steps_per_macro_int

@@ -766,7 +766,7 @@ class WorkflowExecutor:
                 subworkflow_name=subworkflow_name,
                 before_context_version=before_version,
                 call_path=call_path,
-                step_index=context.get('current_step'),
+                step_index=context['clock'].step if context.get('clock') is not None else None,
             )
 
         # Execute function
