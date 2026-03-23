@@ -128,3 +128,117 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 5. Restart the backend server
 6. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
 7. if needed look for the CREATING_FUNCTIONS.md in `MicroCpy/docs/CREATING_FUNCTIONS.md`
+
+---
+
+## Biologist's Guide: Writing Simulation Code
+
+This section is for biologists and non-engineers. You do not need to understand Python architecture to add a new biological rule to a simulation. Use the `/new-function` slash command in Claude Code and answer three plain-English questions — Claude will generate and place the code for you.
+
+### The `context` dictionary — what's available inside any function
+
+Every function receives a single `context` dict. Here are the keys you will need:
+
+| What you want | Code | Notes |
+|---|---|---|
+| Loop over all cells | `for cell in context['population'].cells:` | `cell.id`, `cell.position`, `cell.state.phenotype` |
+| Cell position (x, y or x, y, z) | `x, y = cell.position[0], cell.position[1]` | 2D sim; add `z = cell.position[2]` for 3D |
+| Substance concentration at a cell | `context['simulator'].get_substance_concentration('oxygen', x, y)` | Returns float in simulation units |
+| Mark a cell as dying | `cell.state.phenotype = 'apoptotic'` | Also: `'necrotic'`, `'growth_arrested'`, `'proliferating'` |
+| Read a gene node state | `context['gene_networks'][cell.id].nodes['GeneName'].current_state` | Returns `True` (ON) or `False` (OFF) |
+| Set a gene node state | `context['gene_networks'][cell.id].nodes['GeneName'].current_state = True` | |
+| Current simulation step | `context['current_step']` | Integer |
+| Time step size (hours) | `context['dt']` | Float |
+| Substance→gene input mappings | `context['associations']` | Dict |
+| Store results | `context['results']['my_key'] = value` | Persists across steps |
+
+### Biological patterns — copy-paste recipes
+
+**Pattern 1: Environmental trigger → cell death**
+```python
+# Kill cells when oxygen drops below a threshold
+for cell in context['population'].cells:
+    x, y = cell.position[0], cell.position[1]
+    oxygen = context['simulator'].get_substance_concentration('oxygen', x, y)
+    if oxygen < necrosis_threshold:
+        cell.state.phenotype = 'necrotic'
+```
+
+**Pattern 2: Gene network output → proliferation decision**
+```python
+# A cell divides only if the 'Proliferation' gene is ON
+for cell in context['population'].cells:
+    gn = context['gene_networks'].get(cell.id)
+    if gn and gn.nodes['Proliferation'].current_state:
+        cell.state.phenotype = 'proliferating'
+```
+
+**Pattern 3: Substance concentration → boolean gene input**
+```python
+# Convert analog oxygen level to a binary gene input
+for cell in context['population'].cells:
+    x, y = cell.position[0], cell.position[1]
+    oxygen = context['simulator'].get_substance_concentration('oxygen', x, y)
+    gn = context['gene_networks'].get(cell.id)
+    if gn and 'Oxygen' in gn.nodes:
+        gn.nodes['Oxygen'].current_state = (oxygen > oxygen_threshold)
+```
+
+**Pattern 4: Population census**
+```python
+# Count cells by phenotype and store
+counts = {}
+for cell in context['population'].cells:
+    ph = cell.state.phenotype
+    counts[ph] = counts.get(ph, 0) + 1
+context['results']['phenotype_counts'] = counts
+```
+
+### Biological terms → code concepts
+
+| Biologist says | Code means |
+|---|---|
+| "cell dies" | `cell.state.phenotype = 'apoptotic'` (programmed) or `'necrotic'` (stress) |
+| "cell divides" | `cell.state.phenotype = 'proliferating'` (triggers `update_cell_division`) |
+| "cell stops growing" | `cell.state.phenotype = 'growth_arrested'` |
+| "oxygen gradient / oxygen at position" | `context['simulator'].get_substance_concentration('oxygen', x, y)` |
+| "glucose level" | `context['simulator'].get_substance_concentration('glucose', x, y)` |
+| "gene is ON / expressed" | `network.nodes['GeneName'].current_state = True` |
+| "gene is OFF / silenced" | `network.nodes['GeneName'].current_state = False` |
+| "each cell, every step" | `for cell in context['population'].cells:` inside any intracellular function |
+| "substance diffuses" | handled by `run_diffusion_solver_coupled` in the diffusion stage — no code needed |
+| "initial condition" | a function in the `initialization` stage (runs once at t=0) |
+
+### Stage selection guide
+
+| When does this rule fire? | Use stage |
+|---|---|
+| Once at the start of the simulation | `initialization` |
+| Every step, inside each cell (gene networks, metabolism) | `intracellular` |
+| Every step, between cells (division, death, migration) | `intercellular` |
+| Every step, chemical diffusion | `diffusion` |
+| At the end of the simulation (plots, export) | `finalization` |
+
+### Full "add a function" recipe (mechanical steps)
+
+```
+1. Create:  opencellcomms_engine/src/workflow/functions/<category>/<my_function>.py
+            Copy _TEMPLATE.py as starting point; fill in decorator fields.
+
+2. Register in category:
+            opencellcomms_engine/src/workflow/functions/<category>/__init__.py
+            Add:  from .<my_function> import <my_function>
+                  and add '<my_function>' to __all__
+
+3. Register in engine:
+            opencellcomms_engine/src/workflow/registry.py
+            Add:  import src.workflow.functions.<category>.<my_function>
+            (inside get_default_registry(), after similar imports)
+
+4. Enable in workflow JSON:
+            In the target workflow JSON, inside the appropriate subworkflow's
+            "nodes" array, add a node with "function": "<my_function>", "enabled": true.
+
+5. Restart backend:  ./run.sh   (or Ctrl+C then ./run.sh)
+   The function now appears in the GUI function palette.
+```
