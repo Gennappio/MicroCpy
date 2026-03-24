@@ -48,10 +48,8 @@ from src.workflow.functions.intercellular import (
     mark_proliferating_cells,
 )
 from src.workflow.functions.finalization import (
-    generate_initial_plots,
-    generate_summary_plots,
-    generate_iteration_plots,
-    generate_atp_plots,
+    collect_statistics,
+    export_final_state,
 )
 
 from src.workflow.functions.output.export_csv import (
