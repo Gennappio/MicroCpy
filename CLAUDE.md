@@ -107,10 +107,10 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Key References
 
-- `MicroCpy/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
+- `docs/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
 - `MicroCpy/opencellcomms_engine/README.md` — Engine overview
-- `MicroCpy/opencellcomms_engine/GETTING_STARTED.md` — Tutorial
-- `MicroCpy/opencellcomms_engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
+- `docs/engine/GETTING_STARTED.md` — Tutorial
+- `docs/engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
 
 ## Workflow JSON & GUI Readability
 
