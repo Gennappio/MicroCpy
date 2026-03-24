@@ -1,4 +1,4 @@
-# /add-to-workflow — Add an existing function to a workflow JSON
+# /add-to-workflow — Add an existing function to an OpenCellComms workflow JSON
 
 You are helping a biologist enable a simulation function inside a workflow JSON file. They may not know the JSON format. Your job is to find the right place in the JSON and insert the function node correctly.
 
@@ -6,7 +6,7 @@ You are helping a biologist enable a simulation function inside a workflow JSON 
 
 Ask the user:
 1. **Which function do you want to add?** (e.g., "mark_hypoxic_cells", or describe it in plain English and you will look it up)
-2. **Which workflow JSON file?** Default: `opencellcomms_engine/tests/jayatilake_experiment/v7_microc_workflow.json`
+2. **Which workflow JSON file?** Default: `opencellcomms_adapters/jayatilake/workflows/v7_microc_workflow.json`
 3. **Which stage/subworkflow should it run in?** (e.g., "Intercellular", "Intracellular", "Initialization")
 
 If the user describes a function by name that you are not sure exists, scan the registry by reading `src/workflow/registry.py` and looking at the imports to find the actual Python function name.

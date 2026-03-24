@@ -120,6 +120,8 @@ def <function_name>(
 
 After showing the user the generated code and getting their approval (or if they say "go ahead"):
 
+**For generic (reusable) functions:**
+
 1. **Write the file** to:
    `opencellcomms_engine/src/workflow/functions/<category>/<function_name>.py`
 
@@ -133,6 +135,15 @@ After showing the user the generated code and getting their approval (or if they
    Inside `get_default_registry()`, after the block of similar category imports, add:
    `import src.workflow.functions.<category>.<function_name>`
 
+**For experiment-specific functions** (hardcoded gene names, thresholds, model-specific logic):
+
+1. **Write the file** to:
+   `opencellcomms_adapters/<experiment>/functions/<category>/<function_name>.py`
+
+2. **Add the import** to the adapter's register module:
+   `opencellcomms_adapters/<experiment>/register.py`
+   Add: `from opencellcomms_adapters.<experiment>.functions.<category>.<function_name> import <function_name>`
+
 4. **Tell the user** the function is ready and give them two next steps:
    - To add it to a workflow: type `/add-to-workflow`
    - To verify registration: run from `opencellcomms_engine/`:
@@ -143,7 +154,7 @@ After showing the user the generated code and getting their approval (or if they
 ## Step 5 — Optionally add to a workflow JSON
 
 If the user wants to add the function to a specific workflow JSON right away, ask:
-- "Which workflow JSON file should I add this to?" (default: `opencellcomms_engine/tests/jayatilake_experiment/v7_microc_workflow.json`)
+- "Which workflow JSON file should I add this to?" (default: `opencellcomms_adapters/jayatilake/workflows/v7_microc_workflow.json`)
 - "Which subworkflow stage?" (name of the subworkflow, e.g., "Intracellular", "Intercellular")
 
 Then read the workflow JSON, find the correct subworkflow's `"nodes"` array, and insert the new node. Use `/add-to-workflow` logic for the insertion.

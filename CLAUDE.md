@@ -121,6 +121,8 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Adding a new function
 
+**Generic (reusable) functions** go in the engine:
+
 1. Create a new file in `opencellcomms_engine/src/workflow/functions/<category>/`
 2. Write the function and decorator
 3. Import the function in `opencellcomms_engine/src/workflow/functions/<category>/__init__.py`
@@ -128,6 +130,8 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 5. Restart the backend server
 6. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
 7. if needed look for the CREATING_FUNCTIONS.md in `MicroCpy/docs/CREATING_FUNCTIONS.md`
+
+**Experiment-specific functions** (hardcoded gene names, substance thresholds, model-specific logic) go in `opencellcomms_adapters/<experiment>/functions/<category>/`. Add the import to `opencellcomms_adapters/<experiment>/register.py` — the engine loads these automatically via `registry.py`.
 
 ---
 
@@ -222,6 +226,8 @@ context['results']['phenotype_counts'] = counts
 ### Full "add a function" recipe (mechanical steps)
 
 ```
+For GENERIC functions (reusable across experiments):
+
 1. Create:  opencellcomms_engine/src/workflow/functions/<category>/<my_function>.py
             Copy _TEMPLATE.py as starting point; fill in decorator fields.
 
@@ -234,6 +240,14 @@ context['results']['phenotype_counts'] = counts
             opencellcomms_engine/src/workflow/registry.py
             Add:  import src.workflow.functions.<category>.<my_function>
             (inside get_default_registry(), after similar imports)
+
+For EXPERIMENT-SPECIFIC functions (hardcoded names/thresholds):
+
+1. Create:  opencellcomms_adapters/<experiment>/functions/<category>/<my_function>.py
+2. Import:  opencellcomms_adapters/<experiment>/register.py
+            Add:  from opencellcomms_adapters.<experiment>.functions.<category>.<my_function> import <my_function>
+
+Then for both:
 
 4. Enable in workflow JSON:
             In the target workflow JSON, inside the appropriate subworkflow's
