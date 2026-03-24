@@ -133,28 +133,19 @@ def get_default_registry() -> FunctionRegistry:
 
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
-    import src.workflow.functions.intracellular.run_maboss_step
 
-    # Import intracellular functions
-    import src.workflow.functions.intracellular.update_gene_networks
-    import src.workflow.functions.intracellular.update_gene_networks_v2
-
-    # Import gene network functions (1 file per function)
+    # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks
-    import src.workflow.functions.gene_network.initialize_hierarchical_gene_networks
     import src.workflow.functions.gene_network.set_gene_network_inputs
     import src.workflow.functions.gene_network.apply_associations_to_inputs
-    import src.workflow.functions.gene_network.update_gene_networks_standalone
-    import src.workflow.functions.gene_network.propagate_and_update_gene_networks
     import src.workflow.functions.gene_network.print_gene_network_states
 
-    # Import intercellular functions (phenotype marking)
-    import src.workflow.functions.intercellular.mark_necrotic_cells
-    import src.workflow.functions.intercellular.mark_growth_arrest_cells
-    import src.workflow.functions.intercellular.mark_apoptotic_cells
-    import src.workflow.functions.intercellular.mark_proliferating_cells
-    import src.workflow.functions.intercellular.force_proliferation
+    # Import adapter functions (experiment-specific)
+    try:
+        import opencellcomms_adapters.jayatilake.register  # noqa: F401
+    except ImportError:
+        pass  # Adapters not installed — engine works standalone
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
