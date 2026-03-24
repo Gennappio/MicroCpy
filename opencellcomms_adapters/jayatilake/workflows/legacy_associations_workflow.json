@@ -1,0 +1,250 @@
+{
+  "version": "1.0",
+  "name": "Gene Network with Associations Workflow",
+  "description": "Gene network testing with mock substances and associations. Substances control gene input nodes via thresholds.",
+  "metadata": {
+    "author": "OpenCellComms Team",
+    "experiment": "Gene Network with Associations",
+    "created": "2026-01-06",
+    "notes": "Set substance concentrations to control gene inputs. If concentration > threshold, gene input is ON."
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "description": "Initialize population, substances, associations, and gene networks",
+      "functions": [
+        {
+          "id": "init_population",
+          "function_name": "initialize_population",
+          "enabled": true,
+          "description": "Create N cells",
+          "parameters": {},
+          "parameter_nodes": ["param_num_cells"]
+        },
+        {
+          "id": "add_oxygen",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Oxygen (threshold 0.022 mM for Oxygen_supply)",
+          "parameters": {},
+          "parameter_nodes": ["param_oxygen"]
+        },
+        {
+          "id": "assoc_oxygen",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_oxygen"]
+        },
+        {
+          "id": "add_glucose",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Glucose (threshold 4.0 mM for Glucose_supply)",
+          "parameters": {},
+          "parameter_nodes": ["param_glucose"]
+        },
+        {
+          "id": "assoc_glucose",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_glucose"]
+        },
+        {
+          "id": "add_lactate",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Lactate (threshold 1.5 mM for MCT1_stimulus)",
+          "parameters": {},
+          "parameter_nodes": ["param_lactate"]
+        },
+        {
+          "id": "assoc_lactate",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_lactate"]
+        },
+        {
+          "id": "add_fgf",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "FGF (threshold 1e-6 mM for FGFR_stimulus)",
+          "parameters": {},
+          "parameter_nodes": ["param_fgf"]
+        },
+        {
+          "id": "assoc_fgf",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_fgf"]
+        },
+        {
+          "id": "add_tgfa",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "TGFA (threshold 1e-6 mM for EGFR_stimulus)",
+          "parameters": {},
+          "parameter_nodes": ["param_tgfa"]
+        },
+        {
+          "id": "assoc_tgfa",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_tgfa"]
+        },
+        {
+          "id": "add_hgf",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "HGF (threshold 1e-6 mM for cMET_stimulus)",
+          "parameters": {},
+          "parameter_nodes": ["param_hgf"]
+        },
+        {
+          "id": "assoc_hgf",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_hgf"]
+        },
+        {
+          "id": "add_gi",
+          "function_name": "add_substance",
+          "enabled": true,
+          "description": "Growth Inhibitor (threshold 5e-5 mM for Growth_Inhibitor)",
+          "parameters": {},
+          "parameter_nodes": ["param_gi"]
+        },
+        {
+          "id": "assoc_gi",
+          "function_name": "add_association",
+          "enabled": true,
+          "description": "",
+          "parameters": {},
+          "parameter_nodes": ["param_assoc_gi"]
+        },
+        {
+          "id": "init_gene_networks",
+          "function_name": "initialize_gene_networks",
+          "enabled": true,
+          "description": "Attach gene networks to all cells",
+          "parameters": {},
+          "parameter_nodes": ["param_bnd_file", "param_random_init"]
+        },
+        {
+          "id": "apply_associations",
+          "function_name": "apply_associations_to_inputs",
+          "enabled": true,
+          "description": "Set gene input states based on substance concentrations and thresholds",
+          "parameters": {},
+          "parameter_nodes": []
+        }
+      ],
+      "execution_order": [
+        "init_population",
+        "add_oxygen", "assoc_oxygen",
+        "add_glucose", "assoc_glucose",
+        "add_lactate", "assoc_lactate",
+        "add_fgf", "assoc_fgf",
+        "add_tgfa", "assoc_tgfa",
+        "add_hgf", "assoc_hgf",
+        "add_gi", "assoc_gi",
+        "init_gene_networks",
+        "apply_associations"
+      ],
+      "parameters": [
+        {"id": "param_num_cells", "label": "Number of Cells", "parameters": {"num_cells": 100}},
+
+        {"id": "param_oxygen", "label": "Oxygen", "parameters": {"substance_name": "Oxygen", "concentration": 0}},
+        {"id": "param_assoc_oxygen", "label": "Oxygen -> Oxygen_supply", "parameters": {"substance_name": "Oxygen", "gene_input": "Oxygen_supply", "threshold": 0.022}},
+
+        {"id": "param_glucose", "label": "Glucose", "parameters": {"substance_name": "Glucose", "concentration": 0}},
+        {"id": "param_assoc_glucose", "label": "Glucose -> Glucose_supply", "parameters": {"substance_name": "Glucose", "gene_input": "Glucose_supply", "threshold": 4.0}},
+
+        {"id": "param_lactate", "label": "Lactate", "parameters": {"substance_name": "Lactate", "concentration": 0}},
+        {"id": "param_assoc_lactate", "label": "Lactate -> MCT1_stimulus", "parameters": {"substance_name": "Lactate", "gene_input": "MCT1_stimulus", "threshold": 1.5}},
+
+        {"id": "param_fgf", "label": "FGF", "parameters": {"substance_name": "FGF", "concentration": 0}},
+        {"id": "param_assoc_fgf", "label": "FGF -> FGFR_stimulus", "parameters": {"substance_name": "FGF", "gene_input": "FGFR_stimulus", "threshold": 1.0e-6}},
+
+        {"id": "param_tgfa", "label": "TGFA", "parameters": {"substance_name": "TGFA", "concentration": 0}},
+        {"id": "param_assoc_tgfa", "label": "TGFA -> EGFR_stimulus", "parameters": {"substance_name": "TGFA", "gene_input": "EGFR_stimulus", "threshold": 1.0e-6}},
+
+        {"id": "param_hgf", "label": "HGF", "parameters": {"substance_name": "HGF", "concentration": 0}},
+        {"id": "param_assoc_hgf", "label": "HGF -> cMET_stimulus", "parameters": {"substance_name": "HGF", "gene_input": "cMET_stimulus", "threshold": 1.0e-6}},
+
+        {"id": "param_gi", "label": "Growth Inhibitor", "parameters": {"substance_name": "GI", "concentration": 0}},
+        {"id": "param_assoc_gi", "label": "GI -> Growth_Inhibitor", "parameters": {"substance_name": "GI", "gene_input": "Growth_Inhibitor", "threshold": 5.0e-5}},
+
+        {"id": "param_bnd_file", "label": "BND File Path", "parameters": {"bnd_file": "jaya.bnd"}},
+        {"id": "param_random_init", "label": "Random Initialization", "parameters": {"random_initialization": true}}
+      ]
+    },
+    "intracellular": {
+      "enabled": true,
+      "description": "Update gene networks (propagate signals)",
+      "functions": [
+        {
+          "id": "update_gene_networks_node",
+          "function_name": "update_gene_networks_standalone",
+          "enabled": true,
+          "description": "Propagate gene network for N steps",
+          "parameters": {},
+          "parameter_nodes": ["param_propagation_steps"]
+        }
+      ],
+      "execution_order": ["update_gene_networks_node"],
+      "parameters": [
+        {"id": "param_propagation_steps", "label": "Propagation Steps", "parameters": {"propagation_steps": 500}}
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "description": "Run intracellular step",
+      "steps": 1,
+      "functions": [
+        {
+          "id": "intracellular_step_node",
+          "function_name": "intracellular_step",
+          "enabled": true,
+          "description": "Execute intracellular stage",
+          "parameters": {},
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "execution_order": ["intracellular_step_node"],
+      "parameters": []
+    },
+    "finalization": {
+      "enabled": true,
+      "description": "Print results",
+      "functions": [
+        {
+          "id": "print_results",
+          "function_name": "print_gene_network_states",
+          "enabled": true,
+          "description": "Print gene network statistics",
+          "parameters": {},
+          "parameter_nodes": ["param_show_per_cell"]
+        }
+      ],
+      "execution_order": ["print_results"],
+      "parameters": [
+        {"id": "param_show_per_cell", "label": "Show Per-Cell Results", "parameters": {"show_per_cell": false}}
+      ]
+    }
+  },
+  "parameters": []
+}
+
