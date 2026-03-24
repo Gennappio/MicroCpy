@@ -738,7 +738,7 @@
           "function_file": "",
           "parameters": {
             "enable_gene_network": true,
-            "custom_functions_module": "tests/jayatilake_experiment/jayatilake_experiment_cell_functions.py"
+            "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
           },
           "enabled": true,
           "position": {
@@ -774,7 +774,7 @@
           "id": "param_checkpoint_file",
           "label": "Checkpoint File",
           "parameters": {
-            "file_path": "tests/jayatilake_experiment/initial_cells_1000_center_1500.csv"
+            "file_path": "../data/initial_cells_1000_center_1500.csv"
           },
           "position": {
             "x": -300,
@@ -808,7 +808,7 @@
           "function_name": "initialize_netlogo_gene_networks",
           "function_file": "",
           "parameters": {
-            "bnd_file": "tests/jayatilake_experiment/jaya_microc.bnd",
+            "bnd_file": "../data/jaya_microc.bnd",
             "random_initialization": true
           },
           "enabled": true,
