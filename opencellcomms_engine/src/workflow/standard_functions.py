@@ -32,7 +32,6 @@ from src.workflow.functions.initialization import (
 )
 from src.workflow.functions.intracellular import (
     update_metabolism,
-    update_gene_networks,
 )
 from src.workflow.functions.diffusion import (
     run_diffusion_solver,
