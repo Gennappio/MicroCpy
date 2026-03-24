@@ -1,0 +1,8 @@
+# cell_size_um=20.0, domain_size_um=200.0, description="Simple cell fate demo with 5 cells"
+x,y,phenotype,gene_DNA_damage,gene_p53,gene_Apoptosis,gene_Proliferation,gene_Survival
+5,5,Proliferation,false,false,false,true,true
+4,5,Proliferation,false,false,false,true,true
+6,5,Proliferation,false,false,false,true,true
+5,4,Proliferation,false,false,false,true,true
+5,6,Proliferation,false,false,false,true,true
+
