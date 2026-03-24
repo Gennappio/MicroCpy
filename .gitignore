@@ -200,6 +200,10 @@ opencellcomms_gui/results/
 opencellcomms_gui/GUI_results/
 
 # Legacy/duplicate directories (if present)
-microc-2.0/results/
-microc-2.0/plots/
-microc-2.0/tools/
+microc-2.0/
+
+# Analysis output directories
+confusion_plots/
+my_plots/
+pairwise_plots/
+results*.json

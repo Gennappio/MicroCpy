@@ -54,23 +54,6 @@ from src.workflow.functions.finalization import (
     generate_atp_plots,
 )
 
-from src.workflow.functions.debug.debug_dummy_functions import (
-    debug_initialization_1,
-    debug_initialization_2,
-    debug_initialization_3,
-    debug_intracellular_1,
-    debug_intracellular_2,
-    debug_intracellular_3,
-    debug_microenvironment_1,
-    debug_microenvironment_2,
-    debug_microenvironment_3,
-    debug_intercellular_1,
-    debug_intercellular_2,
-    debug_intercellular_3,
-    debug_finalization_1,
-    debug_finalization_2,
-    debug_finalization_3,
-)
 from src.workflow.functions.output.export_csv import (
     export_csv_checkpoint,
     export_csv_checkpoint_conditional,

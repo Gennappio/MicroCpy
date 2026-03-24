@@ -1,9 +1,0 @@
-Add logic state synchronization to set_gene_network_inputs
-
-- After setting input node states, synchronize all non-input nodes with their boolean logic rules
-- Ensures network starts in consistent state where all nodes match their expressions given current inputs
-- Fixes issue where fate nodes (Apoptosis, Proliferation, Growth_Arrest, Necrosis) were stuck at 0% ON
-- Replicates initialize_logic_states() functionality from benchmark scripts
-- Evaluates each node's update function and updates state if inconsistent
-- Tracks and reports number of nodes synchronized per cell
-
