@@ -41,10 +41,6 @@ from src.workflow.functions.diffusion import (
 from src.workflow.functions.intercellular import (
     update_cell_division,
     update_cell_migration,
-    mark_necrotic_cells,
-    mark_growth_arrest_cells,
-    mark_apoptotic_cells,
-    mark_proliferating_cells,
 )
 from src.workflow.functions.finalization import (
     collect_statistics,
