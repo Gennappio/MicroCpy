@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Tuple, Union
 import numpy as np
-from fipy import Grid2D, Grid3D
+try:
+    from fipy import Grid2D, Grid3D
+    FIPY_AVAILABLE = True
+except ImportError:
+    FIPY_AVAILABLE = False
 
 from config.config import DomainConfig
 from core.units import Length, UnitValidator
@@ -15,6 +19,8 @@ class MeshManager(IMeshManager):
     """Manages FiPy mesh with bulletproof unit handling"""
 
     def __init__(self, config: DomainConfig, verbose: bool = True):
+        if not FIPY_AVAILABLE:
+            raise ImportError("fipy is required for diffusion. Install with: pip install fipy")
         self.config = config
         self.verbose = verbose
         self._validate_config()

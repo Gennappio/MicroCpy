@@ -70,8 +70,11 @@ visualization = [
     "mayavi>=4.7.0",
     "vtk>=9.0.0",
 ]
+diffusion = [
+    "fipy>=3.4.0",
+]
 all = [
-    "microc[dev,docs,jupyter,performance,visualization]",
+    "microc[dev,docs,jupyter,performance,visualization,diffusion]",
 ]
 
 [project.scripts]

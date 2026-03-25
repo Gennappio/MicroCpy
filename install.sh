@@ -90,6 +90,21 @@ print_status "Flask server dependencies installed"
 cd ..
 
 echo ""
+echo "Installing adapter dependencies..."
+
+for req_file in opencellcomms_adapters/*/requirements.txt; do
+    if [ -f "$req_file" ]; then
+        adapter_name=$(basename "$(dirname "$req_file")")
+        echo -n "  $adapter_name adapter... "
+        if pip install -r "$req_file" > /dev/null 2>&1; then
+            print_status "$adapter_name adapter dependencies installed"
+        else
+            print_warning "$adapter_name adapter: some dependencies failed (adapter will be skipped at runtime)"
+        fi
+    fi
+done
+
+echo ""
 echo "Installing GUI dependencies..."
 
 # Install GUI dependencies

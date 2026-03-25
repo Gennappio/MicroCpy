@@ -16,7 +16,6 @@ setup(
     install_requires=[
         "numpy",
         "matplotlib",
-        "fipy",
         "pyyaml",
         "scipy",
     ],

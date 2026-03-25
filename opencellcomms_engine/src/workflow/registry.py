@@ -144,8 +144,8 @@ def get_default_registry() -> FunctionRegistry:
     # Import adapter functions (experiment-specific)
     try:
         import opencellcomms_adapters.jayatilake.register  # noqa: F401
-    except ImportError:
-        pass  # Adapters not installed — engine works standalone
+    except ImportError as e:
+        print(f"[Registry] Jayatilake adapter not available: {e}")
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry

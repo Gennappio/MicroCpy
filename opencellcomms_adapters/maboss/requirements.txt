@@ -1,0 +1,2 @@
+# MaBoSS adapter dependencies
+maboss>=0.8.0
