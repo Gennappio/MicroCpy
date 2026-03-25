@@ -26,7 +26,7 @@ OpenCellComms is a Python-based simulation framework for modeling gene regulator
 **macOS / Linux:**
 ```bash
 git clone <your-repo-url>
-cd MicroCpy
+cd OpenCellComms
 chmod +x install.sh
 ./install.sh
 ```
@@ -34,7 +34,7 @@ chmod +x install.sh
 **Windows:**
 ```batch
 git clone <your-repo-url>
-cd MicroCpy
+cd OpenCellComms
 install.bat
 ```
 
@@ -65,7 +65,7 @@ Open http://localhost:3000 in your browser.
 ## 📁 Project Structure
 
 ```
-MicroCpy/
+OpenCellComms/
 ├── opencellcomms_engine/     # Python simulation engine
 │   ├── src/                  # Source code
 │   ├── tests/                # Test suites

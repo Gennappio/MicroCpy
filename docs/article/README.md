@@ -1,4 +1,4 @@
-# OpenCellComms / MicroCpy — Article Draft (Chapter Files)
+# OpenCellComms — Article Draft (Chapter Files)
 
 This folder contains a **chapter-per-file** long-form article draft about the software in this repository:
 - **Python simulation engine**: `opencellcomms_engine/`
@@ -23,7 +23,7 @@ The writing is intended to be copy/pasted into a blog platform, report, or thesi
 ## How to use
 
 - **Write once, publish many**: each chapter stands alone (it repeats minimal context), but they also flow as a single narrative.
-- **Swap branding early**: the repo uses multiple names (OpenCellComms / MicroCpy / BioComposer). The draft flags where you should standardize naming for your audience.
+- **Consistent branding**: the project is called OpenCellComms. Legacy references to MicroCpy or BioComposer may appear in older drafts.
 - **Replace figure placeholders**:
   - “Suggested figure” sections describe what to capture.
   - When possible, they point at **existing artifacts already in this repo** (plots in `opencellcomms_gui/results/` and `opencellcomms_engine/tools/*results/`).

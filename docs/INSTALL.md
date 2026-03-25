@@ -20,7 +20,7 @@ Before installing, ensure you have the following:
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd MicroCpy
+cd OpenCellComms
 
 # Make the installer executable and run it
 chmod +x install.sh
@@ -32,7 +32,7 @@ chmod +x install.sh
 ```batch
 # Clone the repository
 git clone <your-repo-url>
-cd MicroCpy
+cd OpenCellComms
 
 # Run the installer
 install.bat
@@ -53,7 +53,7 @@ If you prefer to install manually or need more control:
 
 ```bash
 git clone <your-repo-url>
-cd MicroCpy
+cd OpenCellComms
 ```
 
 ### Step 2: Create Python Virtual Environment

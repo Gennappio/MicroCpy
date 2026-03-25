@@ -133,7 +133,7 @@ class WorkflowExecutor:
         # Path configuration (Clean Architecture)
         # engine_root: opencellcomms_engine/
         self._engine_root = Path(__file__).parent.parent.parent.absolute()
-        self._project_root = self._engine_root.parent  # MicroCpy/
+        self._project_root = self._engine_root.parent  # OpenCellComms/
         self._workflow_file = Path(workflow_file).absolute() if workflow_file else None
         self._workflow_dir = self._workflow_file.parent if self._workflow_file else None
         self._gui_results_dir = Path(gui_results_dir).absolute() if gui_results_dir else None
@@ -183,7 +183,7 @@ class WorkflowExecutor:
 
         Context keys set:
             - engine_root: Absolute path to opencellcomms_engine/
-            - project_root: Absolute path to MicroCpy/
+            - project_root: Absolute path to OpenCellComms/
             - workflow_file: Absolute path to workflow JSON file
             - workflow_dir: Directory containing workflow JSON
             - resolve_path: Callable to resolve relative file paths

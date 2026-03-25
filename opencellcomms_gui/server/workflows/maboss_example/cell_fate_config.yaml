@@ -43,7 +43,7 @@ output:
 
 # Initial state configuration - CSV format for 2D
 initial_state:
-  file_path: "MicroCpy/ABM_GUI/server/workflows/maboss_example/simple_cells.csv"
+  file_path: "opencellcomms_gui/server/workflows/maboss_example/simple_cells.csv"
 
 # Substances (minimal for demo)
 substances:

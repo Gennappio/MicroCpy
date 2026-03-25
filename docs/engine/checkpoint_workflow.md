@@ -1,6 +1,6 @@
 # Checkpoint Read/Write Workflow
 
-This document explains how to use checkpoints in MicroCpy workflows to save and load cell populations.
+This document explains how to use checkpoints in OpenCellComms workflows to save and load cell populations.
 
 ## Overview
 

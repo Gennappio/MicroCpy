@@ -2,7 +2,7 @@
 Initialize NetLogo-Faithful Gene Networks for All Cells.
 
 Replicates the EXACT initialization and input-setting behavior from
-gene_network_netlogo_probability.py (the benchmark) inside the MicroCpy
+gene_network_netlogo_probability.py (the benchmark) inside the OpenCellComms
 workflow system.
 
 WHAT THIS FUNCTION DOES (single-step replacement for
@@ -334,7 +334,7 @@ def _resolve_bnd_path(context: Dict[str, Any], bnd_file: str) -> Optional[Path]:
     Tries (in order):
         1. context['resolve_path'](bnd_file)
         2. Relative to engine_root (opencellcomms_engine/)
-        3. Relative to workspace_root (MicroCpy/)
+        3. Relative to workspace_root (OpenCellComms/)
         4. Relative to CWD / tests/
     """
     if 'resolve_path' in context:
@@ -350,7 +350,7 @@ def _resolve_bnd_path(context: Dict[str, Any], bnd_file: str) -> Optional[Path]:
     if candidate.exists():
         return candidate
 
-    # workspace_root = MicroCpy/
+    # workspace_root = OpenCellComms/
     workspace_root = engine_root.parent
     candidate = workspace_root / bnd_file
     if candidate.exists():

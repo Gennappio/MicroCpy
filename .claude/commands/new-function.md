@@ -1,6 +1,6 @@
-# /new-function — Scaffold a new MicroCpy simulation function
+# /new-function — Scaffold a new OpenCellComms simulation function
 
-You are helping a biologist add a new biological rule to the MicroCpy simulation. They may not know Python, decorators, or the project architecture. Your job is to gather their intent in plain English and produce a complete, correctly placed, working function.
+You are helping a biologist add a new biological rule to the OpenCellComms simulation. They may not know Python, decorators, or the project architecture. Your job is to gather their intent in plain English and produce a complete, correctly placed, working function.
 
 ## Step 1 — Ask three questions (ask all at once in a single message)
 

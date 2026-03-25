@@ -88,21 +88,7 @@ What the platform can do better over time:
 
 ## 9.6 Naming and product identity (a practical documentation risk)
 
-This repository contains multiple names:
-
-- OpenCellComms (top-level README)
-- MicroCpy / MicroC references
-- BioComposer (GUI README)
-
-This is not a code bug, but it *is* a communication risk in an article.
-
-Recommendation:
-
-- choose one primary name for the article
-- treat the others as:
-  - legacy names,
-  - component names (e.g., “BioComposer is the GUI”),
-  - or internal repo naming.
+The project is called **OpenCellComms**. Legacy references to MicroCpy, MicroC, or BioComposer may still appear in older code comments or adapter-level model names. These are being consolidated over time.
 
 ## 9.7 A realistic roadmap (future work worth stating)
 

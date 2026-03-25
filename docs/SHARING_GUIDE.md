@@ -38,7 +38,7 @@ git push origin NodeObservability
 Team members can then:
 ```bash
 git clone <repository-url>
-cd MicroCpy
+cd OpenCellComms
 ./install.sh  # or install.bat on Windows
 ./run.sh      # or run.bat on Windows
 ```
@@ -74,14 +74,14 @@ Send this to your team:
 
 macOS/Linux:
 ```bash
-cd MicroCpy
+cd OpenCellComms
 chmod +x install.sh
 ./install.sh
 ```
 
 Windows:
 ```batch
-cd MicroCpy
+cd OpenCellComms
 install.bat
 ```
 

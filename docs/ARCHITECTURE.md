@@ -1,12 +1,12 @@
-# MicroCpy Architecture
+# OpenCellComms Architecture
 
 ## Overview
 
-MicroCpy is a multi-scale cell simulation platform with a **dual-stack architecture**:
+OpenCellComms is a multi-scale cell simulation platform with a **dual-stack architecture**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     MicroCpy Platform                           │
+│                   OpenCellComms Platform                         │
 ├──────────────────────────┬──────────────────────────────────────┤
 │    React GUI (Frontend)  │      Python Engine (Backend)        │
 │    opencellcomms_gui/    │      opencellcomms_engine/          │
@@ -24,7 +24,7 @@ MicroCpy is a multi-scale cell simulation platform with a **dual-stack architect
 ## Directory Structure
 
 ```
-MicroCpy/
+OpenCellComms/
 ├── opencellcomms_engine/     # Python backend
 │   └── src/opencellcomms/
 │       ├── core/             # Domain models (Cell, Population, etc.)

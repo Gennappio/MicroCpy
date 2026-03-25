@@ -9,13 +9,13 @@ A scientist must be capable to understand mechanism tested from the GUI. The cod
 
 ## Repository Structure
 
-This repo contains `MicroCpy/` as a git submodule (currently on the `Abstraction` branch). All real work happens inside `MicroCpy/`. The outer repo (`MicroCpy3D`) just tracks submodule state.
+This repo is the OpenCellComms project. The outer repo (`MicroCpy3D`) tracks it as a git submodule (currently on the `Abstraction` branch). All real work happens here.
 
 ## Commands
 
-All commands run from `MicroCpy/` unless otherwise noted.
+All commands run from the project root unless otherwise noted.
 
-### Python Engine (`MicroCpy/opencellcomms_engine/`)
+### Python Engine (`opencellcomms_engine/`)
 
 ```bash
 # Development install
@@ -41,7 +41,7 @@ python run_workflow.py --workflow path/to/workflow.json
 python run_workflow.py --sim path/to/config.yaml
 ```
 
-### React GUI (`MicroCpy/opencellcomms_gui/`)
+### React GUI (`opencellcomms_gui/`)
 
 ```bash
 npm run dev               # Dev server on port 3000
@@ -108,7 +108,7 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 ## Key References
 
 - `docs/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
-- `MicroCpy/opencellcomms_engine/README.md` — Engine overview
+- `opencellcomms_engine/README.md` — Engine overview
 - `docs/engine/GETTING_STARTED.md` — Tutorial
 - `docs/engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
 
@@ -129,7 +129,7 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 4. Import the module in `opencellcomms_engine/src/workflow/registry.py`
 5. Restart the backend server
 6. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
-7. if needed look for the CREATING_FUNCTIONS.md in `MicroCpy/docs/CREATING_FUNCTIONS.md`
+7. if needed look for the CREATING_FUNCTIONS.md in `docs/CREATING_FUNCTIONS.md`
 
 **Experiment-specific functions** (hardcoded gene names, substance thresholds, model-specific logic) go in `opencellcomms_adapters/<experiment>/functions/<category>/`. Add the import to `opencellcomms_adapters/<experiment>/register.py` — the engine loads these automatically via `registry.py`.
 

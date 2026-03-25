@@ -113,7 +113,7 @@ QUICK START
       --batch-off --reversible --no-atp-gate --initial-cells 100 \\
       --total-ticks 7000 --seed 42
 
-  # Batch-ON, non-reversible (MicroCpy workflow mode)
+  # Batch-ON, non-reversible (OpenCellComms workflow mode)
   python gene_network_workflow_simulator.py network.bnd inputs.txt \\
       --initial-cells 1000 --iterations 7 --propagation-steps 100 --seed 42
 """
@@ -475,7 +475,7 @@ class WorkflowSimulator:
     def simulate_batch_on(self, iterations: int, propagation_steps: int = 100,
                           reversible: bool = False, verbose: bool = False) -> Dict:
         """
-        Batch-on mode (MicroCpy workflow): propagate all cells N steps, then
+        Batch-on mode (OpenCellComms workflow): propagate all cells N steps, then
         mark phenotypes, then divide/kill.  Input nodes are set once at start
         and never refreshed (no diffusion in this mode).
         """
@@ -852,7 +852,7 @@ Examples:
       --batch-off --reversible --no-atp-gate --initial-cells 100 \\
       --total-ticks 7000 --seed 42 --verbose
 
-  # BATCH-ON, non-reversible (MicroCpy workflow mode)
+  # BATCH-ON, non-reversible (OpenCellComms workflow mode)
   python gene_network_workflow_simulator.py network.bnd inputs.txt \\
       --initial-cells 1000 --iterations 7 --propagation-steps 100 --seed 42
         """)

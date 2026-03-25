@@ -1,4 +1,4 @@
-# MicroCpy Coding Conventions
+# OpenCellComms Coding Conventions
 
 ## General Principles
 

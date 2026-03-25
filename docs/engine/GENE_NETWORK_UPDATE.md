@@ -37,7 +37,7 @@ BooleanNetwork
 
 `BooleanNetwork` provides core functionality: BND file parsing, three update modes, node state access.
 
-`HierarchicalBooleanNetwork` adds fate counting across propagation steps and stores a priority-ordered fate hierarchy list. It is the class instantiated per cell in MicroCpy.
+`HierarchicalBooleanNetwork` adds fate counting across propagation steps and stores a priority-ordered fate hierarchy list. It is the class instantiated per cell in OpenCellComms.
 
 ---
 
@@ -411,7 +411,7 @@ The graph-walking mode is slower per step than synchronous but produces statisti
 
 ## Reference: NetLogo Correspondence
 
-| NetLogo construct | MicroCpy equivalent |
+| NetLogo construct | OpenCellComms equivalent |
 |-------------------|---------------------|
 | `my-last-node` | `gn._last_node` |
 | `my-fate` | `gn._fate` |

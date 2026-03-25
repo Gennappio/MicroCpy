@@ -2,7 +2,7 @@
 
 ## 1.1 What this software is (one sentence)
 
-**OpenCellComms (MicroCpy)** is a **multi‑scale biological simulation platform** that couples **cell population dynamics (ABM)**, **microenvironment diffusion (PDE)**, and **intracellular decision logic (gene networks)**—and lets users build and run simulations via a **visual, node‑based workflow designer** that exports a structured **JSON workflow** executed by a Python engine.
+**OpenCellComms** is a **multi‑scale biological simulation platform** that couples **cell population dynamics (ABM)**, **microenvironment diffusion (PDE)**, and **intracellular decision logic (gene networks)**—and lets users build and run simulations via a **visual, node‑based workflow designer** that exports a structured **JSON workflow** executed by a Python engine.
 
 ## 1.2 Who it’s for
 

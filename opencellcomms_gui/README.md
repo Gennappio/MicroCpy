@@ -177,9 +177,9 @@ python run_microc.py --sim config.yaml --workflow my_workflow.json
 
 ## Contributing
 
-This is part of the MicroCpy project. See the main repository for contribution guidelines.
+This is part of the OpenCellComms project. See the main repository for contribution guidelines.
 
 ## License
 
-Part of the MicroCpy project.
+Part of the OpenCellComms project.
 

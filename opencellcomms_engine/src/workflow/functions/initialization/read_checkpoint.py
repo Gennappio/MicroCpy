@@ -70,7 +70,7 @@ def read_checkpoint(
             if candidate.exists():
                 checkpoint_path = candidate
             else:
-                # Try relative to workspace root (MicroCpy/)
+                # Try relative to workspace root (OpenCellComms/)
                 workspace_root = engine_root.parent
                 candidate = workspace_root / file_path
                 if candidate.exists():

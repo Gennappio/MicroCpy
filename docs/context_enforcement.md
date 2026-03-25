@@ -67,7 +67,7 @@ It defines `ValidatedContext`, which extends `TrackedContext` and adds **write p
 
 From the code:
 
-```1:15:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/observability/validated_context.py
+```1:15:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/observability/validated_context.py
 Write Policies:
 - read_only: Cannot be written after initialization (e.g., dt, step, time)
 - write_once: Can be written once, then becomes read-only (e.g., population, simulator)
@@ -76,7 +76,7 @@ Write Policies:
 
 And the default core keys (protected by policy) include:
 
-```29:50:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/observability/validated_context.py
+```29:50:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/observability/validated_context.py
 DEFAULT_CORE_KEYS: Dict[str, str] = {
     'step': WRITE_POLICY_WRITE_ONCE,
     'dt': WRITE_POLICY_WRITE_ONCE,
@@ -109,7 +109,7 @@ Interpretation:
 - before locking, writes are allowed (initialization needs to populate core keys)
 - after locking, policies apply (core keys cannot be overwritten/deleted per policy)
 
-```105:115:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/observability/validated_context.py
+```105:115:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/observability/validated_context.py
 def lock_core_keys(self) -> None:
     self._locked = True
     self._initialized_keys = set(self.keys())
@@ -131,7 +131,7 @@ This is crucial conceptually:
 
 This behavior is implemented in `_validate_write()` (and similarly for delete):
 
-```160:176:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/observability/validated_context.py
+```160:176:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/observability/validated_context.py
 if policy == WRITE_POLICY_READ_ONLY:
     msg = f"Cannot write to read-only context key: '{key}'"
     if self._enforcement == "strict":
@@ -162,7 +162,7 @@ if policy == WRITE_POLICY_WRITE_ONCE:
 
 The enforcement wrapper is applied inside the workflow executor when a node runs. In `_execute_function_with_observability()`:
 
-```670:679:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/executor.py
+```670:679:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/executor.py
 if self._observability_enabled and OBSERVABILITY_AVAILABLE:
     # Use ValidatedContext for write policy enforcement
     tracked_context = ValidatedContext(context, enforcement=self._context_enforcement)
@@ -197,7 +197,7 @@ This creates an opportunity for future improvement (see section 9):
 
 This is the intent expressed directly in the ValidatedContext docstring:
 
-```4:8:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/workflow/observability/validated_context.py
+```4:8:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/workflow/observability/validated_context.py
 Core keys (population, simulator, config, etc.) cannot be overwritten once set,
 but the objects they reference remain mutable (you can modify population.cells,
 but cannot do context['population'] = new_population).
@@ -363,7 +363,7 @@ and uses it when wrapping context for node execution.
 
 The executor is constructed in `SimulationEngine` as:
 
-```43:51:/Users/gennaroabbruzzese/Documents/BIDSA/MicroCpy3D/MicroCpy/opencellcomms_engine/src/simulation/engine.py
+```43:51:/Users/gennaroabbruzzese/Documents/BIDSA/OpenCellComms/opencellcomms_engine/src/simulation/engine.py
 from ..workflow.executor import WorkflowExecutor
 self.workflow_executor = WorkflowExecutor(workflow, custom_functions, config)
 ```

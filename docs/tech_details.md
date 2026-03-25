@@ -1,4 +1,4 @@
-# Technical Details — OpenCellComms / MicroCpy
+# Technical Details — OpenCellComms
 
 This document is a **deep technical description** of the software in this repository, written so that another LLM (or engineer) can understand:
 
@@ -10,7 +10,7 @@ This document is a **deep technical description** of the software in this reposi
 - where outputs go,
 - and how to debug/observe a run.
 
-> Naming note: the repo uses multiple labels (OpenCellComms / MicroCpy / MicroC / BioComposer). In this document, **OpenCellComms** refers to the overall platform, **engine** refers to `opencellcomms_engine/`, and **GUI** refers to `opencellcomms_gui/`.
+> In this document, **OpenCellComms** refers to the overall platform, **engine** refers to `opencellcomms_engine/`, and **GUI** refers to `opencellcomms_gui/`.
 
 ## 1) What the software does (problem statement)
 
@@ -33,7 +33,7 @@ The system includes a **visual workflow designer** (GUI) that can build/edit wor
 
 ## 2) Repository structure (major components)
 
-At repo root (`MicroCpy/`):
+At repo root (`OpenCellComms/`):
 
 - `opencellcomms_engine/`: Python simulation engine, workflow runtime, models, solvers, tools, tests
 - `opencellcomms_gui/`: React GUI (workflow designer) + Flask server used to run the engine from the GUI
@@ -448,7 +448,7 @@ The project expects runs to be validated by executing workflows and comparing pr
 
 These are not necessarily bugs; they are areas where a new contributor should be careful:
 
-- **Multiple naming conventions** (OpenCellComms vs MicroC vs BioComposer) can confuse newcomers.
+- **Legacy naming references** (MicroC, BioComposer) in some places can confuse newcomers.
 - **Path handling** is complex because workflows can reference many file types; the executor’s path resolver is designed to reduce friction, but file layout still matters.
 - **Context sprawl** is a real risk; the observability + validated context system exists to mitigate it, but conventions must be followed.
 - **Overwrite semantics** are deliberate but can surprise users; reproducibility requires explicit archiving practices.

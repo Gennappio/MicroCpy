@@ -84,7 +84,7 @@ pip install -e ".[diffusion]"
 ```
 
 ### Full Installation (Engine + GUI + All Extras)
-From the parent `MicroCpy/` directory:
+From the parent `OpenCellComms/` directory:
 ```bash
 ./install.sh
 ```
@@ -104,7 +104,7 @@ Adapters are located in `../opencellcomms_adapters/<adapter_name>/` and can prov
 ### Installing Adapters
 
 #### Automatic (Recommended)
-From the parent `MicroCpy/` directory:
+From the parent `OpenCellComms/` directory:
 ```bash
 ./install.sh
 ```

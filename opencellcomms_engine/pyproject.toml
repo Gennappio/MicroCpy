@@ -3,16 +3,16 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "microc"
+name = "opencellcomms"
 version = "2.0.0"
 description = "Multi-scale cellular simulation platform with gene networks and spatial dynamics"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "MicroC Development Team", email = "microc@example.com"},
+    {name = "OpenCellComms Development Team", email = "opencellcomms@example.com"},
 ]
 maintainers = [
-    {name = "MicroC Development Team", email = "microc@example.com"},
+    {name = "OpenCellComms Development Team", email = "opencellcomms@example.com"},
 ]
 keywords = ["cellular simulation", "gene networks", "systems biology", "spatial modeling"]
 classifiers = [
@@ -74,19 +74,19 @@ diffusion = [
     "fipy>=3.4.0",
 ]
 all = [
-    "microc[dev,docs,jupyter,performance,visualization,diffusion]",
+    "opencellcomms[dev,docs,jupyter,performance,visualization,diffusion]",
 ]
 
 [project.scripts]
-microc-run = "microc.cli:main"
-microc-analyze = "microc.analysis:main"
-microc-plot = "microc.visualization:main"
+opencellcomms-run = "opencellcomms.cli:main"
+opencellcomms-analyze = "opencellcomms.analysis:main"
+opencellcomms-plot = "opencellcomms.visualization:main"
 
 [project.urls]
-Homepage = "https://github.com/microc/microc"
-Documentation = "https://microc.readthedocs.io/"
-Repository = "https://github.com/microc/microc.git"
-"Bug Tracker" = "https://github.com/microc/microc/issues"
+Homepage = "https://github.com/opencellcomms/opencellcomms"
+Documentation = "https://opencellcomms.readthedocs.io/"
+Repository = "https://github.com/opencellcomms/opencellcomms.git"
+"Bug Tracker" = "https://github.com/opencellcomms/opencellcomms/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -119,7 +119,7 @@ extend-exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
-known_first_party = ["microc"]
+known_first_party = ["opencellcomms"]
 
 [tool.flake8]
 max-line-length = 88

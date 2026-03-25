@@ -27,7 +27,7 @@ npm --version
 ## Installation
 
 ```bash
-cd MicroCpy/ABM_GUI
+cd OpenCellComms/ABM_GUI
 npm install
 ```
 
