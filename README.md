@@ -113,10 +113,10 @@ When working in this repo with [Claude Code](https://claude.ai/code), the follow
 
 | Command | Description |
 |---------|-------------|
-| `/new-function` | Scaffold a new OpenCellComms simulation function. Asks three plain-English questions (what biological event, which stage, which parameters) and generates a complete, registered Python function. Works for both generic engine functions and experiment-specific adapter functions. |
-| `/add-to-workflow` | Add an existing registered function to a workflow JSON file. Guides you through selecting the function, target workflow, and stage — then inserts the node and edges correctly without breaking existing connections. |
+| `/occ_new-function` | Scaffold a new OpenCellComms simulation function. Asks what biological event to model, reads the target workflow JSON to discover its actual subworkflows, and generates a complete, registered Python function placed in the right category. Works for any workflow structure — not limited to a fixed set of stages. |
+| `/occ_add-to-workflow` | Add an existing registered function to a workflow JSON file. Reads the target workflow to present its subworkflows and existing functions, then inserts the node and edges correctly without breaking existing connections. |
 
-These commands are designed for biologists: no Python or JSON knowledge required.
+These commands are workflow-aware and designed for biologists: no Python or JSON knowledge required.
 
 ## 🧪 Running Tests
 
