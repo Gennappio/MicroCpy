@@ -78,9 +78,9 @@ all = [
 ]
 
 [project.scripts]
-opencellcomms-run = "opencellcomms.cli:main"
-opencellcomms-analyze = "opencellcomms.analysis:main"
-opencellcomms-plot = "opencellcomms.visualization:main"
+occ_run = "opencellcomms.cli:main"
+occ_analyze = "opencellcomms.analysis:main"
+occ_plot = "opencellcomms.visualization:main"
 
 [project.urls]
 Homepage = "https://github.com/opencellcomms/opencellcomms"

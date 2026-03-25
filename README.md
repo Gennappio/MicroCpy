@@ -107,6 +107,17 @@ python run_workflow.py --workflow path/to/workflow.json
 python run_workflow.py --help
 ```
 
+## 🤖 Claude Code Commands
+
+When working in this repo with [Claude Code](https://claude.ai/code), the following slash commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `/new-function` | Scaffold a new OpenCellComms simulation function. Asks three plain-English questions (what biological event, which stage, which parameters) and generates a complete, registered Python function. Works for both generic engine functions and experiment-specific adapter functions. |
+| `/add-to-workflow` | Add an existing registered function to a workflow JSON file. Guides you through selecting the function, target workflow, and stage — then inserts the node and edges correctly without breaking existing connections. |
+
+These commands are designed for biologists: no Python or JSON knowledge required.
+
 ## 🧪 Running Tests
 
 ```bash
