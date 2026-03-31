@@ -497,6 +497,8 @@ def get_registry():
 
         # Add to Python path
         sys.path.insert(0, str(engine_dir))
+        # Add parent directory so opencellcomms_adapters can be imported
+        sys.path.insert(0, str(engine_dir.parent))
 
         # Import registry
         from src.workflow.registry import get_default_registry
@@ -579,6 +581,7 @@ def get_function_source():
             # Try to load from registry
             try:
                 sys.path.insert(0, str(engine_dir))
+                sys.path.insert(0, str(engine_dir.parent))
                 from src.workflow.registry import get_default_registry
 
                 registry = get_default_registry()
@@ -659,6 +662,7 @@ def save_function_source():
         if not source_file:
             try:
                 sys.path.insert(0, str(engine_dir))
+                sys.path.insert(0, str(engine_dir.parent))
                 from src.workflow.registry import get_default_registry
 
                 registry = get_default_registry()

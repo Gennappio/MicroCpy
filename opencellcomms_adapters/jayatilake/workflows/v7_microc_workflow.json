@@ -3276,7 +3276,6 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
-            "param_necrosis_params",
             "param_necrosis_params"
           ]
         },
@@ -3403,6 +3402,7 @@
           "id": "param_necrosis_params",
           "type": "dictParameterNode",
           "label": "Necrosis Parameters",
+          "target_param": "necrosis_params",
           "entries": [
             {
               "key": "oxygen_threshold",
