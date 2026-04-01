@@ -41,7 +41,6 @@ Functions must belong to one of these categories:
 | `DIFFUSION` | Substance diffusion | Each timestep |
 | `INTERCELLULAR` | Cell-cell interactions | Each timestep |
 | `FINALIZATION` | Cleanup and output | Once at end |
-| `UTILITY` | Helper functions | As needed |
 
 ## The @register_function Decorator
 
@@ -117,6 +116,8 @@ def custom_metabolism(
 | `FLOAT` | `float` | Number input |
 | `BOOL` | `bool` | Checkbox |
 | `FILE` | `str` | File path input |
+| `DICT` | `dict` | Dict parameter node (key-value table in GUI) |
+| `LIST` | `list` | List parameter node (item list in GUI) |
 
 ### Parameter Options
 
@@ -143,11 +144,11 @@ def my_function(context: Dict[str, Any], **kwargs) -> None:
     population = context.get('population')      # Cell population
     config = context.get('config')              # Configuration
     simulator = context.get('simulator')        # Diffusion simulator
-    gene_network = context.get('gene_network')  # Gene network model
+    gene_networks = context.get('gene_networks', {})  # Gene networks (dict keyed by cell_id)
     
     # Timing information
     dt = context.get('dt', 0.1)                 # Time step
-    step = context.get('step', 0)               # Current step number
+    step = context.get('current_step', 0)        # Current step number
     macrostep = context.get('macrostep', 0)     # Current macrostep
     
     # Results and state
@@ -316,7 +317,11 @@ To catch these mistakes early:
    python scripts/validate_functions.py
    ```
 
-3. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
+3. **Claude Code slash commands:**
+   - `/validate-function` — Validate a single function (import, decorator, registration)
+   - `/validate-workflow` — Validate a workflow JSON (function registry, parameter node connections, dict target_param)
+
+4. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
 
 ## Complete Function Template
 

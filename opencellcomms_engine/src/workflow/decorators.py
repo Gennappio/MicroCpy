@@ -289,7 +289,7 @@ def register_function(
     Args:
         display_name: Human-readable name for the GUI
         description: Description of what the function does
-        category: Function category (INITIALIZATION, INTRACELLULAR, DIFFUSION, INTERCELLULAR, FINALIZATION, UTILITY)
+        category: Function category (INITIALIZATION, INTRACELLULAR, DIFFUSION, INTERCELLULAR, FINALIZATION)
         parameters: Optional list of parameter definitions (auto-inferred if not provided)
         inputs: Optional list of input names (auto-detected from signature if not provided)
         outputs: Optional list of output names
