@@ -85,6 +85,14 @@ def create_path_resolver(engine_root: Path, workflow_dir: Optional[Path] = None)
             if resolved.exists():
                 return resolved
 
+        # Strategy 6: Search in opencellcomms_adapters/ by filename
+        adapters_dir = engine_root.parent / "opencellcomms_adapters"
+        if adapters_dir.exists():
+            filename = Path(file_path).name
+            for found in adapters_dir.rglob(filename):
+                if found.is_file():
+                    return found
+
         # Return as-is (caller should handle non-existence)
         return path
 
@@ -138,6 +146,14 @@ class WorkflowExecutor:
         self._workflow_dir = self._workflow_file.parent if self._workflow_file else None
         self._gui_results_dir = Path(gui_results_dir).absolute() if gui_results_dir else None
         self._running_from_gui = gui_results_dir is not None
+
+        # If the workflow was saved to a temp file by the GUI, use the original
+        # workflow source path for resolving relative paths (e.g. custom_functions)
+        source_path = (workflow.metadata or {}).get('workflow_source_path')
+        if source_path and Path(source_path).is_absolute():
+            source_dir = Path(source_path).parent
+            if source_dir.exists():
+                self._workflow_dir = source_dir
 
         # Observability setup
         self._results_dir = results_dir or Path('results')

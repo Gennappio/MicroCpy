@@ -504,6 +504,12 @@ export const createWorkflowIOSlice = (set, get) => ({
       };
     }
 
+    // Embed original workflow file path so the engine can resolve relative paths
+    // even when the workflow is saved to a temp file by the GUI
+    if (state.workflowFilePath) {
+      exportedMetadata.workflow_source_path = state.workflowFilePath;
+    }
+
     return {
       version: '2.0',
       name: workflow.name,
