@@ -247,7 +247,7 @@ class CellContainer:
         Returns:
             index_map (old_count,): index_map[old] = new, or -1 if removed.
         """
-        alive_mask = self.alive[:self.count]
+        alive_mask = self.alive[:self.count].copy()  # COPY: avoid aliasing
         n_alive = int(alive_mask.sum())
         if n_alive == self.count:
             return np.arange(self.count)
@@ -255,24 +255,26 @@ class CellContainer:
         index_map = np.full(self.count, -1, dtype=np.int64)
         index_map[alive_mask] = np.arange(n_alive)
 
-        # Compact fixed columns
-        self.positions[:n_alive] = self.positions[:self.count][alive_mask]
-        self.phenotype_ids[:n_alive] = self.phenotype_ids[:self.count][alive_mask]
+        # Gather alive data into temporaries, then write back
+        self.positions[:n_alive] = self.positions[:self.count][alive_mask].copy()
+        self.phenotype_ids[:n_alive] = self.phenotype_ids[:self.count][alive_mask].copy()
+        self.cell_type_ids[:n_alive] = self.cell_type_ids[:self.count][alive_mask].copy()
+        self.ages[:n_alive] = self.ages[:self.count][alive_mask].copy()
+        self.division_counts[:n_alive] = self.division_counts[:self.count][alive_mask].copy()
+        self.volumes[:n_alive] = self.volumes[:self.count][alive_mask].copy()
+        self.radii[:n_alive] = self.radii[:self.count][alive_mask].copy()
         self.alive[:n_alive] = True
-        self.cell_type_ids[:n_alive] = self.cell_type_ids[:self.count][alive_mask]
-        self.ages[:n_alive] = self.ages[:self.count][alive_mask]
-        self.division_counts[:n_alive] = self.division_counts[:self.count][alive_mask]
-        self.volumes[:n_alive] = self.volumes[:self.count][alive_mask]
-        self.radii[:n_alive] = self.radii[:self.count][alive_mask]
 
         # Compact dynamic columns
-        for arr in self._float_columns.values():
-            arr[:n_alive] = arr[:self.count][alive_mask]
-        for arr in self._bool_columns.values():
-            arr[:n_alive] = arr[:self.count][alive_mask]
+        for name in list(self._float_columns):
+            arr = self._float_columns[name]
+            arr[:n_alive] = arr[:self.count][alive_mask].copy()
+        for name in list(self._bool_columns):
+            arr = self._bool_columns[name]
+            arr[:n_alive] = arr[:self.count][alive_mask].copy()
 
         if self._ids is not None:
-            self._ids[:n_alive] = self._ids[:self.count][alive_mask]
+            self._ids[:n_alive] = self._ids[:self.count][alive_mask].copy()
 
         self.count = n_alive
         return index_map

@@ -125,8 +125,9 @@ def physiboss_cell_division(
         )
 
         # Copy BN output cache
-        if hasattr(parent, '_physiboss_bn_outputs'):
-            daughter._physiboss_bn_outputs = dict(parent._physiboss_bn_outputs)
+        parent_bn = getattr(parent, '_physiboss_bn_outputs', None)
+        if parent_bn is not None:
+            daughter._physiboss_bn_outputs = dict(parent_bn)
 
         new_cells[new_id] = daughter
         occupied.add(daughter_pos)

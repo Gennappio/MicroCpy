@@ -708,7 +708,7 @@ class TestCellContainer:
         assert c.positions[0, 0] == pytest.approx(10.0)
         assert c.positions[0, 1] == pytest.approx(20.0)
         assert c.phenotype_ids[0] == phenotype_id("Quiescent")
-        assert c.alive[0] is True
+        assert c.alive[0] == True
 
     def test_add_multiple_cells(self):
         import numpy as np
@@ -771,7 +771,7 @@ class TestCellContainer:
         c.add_bool_column("TNF_node", default=False)
         c.add_cell(position=(0, 0))
         c.get_bool("TNF_node")[0] = True
-        assert c.get_bool("TNF_node")[0] is True
+        assert c.get_bool("TNF_node")[0] == True
 
     def test_phenotype_counts(self):
         from src.biology.cell_container import CellContainer, phenotype_id
@@ -846,6 +846,6 @@ class TestCellView:
         c.add_cell(position=(0, 0))
         v = CellView(c, 0)
         v.state.gene_states = {"TNF": True, "Apoptosis": False}
-        assert c.get_bool("TNF")[0] is True
-        assert c.get_bool("Apoptosis")[0] is False
+        assert c.get_bool("TNF")[0] == True
+        assert c.get_bool("Apoptosis")[0] == False
         assert v.state.gene_states == {"TNF": True, "Apoptosis": False}

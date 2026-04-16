@@ -71,18 +71,46 @@
     "macrostep": {
       "enabled": true,
       "steps": 840,
-      "description": "Main loop: 840 steps × 12 min = 10080 min (7 days)",
+      "description": "Main loop: 840 macro steps × 12 min = 10080 min (7 days). Each macro step runs sub-stages at PhysiCell timescale ratios: diffusion (×120 at dt=0.01), intracellular (×1 at dt=12), phenotype (×2 at dt=6).",
       "functions": [
         {
-          "id": "macrostep_node",
-          "function_name": "intracellular_step",
+          "id": "macro_diffusion",
+          "function_name": "run_diffusion_solver",
           "enabled": true,
-          "description": "Execute intracellular + diffusion + intercellular per step",
+          "step_count": 120,
+          "description": "Diffusion sub-stepping: 120 × dt_diffusion(0.01) ≈ 1.2 min per macro (approximate; dt_diffusion << dt_phenotype)",
           "parameters": {},
-          "position": { "x": 200, "y": 150 }
+          "position": { "x": 100, "y": 100 }
+        },
+        {
+          "id": "macro_intracellular",
+          "function_name": "run_physiboss_step",
+          "enabled": true,
+          "step_count": 1,
+          "description": "MaBoSS coupling: 1 step per macro (dt_intracellular = 12 min)",
+          "parameters": {},
+          "position": { "x": 300, "y": 100 }
+        },
+        {
+          "id": "macro_phenotype",
+          "function_name": "apply_physiboss_phenotype",
+          "enabled": true,
+          "step_count": 2,
+          "description": "Phenotype mapping: 2 × dt_phenotype(6 min) = 12 min per macro",
+          "parameters": {},
+          "position": { "x": 500, "y": 100 }
+        },
+        {
+          "id": "macro_division",
+          "function_name": "physiboss_cell_division",
+          "enabled": true,
+          "step_count": 1,
+          "description": "Cell division: once per macro step",
+          "parameters": {},
+          "position": { "x": 700, "y": 100 }
         }
       ],
-      "execution_order": ["macrostep_node"]
+      "execution_order": ["macro_diffusion", "macro_intracellular", "macro_phenotype", "macro_division"]
     },
     "intracellular": {
       "enabled": true,

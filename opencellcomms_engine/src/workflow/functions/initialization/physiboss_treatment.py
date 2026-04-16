@@ -111,24 +111,21 @@ def physiboss_treatment(
             # No period = always on after start_time
             treatment_on = True
 
-    # Apply to simulator
-    simulator = context.get('simulator')
-    if simulator is None:
-        return
-
-    try:
-        if treatment_on:
-            simulator.set_dirichlet_bc(substrate, concentration, enabled=True)
-        else:
-            simulator.set_dirichlet_bc(substrate, 0.0, enabled=False)
-    except AttributeError:
-        # Simulator doesn't support set_dirichlet_bc — store flag for manual handling
-        context.setdefault('physiboss_treatment_state', {})[substrate] = treatment_on
-        if treatment_on:
-            context['physiboss_treatment_state'][f'{substrate}_concentration'] = concentration
-
-    # Store state for logging/inspection
+    # Store state for logging/inspection (always, even without simulator)
     context.setdefault('physiboss_treatment_state', {})[substrate] = treatment_on
+    if treatment_on:
+        context['physiboss_treatment_state'][f'{substrate}_concentration'] = concentration
+
+    # Apply to simulator if available
+    simulator = context.get('simulator')
+    if simulator is not None:
+        try:
+            if treatment_on:
+                simulator.set_dirichlet_bc(substrate, concentration, enabled=True)
+            else:
+                simulator.set_dirichlet_bc(substrate, 0.0, enabled=False)
+        except AttributeError:
+            pass  # Simulator doesn't support set_dirichlet_bc — state already stored
 
     if current_step % 100 == 0:
         state_str = "ON" if treatment_on else "OFF"
