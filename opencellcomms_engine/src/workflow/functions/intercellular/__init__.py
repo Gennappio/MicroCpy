@@ -11,6 +11,7 @@ from .remove_apoptotic_cells import remove_apoptotic_cells
 from .track_population_changes import track_population_start, track_population_end
 from .apply_physiboss_phenotype import apply_physiboss_phenotype
 from .physiboss_cell_division import physiboss_cell_division
+from .update_mechanics_physicell import update_mechanics_physicell
 
 __all__ = [
     'update_cell_division',
@@ -20,5 +21,6 @@ __all__ = [
     'track_population_end',
     'apply_physiboss_phenotype',
     'physiboss_cell_division',
+    'update_mechanics_physicell',
 ]
 

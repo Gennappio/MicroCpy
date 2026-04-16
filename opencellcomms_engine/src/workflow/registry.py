@@ -140,6 +140,7 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.intracellular.run_physiboss_step
     import src.workflow.functions.intercellular.apply_physiboss_phenotype
     import src.workflow.functions.intercellular.physiboss_cell_division
+    import src.workflow.functions.intercellular.update_mechanics_physicell
 
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population

@@ -849,3 +849,156 @@ class TestCellView:
         assert c.get_bool("TNF")[0] == True
         assert c.get_bool("Apoptosis")[0] == False
         assert v.state.gene_states == {"TNF": True, "Apoptosis": False}
+
+
+
+# ---------------------------------------------------------------------------
+# PhysiCell Mechanics (C++ / NumPy fallback)
+# ---------------------------------------------------------------------------
+
+class TestMechanicsKernel:
+    """Verify the C++/NumPy mechanics kernels give identical results."""
+
+    def _two_cells(self, dx):
+        import numpy as np
+        pos = np.array([[0.0, 0.0, 0.0], [dx, 0.0, 0.0]], dtype=np.float64)
+        radii = np.array([8.0, 8.0], dtype=np.float64)
+        alive = np.array([True, True])
+        rep = np.array([10.0, 10.0], dtype=np.float64)
+        adh = np.array([0.0, 0.0], dtype=np.float64)
+        max_adh = np.array([10.0, 10.0], dtype=np.float64)
+        vel = np.zeros((2, 3), dtype=np.float64)
+        vp = np.zeros((2, 3), dtype=np.float64)
+        press = np.zeros(2, dtype=np.float64)
+        return pos, radii, alive, rep, adh, max_adh, vel, vp, press
+
+    def test_fallback_pure_repulsion(self):
+        from src.adapters.physicell_mechanics.fallback import update_velocities_numpy
+        pos, radii, alive, rep, adh, max_adh, vel, vp, press = self._two_cells(12.0)
+        update_velocities_numpy(pos, radii, alive, rep, adh, max_adh, vel, press)
+        # Expected: (1 - 12/16)^2 * sqrt(10*10) = 0.0625 * 10 = 0.625
+        assert vel[0, 0] == pytest.approx(-0.625, abs=1e-6)
+        assert vel[1, 0] == pytest.approx(+0.625, abs=1e-6)
+        assert press[0] > 0
+
+    def test_fallback_far_apart_zero(self):
+        from src.adapters.physicell_mechanics.fallback import update_velocities_numpy
+        pos, radii, alive, rep, adh, max_adh, vel, vp, press = self._two_cells(100.0)
+        update_velocities_numpy(pos, radii, alive, rep, adh, max_adh, vel, press)
+        assert vel[0, 0] == pytest.approx(0.0)
+        assert vel[1, 0] == pytest.approx(0.0)
+
+    def test_fallback_adhesion_dominates(self):
+        import numpy as np
+        from src.adapters.physicell_mechanics.fallback import update_velocities_numpy
+        pos, radii, alive, rep, _, _, vel, _, press = self._two_cells(14.0)
+        adh = np.array([5.0, 5.0], dtype=np.float64)
+        max_adh = np.array([10.0, 10.0], dtype=np.float64)  # S = 20
+        update_velocities_numpy(pos, radii, alive, rep, adh, max_adh, vel, press)
+        # rep = (1-14/16)^2 * 10 = 0.15625; adh = (1-14/20)^2 * 5 = 0.45; net = -0.294
+        assert vel[1, 0] == pytest.approx(-0.29375, abs=1e-6)
+        assert vel[0, 0] == pytest.approx(+0.29375, abs=1e-6)
+
+    def test_fallback_adams_bashforth_first_step(self):
+        import numpy as np
+        from src.adapters.physicell_mechanics.fallback import update_mechanics_numpy
+        pos, radii, alive, rep, adh, max_adh, vel, vp, press = self._two_cells(12.0)
+        update_mechanics_numpy(pos, radii, alive, rep, adh, max_adh,
+                               vel, vp, press, 0.1,
+                               -100, -100, -100, 100, 100, 100, True)
+        # First step: x_new = x + dt*(1.5*v - 0.5*0) = x + 0.15*v
+        assert pos[0, 0] == pytest.approx(-0.09375, abs=1e-6)
+        assert pos[1, 0] == pytest.approx(+12.09375, abs=1e-6)
+        # velocities_prev stores current velocities
+        assert vp[0, 0] == pytest.approx(-0.625, abs=1e-6)
+
+    def test_cxx_matches_fallback(self):
+        """If the C++ extension is built, it must match the NumPy fallback."""
+        import numpy as np
+        from src.adapters.physicell_mechanics import get_extension
+        from src.adapters.physicell_mechanics.fallback import update_mechanics_numpy
+
+        ext = get_extension()
+        if ext is None:
+            pytest.skip("C++ extension not built")
+
+        rng = np.random.default_rng(42)
+        N = 20
+        pos_cxx = rng.uniform(-30, 30, (N, 3)).astype(np.float64)
+        pos_np = pos_cxx.copy()
+        radii = np.full(N, 8.0, dtype=np.float64)
+        alive = np.ones(N, dtype=np.bool_)
+        rep = np.full(N, 10.0, dtype=np.float64)
+        adh = np.full(N, 0.4, dtype=np.float64)
+        max_adh = np.full(N, 10.0, dtype=np.float64)
+
+        vel_cxx = np.zeros((N, 3), dtype=np.float64)
+        vp_cxx = np.zeros((N, 3), dtype=np.float64)
+        press_cxx = np.zeros(N, dtype=np.float64)
+
+        vel_np = np.zeros((N, 3), dtype=np.float64)
+        vp_np = np.zeros((N, 3), dtype=np.float64)
+        press_np = np.zeros(N, dtype=np.float64)
+
+        ext.update_mechanics(pos_cxx, radii, alive, rep, adh, max_adh,
+                             vel_cxx, vp_cxx, press_cxx, 0.1,
+                             -100, -100, -100, 100, 100, 100, 8.5, False)
+        update_mechanics_numpy(pos_np, radii, alive, rep, adh, max_adh,
+                               vel_np, vp_np, press_np, 0.1,
+                               -100, -100, -100, 100, 100, 100, False)
+
+        assert np.allclose(pos_cxx, pos_np, atol=1e-6)
+        assert np.allclose(vel_cxx, vel_np, atol=1e-6)
+        assert np.allclose(press_cxx, press_np, atol=1e-6)
+
+
+class TestMechanicsWorkflow:
+    """Test the update_mechanics_physicell workflow function."""
+
+    def _make_context(self, n_cells=4, dx=12.0, dims=3):
+        from src.biology.cell_container import CellContainer
+        import numpy as np
+        c = CellContainer(capacity=32, dimensions=dims)
+        for i in range(n_cells):
+            pos = [i * dx, 0.0] + ([0.0] if dims == 3 else [])
+            c.add_cell(position=tuple(pos), phenotype="Quiescent")
+        return {"cell_container": c, "dt": 0.1, "dimensions": dims}
+
+    def test_runs_on_container(self):
+        from src.workflow.functions.intercellular.update_mechanics_physicell import (
+            update_mechanics_physicell,
+        )
+        ctx = self._make_context(n_cells=4, dx=12.0)
+        ok = update_mechanics_physicell(ctx, dt=0.1, use_fallback=True)
+        assert ok is True
+        # positions should have moved (repulsion)
+        c = ctx["cell_container"]
+        assert abs(c.positions[0, 0] - 0.0) > 1e-6 or abs(c.positions[1, 0] - 12.0) > 1e-6
+
+    def test_creates_mechanics_state(self):
+        from src.workflow.functions.intercellular.update_mechanics_physicell import (
+            update_mechanics_physicell,
+        )
+        ctx = self._make_context(n_cells=2, dx=12.0)
+        update_mechanics_physicell(ctx, use_fallback=True)
+        assert "mechanics" in ctx
+        assert ctx["mechanics"]["velocities"].shape[1] == 3
+
+    def test_lazy_columns(self):
+        from src.workflow.functions.intercellular.update_mechanics_physicell import (
+            update_mechanics_physicell,
+        )
+        ctx = self._make_context(n_cells=2)
+        update_mechanics_physicell(ctx, use_fallback=True)
+        c = ctx["cell_container"]
+        assert c.has_column("repulsion_strength")
+        assert c.has_column("adhesion_strength")
+        assert c.has_column("max_adh_distance")
+        assert c.has_column("pressure")
+
+    def test_no_container_returns_false(self):
+        from src.workflow.functions.intercellular.update_mechanics_physicell import (
+            update_mechanics_physicell,
+        )
+        ok = update_mechanics_physicell({"dt": 0.1}, use_fallback=True)
+        assert ok is False
