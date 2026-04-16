@@ -17,6 +17,8 @@ from .setup_custom_parameters import setup_custom_parameters
 from .setup_associations import add_association, setup_associations
 from .setup_gene_network import setup_gene_network
 from .setup_maboss import setup_maboss
+from .setup_physiboss_model import setup_physiboss_model
+from .physiboss_treatment import physiboss_treatment
 from .load_cells_from_vtk import load_cells_from_vtk
 from .load_cells_from_csv import load_cells_from_csv
 from .read_checkpoint import read_checkpoint
@@ -36,6 +38,8 @@ __all__ = [
     'setup_associations',
     'setup_gene_network',
     'setup_maboss',
+    'setup_physiboss_model',
+    'physiboss_treatment',
     'load_cells_from_vtk',
     'load_cells_from_csv',
     'read_checkpoint',

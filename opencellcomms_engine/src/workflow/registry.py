@@ -134,6 +134,13 @@ def get_default_registry() -> FunctionRegistry:
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
 
+    # Import PhysiBoss functions
+    import src.workflow.functions.initialization.setup_physiboss_model
+    import src.workflow.functions.initialization.physiboss_treatment
+    import src.workflow.functions.intracellular.run_physiboss_step
+    import src.workflow.functions.intercellular.apply_physiboss_phenotype
+    import src.workflow.functions.intercellular.physiboss_cell_division
+
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks

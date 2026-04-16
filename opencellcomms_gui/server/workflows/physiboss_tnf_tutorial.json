@@ -1,0 +1,170 @@
+{
+  "version": "1.0",
+  "name": "PhysiBoss TNF Tutorial",
+  "description": "PhysiBoss TNF-death tutorial: cells with a MaBoSS Boolean network respond to pulsed TNF treatment. Maps TNF concentration to the BN input node, and BN apoptosis/necrosis outputs to cell fate.",
+  "metadata": {
+    "author": "OpenCellComms Team",
+    "experiment": "PhysiBoss TNF-Death Tutorial",
+    "reference": "Letort et al. 2019 - PhysiBoSS: TNF pulsed treatment model. PhysiCell XML config → OpenCellComms workflow.",
+    "created": "2026-04-16"
+  },
+  "stages": {
+    "initialization": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Load PhysiBoss XML config, initialize MaBoSS coupling, and set up treatment schedule",
+      "functions": [
+        {
+          "id": "setup_physiboss_node",
+          "function_name": "setup_physiboss_model",
+          "enabled": true,
+          "description": "Parse PhysiCell XML config, load MaBoSS BND/CFG, set up coupling",
+          "parameters": {
+            "xml_config": "1_Long_TNF.xml",
+            "sample_count": 1
+          },
+          "position": { "x": 100, "y": 100 }
+        },
+        {
+          "id": "setup_domain_node",
+          "function_name": "setup_domain",
+          "enabled": true,
+          "description": "Create domain from PhysiBoss config (1000×1000 µm, dx=20)",
+          "parameters": {},
+          "position": { "x": 100, "y": 200 }
+        },
+        {
+          "id": "setup_substances_node",
+          "function_name": "setup_substances",
+          "enabled": true,
+          "description": "Set up TNF diffusion from PhysiBoss substrate config",
+          "parameters": {},
+          "position": { "x": 100, "y": 300 }
+        },
+        {
+          "id": "setup_population_node",
+          "function_name": "setup_population",
+          "enabled": true,
+          "description": "Initialize cell population (2500 cells in disc)",
+          "parameters": {},
+          "position": { "x": 100, "y": 400 }
+        },
+        {
+          "id": "treatment_node",
+          "function_name": "physiboss_treatment",
+          "enabled": true,
+          "description": "Pulsed TNF: Dirichlet BC toggled on periodic schedule",
+          "parameters": {
+            "use_physiboss_config": true
+          },
+          "position": { "x": 100, "y": 500 }
+        }
+      ],
+      "execution_order": [
+        "setup_physiboss_node",
+        "setup_domain_node",
+        "setup_substances_node",
+        "setup_population_node",
+        "treatment_node"
+      ]
+    },
+    "macrostep": {
+      "enabled": true,
+      "steps": 840,
+      "description": "Main loop: 840 steps × 12 min = 10080 min (7 days)",
+      "functions": [
+        {
+          "id": "macrostep_node",
+          "function_name": "intracellular_step",
+          "enabled": true,
+          "description": "Execute intracellular + diffusion + intercellular per step",
+          "parameters": {},
+          "position": { "x": 200, "y": 150 }
+        }
+      ],
+      "execution_order": ["macrostep_node"]
+    },
+    "intracellular": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Run PhysiBoss MaBoSS coupling: environment → BN inputs → MaBoSS → BN outputs",
+      "functions": [
+        {
+          "id": "physiboss_step_node",
+          "function_name": "run_physiboss_step",
+          "enabled": true,
+          "description": "Per-cell: sample [TNF], set BN inputs, run MaBoSS, store output probabilities",
+          "parameters": {},
+          "position": { "x": 100, "y": 100 }
+        }
+      ],
+      "execution_order": ["physiboss_step_node"]
+    },
+    "diffusion": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Solve TNF diffusion PDE (dt_diffusion from XML config)",
+      "functions": [
+        {
+          "id": "diffusion_node",
+          "function_name": "run_diffusion_solver_coupled",
+          "enabled": true,
+          "description": "FiPy diffusion solve for TNF substrate",
+          "parameters": {},
+          "position": { "x": 100, "y": 100 }
+        }
+      ],
+      "execution_order": ["diffusion_node"]
+    },
+    "intercellular": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Apply PhysiBoss phenotype mapping and handle cell division",
+      "functions": [
+        {
+          "id": "phenotype_node",
+          "function_name": "apply_physiboss_phenotype",
+          "enabled": true,
+          "description": "BN output nodes → cell fate (apoptosis, necrosis, proliferation)",
+          "parameters": {},
+          "position": { "x": 100, "y": 100 }
+        },
+        {
+          "id": "division_node",
+          "function_name": "physiboss_cell_division",
+          "enabled": true,
+          "description": "Divide proliferating cells; daughter inherits BN state",
+          "parameters": {
+            "inheritance_fraction": -1.0
+          },
+          "position": { "x": 100, "y": 200 }
+        },
+        {
+          "id": "remove_dead_node",
+          "function_name": "remove_apoptotic_cells",
+          "enabled": true,
+          "description": "Remove dead cells from population",
+          "parameters": {},
+          "position": { "x": 100, "y": 300 }
+        }
+      ],
+      "execution_order": ["phenotype_node", "division_node", "remove_dead_node"]
+    },
+    "finalization": {
+      "enabled": true,
+      "steps": 1,
+      "description": "Print simulation summary",
+      "functions": [
+        {
+          "id": "summary_node",
+          "function_name": "print_simulation_summary",
+          "enabled": true,
+          "description": "Print final cell counts by phenotype",
+          "parameters": {},
+          "position": { "x": 100, "y": 100 }
+        }
+      ],
+      "execution_order": ["summary_node"]
+    }
+  }
+}
