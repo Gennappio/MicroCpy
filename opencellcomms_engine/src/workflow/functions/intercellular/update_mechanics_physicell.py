@@ -108,9 +108,16 @@ def update_mechanics_physicell(
         velocities, velocities_prev = mech["velocities"], mech["velocities_prev"]
 
     # ── Slice active arrays (views into SoA) ─────────────────────────────
-    positions = container.positions
     radii = container.radii
     alive = container.alive
+
+    # Promote 2D positions (N,2) to (N,3) for the kernel (z=0, use_2D=True)
+    if container.dims == 2:
+        use_2D = True
+        positions3 = np.zeros((container.capacity, 3), dtype=np.float64)
+        positions3[:, :2] = container.positions
+    else:
+        positions3 = container.positions
 
     # ── Dispatch: C++ or NumPy ───────────────────────────────────────────
     ext = None
@@ -120,7 +127,7 @@ def update_mechanics_physicell(
 
     if ext is not None:
         ext.update_mechanics(
-            positions, radii, alive,
+            positions3, radii, alive,
             rep_arr, adh_arr, max_adh,
             velocities, velocities_prev, pressure,
             step_dt,
@@ -131,13 +138,17 @@ def update_mechanics_physicell(
     else:
         from src.adapters.physicell_mechanics.fallback import update_mechanics_numpy
         update_mechanics_numpy(
-            positions[:N], radii[:N], alive[:N],
+            positions3[:N], radii[:N], alive[:N],
             rep_arr[:N], adh_arr[:N], max_adh[:N],
             velocities[:N], velocities_prev[:N], pressure[:N],
             step_dt,
             x_min, y_min, z_min, x_max, y_max, z_max, use_2D,
         )
         backend = "numpy"
+
+    # Copy (x,y) back into the 2D container if we padded
+    if container.dims == 2:
+        container.positions[:] = positions3[:, :2]
 
     log(context, f"mechanics step: {N} cells, dt={step_dt:.4f}, backend={backend}",
         prefix="[Mech]", node_verbose=verbose)

@@ -1002,3 +1002,183 @@ class TestMechanicsWorkflow:
         )
         ok = update_mechanics_physicell({"dt": 0.1}, use_fallback=True)
         assert ok is False
+
+
+
+
+# ---------------------------------------------------------------------------
+# End-to-end TNF tutorial integration test (Phase 3.9)
+# ---------------------------------------------------------------------------
+
+class TestTNFTutorialIntegration:
+    """
+    Runs the full coupling → phenotype → mechanics pipeline on a small
+    CellContainer with a mocked MaBoSS output (TNF-ON drives Apoptosis≈0.7,
+    NonACD≈0.3, matching 1_Long_TNF.xml behaviour).
+
+    Verifies invariants that must hold regardless of randomness:
+    * total cell count is conserved (no cell is lost silently)
+    * high TNF monotonically drives apoptotic fraction upward
+    * zero TNF leaves the population quiescent
+    * mechanics step keeps all cells inside the domain
+    """
+
+    def _build_context(self, n_cells=80, tnf_level=10.0, seed=42, dims=2):
+        """Build a minimal context: CellContainer + coupling + mapper."""
+        import numpy as np
+        from src.biology.cell_container import CellContainer
+        from src.adapters.physiboss.coupling import PhysiBossSubstrateCoupling
+        from src.adapters.physiboss.phenotype_mapper import PhysiBossPhenotypeMapper
+        from src.adapters.physiboss.config_loader import (
+            PhysiBossConfig, TimingConfig, InputMapping, OutputMapping,
+        )
+
+        rng = np.random.default_rng(seed)
+        container = CellContainer(capacity=n_cells * 2, dimensions=dims)
+
+        # Cells on a disc (r=200 um)
+        angles = rng.uniform(0, 2 * np.pi, n_cells)
+        radii_arr = 200.0 * np.sqrt(rng.uniform(0, 1, n_cells))
+        if dims == 2:
+            positions = np.column_stack([radii_arr * np.cos(angles),
+                                         radii_arr * np.sin(angles)])
+        else:
+            positions = np.column_stack([radii_arr * np.cos(angles),
+                                         radii_arr * np.sin(angles),
+                                         np.zeros(n_cells)])
+        container.add_cells(positions, phenotype="Quiescent")
+
+        # Pre-register BN output columns (apply_physiboss_phenotype reads these)
+        container.add_float_column("bn_prob_Apoptosis", default=0.0)
+        container.add_float_column("bn_prob_NonACD", default=0.0)
+
+        coupling = PhysiBossSubstrateCoupling(
+            inputs=[InputMapping(substance_name="TNF", node_name="TNF",
+                                 threshold=1.0, action="activation")],
+            outputs=[
+                OutputMapping(node_name="Apoptosis", behaviour_name="apoptosis",
+                              value=1e6, base_value=0.0, action="activation"),
+                OutputMapping(node_name="NonACD", behaviour_name="necrosis",
+                              value=1e6, base_value=0.0, action="activation"),
+            ],
+        )
+        mapper = PhysiBossPhenotypeMapper(dt_phenotype=6.0)
+        pb_config = PhysiBossConfig(timing=TimingConfig(dt_phenotype=6.0))
+
+        ctx = {
+            "cell_container": container,
+            "physiboss_coupling": coupling,
+            "physiboss_phenotype_mapper": mapper,
+            "physiboss_config": pb_config,
+            "dt": 6.0,
+            "dimensions": dims,
+            "_tnf_level": tnf_level,
+        }
+        return ctx
+
+    def _step_pipeline(self, ctx, n_steps):
+        """Run `n_steps` of (mock MaBoSS → phenotype → mechanics)."""
+        import numpy as np
+        from src.workflow.functions.intercellular.apply_physiboss_phenotype import (
+            apply_physiboss_phenotype,
+        )
+        from src.workflow.functions.intercellular.update_mechanics_physicell import (
+            update_mechanics_physicell,
+        )
+
+        container = ctx["cell_container"]
+        coupling = ctx["physiboss_coupling"]
+        tnf = ctx["_tnf_level"]
+
+        for _ in range(n_steps):
+            N = container.count
+            if N == 0:
+                break
+            # ---- mock MaBoSS: TNF concentration → BN inputs → fate probs ----
+            tnf_arr = np.full(N, tnf, dtype=np.float64)
+            bn_inputs = coupling.compute_bn_inputs_vectorized({"TNF": tnf_arr})
+            tnf_on = bn_inputs.get("TNF", np.zeros(N, dtype=np.bool_))
+            container.get_float("bn_prob_Apoptosis")[:N] = np.where(tnf_on, 0.7, 0.0)
+            container.get_float("bn_prob_NonACD")[:N] = np.where(tnf_on, 0.3, 0.0)
+
+            apply_physiboss_phenotype(ctx)
+            update_mechanics_physicell(ctx, dt=0.1, use_fallback=True,
+                                       repulsion_strength=10.0,
+                                       adhesion_strength=0.4)
+
+    def test_high_tnf_drives_apoptosis(self):
+        """With TNF >> threshold, apoptotic fraction should become majority."""
+        import random
+        random.seed(7)
+        ctx = self._build_context(n_cells=80, tnf_level=10.0, seed=7)
+        container = ctx["cell_container"]
+        n0 = container.count
+
+        self._step_pipeline(ctx, n_steps=6)
+
+        counts = container.phenotype_counts()
+        apop = counts.get("apoptotic", 0)
+        necro = counts.get("necrotic", 0)
+        assert container.count == n0, "cell count must be conserved (no divisions here)"
+        assert apop + necro >= int(0.5 * n0), \
+            f"expected majority apoptotic/necrotic, got apop={apop} necro={necro} of {n0}"
+
+    def test_zero_tnf_keeps_cells_quiescent(self):
+        """With TNF below threshold, no cell should die."""
+        import random
+        random.seed(11)
+        ctx = self._build_context(n_cells=40, tnf_level=0.0, seed=11)
+        container = ctx["cell_container"]
+
+        self._step_pipeline(ctx, n_steps=5)
+
+        counts = container.phenotype_counts()
+        assert counts.get("apoptotic", 0) == 0
+        assert counts.get("necrotic", 0) == 0
+        assert counts.get("Quiescent", 0) == container.count
+
+    def test_mechanics_keeps_cells_in_domain(self):
+        """Mechanics integration must never push cells outside the domain."""
+        import random
+        random.seed(23)
+        ctx = self._build_context(n_cells=30, tnf_level=0.0, seed=23)
+        # Shrink domain
+        from dataclasses import dataclass
+
+        @dataclass
+        class _Len:
+            micrometers: float
+
+        class _Dom:
+            dimensions = 2
+            size_x = _Len(400.0)
+            size_y = _Len(400.0)
+            size_z = _Len(0.0)
+
+        class _Cfg:
+            domain = _Dom()
+
+        ctx["config"] = _Cfg()
+
+        self._step_pipeline(ctx, n_steps=8)
+
+        container = ctx["cell_container"]
+        N = container.count
+        pos = container.positions[:N]
+        assert (pos[:, 0] >= -200.0).all() and (pos[:, 0] <= 200.0).all()
+        assert (pos[:, 1] >= -200.0).all() and (pos[:, 1] <= 200.0).all()
+
+    def test_apoptosis_is_monotonic_in_tnf(self):
+        """Apoptotic fraction under high TNF >= under zero TNF (same seed)."""
+        import random
+        random.seed(31)
+        hi = self._build_context(n_cells=60, tnf_level=10.0, seed=31)
+        random.seed(31)
+        lo = self._build_context(n_cells=60, tnf_level=0.0, seed=31)
+
+        self._step_pipeline(hi, n_steps=6)
+        self._step_pipeline(lo, n_steps=6)
+
+        apop_hi = hi["cell_container"].phenotype_counts().get("apoptotic", 0)
+        apop_lo = lo["cell_container"].phenotype_counts().get("apoptotic", 0)
+        assert apop_hi > apop_lo
