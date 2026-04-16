@@ -452,6 +452,60 @@ function getFallbackRegistry() {
     source_file: 'src/workflow/functions/output/export_vtk.py',
   },
 
+  // PHYSIBOSS ADAPTER FUNCTIONS
+  setup_physiboss_model: {
+    name: 'setup_physiboss_model',
+    displayName: 'Setup PhysiBoss Model',
+    description: 'Load PhysiCell XML + MaBoSS .bnd/.cfg and wire the adapter into the context',
+    category: FunctionCategory.INITIALIZATION,
+    parameters: [],
+    source_file: 'src/workflow/functions/initialization/setup_physiboss_model.py',
+  },
+
+  run_physiboss_step: {
+    name: 'run_physiboss_step',
+    displayName: 'Run PhysiBoss Step',
+    description: 'Advance the Boolean network of each cell by one (sub-)step and couple to substrates',
+    category: FunctionCategory.INTRACELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intracellular/run_physiboss_step.py',
+  },
+
+  apply_physiboss_phenotype: {
+    name: 'apply_physiboss_phenotype',
+    displayName: 'Apply PhysiBoss Phenotype',
+    description: 'Map Boolean network readouts to cell phenotype (proliferation/apoptosis/necrosis)',
+    category: FunctionCategory.INTERCELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intercellular/apply_physiboss_phenotype.py',
+  },
+
+  physiboss_treatment: {
+    name: 'physiboss_treatment',
+    displayName: 'PhysiBoss Treatment',
+    description: 'Apply a substrate pulse treatment (e.g. TNF) to the simulation environment',
+    category: FunctionCategory.INITIALIZATION,
+    parameters: [],
+    source_file: 'src/workflow/functions/initialization/physiboss_treatment.py',
+  },
+
+  physiboss_cell_division: {
+    name: 'physiboss_cell_division',
+    displayName: 'PhysiBoss Cell Division',
+    description: 'Divide cells flagged as proliferating and propagate Boolean state to daughters',
+    category: FunctionCategory.INTERCELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intercellular/physiboss_cell_division.py',
+  },
+
+  update_mechanics_physicell: {
+    name: 'update_mechanics_physicell',
+    displayName: 'Update Mechanics (PhysiCell)',
+    description: 'Hertzian repulsion + adhesion forces and Adams-Bashforth integration (C++/NumPy)',
+    category: FunctionCategory.INTERCELLULAR,
+    parameters: [],
+    source_file: 'src/workflow/functions/intercellular/update_mechanics_physicell.py',
+  },
 
   };
 }
