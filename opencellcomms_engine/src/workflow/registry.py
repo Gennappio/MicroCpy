@@ -138,9 +138,14 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.initialization.setup_physiboss_model
     import src.workflow.functions.initialization.physiboss_treatment
     import src.workflow.functions.intracellular.run_physiboss_step
+    import src.workflow.functions.intracellular.update_volume_physicell
     import src.workflow.functions.intercellular.apply_physiboss_phenotype
     import src.workflow.functions.intercellular.physiboss_cell_division
     import src.workflow.functions.intercellular.update_mechanics_physicell
+    import src.workflow.functions.intercellular.update_cycle_physicell
+    import src.workflow.functions.intercellular.update_death_physicell
+    import src.workflow.functions.intercellular.remove_flagged_cells
+    import src.workflow.functions.diffusion.apply_secretion_physicell
 
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population
@@ -154,6 +159,11 @@ def get_default_registry() -> FunctionRegistry:
         import opencellcomms_adapters.jayatilake.register  # noqa: F401
     except ImportError as e:
         print(f"[Registry] Jayatilake adapter not available: {e}")
+
+    try:
+        import opencellcomms_adapters.prostate.register  # noqa: F401
+    except ImportError as e:
+        print(f"[Registry] Prostate adapter not available: {e}")
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry

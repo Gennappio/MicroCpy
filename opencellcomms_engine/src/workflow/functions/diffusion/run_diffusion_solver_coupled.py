@@ -489,6 +489,14 @@ def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any]
             max_oxygen_consumption = max(max_oxygen_consumption, oxygen_consumption)
             total_oxygen_consumption += oxygen_consumption
 
+    # Merge reactions produced by apply_secretion_physicell (CellContainer path).
+    container_reactions = context.get("container_substance_reactions")
+    if container_reactions:
+        for pos, subs in container_reactions.items():
+            dst = position_reactions.setdefault(pos, {})
+            for sub, rate in subs.items():
+                dst[sub] = dst.get(sub, 0.0) + float(rate)
+
     # DEBUG output
     log(context, f"Total cells: {total_cells}", prefix="[REACTIONS]", node_verbose=verbose)
     log(context, f"Cells with metabolic_state: {cells_with_metabolic_state}", prefix="[REACTIONS]", node_verbose=verbose)

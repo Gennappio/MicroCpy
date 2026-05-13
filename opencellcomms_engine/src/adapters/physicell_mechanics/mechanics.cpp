@@ -192,14 +192,18 @@ static void update_velocities(
 //   x_new = x + dt * (1.5 * v_new - 0.5 * v_prev)
 // On the first step (v_prev = 0), this reduces to x + 1.5*dt*v_new.
 // After update, v_prev is set to v_new for the next step.
+//
+// Domain bounds are accepted for API compatibility with the neighbor grid
+// but positions are NOT hard-clamped: PhysiCell models domain walls as soft
+// force contributions (virtual_wall_at_domain_edge), never as position snaps.
 static void update_positions(
     py::array_t<double, py::array::c_style> positions,
     py::array_t<double, py::array::c_style | py::array::forcecast> velocities,
     py::array_t<double, py::array::c_style> velocities_prev,
     py::array_t<bool,   py::array::c_style | py::array::forcecast> alive,
     double dt,
-    double x_min, double y_min, double z_min,
-    double x_max, double y_max, double z_max,
+    double /*x_min*/, double /*y_min*/, double /*z_min*/,
+    double /*x_max*/, double /*y_max*/, double /*z_max*/,
     bool use_2D
 ) {
     const ssize_t N = positions.shape(0);
@@ -216,15 +220,6 @@ static void update_positions(
             double old_v = vp[3*i + k];
             pos[3*i + k] += dt * (1.5 * new_v - 0.5 * old_v);
             vp[3*i + k] = new_v;
-        }
-        // Clamp to domain
-        if (pos[3*i]   < x_min) pos[3*i]   = x_min;
-        if (pos[3*i]   > x_max) pos[3*i]   = x_max;
-        if (pos[3*i+1] < y_min) pos[3*i+1] = y_min;
-        if (pos[3*i+1] > y_max) pos[3*i+1] = y_max;
-        if (!use_2D) {
-            if (pos[3*i+2] < z_min) pos[3*i+2] = z_min;
-            if (pos[3*i+2] > z_max) pos[3*i+2] = z_max;
         }
     }
 }

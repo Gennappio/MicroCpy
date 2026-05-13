@@ -1,0 +1,65 @@
+{
+  "version": "2.0",
+  "name": "Prostate LNCaP (PhysiBoSS replica)",
+  "description": "Replicates PhysiBoSS sample_projects_intracellular/boolean/prostate in OpenCellComms. One MaBoSS-driven LNCaP cell line with optional drug inhibition (Luminespib, Pictilisib, ...). Drug sensitivity -> anti_<target> BN inputs -> MaBoSS -> Apoptosis/Proliferation/Migration -> phenotype effects.",
+  "metadata": {
+    "author": "OpenCellComms Prostate adapter",
+    "experiment": "Prostate LNCaP drug response",
+    "created": "2026-04-21",
+    "source": "PhysiBoSS-master/sample_projects_intracellular/boolean/prostate",
+    "gui": {
+      "subworkflow_kinds": {"main": "composer", "setup": "composer", "loop": "subworkflow"}
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Linear composer: setup -> loop(N steps)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {"id": "controller-main", "type": "controller", "label": "MAIN", "position": {"x": 0, "y": 0}, "number_of_steps": 1},
+      "functions": [],
+      "subworkflow_calls": [
+        {"id": "call_setup", "type": "subworkflow_call", "subworkflow_name": "setup", "iterations": 1, "parameters": {}, "enabled": true, "position": {"x": 200, "y": 0}, "parameter_nodes": []},
+        {"id": "call_loop", "type": "subworkflow_call", "subworkflow_name": "loop", "iterations": 1000, "parameters": {}, "enabled": true, "position": {"x": 200, "y": 200}, "parameter_nodes": []}
+      ],
+      "parameters": [],
+      "execution_order": ["call_setup", "call_loop"],
+      "input_parameters": []
+    },
+    "setup": {
+      "description": "Kernel + prostate user_parameters + MaBoSS load.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {"id": "controller-setup", "type": "controller", "label": "SETUP", "position": {"x": 0, "y": 0}, "number_of_steps": 1},
+      "functions": [
+        {"id": "load_kernel", "function_name": "load_kernel", "parameters": {"kernel_name": "biophysics"}, "enabled": true, "position": {"x": 100, "y": 100}, "step_count": 1, "parameter_nodes": []},
+        {"id": "setup_prostate_params", "function_name": "setup_prostate_params", "parameters": {"xml_path": "../../../PhysiBoSS-master/sample_projects_intracellular/boolean/prostate/config/PhysiCell_settings_LNCaP.xml"}, "enabled": true, "position": {"x": 100, "y": 250}, "step_count": 1, "parameter_nodes": []}
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["load_kernel", "setup_prostate_params"],
+      "input_parameters": []
+    },
+    "loop": {
+      "description": "Per-step: drug sens -> MaBoSS -> BN effects -> PhysiCell Core Four (cycle/volume/death/secretion) -> division -> removal.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {"id": "controller-loop", "type": "controller", "label": "LOOP", "position": {"x": 0, "y": 0}, "number_of_steps": 1},
+      "functions": [
+        {"id": "drug_sens", "function_name": "apply_drug_sensitivity_inputs", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 100}, "step_count": 1, "parameter_nodes": []},
+        {"id": "run_maboss", "function_name": "run_prostate_physiboss_step", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 250}, "step_count": 1, "parameter_nodes": []},
+        {"id": "bn_effects", "function_name": "apply_prostate_boolean_effects", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 400}, "step_count": 1, "parameter_nodes": []},
+        {"id": "update_cycle", "function_name": "update_cycle_physicell", "parameters": {"model": "live", "verbose": false}, "enabled": true, "position": {"x": 100, "y": 550}, "step_count": 1, "parameter_nodes": []},
+        {"id": "update_volume", "function_name": "update_volume_physicell", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 700}, "step_count": 1, "parameter_nodes": []},
+        {"id": "update_death", "function_name": "update_death_physicell", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 850}, "step_count": 1, "parameter_nodes": []},
+        {"id": "apply_secretion", "function_name": "apply_secretion_physicell", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 1000}, "step_count": 1, "parameter_nodes": []},
+        {"id": "cell_division", "function_name": "physiboss_cell_division", "parameters": {"verbose": false}, "enabled": true, "position": {"x": 100, "y": 1150}, "step_count": 1, "parameter_nodes": []},
+        {"id": "remove_flagged", "function_name": "remove_flagged_cells", "parameters": {"compact": true, "verbose": false}, "enabled": true, "position": {"x": 100, "y": 1300}, "step_count": 1, "parameter_nodes": []}
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["drug_sens", "run_maboss", "bn_effects", "update_cycle", "update_volume", "update_death", "apply_secretion", "cell_division", "remove_flagged"],
+      "input_parameters": []
+    }
+  }
+}

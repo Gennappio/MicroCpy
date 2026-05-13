@@ -2,7 +2,8 @@
 
 **Multi-scale cellular simulation platform with visual workflow designer.**
 
-OpenCellComms is a Python-based simulation framework for modeling gene regulatory networks, substance diffusion, and cell behavior in biological systems — featuring a visual drag-and-drop workflow editor.
+OpenCellComms is a Python-based simulation framework for modeling gene regulatory networks, substance diffusion, and cell behavior in biological sys
+s — featuring a visual drag-and-drop workflow editor.
 
 ## ✨ Features
 

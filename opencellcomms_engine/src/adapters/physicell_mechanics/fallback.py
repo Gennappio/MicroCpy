@@ -104,7 +104,13 @@ def update_positions_numpy(
     x_max: float, y_max: float, z_max: float,
     use_2D: bool,
 ) -> None:
-    """Adams-Bashforth 2nd-order integration. Modifies positions in place."""
+    """Adams-Bashforth 2nd-order integration. Modifies positions in place.
+
+    Domain bounds are accepted for signature parity with the C++ kernel but
+    positions are NOT hard-clamped: PhysiCell models domain walls as soft
+    force contributions (virtual_wall_at_domain_edge), never as position snaps.
+    """
+    del x_min, y_min, z_min, x_max, y_max, z_max
     mask = alive.astype(bool)
     new_v = velocities[mask]
     old_v = velocities_prev[mask]
@@ -113,12 +119,6 @@ def update_positions_numpy(
         delta[:, 2] = 0.0
     positions[mask] += delta
     velocities_prev[mask] = new_v
-
-    # Clamp to domain
-    np.clip(positions[:, 0], x_min, x_max, out=positions[:, 0])
-    np.clip(positions[:, 1], y_min, y_max, out=positions[:, 1])
-    if not use_2D:
-        np.clip(positions[:, 2], z_min, z_max, out=positions[:, 2])
 
 
 def update_mechanics_numpy(

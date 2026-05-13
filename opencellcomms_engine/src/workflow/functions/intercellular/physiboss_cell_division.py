@@ -211,8 +211,14 @@ def _divide_container(context, container, inh_frac, verbose):
     prolif_id = phenotype_id("Proliferation")
     quiescent_id = phenotype_id("Quiescent")
 
-    # Find cells to divide
-    dividing_mask = (container.phenotype_ids[:N] == prolif_id) & container.alive[:N]
+    # Prefer the flagged_for_division column (set by update_cycle_physicell).
+    # If that column is absent, fall back to the legacy Proliferation-phenotype
+    # trigger so workflows without the PhysiCell cycle kernel still divide.
+    if "flagged_for_division" in container._bool_columns:
+        flag = container.get_bool("flagged_for_division")[:N]
+        dividing_mask = flag & container.alive[:N]
+    else:
+        dividing_mask = (container.phenotype_ids[:N] == prolif_id) & container.alive[:N]
     dividing_indices = np.where(dividing_mask)[0]
 
     if len(dividing_indices) == 0:
@@ -258,6 +264,30 @@ def _divide_container(context, container, inh_frac, verbose):
     container.radii[daughter_indices] = (
         3.0 * container.volumes[daughter_indices] / (4.0 * np.pi)
     ) ** (1.0 / 3.0)
+
+    # Halve PhysiCell volume-state columns on parent and daughter (Volume::divide)
+    _halve_vol_cols = (
+        "volume_fluid", "volume_nuclear_solid", "volume_cytoplasmic_solid",
+        "volume_nuclear", "volume_target_solid_nuclear",
+        "volume_target_solid_cytoplasmic", "volume_rupture_volume",
+    )
+    for name in _halve_vol_cols:
+        if name in container._float_columns:
+            col = container._float_columns[name]
+            col[daughter_indices] = col[dividing_indices] * 0.5
+            col[dividing_indices] = col[dividing_indices] * 0.5
+
+    # Reset cycle state on parent and daughter (new cycle in phase 0)
+    for name in ("cycle_phase_idx", "cycle_elapsed", "death_phase_idx", "death_elapsed"):
+        if name in container._float_columns:
+            col = container._float_columns[name]
+            col[daughter_indices] = -1.0 if name == "death_phase_idx" else 0.0
+            col[dividing_indices] = -1.0 if name == "death_phase_idx" else 0.0
+    for name in ("flagged_for_division", "flagged_for_removal"):
+        if name in container._bool_columns:
+            col = container._bool_columns[name]
+            col[daughter_indices] = False
+            col[dividing_indices] = False
 
     # Reset parents: Quiescent, halve volume, increment division count
     container.phenotype_ids[dividing_indices] = quiescent_id
