@@ -134,6 +134,11 @@ def get_default_registry() -> FunctionRegistry:
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
 
+    # PhysiCell codegen-only nodes (define_substrate / define_cell_type /
+    # define_hill_rule / run_physicell_simulation / select_project_template).
+    import src.workflow.functions.physicell  # noqa: F401
+
+
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks
