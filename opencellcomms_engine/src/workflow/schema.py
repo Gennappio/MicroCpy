@@ -781,6 +781,11 @@ class WorkflowDefinition:
     version: str = "2.0"
     name: str = "Untitled Workflow"
     description: str = ""
+    kernel: str = "biophysics"  # routes executor dispatch; "physicell" → facade backend
+    # Free-form kernel-specific configuration block. The physicell facade reads
+    # domain / overall / save / options overrides from kernel_config["physicell"]
+    # (legacy: the workflow's top-level "physicell" key, preserved on load).
+    kernel_config: Dict[str, Any] = field(default_factory=dict)
     stages: Dict[str, WorkflowStage] = field(default_factory=dict)
     subworkflows: Dict[str, SubWorkflow] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -815,8 +820,16 @@ class WorkflowDefinition:
             "version": self.version,
             "name": self.name,
             "description": self.description,
+            "kernel": self.kernel,
             "metadata": self.metadata
         }
+        if self.kernel_config:
+            result["kernel_config"] = self.kernel_config
+            # Legacy mirror: kernel_config["physicell"] is also exposed at the
+            # workflow root so spec_from_workflow.py can read it without
+            # depending on WorkflowDefinition.
+            if "physicell" in self.kernel_config:
+                result["physicell"] = self.kernel_config["physicell"]
 
         if self.version == "2.0":
             result["subworkflows"] = {
@@ -836,6 +849,12 @@ class WorkflowDefinition:
         """Create from dictionary (JSON deserialization)."""
         version = data.get("version", "1.0")
 
+        # kernel_config absorbs top-level "physicell" for backward compatibility
+        # with workflows that pre-date the kernel_config field.
+        kernel_config = dict(data.get("kernel_config") or {})
+        if "physicell" in data and "physicell" not in kernel_config:
+            kernel_config["physicell"] = data["physicell"]
+
         if version == "2.0":
             # New sub-workflow format
             subworkflows = {
@@ -846,6 +865,8 @@ class WorkflowDefinition:
                 version=version,
                 name=data.get("name", "Untitled Workflow"),
                 description=data.get("description", ""),
+                kernel=data.get("kernel", "biophysics"),
+                kernel_config=kernel_config,
                 subworkflows=subworkflows,
                 metadata=data.get("metadata", {})
             )
@@ -859,6 +880,8 @@ class WorkflowDefinition:
                 version=version,
                 name=data.get("name", "Untitled Workflow"),
                 description=data.get("description", ""),
+                kernel=data.get("kernel", "biophysics"),
+                kernel_config=kernel_config,
                 stages=stages,
                 metadata=data.get("metadata", {})
             )

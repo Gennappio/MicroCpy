@@ -134,18 +134,17 @@ def get_default_registry() -> FunctionRegistry:
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
 
-    # Import PhysiBoss functions
-    import src.workflow.functions.initialization.setup_physiboss_model
-    import src.workflow.functions.initialization.physiboss_treatment
-    import src.workflow.functions.intracellular.run_physiboss_step
+    # Import PhysiCell-related runtime functions (legacy physiboss wrappers removed
+    # as part of the black-box facade cutover; see docs/Physicell_Facade_plan.md)
     import src.workflow.functions.intracellular.update_volume_physicell
-    import src.workflow.functions.intercellular.apply_physiboss_phenotype
-    import src.workflow.functions.intercellular.physiboss_cell_division
-    import src.workflow.functions.intercellular.update_mechanics_physicell
     import src.workflow.functions.intercellular.update_cycle_physicell
     import src.workflow.functions.intercellular.update_death_physicell
     import src.workflow.functions.intercellular.remove_flagged_cells
     import src.workflow.functions.diffusion.apply_secretion_physicell
+
+    # PhysiCell codegen-only nodes (define_substrate / define_cell_type /
+    # define_hill_rule). No-op at runtime; consumed by codegen.
+    import src.workflow.functions.physicell  # noqa: F401
 
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population

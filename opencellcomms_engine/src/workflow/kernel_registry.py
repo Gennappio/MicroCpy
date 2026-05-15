@@ -143,3 +143,33 @@ BIOPHYSICS_KERNEL = KernelDefinition(
 
 register_kernel(BIOPHYSICS_KERNEL)
 
+
+# -- PhysiCell black-box facade kernel ---------------------------------------
+#
+# Routing signal for the codegen→make→spawn pipeline (see
+# docs/Physicell_Facade_plan.md). Unlike biophysics, the simulation lives in
+# a generated C++ project; the Python "kernel" is just the dispatch token.
+
+def _initialize_physicell(context: Dict[str, Any], params: Dict[str, Any]) -> bool:
+    context['kernel_type'] = 'physicell'
+    print("[KERNEL] PhysiCell facade kernel selected — simulation will run via codegen + native binary")
+    return True
+
+
+PHYSICELL_KERNEL = KernelDefinition(
+    name="physicell",
+    description=(
+        "PhysiCell / PhysiBoSS black-box facade. Workflow nodes describe a "
+        "domain spec (substrates, cell types, Hill rules); the engine "
+        "generates a project, builds it against unmodified PhysiBoSS-master, "
+        "and runs the native binary while streaming occ_events.jsonl."
+    ),
+    core_keys={},
+    required_interfaces={},
+    initializer=_initialize_physicell,
+    compatible_categories=["INITIALIZATION"],
+)
+
+register_kernel(PHYSICELL_KERNEL)
+
+
