@@ -1,5 +1,0 @@
-# Compiled extension and build artifacts
-*.so
-build/
-__pycache__/
-*.pyc

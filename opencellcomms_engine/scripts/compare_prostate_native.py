@@ -34,18 +34,40 @@ import numpy as np
 import pandas as pd
 import scipy.io
 
+
+def _phase5_stub() -> None:
+    sys.stderr.write(
+        "compare_prostate_native.py is the Phase 5 regression-test spec for "
+        "the prostate model under the new PhysiCell black-box facade.\n"
+        "It is preserved here for reference but is NOT runnable until the "
+        "Phase 5 fragment library lands. See docs/Physicell_Facade_plan.md.\n"
+    )
+    sys.exit(2)
+
+
+if __name__ == "__main__":
+    _phase5_stub()
+
+
 # Make the engine src importable without installing the package.
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE.parent))
 # Make opencellcomms_adapters importable.
 sys.path.insert(0, str(_HERE.parent.parent))
 
-from src.adapters.physiboss.config_loader import (  # noqa: E402
-    PhysiBossConfig, TimingConfig,
-)
-from src.adapters.physiboss.phenotype_mapper import (  # noqa: E402
-    PhysiBossPhenotypeMapper,
-)
+# NOTE (Phase 5): the imports below targeted the legacy pybind11 / Python-side
+# physiboss adapter that was removed in Phase 0 of the black-box facade
+# cutover. They are commented out so this file remains importable as spec.
+# Phase 5 will rewrite this script to drive the generated PhysiCell project
+# (via opencellcomms_engine.codegen.physicell) and compare against the
+# native PhysiBoSS prostate sample directly.
+#
+# from src.adapters.physiboss.config_loader import PhysiBossConfig, TimingConfig
+# from src.adapters.physiboss.phenotype_mapper import PhysiBossPhenotypeMapper
+# from src.workflow.functions.intercellular.update_death_physicell import update_death_physicell
+# from src.workflow.functions.diffusion.apply_secretion_physicell import apply_secretion_physicell
+# from src.workflow.functions.intercellular.physiboss_cell_division import physiboss_cell_division
+
 from src.biology.cell_container import CellContainer  # noqa: E402
 from opencellcomms_adapters.prostate.drug_sensitivity import (  # noqa: E402
     DRUG_TARGETS,
@@ -62,15 +84,6 @@ from src.workflow.functions.intercellular.update_cycle_physicell import (  # noq
 )
 from src.workflow.functions.intracellular.update_volume_physicell import (  # noqa: E402
     update_volume_physicell,
-)
-from src.workflow.functions.intercellular.update_death_physicell import (  # noqa: E402
-    update_death_physicell,
-)
-from src.workflow.functions.diffusion.apply_secretion_physicell import (  # noqa: E402
-    apply_secretion_physicell,
-)
-from src.workflow.functions.intercellular.physiboss_cell_division import (  # noqa: E402
-    physiboss_cell_division,
 )
 from src.workflow.functions.intercellular.remove_flagged_cells import (  # noqa: E402
     remove_flagged_cells,

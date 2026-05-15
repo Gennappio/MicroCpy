@@ -9,9 +9,6 @@ from .update_cell_division import update_cell_division
 from .update_cell_migration import update_cell_migration
 from .remove_apoptotic_cells import remove_apoptotic_cells
 from .track_population_changes import track_population_start, track_population_end
-from .apply_physiboss_phenotype import apply_physiboss_phenotype
-from .physiboss_cell_division import physiboss_cell_division
-from .update_mechanics_physicell import update_mechanics_physicell
 from .update_cycle_physicell import update_cycle_physicell
 from .update_death_physicell import update_death_physicell
 from .remove_flagged_cells import remove_flagged_cells
@@ -22,9 +19,6 @@ __all__ = [
     'remove_apoptotic_cells',
     'track_population_start',
     'track_population_end',
-    'apply_physiboss_phenotype',
-    'physiboss_cell_division',
-    'update_mechanics_physicell',
     'update_cycle_physicell',
     'update_death_physicell',
     'remove_flagged_cells',

@@ -6,12 +6,10 @@ opencellcomms_adapters/jayatilake/functions/intracellular/.
 """
 
 from .update_metabolism import update_metabolism
-from .run_physiboss_step import run_physiboss_step
 from .update_volume_physicell import update_volume_physicell
 
 __all__ = [
     'update_metabolism',
-    'run_physiboss_step',
     'update_volume_physicell',
 ]
 
