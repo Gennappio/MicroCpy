@@ -1,0 +1,267 @@
+{
+  "version": "2.0",
+  "name": "Spheroid TNF composable",
+  "description": "Composable PhysiCell facade workflow. The simulation is one node (run_physicell_simulation) in a normal Python workflow — anything before or after is just more nodes. No kernel dispatch; kernel stays 'biophysics'. Drop your own post-processing / plotting / coupling nodes after run_physicell_simulation; they see the events JSONL path in context['physicell']['events_jsonl'].",
+  "kernel": "biophysics",
+  "metadata": {
+    "author": "OpenCellComms / PhysiCell facade",
+    "experiment": "Composable spheroid_tnf demo",
+    "notes": "Run: PHYSICELL_CPP=g++-14 PHYSIBOSS_ROOT=/path/to/PhysiBoSS-master python run_workflow.py --workflow ../opencellcomms_gui/server/workflows/spheroid_tnf_composable.json",
+    "gui": {
+      "subworkflow_kinds": {"main": "composer"}
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Setup (define_*) → run PhysiCell → summarize events. Add any other nodes after summarize for plotting, image post-processing, or coupling to other tools.",
+      "enabled": true,
+      "deletable": false,
+      "execution_order": [
+        "sub_oxygen",
+        "sub_tnf",
+        "ct_default",
+        "rule_tnf_apoptosis",
+        "rule_o2_migration",
+        "run_sim",
+        "summarize"
+      ],
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN COMPOSER",
+        "position": {"x": 700.0, "y": -140.0},
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "sub_oxygen",
+          "function_name": "define_substrate",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 100.0, "y": 100.0},
+          "description": "Oxygen, Dirichlet 38 mmHg, decay 0.1 (matches upstream spheroid_tnf_model).",
+          "step_count": 1,
+          "parameter_nodes": ["pn_oxygen"]
+        },
+        {
+          "id": "sub_tnf",
+          "function_name": "define_substrate",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 380.0, "y": 100.0},
+          "description": "TNF, no Dirichlet, decay 0.0275. Seeded uniformly at the upstream pulse concentration.",
+          "step_count": 1,
+          "parameter_nodes": ["pn_tnf"]
+        },
+        {
+          "id": "ct_default",
+          "function_name": "define_cell_type",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 660.0, "y": 100.0},
+          "description": "Default tumor cell. Upstream MaBoSS intracellular + custom <custom_data> deferred to Phase 5.",
+          "step_count": 1,
+          "parameter_nodes": ["pn_default"]
+        },
+        {
+          "id": "rule_tnf_apoptosis",
+          "function_name": "define_hill_rule",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 940.0, "y": 100.0},
+          "description": "Approximates upstream MaBoSS TNF→FADD→Apoptosis pathway.",
+          "step_count": 1,
+          "parameter_nodes": ["pn_rule_tnf_apoptosis"]
+        },
+        {
+          "id": "rule_o2_migration",
+          "function_name": "define_hill_rule",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 1220.0, "y": 100.0},
+          "description": "Visualization rule: cells migrate faster in oxygen-rich regions.",
+          "step_count": 1,
+          "parameter_nodes": ["pn_rule_o2_migration"]
+        },
+        {
+          "id": "run_sim",
+          "function_name": "run_physicell_simulation",
+          "parameters": {},
+          "enabled": true,
+          "position": {"x": 1500.0, "y": 100.0},
+          "description": "Reads context['physicell_spec'] (substrates/cell types/rules) + own DICTs (domain/timing/save/options). Generates project, builds, runs, tails occ_events.jsonl.",
+          "step_count": 1,
+          "parameter_nodes": [
+            "pn_domain", "pn_overall", "pn_save",
+            "pn_options", "pn_parallel", "pn_user_parameters"
+          ]
+        },
+        {
+          "id": "summarize",
+          "function_name": "summarize_physicell_events",
+          "parameters": {"max_lines_to_show": 3},
+          "enabled": true,
+          "position": {"x": 1820.0, "y": 100.0},
+          "description": "Reads context['physicell']['events_jsonl'] and prints a tally. Replace with your own plot / analyze / couple node — it gets the same context.",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "pn_oxygen",
+          "type": "dictParameterNode",
+          "label": "Oxygen (substrate)",
+          "target_param": "substrate",
+          "position": {"x": 100.0, "y": 280.0},
+          "entries": [
+            {"key": "name", "value": "oxygen", "valueType": "string"},
+            {"key": "units", "value": "mmHg", "valueType": "string"},
+            {"key": "diffusion_coefficient", "value": 100000.0, "valueType": "float"},
+            {"key": "decay_rate", "value": 0.1, "valueType": "float"},
+            {"key": "initial_condition", "value": 38.0, "valueType": "float"},
+            {"key": "dirichlet_enabled", "value": true, "valueType": "bool"},
+            {"key": "dirichlet_value", "value": 38.0, "valueType": "float"}
+          ]
+        },
+        {
+          "id": "pn_tnf",
+          "type": "dictParameterNode",
+          "label": "TNF (substrate)",
+          "target_param": "substrate",
+          "position": {"x": 380.0, "y": 280.0},
+          "entries": [
+            {"key": "name", "value": "tnf", "valueType": "string"},
+            {"key": "units", "value": "TNF/um^3", "valueType": "string"},
+            {"key": "diffusion_coefficient", "value": 1200.0, "valueType": "float"},
+            {"key": "decay_rate", "value": 0.0275, "valueType": "float"},
+            {"key": "initial_condition", "value": 0.001, "valueType": "float"},
+            {"key": "dirichlet_enabled", "value": false, "valueType": "bool"},
+            {"key": "dirichlet_value", "value": 0.0, "valueType": "float"}
+          ]
+        },
+        {
+          "id": "pn_default",
+          "type": "dictParameterNode",
+          "label": "default (cell type)",
+          "target_param": "cell_type",
+          "position": {"x": 660.0, "y": 280.0},
+          "entries": [
+            {"key": "name", "value": "default", "valueType": "string"},
+            {"key": "id", "value": 0, "valueType": "int"}
+          ]
+        },
+        {
+          "id": "pn_rule_tnf_apoptosis",
+          "type": "dictParameterNode",
+          "label": "TNF → apoptosis",
+          "target_param": "rule",
+          "position": {"x": 940.0, "y": 280.0},
+          "entries": [
+            {"key": "cell_type", "value": "default", "valueType": "string"},
+            {"key": "signal", "value": "tnf", "valueType": "string"},
+            {"key": "direction", "value": "increases", "valueType": "string"},
+            {"key": "behavior", "value": "apoptosis", "valueType": "string"},
+            {"key": "max_response", "value": 0.005, "valueType": "float"},
+            {"key": "half_max", "value": 0.0005, "valueType": "float"},
+            {"key": "hill_power", "value": 4.0, "valueType": "float"},
+            {"key": "use_on_dead", "value": 0, "valueType": "int"}
+          ]
+        },
+        {
+          "id": "pn_rule_o2_migration",
+          "type": "dictParameterNode",
+          "label": "O2 → migration speed",
+          "target_param": "rule",
+          "position": {"x": 1220.0, "y": 280.0},
+          "entries": [
+            {"key": "cell_type", "value": "default", "valueType": "string"},
+            {"key": "signal", "value": "oxygen", "valueType": "string"},
+            {"key": "direction", "value": "increases", "valueType": "string"},
+            {"key": "behavior", "value": "migration speed", "valueType": "string"},
+            {"key": "max_response", "value": 3.0, "valueType": "float"},
+            {"key": "half_max", "value": 10.0, "valueType": "float"},
+            {"key": "hill_power", "value": 4.0, "valueType": "float"},
+            {"key": "use_on_dead", "value": 0, "valueType": "int"}
+          ]
+        },
+        {
+          "id": "pn_domain",
+          "type": "dictParameterNode",
+          "label": "Domain",
+          "target_param": "domain",
+          "position": {"x": 1500.0, "y": 280.0},
+          "entries": [
+            {"key": "x_min", "value": -500.0, "valueType": "float"},
+            {"key": "x_max", "value": 500.0, "valueType": "float"},
+            {"key": "y_min", "value": -500.0, "valueType": "float"},
+            {"key": "y_max", "value": 500.0, "valueType": "float"},
+            {"key": "z_min", "value": -10.0, "valueType": "float"},
+            {"key": "z_max", "value": 10.0, "valueType": "float"},
+            {"key": "dx", "value": 20.0, "valueType": "float"},
+            {"key": "dy", "value": 20.0, "valueType": "float"},
+            {"key": "dz", "value": 20.0, "valueType": "float"},
+            {"key": "use_2D", "value": true, "valueType": "bool"}
+          ]
+        },
+        {
+          "id": "pn_overall",
+          "type": "dictParameterNode",
+          "label": "Timing",
+          "target_param": "overall",
+          "position": {"x": 1500.0, "y": 460.0},
+          "entries": [
+            {"key": "max_time", "value": 60.0, "valueType": "float"},
+            {"key": "dt_diffusion", "value": 0.02, "valueType": "float"},
+            {"key": "dt_mechanics", "value": 0.1, "valueType": "float"},
+            {"key": "dt_phenotype", "value": 2.0, "valueType": "float"}
+          ]
+        },
+        {
+          "id": "pn_save",
+          "type": "dictParameterNode",
+          "label": "Save",
+          "target_param": "save",
+          "position": {"x": 1500.0, "y": 640.0},
+          "entries": [
+            {"key": "folder", "value": "output", "valueType": "string"},
+            {"key": "full_data_interval", "value": 15.0, "valueType": "float"},
+            {"key": "svg_interval", "value": 15.0, "valueType": "float"},
+            {"key": "svg_enabled", "value": false, "valueType": "bool"}
+          ]
+        },
+        {
+          "id": "pn_options",
+          "type": "dictParameterNode",
+          "label": "Options",
+          "target_param": "options",
+          "position": {"x": 1500.0, "y": 820.0},
+          "entries": [
+            {"key": "random_seed", "value": 0, "valueType": "int"},
+            {"key": "virtual_wall_at_domain_edge", "value": true, "valueType": "bool"}
+          ]
+        },
+        {
+          "id": "pn_parallel",
+          "type": "dictParameterNode",
+          "label": "Parallel",
+          "target_param": "parallel",
+          "position": {"x": 1500.0, "y": 1000.0},
+          "entries": [
+            {"key": "omp_num_threads", "value": 4, "valueType": "int"}
+          ]
+        },
+        {
+          "id": "pn_user_parameters",
+          "type": "dictParameterNode",
+          "label": "User parameters",
+          "target_param": "user_parameters",
+          "position": {"x": 1500.0, "y": 1180.0},
+          "entries": [
+            {"key": "number_of_cells", "value": 12, "valueType": "int"}
+          ]
+        }
+      ]
+    }
+  }
+}
