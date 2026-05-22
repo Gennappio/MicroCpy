@@ -1,12 +1,12 @@
 {
   "version": "2.0",
-  "name": "Spheroid TNF composable",
-  "description": "Four-composer PhysiCell facade workflow: Configuration → CustomModules → Engine → Postprocessing. The CustomModules composer lets you pick any PhysiBoSS sample project's custom C++ layer from the GUI. Hill rules still layer on top via cell_rules.csv. Add your own nodes to any composer; context flows through all of them.",
+  "name": "Heterogeneity composable",
+  "description": "Demonstrates the CustomModules composer: uses the PhysiBoSS 'heterogeneity' sample project's custom C++ layer (oncoprotein-driven cell diversity) combined with OCC Hill rules and observability. The Configuration composer sets up oxygen + cancer cell type; the CustomModules composer points at heterogeneity/custom_modules/.",
   "kernel": "biophysics",
   "metadata": {
     "author": "OpenCellComms / PhysiCell facade",
-    "experiment": "Composable spheroid_tnf demo (Hill-rule approximation)",
-    "notes": "Run: PHYSICELL_CPP=g++-14 PHYSIBOSS_ROOT=/path/to/PhysiBoSS-master python run_workflow.py --workflow ../opencellcomms_gui/server/workflows/spheroid_tnf_composable.json",
+    "experiment": "heterogeneity project template demo",
+    "notes": "Run: PHYSICELL_CPP=g++-14 PHYSIBOSS_ROOT=/path/to/PhysiBoSS-master python run_workflow.py --workflow ../opencellcomms_gui/server/workflows/heterogeneity_composable.json",
     "gui": {
       "subworkflow_kinds": {
         "main": "composer",
@@ -19,7 +19,7 @@
   },
   "subworkflows": {
     "main": {
-      "description": "Orchestrator: delegates to the four stage composers in order.",
+      "description": "Orchestrator: Configuration → CustomModules → Engine → Postprocessing.",
       "enabled": true,
       "deletable": false,
       "execution_order": ["call_config", "call_custom", "call_engine", "call_postprocess"],
@@ -39,7 +39,7 @@
           "iterations": 1,
           "enabled": true,
           "position": {"x": 100.0, "y": 100.0},
-          "description": "Define substrates, cell types, and Hill rules.",
+          "description": "Oxygen substrate + cancer cell type + oxygen→proliferation Hill rule.",
           "parameters": {},
           "parameter_nodes": [],
           "context_mapping": {}
@@ -51,7 +51,7 @@
           "iterations": 1,
           "enabled": true,
           "position": {"x": 400.0, "y": 100.0},
-          "description": "Choose which PhysiBoSS sample project backs the C++ layer.",
+          "description": "Use the heterogeneity project's custom C++ cell behavior.",
           "parameters": {},
           "parameter_nodes": [],
           "context_mapping": {}
@@ -63,7 +63,7 @@
           "iterations": 1,
           "enabled": true,
           "position": {"x": 700.0, "y": 100.0},
-          "description": "Run PhysiCell: codegen → make → spawn → tail events.",
+          "description": "Run PhysiCell.",
           "parameters": {},
           "parameter_nodes": [],
           "context_mapping": {}
@@ -75,7 +75,7 @@
           "iterations": 1,
           "enabled": true,
           "position": {"x": 1000.0, "y": 100.0},
-          "description": "Summarize events and any additional analysis.",
+          "description": "Summarize events.",
           "parameters": {},
           "parameter_nodes": [],
           "context_mapping": {}
@@ -84,10 +84,10 @@
       "parameters": []
     },
     "Configuration": {
-      "description": "Substrates + cell types + Hill rules. These build context['physicell_spec'] consumed by the Engine composer.",
+      "description": "Oxygen substrate + cancer cell type (matches the heterogeneity project's expected XML). Adds a Hill rule: oxygen increases proliferation.",
       "enabled": true,
       "deletable": false,
-      "execution_order": ["sub_oxygen", "sub_tnf", "ct_default", "rule_tnf_apoptosis", "rule_o2_migration"],
+      "execution_order": ["sub_oxygen", "ct_cancer", "rule_o2_prolif"],
       "controller": {
         "id": "controller-config",
         "type": "controller",
@@ -102,49 +102,29 @@
           "parameters": {},
           "enabled": true,
           "position": {"x": 100.0, "y": 100.0},
-          "description": "Oxygen — Dirichlet 38 mmHg, decay 0.1.",
+          "description": "Oxygen substrate matching heterogeneity project defaults.",
           "step_count": 1,
           "parameter_nodes": ["pn_oxygen"]
         },
         {
-          "id": "sub_tnf",
-          "function_name": "define_substrate",
-          "parameters": {},
-          "enabled": true,
-          "position": {"x": 380.0, "y": 100.0},
-          "description": "TNF — no Dirichlet, decay 0.0275.",
-          "step_count": 1,
-          "parameter_nodes": ["pn_tnf"]
-        },
-        {
-          "id": "ct_default",
+          "id": "ct_cancer",
           "function_name": "define_cell_type",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 660.0, "y": 100.0},
-          "description": "Default tumor cell.",
+          "position": {"x": 400.0, "y": 100.0},
+          "description": "Cancer cell type (ID 0) as expected by the heterogeneity project XML.",
           "step_count": 1,
-          "parameter_nodes": ["pn_default"]
+          "parameter_nodes": ["pn_cancer"]
         },
         {
-          "id": "rule_tnf_apoptosis",
+          "id": "rule_o2_prolif",
           "function_name": "define_hill_rule",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 940.0, "y": 100.0},
-          "description": "TNF increases apoptosis (Hill-rule approximation of MaBoSS TNF→FADD pathway).",
+          "position": {"x": 700.0, "y": 100.0},
+          "description": "Oxygen increases cycle entry rate (Hill rule on top of heterogeneity C++ logic).",
           "step_count": 1,
-          "parameter_nodes": ["pn_rule_tnf_apoptosis"]
-        },
-        {
-          "id": "rule_o2_migration",
-          "function_name": "define_hill_rule",
-          "parameters": {},
-          "enabled": true,
-          "position": {"x": 1220.0, "y": 100.0},
-          "description": "Oxygen increases migration speed.",
-          "step_count": 1,
-          "parameter_nodes": ["pn_rule_o2_migration"]
+          "parameter_nodes": ["pn_rule_o2_prolif"]
         }
       ],
       "subworkflow_calls": [],
@@ -157,7 +137,7 @@
           "position": {"x": 100.0, "y": 280.0},
           "entries": [
             {"key": "name", "value": "oxygen", "valueType": "string"},
-            {"key": "units", "value": "mmHg", "valueType": "string"},
+            {"key": "units", "value": "dimensionless", "valueType": "string"},
             {"key": "diffusion_coefficient", "value": 100000.0, "valueType": "float"},
             {"key": "decay_rate", "value": 0.1, "valueType": "float"},
             {"key": "initial_condition", "value": 38.0, "valueType": "float"},
@@ -166,62 +146,29 @@
           ]
         },
         {
-          "id": "pn_tnf",
+          "id": "pn_cancer",
           "type": "dictParameterNode",
-          "label": "TNF (substrate)",
-          "target_param": "substrate",
-          "position": {"x": 380.0, "y": 280.0},
-          "entries": [
-            {"key": "name", "value": "tnf", "valueType": "string"},
-            {"key": "units", "value": "TNF/um^3", "valueType": "string"},
-            {"key": "diffusion_coefficient", "value": 1200.0, "valueType": "float"},
-            {"key": "decay_rate", "value": 0.0275, "valueType": "float"},
-            {"key": "initial_condition", "value": 0.001, "valueType": "float"},
-            {"key": "dirichlet_enabled", "value": false, "valueType": "bool"},
-            {"key": "dirichlet_value", "value": 0.0, "valueType": "float"}
-          ]
-        },
-        {
-          "id": "pn_default",
-          "type": "dictParameterNode",
-          "label": "default (cell type)",
+          "label": "cancer cell (cell type)",
           "target_param": "cell_type",
-          "position": {"x": 660.0, "y": 280.0},
+          "position": {"x": 400.0, "y": 280.0},
           "entries": [
-            {"key": "name", "value": "default", "valueType": "string"},
+            {"key": "name", "value": "cancer cell", "valueType": "string"},
             {"key": "id", "value": 0, "valueType": "int"}
           ]
         },
         {
-          "id": "pn_rule_tnf_apoptosis",
+          "id": "pn_rule_o2_prolif",
           "type": "dictParameterNode",
-          "label": "TNF → apoptosis",
+          "label": "O2 → cycle entry",
           "target_param": "rule",
-          "position": {"x": 940.0, "y": 280.0},
+          "position": {"x": 700.0, "y": 280.0},
           "entries": [
-            {"key": "cell_type", "value": "default", "valueType": "string"},
-            {"key": "signal", "value": "tnf", "valueType": "string"},
-            {"key": "direction", "value": "increases", "valueType": "string"},
-            {"key": "behavior", "value": "apoptosis", "valueType": "string"},
-            {"key": "max_response", "value": 0.005, "valueType": "float"},
-            {"key": "half_max", "value": 0.0005, "valueType": "float"},
-            {"key": "hill_power", "value": 4.0, "valueType": "float"},
-            {"key": "use_on_dead", "value": 0, "valueType": "int"}
-          ]
-        },
-        {
-          "id": "pn_rule_o2_migration",
-          "type": "dictParameterNode",
-          "label": "O2 → migration speed",
-          "target_param": "rule",
-          "position": {"x": 1220.0, "y": 280.0},
-          "entries": [
-            {"key": "cell_type", "value": "default", "valueType": "string"},
+            {"key": "cell_type", "value": "cancer cell", "valueType": "string"},
             {"key": "signal", "value": "oxygen", "valueType": "string"},
             {"key": "direction", "value": "increases", "valueType": "string"},
-            {"key": "behavior", "value": "migration speed", "valueType": "string"},
-            {"key": "max_response", "value": 3.0, "valueType": "float"},
-            {"key": "half_max", "value": 10.0, "valueType": "float"},
+            {"key": "behavior", "value": "cycle entry", "valueType": "string"},
+            {"key": "max_response", "value": 0.001, "valueType": "float"},
+            {"key": "half_max", "value": 21.5, "valueType": "float"},
             {"key": "hill_power", "value": 4.0, "valueType": "float"},
             {"key": "use_on_dead", "value": 0, "valueType": "int"}
           ]
@@ -229,7 +176,7 @@
       ]
     },
     "CustomModules": {
-      "description": "Select which PhysiBoSS sample project's custom_modules/ backs the C++ simulation. Leave project_name empty to use the default stub (Hill rules only).",
+      "description": "Points at the heterogeneity project's custom_modules/. The project's phenotype_function assigns random oncoprotein values that determine each cell's proliferation rate.",
       "enabled": true,
       "deletable": false,
       "execution_order": ["tmpl_node"],
@@ -244,10 +191,10 @@
         {
           "id": "tmpl_node",
           "function_name": "select_project_template",
-          "parameters": {"project_name": ""},
+          "parameters": {"project_name": "heterogeneity"},
           "enabled": true,
           "position": {"x": 100.0, "y": 100.0},
-          "description": "Empty = default stub (rules-only). Set project_name to a PhysiBoSS sample project (e.g. 'heterogeneity', 'immune_function') to use its custom C++ cell behavior.",
+          "description": "Use heterogeneity/custom_modules/: oncoprotein-driven cell heterogeneity with OCC observability wrapper injected automatically.",
           "step_count": 1,
           "parameter_nodes": []
         }
@@ -256,7 +203,7 @@
       "parameters": []
     },
     "Engine": {
-      "description": "Reads context['physicell_spec'] + own DICT params, generates the PhysiCell project, builds it, and runs it. Writes context['physicell'].",
+      "description": "Generates project, compiles, and runs with the heterogeneity custom modules.",
       "enabled": true,
       "deletable": false,
       "execution_order": ["run_sim"],
@@ -291,15 +238,15 @@
           "target_param": "domain",
           "position": {"x": 100.0, "y": 280.0},
           "entries": [
-            {"key": "x_min", "value": -500.0, "valueType": "float"},
-            {"key": "x_max", "value": 500.0, "valueType": "float"},
-            {"key": "y_min", "value": -500.0, "valueType": "float"},
-            {"key": "y_max", "value": 500.0, "valueType": "float"},
+            {"key": "x_min", "value": -750.0, "valueType": "float"},
+            {"key": "x_max", "value": 750.0, "valueType": "float"},
+            {"key": "y_min", "value": -750.0, "valueType": "float"},
+            {"key": "y_max", "value": 750.0, "valueType": "float"},
             {"key": "z_min", "value": -10.0, "valueType": "float"},
             {"key": "z_max", "value": 10.0, "valueType": "float"},
-            {"key": "dx", "value": 20.0, "valueType": "float"},
-            {"key": "dy", "value": 20.0, "valueType": "float"},
-            {"key": "dz", "value": 20.0, "valueType": "float"},
+            {"key": "dx", "value": 30.0, "valueType": "float"},
+            {"key": "dy", "value": 30.0, "valueType": "float"},
+            {"key": "dz", "value": 30.0, "valueType": "float"},
             {"key": "use_2D", "value": true, "valueType": "bool"}
           ]
         },
@@ -310,10 +257,10 @@
           "target_param": "overall",
           "position": {"x": 100.0, "y": 460.0},
           "entries": [
-            {"key": "max_time", "value": 60.0, "valueType": "float"},
-            {"key": "dt_diffusion", "value": 0.02, "valueType": "float"},
+            {"key": "max_time", "value": 120.0, "valueType": "float"},
+            {"key": "dt_diffusion", "value": 0.01, "valueType": "float"},
             {"key": "dt_mechanics", "value": 0.1, "valueType": "float"},
-            {"key": "dt_phenotype", "value": 2.0, "valueType": "float"}
+            {"key": "dt_phenotype", "value": 6.0, "valueType": "float"}
           ]
         },
         {
@@ -324,8 +271,8 @@
           "position": {"x": 100.0, "y": 640.0},
           "entries": [
             {"key": "folder", "value": "output", "valueType": "string"},
-            {"key": "full_data_interval", "value": 15.0, "valueType": "float"},
-            {"key": "svg_interval", "value": 15.0, "valueType": "float"},
+            {"key": "full_data_interval", "value": 30.0, "valueType": "float"},
+            {"key": "svg_interval", "value": 30.0, "valueType": "float"},
             {"key": "svg_enabled", "value": false, "valueType": "bool"}
           ]
         },
@@ -357,13 +304,17 @@
           "target_param": "user_parameters",
           "position": {"x": 100.0, "y": 1180.0},
           "entries": [
-            {"key": "number_of_cells", "value": 12, "valueType": "int"}
+            {"key": "number_of_cells", "value": 200, "valueType": "int"},
+            {"key": "oncoprotein_mean", "value": 1.0, "valueType": "float"},
+            {"key": "oncoprotein_sd", "value": 0.25, "valueType": "float"},
+            {"key": "oncoprotein_min", "value": 0.0, "valueType": "float"},
+            {"key": "oncoprotein_max", "value": 2.0, "valueType": "float"}
           ]
         }
       ]
     },
     "Postprocessing": {
-      "description": "Reads context['physicell']['events_jsonl'] and reports a summary. Add plotting, image analysis, or coupling nodes here — they all see the same context.",
+      "description": "Summarize OCC events. Add cell-population analysis or image export nodes here.",
       "enabled": true,
       "deletable": false,
       "execution_order": ["summarize"],
@@ -378,10 +329,10 @@
         {
           "id": "summarize",
           "function_name": "summarize_physicell_events",
-          "parameters": {"max_lines_to_show": 3},
+          "parameters": {"max_lines_to_show": 5},
           "enabled": true,
           "position": {"x": 100.0, "y": 100.0},
-          "description": "Tally rule_engine_changed events by type and rate tag. Replace or extend with your own analysis nodes.",
+          "description": "Tally rule_engine_changed events.",
           "step_count": 1,
           "parameter_nodes": []
         }

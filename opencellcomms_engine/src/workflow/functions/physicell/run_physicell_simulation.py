@@ -143,6 +143,9 @@ def run_physicell_simulation(
         "cell_types": cell_types,
         "hill_rules": hill_rules,
     }
+    custom_modules_source = accumulated.get("custom_modules_source")
+    if custom_modules_source:
+        spec["custom_modules_source"] = custom_modules_source
 
     from src.workflow.backends import physicell_backend
 

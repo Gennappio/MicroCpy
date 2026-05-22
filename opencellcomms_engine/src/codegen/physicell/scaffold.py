@@ -152,6 +152,62 @@ def _link_upstream(project_dir: Path, physiboss_root: Path) -> None:
         link.symlink_to(target.resolve())
 
 
+def _write_custom_modules(
+    project_dir: Path,
+    spec: Dict[str, Any],
+    env: jinja2.Environment,
+    ctx: Dict[str, Any],
+) -> None:
+    """Populate custom_modules/ from either a project template or the stub.
+
+    Project-template mode (``spec['custom_modules_source']`` is set):
+      - Copy the project's *.cpp and *.h (renamed to custom.cpp / custom.h).
+      - Render ``occ_glue.cpp`` to wrap phenotype_function with observability.
+
+    Stub mode (default): render custom.h.j2 and custom.cpp.j2 as before.
+
+    In both modes occ_observability.{h,cpp} are copied verbatim.
+    """
+    custom_dir = project_dir / "custom_modules"
+    source_info = spec.get("custom_modules_source")
+
+    if source_info and source_info.get("source_dir"):
+        source_dir = Path(source_info["source_dir"])
+        # Detect .cpp and .h files (exclude occ_* which we own).
+        cpp_files = [f for f in source_dir.glob("*.cpp") if not f.name.startswith("occ_")]
+        h_files   = [f for f in source_dir.glob("*.h")   if not f.name.startswith("occ_")]
+        if not cpp_files or not h_files:
+            raise SpecError(
+                f"custom_modules_source '{source_dir}' has no *.cpp or *.h files."
+            )
+        # Copy all project sources verbatim (rename to custom.* for simplicity).
+        src_cpp = cpp_files[0]
+        src_h   = h_files[0]
+        shutil.copy(src_cpp, custom_dir / "custom.cpp")
+        shutil.copy(src_h,   custom_dir / "custom.h")
+
+        # Extra sources (if any beyond the primary pair) are copied as-is.
+        for f in cpp_files[1:]:
+            shutil.copy(f, custom_dir / f.name)
+        for f in h_files[1:]:
+            shutil.copy(f, custom_dir / f.name)
+
+        # Detect whether the project declares my_coloring_function.
+        header_text = src_h.read_text()
+        provide_coloring = "my_coloring_function" not in header_text
+
+        glue_ctx = {**ctx, "provide_coloring_function": provide_coloring}
+        (custom_dir / "occ_glue.cpp").write_text(
+            _render(env, "occ_glue.cpp.j2", glue_ctx)
+        )
+    else:
+        (custom_dir / "custom.h").write_text(_render(env, "custom.h.j2", ctx))
+        (custom_dir / "custom.cpp").write_text(_render(env, "custom.cpp.j2", ctx))
+
+    shutil.copy(OBSERVABILITY_HEADER, custom_dir / "occ_observability.h")
+    shutil.copy(OBSERVABILITY_SOURCE, custom_dir / "occ_observability.cpp")
+
+
 def _write_cell_rules_csv(project_dir: Path, spec: Dict[str, Any]) -> None:
     """Emit the upstream CBHG v3.0 8-column CSV (one rule per row).
 
@@ -208,6 +264,8 @@ def generate_project(
 
     env = _env()
 
+    use_occ_glue = bool(spec.get("custom_modules_source"))
+
     ctx = {
         "domain": spec["domain"],
         "overall": spec["overall"],
@@ -219,26 +277,19 @@ def generate_project(
         "user_parameters": spec["user_parameters"],
         "cell_rules_enabled": spec["cell_rules_enabled"],
         "program_name": project_name,
+        "use_occ_glue": use_occ_glue,
     }
 
     (project_dir / "config" / "PhysiCell_settings.xml").write_text(
         _render(env, "PhysiCell_settings.xml.j2", ctx)
     )
-    (project_dir / "custom_modules" / "custom.h").write_text(
-        _render(env, "custom.h.j2", ctx)
-    )
-    (project_dir / "custom_modules" / "custom.cpp").write_text(
-        _render(env, "custom.cpp.j2", ctx)
-    )
+    _write_custom_modules(project_dir, spec, env, ctx)
     (project_dir / "main.cpp").write_text(
         _render(env, "main.cpp.j2", ctx)
     )
     (project_dir / "Makefile").write_text(
         _render(env, "Makefile.j2", ctx)
     )
-
-    shutil.copy(OBSERVABILITY_HEADER, project_dir / "custom_modules" / "occ_observability.h")
-    shutil.copy(OBSERVABILITY_SOURCE, project_dir / "custom_modules" / "occ_observability.cpp")
 
     _write_cell_rules_csv(project_dir, spec)
     _link_upstream(project_dir, physiboss_root)

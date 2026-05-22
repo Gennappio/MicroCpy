@@ -14,6 +14,7 @@ from .define_substrate import define_substrate
 from .define_cell_type import define_cell_type
 from .define_hill_rule import define_hill_rule
 from .run_physicell_simulation import run_physicell_simulation
+from .select_project_template import select_project_template
 from .summarize_physicell_events import summarize_physicell_events
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "define_cell_type",
     "define_hill_rule",
     "run_physicell_simulation",
+    "select_project_template",
     "summarize_physicell_events",
 ]

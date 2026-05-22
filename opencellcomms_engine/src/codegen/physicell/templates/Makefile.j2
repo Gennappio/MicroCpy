@@ -42,7 +42,7 @@ PhysiCell_signal_behavior.o PhysiCell_rules.o
 PhysiCell_module_OBJECTS := PhysiCell_SVG.o PhysiCell_pathology.o PhysiCell_MultiCellDS.o PhysiCell_various_outputs.o \
 PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
 
-PhysiCell_custom_module_OBJECTS := custom.o occ_observability.o
+PhysiCell_custom_module_OBJECTS := custom.o occ_observability.o{% if use_occ_glue %} occ_glue.o{% endif %}
 
 pugixml_OBJECTS := pugixml.o
 
@@ -117,6 +117,10 @@ custom.o: ./custom_modules/custom.cpp
 	$(COMPILE_COMMAND) -c ./custom_modules/custom.cpp
 occ_observability.o: ./custom_modules/occ_observability.cpp
 	$(COMPILE_COMMAND) -c ./custom_modules/occ_observability.cpp
+{% if use_occ_glue %}
+occ_glue.o: ./custom_modules/occ_glue.cpp
+	$(COMPILE_COMMAND) -c ./custom_modules/occ_glue.cpp
+{% endif %}
 
 clean:
 	rm -f *.o
