@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import WorkflowCanvas from './WorkflowCanvas';
 import FunctionPalette from './FunctionPalette';
@@ -22,6 +22,15 @@ const ProcessingView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMo
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');
+
+  // Sync currentStage on entry: jump to the first behavior if currentStage
+  // doesn't belong to this view.
+  useEffect(() => {
+    if (behaviors.length > 0 && !behaviors.includes(currentStage)) {
+      setCurrentStage(behaviors[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [behaviors.join(',')]);
 
   const handleCreateBehavior = () => {
     const name = newBehaviorName.trim();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, X, Users } from 'lucide-react';
 import WorkflowCanvas from './WorkflowCanvas';
 import FunctionPalette from './FunctionPalette';
@@ -34,9 +34,22 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
     addAgentKind(name);
     setSelectedKind(name);
+    setCurrentStage(`${name}_init`);
     setNewKindName('');
     setShowAddKind(false);
   };
+
+  // Keep currentStage in sync with the active kind: if the user lands on this
+  // view (or the selected kind changes) and currentStage doesn't belong to
+  // this kind, jump to the init canvas. Otherwise the FunctionPalette sees
+  // currentStage='__scheduler__' and disables "New Function".
+  useEffect(() => {
+    if (!activeKind) return;
+    const validNames = [activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])];
+    if (!validNames.includes(currentStage)) {
+      setCurrentStage(activeKind.init_subworkflow);
+    }
+  }, [activeKind?.name]);
 
   const handleCreateBehavior = () => {
     if (!activeKind) return;

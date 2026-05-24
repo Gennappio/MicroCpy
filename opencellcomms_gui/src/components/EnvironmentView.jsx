@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Globe } from 'lucide-react';
 import WorkflowCanvas from './WorkflowCanvas';
 import FunctionPalette from './FunctionPalette';
@@ -25,6 +25,16 @@ const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onM
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');
+
+  // Sync currentStage when entering this view: jump to init (or first behavior)
+  // if currentStage isn't one of this view's tabs.
+  useEffect(() => {
+    const valid = [initSw, ...behaviors].filter(Boolean);
+    if (valid.length > 0 && !valid.includes(currentStage)) {
+      setCurrentStage(valid[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initSw, behaviors.join(',')]);
 
   const handleCreateBehavior = () => {
     const name = newBehaviorName.trim();
