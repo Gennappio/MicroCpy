@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Database, Zap, List, Braces, Plus, FolderOpe
 import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
-import { BEHAVIOR_KINDS, KINDS } from '../store/subworkflowKinds';
+import { BEHAVIOR_KINDS, FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
 import './FunctionPalette.css';
 
 /**
@@ -25,6 +25,7 @@ const FunctionPalette = ({ currentStage }) => {
 
   const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage];
   const isBehaviorCanvas = BEHAVIOR_KINDS.has(currentKind);
+  const canHostFunctions = FUNCTION_HOSTING_KINDS.has(currentKind);
   const isSchedulerCanvas = currentKind === KINDS.SCHEDULER;
 
   const libraries = workflow.metadata?.gui?.function_libraries || [];
@@ -206,8 +207,8 @@ const FunctionPalette = ({ currentStage }) => {
         <button
           className="palette-pri-btn"
           onClick={() => setShowNewFunc(true)}
-          disabled={!isBehaviorCanvas}
-          title={isBehaviorCanvas ? 'Create a new function for this behavior' : 'Open a behavior canvas to create functions'}
+          disabled={!canHostFunctions}
+          title={canHostFunctions ? 'Create a new function for this canvas' : 'Open a behavior or init canvas to create functions'}
         >
           <Plus size={14} />
           New Function
@@ -372,7 +373,15 @@ const FunctionPalette = ({ currentStage }) => {
       {showNewFunc && (
         <NewFunctionDialog
           behaviorName={currentStage}
-          defaultCategory={currentKind === KINDS.ENV_BEHAVIOR ? 'diffusion' : 'intracellular'}
+          defaultCategory={
+            currentKind === KINDS.AGENT_INIT || currentKind === KINDS.ENV_INIT
+              ? 'initialization'
+              : currentKind === KINDS.ENV_BEHAVIOR
+                ? 'diffusion'
+                : currentKind === KINDS.PROCESSING_BEHAVIOR
+                  ? 'finalization'
+                  : 'intracellular'
+          }
           onCreate={handleCreateFunction}
           onCancel={() => setShowNewFunc(false)}
         />
