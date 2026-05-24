@@ -1,88 +1,44 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronRight, Database, Zap, Upload, Download, List, Braces } from 'lucide-react';
-import { getFunctionsByCategoryAsync, FunctionCategory, fetchRegistry } from '../data/functionRegistry';
+import { useState, useRef } from 'react';
+import { ChevronDown, ChevronRight, Database, Zap, List, Braces, Plus, FolderOpen, FileJson, X } from 'lucide-react';
+import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
-import LibraryConflictDialog from './LibraryConflictDialog';
-import SubworkflowImportDialog from './SubworkflowImportDialog';
+import NewFunctionDialog from './NewFunctionDialog';
+import { BEHAVIOR_KINDS, KINDS } from '../store/subworkflowKinds';
 import './FunctionPalette.css';
 
 /**
- * Function Palette - Sidebar with draggable functions
+ * Function Palette - empty by default. Users load functions from workflow JSONs
+ * or create new ones inline.
  */
 const FunctionPalette = ({ currentStage }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
-  const addFunctionLibrary = useWorkflowStore((state) => state.addFunctionLibrary);
-  const exportSingleSubworkflow = useWorkflowStore((state) => state.exportSingleSubworkflow);
-  const importSubworkflowsFromWorkflow = useWorkflowStore((state) => state.importSubworkflowsFromWorkflow);
-  const [functionsByCategory, setFunctionsByCategory] = useState({});
-  const [libraryFunctions, setLibraryFunctions] = useState({});  // Functions from imported libraries
-  const [isLoading, setIsLoading] = useState(true);
-  const [expandedCategories, setExpandedCategories] = useState({
-    [FunctionCategory.INITIALIZATION]: true,
-    [FunctionCategory.INTRACELLULAR]: true,
-    [FunctionCategory.MICROENVIRONMENT]: true,
-    [FunctionCategory.INTERCELLULAR]: true,
-    [FunctionCategory.FINALIZATION]: true,
-    'subworkflows': true,
-    'composers': true,
-    'libraries': true,
-  });
-  const [conflictDialog, setConflictDialog] = useState(null);
-  const [importDialog, setImportDialog] = useState(null);  // For subworkflow import dialog
-  const fileInputRef = useRef(null);
-  const subworkflowImportRef = useRef(null);  // For subworkflow import file input
+  const addWorkflowLibrary = useWorkflowStore((state) => state.addWorkflowLibrary);
+  const removeFunctionLibrary = useWorkflowStore((state) => state.removeFunctionLibrary);
+  const addUserFunction = useWorkflowStore((state) => state.addUserFunction);
+  const removeUserFunction = useWorkflowStore((state) => state.removeUserFunction);
 
-  // Determine if current stage is a composer
-  const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                     (currentStage === 'main' ? 'composer' : 'subworkflow');
-  const isComposer = currentKind === 'composer';
+  const [expanded, setExpanded] = useState({});
+  const [showNewFunc, setShowNewFunc] = useState(false);
+  const [reloadHint, setReloadHint] = useState(null);
+  const [registryCache, setRegistryCache] = useState({});
+  const workflowFileRef = useRef(null);
 
-  // Load registry on mount and when stage changes
-  useEffect(() => {
-    const loadFunctions = async () => {
-      setIsLoading(true);
-      try {
-        console.log('[PALETTE] Loading functions for stage:', currentStage);
-        const registry = await fetchRegistry();
-        console.log('[PALETTE] Registry loaded, total functions:', Object.keys(registry).length);
+  const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage];
+  const isBehaviorCanvas = BEHAVIOR_KINDS.has(currentKind);
+  const isSchedulerCanvas = currentKind === KINDS.SCHEDULER;
 
-        // For v2.0 workflows, show all functions grouped by category
-        // For v1.0 workflows, show only functions for the current stage
-        if (workflow.version === '2.0') {
-          // Group all functions by their category
-          const grouped = {};
-          Object.values(registry).forEach((func) => {
-            const category = func.category;
-            if (!grouped[category]) {
-              grouped[category] = [];
-            }
-            grouped[category].push(func);
-          });
-          console.log('[PALETTE] v2.0 mode - showing all functions grouped by category');
-          setFunctionsByCategory(grouped);
-        } else {
-          // v1.0 mode - show only functions for current stage
-          const functions = await getFunctionsByCategoryAsync(currentStage);
-          console.log('[PALETTE] v1.0 mode - functions for stage', currentStage, ':', functions.length);
-          setFunctionsByCategory({ [currentStage]: functions });
-        }
-      } catch (error) {
-        console.error('[PALETTE] Error loading functions:', error);
-        setFunctionsByCategory({});
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const libraries = workflow.metadata?.gui?.function_libraries || [];
+  const userFunctions = workflow.metadata?.gui?.user_functions || [];
 
-    loadFunctions();
-  }, [currentStage, workflow.version]);
-
-  const toggleCategory = (category) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
+  // Lazy registry fetch (cached) for parameter metadata lookups
+  const ensureRegistry = async () => {
+    if (Object.keys(registryCache).length > 0) return registryCache;
+    const reg = await fetchRegistry();
+    setRegistryCache(reg || {});
+    return reg || {};
   };
+
+  // ─── Drag handlers ──────────────────────────────────────────────────────
 
   const onDragStart = (event, functionData) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify(functionData));
@@ -90,345 +46,198 @@ const FunctionPalette = ({ currentStage }) => {
   };
 
   const onDragStartParameter = (event) => {
-    const parameterNodeData = {
-      type: 'parameterNode',
-      label: 'New Parameters',
-      parameters: {},
-    };
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(parameterNodeData));
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  const onDragStartSubWorkflow = (event, subworkflowName) => {
-    const subworkflowCallData = {
-      type: 'subworkflowCall',
-      subworkflowName: subworkflowName,
-      label: subworkflowName,
-      iterations: 1,
-      parameters: {},
-    };
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(subworkflowCallData));
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
+      type: 'parameterNode', label: 'New Parameters', parameters: {},
+    }));
     event.dataTransfer.effectAllowed = 'move';
   };
 
   const onDragStartList = (event, listType) => {
-    const listNodeData = {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
       type: 'listParameterNode',
       label: `${listType === 'float' ? 'Float' : 'String'} List`,
-      listType: listType,
-      items: [],
-    };
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(listNodeData));
+      listType, items: [],
+    }));
     event.dataTransfer.effectAllowed = 'move';
   };
 
   const onDragStartDict = (event) => {
-    const dictNodeData = {
-      type: 'dictParameterNode',
-      label: 'Dictionary',
-      entries: [],
-    };
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(dictNodeData));
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
+      type: 'dictParameterNode', label: 'Dictionary', entries: [],
+    }));
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const categoryLabels = {
-    [FunctionCategory.INITIALIZATION]: 'Initialization',
-    [FunctionCategory.INTRACELLULAR]: 'Intracellular',
-    [FunctionCategory.MICROENVIRONMENT]: 'Microenvironment',
-    [FunctionCategory.DIFFUSION]: 'Microenvironment',
-    [FunctionCategory.INTERCELLULAR]: 'Intercellular',
-    [FunctionCategory.FINALIZATION]: 'Finalization',
-    [FunctionCategory.UTILITY]: 'Utility',
-  };
+  // ─── Load from workflow JSON ────────────────────────────────────────────
 
-  // Determine which categories to display
-  const categoriesToDisplay = workflow.version === '2.0'
-    ? [
-        FunctionCategory.INITIALIZATION,
-        FunctionCategory.INTRACELLULAR,
-        FunctionCategory.DIFFUSION,
-        FunctionCategory.INTERCELLULAR,
-        FunctionCategory.FINALIZATION,
-        FunctionCategory.UTILITY,
-      ]
-    : [currentStage];
+  const handleLoadWorkflow = () => workflowFileRef.current?.click();
 
-  // Handle library import
-  const handleImportLibrary = async () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileSelected = async (event) => {
-    const file = event.target.files?.[0];
+  const handleWorkflowFileSelected = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
 
-    // Phase 6: Get absolute path for library
-    // In Electron: file.path is available
-    // In browser: prompt user for absolute path
-    let libraryPath = file.path;
-    if (!libraryPath) {
-      libraryPath = prompt(
-        `Enter the absolute path to the library file:\n\n` +
-        `File name: ${file.name}\n\n` +
-        `Example: /Users/yourname/projects/libs/${file.name}\n` +
-        `or C:\\Users\\yourname\\projects\\libs\\${file.name}`,
-        ''
-      );
+      // Extract function names from all subworkflows
+      const fnNames = new Set();
+      Object.values(data.subworkflows || {}).forEach((sw) => {
+        (sw.functions || []).forEach((f) => {
+          if (f.function_name) fnNames.add(f.function_name);
+        });
+      });
 
-      if (!libraryPath) {
-        alert('Library path is required for proper path handling.');
+      if (fnNames.size === 0) {
+        alert('No functions found in this workflow file.');
+        e.target.value = '';
         return;
       }
-    }
 
+      const path = file.path || file.name;
+      addWorkflowLibrary(data.name || file.name, path, Array.from(fnNames));
+      // Make sure registry is loaded so we can show metadata
+      await ensureRegistry();
+    } catch (err) {
+      alert('Failed to load workflow: ' + err.message);
+    }
+    e.target.value = '';
+  };
+
+  // ─── Create new function ────────────────────────────────────────────────
+
+  const handleCreateFunction = async (def) => {
     try {
-      // Parse the library file
-      const response = await fetch('http://localhost:5001/api/library/parse', {
+      const response = await fetch('http://localhost:5001/api/function/scaffold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ library_path: libraryPath })
+        body: JSON.stringify({
+          behavior_name: currentStage,
+          category: def.category,
+          adapter: def.adapter,
+          functions: [{ name: def.name, parameters: def.parameters }],
+        }),
       });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        alert(`Error parsing library: ${data.error}`);
-        return;
-      }
-
-      // Check for conflicts with existing functions
-      const allExistingFunctions = new Set();
-      Object.values(functionsByCategory).forEach(funcs => {
-        funcs.forEach(f => allExistingFunctions.add(f.name));
-      });
-      Object.values(libraryFunctions).forEach(funcs => {
-        funcs.forEach(f => allExistingFunctions.add(f.name));
-      });
-
-      const conflicts = data.functions.filter(f => allExistingFunctions.has(f.name));
-
-      if (conflicts.length > 0) {
-        // Show conflict resolution dialog
-        setConflictDialog({
-          conflicts: conflicts.map(f => ({
-            functionName: f.name,
-            existingSource: 'Built-in'  // TODO: track actual source
-          })),
-          libraryName: data.library_name,
-          libraryPath: libraryPath,
-          allFunctions: data.functions
+      const result = await response.json();
+      if (result.success) {
+        addUserFunction({
+          name: def.name,
+          category: def.category,
+          adapter: def.adapter,
+          behavior: currentStage,
+          parameters: def.parameters,
+          file_path: result.file_path,
         });
+        setShowNewFunc(false);
+        setReloadHint(`Function "${def.name}" was scaffolded at ${result.file_path}. Restart the backend so it appears in the registry.`);
+        // Try to refresh registry — works if backend reloads on each request
+        const reg = await fetchRegistry();
+        setRegistryCache(reg || {});
       } else {
-        // No conflicts, add all functions
-        const functionMappings = {};
-        data.functions.forEach(f => {
-          functionMappings[f.name] = 'add';
-        });
-        addFunctionLibrary(libraryPath, functionMappings);
-
-        // Add to library functions display
-        setLibraryFunctions(prev => ({
-          ...prev,
-          [data.library_name]: data.functions
-        }));
+        alert('Scaffold failed: ' + (result.error || 'unknown'));
       }
-    } catch (error) {
-      console.error('Error importing library:', error);
-      alert(`Error importing library: ${error.message}`);
+    } catch (err) {
+      alert('Failed to reach backend: ' + err.message);
     }
-
-    // Reset file input
-    event.target.value = '';
   };
 
-  const handleConflictResolution = (resolutions) => {
-    const { libraryPath, libraryName, allFunctions } = conflictDialog;
+  // ─── Sub-workflow palette section (cross-canvas calls) ─────────────────
 
-    // Build function mappings based on resolutions
-    const functionMappings = {};
-    allFunctions.forEach(func => {
-      const resolution = resolutions[func.name] || 'add';
-      if (resolution !== 'skip') {
-        functionMappings[func.name] = resolution;
-      }
-    });
+  const buildSubworkflowCallData = (name) => ({
+    type: 'subworkflowCall', subworkflowName: name, label: name, iterations: 1, parameters: {},
+  });
 
-    // Add library to workflow
-    addFunctionLibrary(libraryPath, functionMappings);
+  const toggle = (key) => setExpanded((s) => ({ ...s, [key]: !s[key] }));
+  const isExpanded = (key, defaultOpen = true) => expanded[key] !== undefined ? expanded[key] : defaultOpen;
 
-    // Update library functions display
-    const functionsToAdd = allFunctions.filter(f => {
-      const resolution = resolutions[f.name] || 'add';
-      return resolution !== 'skip';
-    }).map(f => ({
-      ...f,
-      variant: resolutions[f.name] === 'variant' ? libraryName : null,
-      function_file: resolutions[f.name] === 'variant' ? libraryPath : null
-    }));
+  // ─── Function item render helper ────────────────────────────────────────
 
-    setLibraryFunctions(prev => ({
-      ...prev,
-      [libraryName]: functionsToAdd
-    }));
+  const renderFunctionItem = (name, source = null) => {
+    const meta = registryCache[name];
+    const description = meta?.description || (source === 'user' ? '(custom — restart backend to load)' : 'No description');
+    const paramCount = meta?.parameters?.length ?? 0;
 
-    setConflictDialog(null);
-  };
-
-  // Handle importing subworkflows from a workflow file
-  const handleImportSubworkflows = () => {
-    subworkflowImportRef.current?.click();
-  };
-
-  const handleSubworkflowFileSelected = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const workflowData = JSON.parse(e.target.result);
-
-        // Validate it's a workflow file
-        if (!workflowData.subworkflows) {
-          // Check if it's a standalone subworkflow format
-          if (workflowData.format === 'subworkflow') {
-            // Import single subworkflow directly
-            const name = workflowData.name;
-            const kind = workflowData.kind || 'subworkflow';
-            const success = importSubworkflowsFromWorkflow(
-              { subworkflows: { [name]: workflowData.subworkflow }, metadata: { gui: { subworkflow_kinds: { [name]: kind } } } },
-              [name],
-              {}
-            );
-            if (success.success.length > 0) {
-              alert(`Imported subworkflow: ${name}`);
-            } else {
-              alert(`Failed to import: ${success.failed.map(f => f.error).join(', ')}`);
-            }
-          } else {
-            alert('Invalid file format. Please select a workflow or subworkflow JSON file.');
-          }
-          return;
-        }
-
-        // Show the import dialog for selecting subworkflows
-        setImportDialog(workflowData);
-      } catch (error) {
-        console.error('Error parsing workflow file:', error);
-        alert('Error reading file: ' + error.message);
-      }
+    const payload = {
+      type: 'function',
+      name,
+      function_name: name,
+      label: meta?.display_name || name,
+      description,
+      category: meta?.category,
+      parameters: (meta?.parameters || []).reduce((acc, p) => {
+        acc[p.name] = p.default;
+        return acc;
+      }, {}),
     };
-    reader.readAsText(file);
 
-    // Reset file input
-    event.target.value = '';
+    return (
+      <div
+        key={`${source || 'lib'}-${name}`}
+        className={`function-item ${!meta ? 'unloaded' : ''}`}
+        draggable={!!meta}
+        title={meta ? '' : 'Not loaded in backend registry yet — restart backend first'}
+        onDragStart={meta ? (e) => onDragStart(e, payload) : undefined}
+      >
+        <div className="function-item-name">{name}</div>
+        <div className="function-item-description">{description}</div>
+        {meta && (
+          <div className="function-item-params">
+            {paramCount} parameter{paramCount !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const handleImportDialogConfirm = (selectedNames, renameMap) => {
-    const workflowData = importDialog;
-    const results = importSubworkflowsFromWorkflow(workflowData, selectedNames, { renameMap });
+  // ─── Render ─────────────────────────────────────────────────────────────
 
-    if (results.success.length > 0) {
-      const imported = results.success.map(s => s.imported).join(', ');
-      let message = `Successfully imported: ${imported}`;
-
-      if (results.warnings.length > 0) {
-        message += '\n\nWarnings:\n' + results.warnings.map(w => `- ${w.name}: ${w.warning}`).join('\n');
-      }
-
-      alert(message);
-    }
-
-    if (results.failed.length > 0) {
-      alert('Failed to import:\n' + results.failed.map(f => `- ${f.name}: ${f.error}`).join('\n'));
-    }
-
-    setImportDialog(null);
-  };
-
-  // Handle exporting the current subworkflow
-  const handleExportCurrentSubworkflow = () => {
-    const exportData = exportSingleSubworkflow(currentStage);
-
-    if (!exportData) {
-      alert('Failed to export subworkflow');
-      return;
-    }
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentStage}.subworkflow.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const hasContent = libraries.length > 0 || userFunctions.length > 0;
 
   return (
     <div className="function-palette">
       <div className="palette-header">
         <h3>Library</h3>
-        <div className="palette-header-actions">
-          {/* Import Subworkflow Button */}
-          <button
-            className="palette-action-btn"
-            onClick={handleImportSubworkflows}
-            title="Import subworkflow/composer from file"
-          >
-            <Upload size={16} />
-          </button>
-          {/* Export Current Subworkflow Button */}
-          <button
-            className="palette-action-btn"
-            onClick={handleExportCurrentSubworkflow}
-            title={`Export ${isComposer ? 'composer' : 'subworkflow'}: ${currentStage}`}
-          >
-            <Download size={16} />
-          </button>
-          {/* Import Library Button (only for subworkflows) */}
-          {workflow.version === '2.0' && !isComposer && (
-            <button
-              className="palette-action-btn library-btn"
-              onClick={handleImportLibrary}
-              title="Import Python library"
-            >
-              <Zap size={16} />
-            </button>
-          )}
-        </div>
+      </div>
+
+      <div className="palette-actions-bar">
+        <button className="palette-pri-btn" onClick={handleLoadWorkflow}>
+          <FolderOpen size={14} />
+          Load from Workflow
+        </button>
+        <button
+          className="palette-pri-btn"
+          onClick={() => setShowNewFunc(true)}
+          disabled={!isBehaviorCanvas}
+          title={isBehaviorCanvas ? 'Create a new function for this behavior' : 'Open a behavior canvas to create functions'}
+        >
+          <Plus size={14} />
+          New Function
+        </button>
         <input
-          ref={fileInputRef}
-          type="file"
-          accept=".py"
-          style={{ display: 'none' }}
-          onChange={handleFileSelected}
-        />
-        <input
-          ref={subworkflowImportRef}
+          ref={workflowFileRef}
           type="file"
           accept=".json"
           style={{ display: 'none' }}
-          onChange={handleSubworkflowFileSelected}
+          onChange={handleWorkflowFileSelected}
         />
       </div>
 
+      {reloadHint && (
+        <div className="palette-hint-banner">
+          <span>{reloadHint}</span>
+          <button onClick={() => setReloadHint(null)} title="Dismiss"><X size={12} /></button>
+        </div>
+      )}
+
       <div className="palette-content">
-        {/* Parameters Section - All parameter node types */}
+
+        {/* Parameter helper nodes — always available */}
         <div className="parameter-node-section">
           <div className="parameter-node-header">
             <Database size={16} />
             <span>Parameters</span>
           </div>
 
-          {/* Key-Value Parameters */}
-          <div
-            className="parameter-node-draggable"
-            draggable
-            onDragStart={onDragStartParameter}
-          >
+          <div className="parameter-node-draggable" draggable onDragStart={onDragStartParameter}>
             <Database size={14} />
             <div className="parameter-node-info">
               <div className="parameter-node-name">Key-Value</div>
@@ -436,25 +245,15 @@ const FunctionPalette = ({ currentStage }) => {
             </div>
           </div>
 
-          {/* String List */}
-          <div
-            className="parameter-node-draggable list-string"
-            draggable
-            onDragStart={(e) => onDragStartList(e, 'string')}
-          >
+          <div className="parameter-node-draggable list-string" draggable onDragStart={(e) => onDragStartList(e, 'string')}>
             <List size={14} />
             <div className="parameter-node-info">
               <div className="parameter-node-name">List [String]</div>
-              <div className="parameter-node-desc">List of string values</div>
+              <div className="parameter-node-desc">List of strings</div>
             </div>
           </div>
 
-          {/* Float List */}
-          <div
-            className="parameter-node-draggable list-float"
-            draggable
-            onDragStart={(e) => onDragStartList(e, 'float')}
-          >
+          <div className="parameter-node-draggable list-float" draggable onDragStart={(e) => onDragStartList(e, 'float')}>
             <List size={14} />
             <div className="parameter-node-info">
               <div className="parameter-node-name">List [Float]</div>
@@ -462,260 +261,120 @@ const FunctionPalette = ({ currentStage }) => {
             </div>
           </div>
 
-          {/* Dictionary */}
-          <div
-            className="parameter-node-draggable dict"
-            draggable
-            onDragStart={onDragStartDict}
-          >
+          <div className="parameter-node-draggable dict" draggable onDragStart={onDragStartDict}>
             <Braces size={14} />
             <div className="parameter-node-info">
               <div className="parameter-node-name">Dictionary</div>
-              <div className="parameter-node-desc">Key-value pairs with typed values</div>
+              <div className="parameter-node-desc">Key-value with typed values</div>
             </div>
           </div>
         </div>
 
-        {/* Composers Section (v2.0 only) */}
-        {workflow.version === '2.0' && (() => {
-          const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                             (currentStage === 'main' ? 'composer' : 'subworkflow');
-
-          const availableComposers = Object.keys(workflow.subworkflows || {}).filter(name => {
-            if (name === currentStage) return false;
-            const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
-                              (name === 'main' ? 'composer' : 'subworkflow');
-            // Only show composers
-            if (targetKind !== 'composer') return false;
-            // Sub-workflows cannot call composers
-            if (currentKind === 'subworkflow') return false;
-            return true;
-          });
-
-          if (availableComposers.length === 0) return null;
-
-          return (
-            <div className="palette-category">
-              <div
-                className="category-header"
-                onClick={() => toggleCategory('composers')}
-              >
-                {expandedCategories['composers'] ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-                <span>Composers</span>
-                <span className="category-count">
-                  {availableComposers.length}
-                </span>
-              </div>
-
-              {expandedCategories['composers'] && (
-                <div className="category-functions">
-                  {availableComposers.map((composerName) => (
-                    <div
-                      key={composerName}
-                      className="function-item subworkflow-item composer-item"
-                      draggable
-                      onDragStart={(e) => onDragStartSubWorkflow(e, composerName)}
-                    >
-                      <div className="function-item-icon">
-                        <Zap size={14} />
-                      </div>
-                      <div className="function-item-name">{composerName}</div>
-                      <div className="function-item-description">
-                        {workflow.subworkflows[composerName].description || 'Composer call'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Sub-workflow call section (cross-references inside the project) */}
+        {!isSchedulerCanvas && Object.keys(workflow.subworkflows || {}).filter((n) => n !== currentStage).length > 0 && (
+          <div className="palette-category">
+            <div className="category-header" onClick={() => toggle('subworkflows')}>
+              {isExpanded('subworkflows') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <Zap size={14} />
+              <span>Sub-workflow Calls</span>
             </div>
-          );
-        })()}
-
-        {/* Sub-workflows Section (v2.0 only) */}
-        {workflow.version === '2.0' && (() => {
-          const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] ||
-                             (currentStage === 'main' ? 'composer' : 'subworkflow');
-
-          const availableSubworkflows = Object.keys(workflow.subworkflows || {}).filter(name => {
-            if (name === currentStage) return false;
-            const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[name] ||
-                              (name === 'main' ? 'composer' : 'subworkflow');
-            // Only show sub-workflows (not composers)
-            if (targetKind !== 'subworkflow') return false;
-            return true;
-          });
-
-          if (availableSubworkflows.length === 0) return null;
-
-          return (
-            <div className="palette-category">
-              <div
-                className="category-header"
-                onClick={() => toggleCategory('subworkflows')}
-              >
-                {expandedCategories['subworkflows'] ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-                <span>Sub-workflows</span>
-                <span className="category-count">
-                  {availableSubworkflows.length}
-                </span>
-              </div>
-
-              {expandedCategories['subworkflows'] && (
-                <div className="category-functions">
-                  {availableSubworkflows.map((subworkflowName) => (
+            {isExpanded('subworkflows') && (
+              <div className="category-functions">
+                {Object.keys(workflow.subworkflows || {}).filter((n) => n !== currentStage).map((name) => {
+                  const kind = workflow.metadata?.gui?.subworkflow_kinds?.[name];
+                  if (kind === KINDS.SCHEDULER) return null;
+                  return (
                     <div
-                      key={subworkflowName}
+                      key={name}
                       className="function-item subworkflow-item"
                       draggable
-                      onDragStart={(e) => onDragStartSubWorkflow(e, subworkflowName)}
+                      onDragStart={(e) => onDragStart(e, buildSubworkflowCallData(name))}
                     >
-                      <div className="function-item-icon">
-                        <Zap size={14} />
-                      </div>
-                      <div className="function-item-name">{subworkflowName}</div>
+                      <div className="function-item-name">{name}</div>
                       <div className="function-item-description">
-                        {workflow.subworkflows[subworkflowName].description || 'Sub-workflow call'}
+                        {workflow.subworkflows[name]?.description || kind || ''}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Standard Functions Categories - Hidden for composers */}
-        {!isComposer && categoriesToDisplay.map((category) => {
-          const functions = functionsByCategory[category] || [];
-          return (
-            <div key={category} className="palette-category">
-              <div
-                className="category-header"
-                onClick={() => toggleCategory(category)}
-              >
-                {expandedCategories[category] ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-                <span>{categoryLabels[category] || category}</span>
-                <span className="category-count">{functions.length}</span>
+                  );
+                })}
               </div>
+            )}
+          </div>
+        )}
 
-              {expandedCategories[category] && (
-                <div className="category-functions">
-                  {isLoading ? (
-                    <div className="no-functions">Loading functions...</div>
-                  ) : functions.length === 0 ? (
-                    <div className="no-functions">No functions available</div>
-                  ) : (
-                    functions.map((func) => (
-                      <div
-                        key={func.name}
-                        className="function-item"
-                        draggable
-                        onDragStart={(e) => onDragStart(e, func)}
-                      >
-                        <div className="function-item-name">{func.displayName}</div>
-                        <div className="function-item-description">
-                          {func.description}
-                        </div>
-                        <div className="function-item-params">
-                          {(func.parameters || []).length} parameter{(func.parameters || []).length !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Imported Libraries Section (v2.0 only) - Hidden for composers */}
-        {workflow.version === '2.0' && !isComposer && Object.keys(libraryFunctions).length > 0 && (
+        {/* Project (user-created) functions */}
+        {userFunctions.length > 0 && (
           <div className="palette-category">
-            <div
-              className="category-header"
-              onClick={() => toggleCategory('libraries')}
-            >
-              {expandedCategories['libraries'] ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
-              <span>Imported Libraries</span>
-              <span className="category-count">
-                {Object.values(libraryFunctions).reduce((sum, funcs) => sum + funcs.length, 0)}
-              </span>
+            <div className="category-header" onClick={() => toggle('project')}>
+              {isExpanded('project') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>Project</span>
+              <span className="category-count">{userFunctions.length}</span>
             </div>
-
-            {expandedCategories['libraries'] && (
-              <div className="category-content">
-                {Object.entries(libraryFunctions).map(([libraryName, functions]) => (
-                  <div key={libraryName} className="library-group">
-                    <div className="library-group-header">{libraryName}</div>
-                    {functions.map((func) => (
-                      <div
-                        key={`${libraryName}-${func.name}`}
-                        className="function-item"
-                        draggable
-                        onDragStart={(e) => onDragStart(e, {
-                          type: 'function',
-                          name: func.name,
-                          category: func.category,
-                          function_file: func.function_file || null,
-                          label: func.variant ? `${func.name} (${func.variant})` : func.name
-                        })}
-                      >
-                        <Zap size={14} />
-                        <div className="function-info">
-                          <div className="function-name">
-                            {func.name}
-                            {func.variant && <span className="variant-suffix"> ({func.variant})</span>}
-                          </div>
-                          <div className="function-desc">{func.docstring || 'No description'}</div>
-                        </div>
-                      </div>
-                    ))}
+            {isExpanded('project') && (
+              <div className="category-functions">
+                {userFunctions.map((uf) => (
+                  <div key={`u-${uf.name}`} className="function-item-row">
+                    <div className="function-item-wrap">
+                      {renderFunctionItem(uf.name, 'user')}
+                    </div>
+                    <button
+                      className="function-item-remove"
+                      title="Remove from project (does not delete file)"
+                      onClick={() => removeUserFunction(uf.name)}
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
+
+        {/* Each loaded workflow library */}
+        {libraries.filter((l) => l.type === 'workflow').map((lib) => (
+          <div className="palette-category" key={lib.path}>
+            <div className="category-header library-header" onClick={() => toggle(`lib-${lib.path}`)}>
+              {isExpanded(`lib-${lib.path}`) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <FileJson size={14} />
+              <div className="library-header-text">
+                <div className="library-name">{lib.name}</div>
+                <div className="library-path" title={lib.path}>{lib.path}</div>
+              </div>
+              <button
+                className="function-item-remove"
+                title="Remove library"
+                onClick={(e) => { e.stopPropagation(); removeFunctionLibrary(lib.path); }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+            {isExpanded(`lib-${lib.path}`) && (
+              <div className="category-functions">
+                {(lib.functions || []).map((name) => renderFunctionItem(name, lib.path))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {!hasContent && (
+          <div className="palette-empty">
+            <FolderOpen size={36} opacity={0.3} />
+            <p>No functions loaded.</p>
+            <p className="palette-empty-hint">
+              Load functions from another workflow, or create a new one (only on behavior canvases).
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="palette-footer">
-        <div className="palette-hint">
-          💡 Drag functions to the canvas and customize from node settings
-        </div>
-      </div>
-
-      {/* Conflict Resolution Dialog */}
-      {conflictDialog && (
-        <LibraryConflictDialog
-          conflicts={conflictDialog.conflicts}
-          libraryName={conflictDialog.libraryName}
-          onResolve={handleConflictResolution}
-          onCancel={() => setConflictDialog(null)}
-        />
-      )}
-
-      {/* Subworkflow Import Dialog */}
-      {importDialog && (
-        <SubworkflowImportDialog
-          workflowData={importDialog}
-          onImport={handleImportDialogConfirm}
-          onCancel={() => setImportDialog(null)}
+      {showNewFunc && (
+        <NewFunctionDialog
+          behaviorName={currentStage}
+          defaultCategory={currentKind === KINDS.ENV_BEHAVIOR ? 'diffusion' : 'intracellular'}
+          onCreate={handleCreateFunction}
+          onCancel={() => setShowNewFunc(false)}
         />
       )}
     </div>
@@ -723,4 +382,3 @@ const FunctionPalette = ({ currentStage }) => {
 };
 
 export default FunctionPalette;
-

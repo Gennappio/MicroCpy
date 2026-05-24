@@ -84,5 +84,75 @@ export const createLibrarySlice = (set, get) => ({
     const state = get();
     return state.workflow.metadata?.gui?.function_libraries || [];
   },
+
+  /**
+   * Add a library loaded from a workflow JSON file.
+   * Extracts function names used in the workflow and stores them with workflow metadata.
+   */
+  addWorkflowLibrary: (workflowName, workflowPath, functionNames) => {
+    set((state) => {
+      const libraries = state.workflow.metadata.gui.function_libraries || [];
+      const existingIndex = libraries.findIndex((lib) => lib.path === workflowPath);
+      const newLib = {
+        type: 'workflow',
+        name: workflowName,
+        path: workflowPath,
+        functions: functionNames,
+      };
+      const updated = existingIndex >= 0
+        ? libraries.map((l, i) => (i === existingIndex ? newLib : l))
+        : [...libraries, newLib];
+
+      return {
+        workflow: {
+          ...state.workflow,
+          metadata: {
+            ...state.workflow.metadata,
+            gui: { ...state.workflow.metadata.gui, function_libraries: updated },
+          },
+        },
+      };
+    });
+  },
+
+  /**
+   * Add a user-created function to project metadata.
+   * Each entry: { name, category, adapter, behavior, parameters: [{name,type,default}] }
+   */
+  addUserFunction: (functionDef) => {
+    set((state) => {
+      const existing = state.workflow.metadata.gui.user_functions || [];
+      if (existing.some((f) => f.name === functionDef.name)) return state;
+      return {
+        workflow: {
+          ...state.workflow,
+          metadata: {
+            ...state.workflow.metadata,
+            gui: {
+              ...state.workflow.metadata.gui,
+              user_functions: [...existing, functionDef],
+            },
+          },
+        },
+      };
+    });
+  },
+
+  removeUserFunction: (functionName) => {
+    set((state) => ({
+      workflow: {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            user_functions: (state.workflow.metadata.gui.user_functions || []).filter(
+              (f) => f.name !== functionName
+            ),
+          },
+        },
+      },
+    }));
+  },
 });
 

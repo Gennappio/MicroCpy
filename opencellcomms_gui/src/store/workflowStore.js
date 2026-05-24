@@ -50,6 +50,7 @@ const useWorkflowStore = create((set, get) => ({
         scheduler: { subworkflow: SCHEDULER_NAME },
         processing: { behavior_subworkflows: [] },
         main_is_synthesized: false,
+        user_functions: [],
       }
     },
     subworkflows: {

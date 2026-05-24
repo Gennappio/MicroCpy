@@ -814,6 +814,19 @@ from src.workflow.decorators import register_function
         added = []
         skipped = []
 
+        type_to_py = {'INT': 'int', 'FLOAT': 'float', 'BOOL': 'bool', 'STRING': 'str', 'DICT': 'dict'}
+
+        def fmt_default(val, py_type):
+            if py_type == 'str':
+                return repr(val if val is not None else '')
+            if py_type == 'bool':
+                return 'True' if val else 'False'
+            if py_type == 'dict':
+                return '{}'
+            if val is None:
+                return '0' if py_type == 'int' else '0.0'
+            return repr(val)
+
         for fn in functions:
             fn_name = fn.get('name', '').strip()
             if not fn_name:
@@ -823,17 +836,53 @@ from src.workflow.decorators import register_function
                 continue
 
             display_name = fn_name.replace('_', ' ').title()
+            fn_params = fn.get('parameters') or []
+
+            # Build decorator parameters list
+            if fn_params:
+                decorator_param_lines = []
+                for p in fn_params:
+                    pname = p.get('name', '').strip()
+                    ptype = p.get('type', 'FLOAT')
+                    pdefault = p.get('default')
+                    if not pname:
+                        continue
+                    py_t = type_to_py.get(ptype, 'float')
+                    default_repr = fmt_default(pdefault, py_t)
+                    decorator_param_lines.append(
+                        f'        {{"name": "{pname}", "type": "{ptype}", '
+                        f'"description": "TODO", "default": {default_repr}}}'
+                    )
+                decorator_params_block = '[\n' + ',\n'.join(decorator_param_lines) + ',\n    ]'
+
+                # Build signature
+                sig_lines = ['    context: Dict[str, Any] = None,']
+                for p in fn_params:
+                    pname = p.get('name', '').strip()
+                    if not pname:
+                        continue
+                    py_t = type_to_py.get(p.get('type', 'FLOAT'), 'float')
+                    default_repr = fmt_default(p.get('default'), py_t)
+                    sig_lines.append(f'    {pname}: {py_t} = {default_repr},')
+                sig_lines.append('    **kwargs')
+                sig_block = '\n'.join(sig_lines)
+            else:
+                decorator_params_block = '[]'
+                sig_block = '    context: Dict[str, Any] = None, **kwargs'
+
             fn_block = textwrap.dedent(f'''
 @register_function(
     display_name="{display_name}",
     description="TODO: describe what {fn_name} does",
     category="{category_const}",
-    parameters=[],
+    parameters={decorator_params_block},
     inputs=["context"],
     outputs=[],
     cloneable=False,
 )
-def {fn_name}(context: Dict[str, Any] = None, **kwargs) -> bool:
+def {fn_name}(
+{sig_block}
+) -> bool:
     """TODO: implement {fn_name}."""
     if not context:
         print("[ERROR] [{fn_name}] No context provided")

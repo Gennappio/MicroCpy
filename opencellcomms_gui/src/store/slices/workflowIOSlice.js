@@ -285,6 +285,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     const scheduler = guiMeta.scheduler || { subworkflow: '__scheduler__' };
     const processing = guiMeta.processing || { behavior_subworkflows: [] };
     const mainIsSynthesized = guiMeta.main_is_synthesized || false;
+    const userFunctions = guiMeta.user_functions || [];
 
     // Determine initial stage: prefer scheduler, else first non-synthesized subworkflow
     const schedulerName = scheduler.subworkflow || '__scheduler__';
@@ -305,6 +306,7 @@ export const createWorkflowIOSlice = (set, get) => ({
             scheduler,
             processing,
             main_is_synthesized: mainIsSynthesized,
+            user_functions: userFunctions,
           }
         },
         subworkflows,
@@ -581,6 +583,7 @@ export const createWorkflowIOSlice = (set, get) => ({
       scheduler: schedulerMeta,
       processing: processingMeta,
       main_is_synthesized: hasAbmContent,
+      user_functions: guiMeta.user_functions || [],
     };
 
     // Include planner tabs in exported metadata
