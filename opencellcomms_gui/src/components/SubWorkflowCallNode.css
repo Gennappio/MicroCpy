@@ -1,37 +1,70 @@
+/* Base node */
 .subworkflow-call-node {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  border: 2px solid #7c3aed;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  border: 2px solid;
   transition: all 0.2s;
   color: white;
 }
 
+/* ── Purple (default / processing_behavior / subworkflow) ── */
+.subworkflow-call-node,
+.subworkflow-call-node[data-variant="purple"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-color: #7c3aed;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+.subworkflow-call-node[data-variant="purple"].selected,
 .subworkflow-call-node.selected {
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
   border-color: #6d28d9;
 }
-
+.subworkflow-call-node[data-variant="purple"].disabled,
 .subworkflow-call-node.disabled {
   opacity: 0.5;
-  background: linear-gradient(135deg, #a78bfa 0%, #9333ea 100%);
 }
 
-/* Composer Call Node - Orange/Gold theme */
-.subworkflow-call-node.composer-call {
+/* ── Orange (composer / legacy) ── */
+.subworkflow-call-node[data-variant="orange"] {
   background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-  border: 2px solid #f97316;
+  border-color: #f97316;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
-
-.subworkflow-call-node.composer-call.selected {
+.subworkflow-call-node[data-variant="orange"].selected {
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4);
   border-color: #ea580c;
 }
 
-.subworkflow-call-node.composer-call.disabled {
-  opacity: 0.5;
-  background: linear-gradient(135deg, #fbbf24 0%, #fb923c 100%);
+/* ── Blue (agent_behavior / agent_init) ── */
+.subworkflow-call-node[data-variant="blue"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+.subworkflow-call-node[data-variant="blue"].selected {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  border-color: #1d4ed8;
+}
+
+/* ── Green (env_behavior / env_init) ── */
+.subworkflow-call-node[data-variant="green"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: #059669;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+.subworkflow-call-node[data-variant="green"].selected {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+  border-color: #047857;
+}
+
+/* ── Slate (scheduler) ── */
+.subworkflow-call-node[data-variant="slate"] {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border-color: #334155;
+  box-shadow: 0 2px 8px rgba(71, 85, 105, 0.3);
+}
+.subworkflow-call-node[data-variant="slate"].selected {
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.4);
+  border-color: #1e293b;
 }
 
 .subworkflow-call-node .node-header {

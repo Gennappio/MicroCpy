@@ -2,6 +2,7 @@ import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, Zap, ExternalLink, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
+import { variantForKind } from '../store/subworkflowKinds';
 import './SubWorkflowCallNode.css';
 
 /**
@@ -38,9 +39,9 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
     openInspector(tabMap[badgeType] || 'overview');
   };
 
-  // Determine if this is calling a composer
   const targetKind = workflow.metadata?.gui?.subworkflow_kinds?.[subworkflowName] ||
                     (subworkflowName === 'main' ? 'composer' : 'subworkflow');
+  const colorVariant = variantForKind(targetKind);
   const isComposerCall = targetKind === 'composer';
 
   const handleToggleEnabled = (e) => {
@@ -55,7 +56,8 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`subworkflow-call-node ${isComposerCall ? 'composer-call' : ''} ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
+      className={`subworkflow-call-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
+      data-variant={colorVariant}
       style={{ width: '350px', padding: '8px', fontSize: '13px' }}
     >
       {/* Function flow handles (top and bottom) */}
@@ -102,10 +104,16 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
           className="node-goto-btn"
           onClick={(e) => {
             e.stopPropagation();
-            // Switch to the appropriate main tab based on target subworkflow kind
-            const targetMainTab = isComposerCall ? 'composers' : 'subworkflows';
-            setCurrentMainTab(targetMainTab);
-            // Then navigate to the target subworkflow
+            // Navigate to the owning tab based on target kind
+            const tabMap = {
+              agent_init: 'agents', agent_behavior: 'agents',
+              env_init: 'environment', env_behavior: 'environment',
+              processing_behavior: 'processing',
+              scheduler: 'scheduler',
+              composer: 'agents',
+              subworkflow: 'agents',
+            };
+            setCurrentMainTab(tabMap[targetKind] || 'agents');
             setCurrentStage(subworkflowName);
           }}
           title={`Go to ${subworkflowName}`}

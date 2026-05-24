@@ -728,6 +728,161 @@ def save_function_source():
         return jsonify({'error': f'Unexpected error: {e}'}), 500
 
 
+@app.route('/api/function/scaffold', methods=['POST'])
+def scaffold_behavior_code():
+    """
+    Idempotently create a Python file for a behavior subworkflow.
+
+    Request body:
+        {
+            "behavior_name": "differentiation",
+            "category": "intracellular",
+            "adapter": "jayatilake",   // null for generic engine functions
+            "functions": [{"name": "evaluate_de_inputs"}, ...]
+        }
+
+    Returns:
+        { success, file_path, created, added_functions, skipped_existing }
+    """
+    import ast
+    import shutil
+    import textwrap
+
+    try:
+        data = request.json or {}
+        behavior_name = data.get('behavior_name', '').strip()
+        category = data.get('category', 'intracellular').strip()
+        adapter = (data.get('adapter') or '').strip() or None
+        functions = data.get('functions', [])
+
+        if not behavior_name:
+            return jsonify({'error': 'behavior_name is required'}), 400
+        if not functions:
+            return jsonify({'error': 'functions list is required'}), 400
+
+        engine_dir = get_engine_path().parent  # opencellcomms_engine/
+
+        if adapter:
+            # Adapter-specific path: opencellcomms_adapters/<adapter>/functions/<category>/<behavior>.py
+            adapters_dir = engine_dir.parent / 'opencellcomms_adapters'
+            file_path = adapters_dir / adapter / 'functions' / category / f'{behavior_name}.py'
+            register_path = adapters_dir / adapter / 'register.py'
+        else:
+            # Generic engine path
+            file_path = engine_dir / 'src' / 'workflow' / 'functions' / category / f'{behavior_name}.py'
+            register_path = None
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Derive category constant name (e.g. intracellular → INTRACELLULAR)
+        category_const = category.upper()
+
+        # File header template
+        header = f'''"""
+{behavior_name} — auto-generated behavior scaffold.
+
+Edit the function bodies below to implement the behavior logic.
+"""
+
+from typing import Dict, Any
+from src.workflow.decorators import register_function
+
+
+'''
+
+        created = False
+        if not file_path.exists():
+            file_path.write_text(header, encoding='utf-8')
+            created = True
+        else:
+            # Make a backup before modifying
+            shutil.copy2(file_path, file_path.with_suffix('.py.bak'))
+
+        # Read existing function names via ast
+        existing_source = file_path.read_text(encoding='utf-8')
+        try:
+            tree = ast.parse(existing_source)
+        except SyntaxError:
+            tree = None
+
+        existing_funcs = set()
+        if tree:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    existing_funcs.add(node.name)
+
+        added = []
+        skipped = []
+
+        for fn in functions:
+            fn_name = fn.get('name', '').strip()
+            if not fn_name:
+                continue
+            if fn_name in existing_funcs:
+                skipped.append(fn_name)
+                continue
+
+            display_name = fn_name.replace('_', ' ').title()
+            fn_block = textwrap.dedent(f'''
+@register_function(
+    display_name="{display_name}",
+    description="TODO: describe what {fn_name} does",
+    category="{category_const}",
+    parameters=[],
+    inputs=["context"],
+    outputs=[],
+    cloneable=False,
+)
+def {fn_name}(context: Dict[str, Any] = None, **kwargs) -> bool:
+    """TODO: implement {fn_name}."""
+    if not context:
+        print("[ERROR] [{fn_name}] No context provided")
+        return False
+    # TODO: implement behavior
+    return True
+
+''')
+            existing_source += fn_block
+            existing_funcs.add(fn_name)
+            added.append(fn_name)
+
+        # Validate syntax before writing
+        try:
+            compile(existing_source, str(file_path), 'exec')
+        except SyntaxError as e:
+            return jsonify({'error': f'Syntax error in generated code: {e}', 'line': e.lineno}), 400
+
+        file_path.write_text(existing_source, encoding='utf-8')
+
+        # Update adapter register.py (idempotent)
+        if register_path and register_path.exists() and added:
+            reg_source = register_path.read_text(encoding='utf-8')
+            lines_to_add = []
+            for fn_name in added:
+                import_line = (
+                    f'from opencellcomms_adapters.{adapter}.functions.{category}.{behavior_name} '
+                    f'import {fn_name}'
+                )
+                if import_line not in reg_source:
+                    lines_to_add.append(import_line)
+            if lines_to_add:
+                shutil.copy2(register_path, register_path.with_suffix('.py.bak'))
+                register_path.write_text(reg_source.rstrip() + '\n' + '\n'.join(lines_to_add) + '\n',
+                                          encoding='utf-8')
+
+        rel_path = str(file_path.relative_to(engine_dir.parent))
+        return jsonify({
+            'success': True,
+            'file_path': rel_path,
+            'created': created,
+            'added_functions': added,
+            'skipped_existing': skipped,
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {e}'}), 500
+
+
 @app.route('/api/function/validate', methods=['POST'])
 def validate_function_source():
     """
