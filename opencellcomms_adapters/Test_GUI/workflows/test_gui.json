@@ -1,0 +1,1977 @@
+{
+  "version": "2.0",
+  "name": "Test_GUI",
+  "description": "Stress-test workflow: 3 agent kinds, mixed scheduler, planner runs, processing.",
+  "metadata": {
+    "author": "Test_GUI generator",
+    "created": "2026-05-24",
+    "gui": {
+      "subworkflow_kinds": {
+        "predator_init": "agent_init",
+        "predator_hunt": "agent_behavior",
+        "predator_rest": "agent_behavior",
+        "predator_reproduce": "agent_behavior",
+        "prey_init": "agent_init",
+        "prey_graze": "agent_behavior",
+        "prey_flee": "agent_behavior",
+        "prey_reproduce": "agent_behavior",
+        "plankton_init": "agent_init",
+        "plankton_drift": "agent_behavior",
+        "plankton_photosynth": "agent_behavior",
+        "plankton_replicate": "agent_behavior",
+        "env_init": "env_init",
+        "env_diffuse": "env_behavior",
+        "env_replenish": "env_behavior",
+        "env_log": "env_behavior",
+        "proc_export_csv": "processing_behavior",
+        "proc_make_plots": "processing_behavior",
+        "proc_summary": "processing_behavior",
+        "__scheduler__": "scheduler",
+        "main": "composer"
+      },
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "predator",
+          "init_subworkflow": "predator_init",
+          "behavior_subworkflows": [
+            "predator_hunt",
+            "predator_rest",
+            "predator_reproduce"
+          ]
+        },
+        {
+          "name": "prey",
+          "init_subworkflow": "prey_init",
+          "behavior_subworkflows": [
+            "prey_graze",
+            "prey_flee",
+            "prey_reproduce"
+          ]
+        },
+        {
+          "name": "plankton",
+          "init_subworkflow": "plankton_init",
+          "behavior_subworkflows": [
+            "plankton_drift",
+            "plankton_photosynth",
+            "plankton_replicate"
+          ]
+        }
+      ],
+      "environment": {
+        "init_subworkflow": "env_init",
+        "behavior_subworkflows": [
+          "env_diffuse",
+          "env_replenish",
+          "env_log"
+        ]
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "proc_export_csv",
+          "proc_make_plots",
+          "proc_summary"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-baseline",
+            "name": "run_baseline",
+            "enabled": true,
+            "parameterOverrides": {}
+          },
+          {
+            "id": "tab-pressure",
+            "name": "run_high_predator_pressure",
+            "enabled": true,
+            "parameterOverrides": {
+              "predator_hunt": {
+                "intensity": 5.0
+              }
+            }
+          },
+          {
+            "id": "tab-lowfood",
+            "name": "run_low_food",
+            "enabled": true,
+            "parameterOverrides": {
+              "env_replenish": {
+                "intensity": 0.2
+              }
+            }
+          },
+          {
+            "id": "tab-long",
+            "name": "run_long",
+            "enabled": true,
+            "parameterOverrides": {
+              "__scheduler__": {
+                "number_of_steps": 30
+              }
+            }
+          },
+          {
+            "id": "tab-silent",
+            "name": "run_silent",
+            "enabled": false,
+            "parameterOverrides": {}
+          }
+        ]
+      }
+    }
+  },
+  "subworkflows": {
+    "predator_init": {
+      "description": "predator initialization",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-predator_init",
+        "type": "controller",
+        "label": "PREDATOR_INIT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-1",
+          "function_name": "predator_spawn",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-2",
+          "function_name": "predator_set_energy",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-3",
+          "function_name": "predator_log_init",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-1",
+        "func-1779654396307-2",
+        "func-1779654396307-3"
+      ],
+      "input_parameters": []
+    },
+    "predator_hunt": {
+      "description": "predator behavior: hunt",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-predator_hunt",
+        "type": "controller",
+        "label": "PREDATOR_HUNT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-4",
+          "function_name": "predator_stalk",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-5",
+          "function_name": "predator_strike",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-6",
+          "function_name": "predator_digest",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-4",
+        "func-1779654396307-5",
+        "func-1779654396307-6"
+      ],
+      "input_parameters": []
+    },
+    "predator_rest": {
+      "description": "predator behavior: rest",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-predator_rest",
+        "type": "controller",
+        "label": "PREDATOR_REST CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-7",
+          "function_name": "predator_idle",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-8",
+          "function_name": "predator_sleep",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-9",
+          "function_name": "predator_dream",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 640
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-7",
+        "func-1779654396307-8",
+        "func-1779654396307-9"
+      ],
+      "input_parameters": []
+    },
+    "predator_reproduce": {
+      "description": "predator behavior: reproduce",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-predator_reproduce",
+        "type": "controller",
+        "label": "PREDATOR_REPRODUCE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-10",
+          "function_name": "predator_court",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-11",
+          "function_name": "predator_mate",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-12",
+          "function_name": "predator_spawn_offspring",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-10",
+        "func-1779654396307-11",
+        "func-1779654396307-12"
+      ],
+      "input_parameters": []
+    },
+    "prey_init": {
+      "description": "prey initialization",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-prey_init",
+        "type": "controller",
+        "label": "PREY_INIT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-13",
+          "function_name": "prey_spawn",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-14",
+          "function_name": "prey_set_state",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-15",
+          "function_name": "prey_log_init",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-13",
+        "func-1779654396307-14",
+        "func-1779654396307-15"
+      ],
+      "input_parameters": []
+    },
+    "prey_graze": {
+      "description": "prey behavior: graze",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-prey_graze",
+        "type": "controller",
+        "label": "PREY_GRAZE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-16",
+          "function_name": "prey_forage",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-17",
+          "function_name": "prey_chew",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-18",
+          "function_name": "prey_swallow",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-16",
+        "func-1779654396307-17",
+        "func-1779654396307-18"
+      ],
+      "input_parameters": []
+    },
+    "prey_flee": {
+      "description": "prey behavior: flee",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-prey_flee",
+        "type": "controller",
+        "label": "PREY_FLEE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-19",
+          "function_name": "prey_detect_threat",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 640
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-20",
+          "function_name": "prey_sprint",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-21",
+          "function_name": "prey_hide",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-19",
+        "func-1779654396307-20",
+        "func-1779654396307-21"
+      ],
+      "input_parameters": []
+    },
+    "prey_reproduce": {
+      "description": "prey behavior: reproduce",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-prey_reproduce",
+        "type": "controller",
+        "label": "PREY_REPRODUCE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-22",
+          "function_name": "prey_pair",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-23",
+          "function_name": "prey_nest",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-24",
+          "function_name": "prey_hatch",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-22",
+        "func-1779654396307-23",
+        "func-1779654396307-24"
+      ],
+      "input_parameters": []
+    },
+    "plankton_init": {
+      "description": "plankton initialization",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-plankton_init",
+        "type": "controller",
+        "label": "PLANKTON_INIT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-25",
+          "function_name": "plankton_spawn",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-26",
+          "function_name": "plankton_set_state",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-27",
+          "function_name": "plankton_log_init",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-25",
+        "func-1779654396307-26",
+        "func-1779654396307-27"
+      ],
+      "input_parameters": []
+    },
+    "plankton_drift": {
+      "description": "plankton behavior: drift",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-plankton_drift",
+        "type": "controller",
+        "label": "PLANKTON_DRIFT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-28",
+          "function_name": "plankton_brownian",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-29",
+          "function_name": "plankton_current",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 640
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-30",
+          "function_name": "plankton_tide",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-28",
+        "func-1779654396307-29",
+        "func-1779654396307-30"
+      ],
+      "input_parameters": []
+    },
+    "plankton_photosynth": {
+      "description": "plankton behavior: photosynth",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-plankton_photosynth",
+        "type": "controller",
+        "label": "PLANKTON_PHOTOSYNTH CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-31",
+          "function_name": "plankton_capture",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-32",
+          "function_name": "plankton_convert",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-33",
+          "function_name": "plankton_store",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-31",
+        "func-1779654396307-32",
+        "func-1779654396307-33"
+      ],
+      "input_parameters": []
+    },
+    "plankton_replicate": {
+      "description": "plankton behavior: replicate",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-plankton_replicate",
+        "type": "controller",
+        "label": "PLANKTON_REPLICATE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-34",
+          "function_name": "plankton_divide",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-35",
+          "function_name": "plankton_scatter",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-36",
+          "function_name": "plankton_settle",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-34",
+        "func-1779654396307-35",
+        "func-1779654396307-36"
+      ],
+      "input_parameters": []
+    },
+    "env_init": {
+      "description": "Environment initialization",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-env_init",
+        "type": "controller",
+        "label": "ENV_INIT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-37",
+          "function_name": "setup_test_domain",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-38",
+          "function_name": "setup_test_substances",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-39",
+          "function_name": "log_env_ready",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 640
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-37",
+        "func-1779654396307-38",
+        "func-1779654396307-39"
+      ],
+      "input_parameters": []
+    },
+    "env_diffuse": {
+      "description": "Environment behavior: env_diffuse",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-env_diffuse",
+        "type": "controller",
+        "label": "ENV_DIFFUSE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-40",
+          "function_name": "diffuse_food",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-41",
+          "function_name": "diffuse_oxygen",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-42",
+          "function_name": "log_diffusion",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-40",
+        "func-1779654396307-41",
+        "func-1779654396307-42"
+      ],
+      "input_parameters": []
+    },
+    "env_replenish": {
+      "description": "Environment behavior: env_replenish",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-env_replenish",
+        "type": "controller",
+        "label": "ENV_REPLENISH CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-43",
+          "function_name": "refill_food",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-44",
+          "function_name": "refill_oxygen",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-45",
+          "function_name": "log_replenish",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-43",
+        "func-1779654396307-44",
+        "func-1779654396307-45"
+      ],
+      "input_parameters": []
+    },
+    "env_log": {
+      "description": "Environment behavior: env_log",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-env_log",
+        "type": "controller",
+        "label": "ENV_LOG CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-46",
+          "function_name": "snapshot_state",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-47",
+          "function_name": "dump_grid",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-48",
+          "function_name": "log_env_step",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-46",
+        "func-1779654396307-47",
+        "func-1779654396307-48"
+      ],
+      "input_parameters": []
+    },
+    "proc_export_csv": {
+      "description": "Processing: proc_export_csv",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-proc_export_csv",
+        "type": "controller",
+        "label": "PROC_EXPORT_CSV CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-49",
+          "function_name": "write_predators_csv",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 640
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-50",
+          "function_name": "write_prey_csv",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-51",
+          "function_name": "write_plankton_csv",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-49",
+        "func-1779654396307-50",
+        "func-1779654396307-51"
+      ],
+      "input_parameters": []
+    },
+    "proc_make_plots": {
+      "description": "Processing: proc_make_plots",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-proc_make_plots",
+        "type": "controller",
+        "label": "PROC_MAKE_PLOTS CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-52",
+          "function_name": "plot_populations",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-53",
+          "function_name": "plot_environment",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-54",
+          "function_name": "plot_interactions",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-52",
+        "func-1779654396307-53",
+        "func-1779654396307-54"
+      ],
+      "input_parameters": []
+    },
+    "proc_summary": {
+      "description": "Processing: proc_summary",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-proc_summary",
+        "type": "controller",
+        "label": "PROC_SUMMARY CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "func-1779654396307-55",
+          "function_name": "print_counts",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-56",
+          "function_name": "print_max_step",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "func-1779654396307-57",
+          "function_name": "print_final_message",
+          "function_file": "",
+          "parameters": {
+            "intensity": 1.0,
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "func-1779654396307-55",
+        "func-1779654396307-56",
+        "func-1779654396307-57"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Test_GUI scheduler (main loop)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 10
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sched-call-1779654396307-58",
+          "type": "subworkflow_call",
+          "subworkflow_name": "env_diffuse",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "env_diffuse",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-59",
+          "type": "subworkflow_call",
+          "subworkflow_name": "predator_hunt",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 230
+          },
+          "description": "predator_hunt",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-60",
+          "type": "subworkflow_call",
+          "subworkflow_name": "prey_flee",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "prey_flee",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-61",
+          "type": "subworkflow_call",
+          "subworkflow_name": "plankton_drift",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 450
+          },
+          "description": "plankton_drift",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-62",
+          "type": "subworkflow_call",
+          "subworkflow_name": "env_replenish",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "env_replenish",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-63",
+          "type": "subworkflow_call",
+          "subworkflow_name": "predator_rest",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 670
+          },
+          "description": "predator_rest",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-64",
+          "type": "subworkflow_call",
+          "subworkflow_name": "prey_graze",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 780
+          },
+          "description": "prey_graze",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-65",
+          "type": "subworkflow_call",
+          "subworkflow_name": "plankton_photosynth",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 890
+          },
+          "description": "plankton_photosynth",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-66",
+          "type": "subworkflow_call",
+          "subworkflow_name": "env_log",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 1000
+          },
+          "description": "env_log",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-67",
+          "type": "subworkflow_call",
+          "subworkflow_name": "predator_reproduce",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 1110
+          },
+          "description": "predator_reproduce",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-68",
+          "type": "subworkflow_call",
+          "subworkflow_name": "prey_reproduce",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 1220
+          },
+          "description": "prey_reproduce",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-1779654396307-69",
+          "type": "subworkflow_call",
+          "subworkflow_name": "plankton_replicate",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 1330
+          },
+          "description": "plankton_replicate",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "sched-call-1779654396307-58",
+        "sched-call-1779654396307-59",
+        "sched-call-1779654396307-60",
+        "sched-call-1779654396307-61",
+        "sched-call-1779654396307-62",
+        "sched-call-1779654396307-63",
+        "sched-call-1779654396307-64",
+        "sched-call-1779654396307-65",
+        "sched-call-1779654396307-66",
+        "sched-call-1779654396307-67",
+        "sched-call-1779654396307-68",
+        "sched-call-1779654396307-69"
+      ],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main (do not edit \u2014 managed by ABM structure)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "main-call-env_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "env_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Environment init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-predator_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "predator_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "description": "Agent init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-prey_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "prey_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "description": "Agent init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-plankton_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "plankton_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "Agent init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 10,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 680
+          },
+          "description": "Main loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-proc_export_csv",
+          "type": "subworkflow_call",
+          "subworkflow_name": "proc_export_csv",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 800
+          },
+          "description": "Processing",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-proc_make_plots",
+          "type": "subworkflow_call",
+          "subworkflow_name": "proc_make_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 920
+          },
+          "description": "Processing",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-proc_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "proc_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 1040
+          },
+          "description": "Processing",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "main-call-env_init",
+        "main-call-predator_init",
+        "main-call-prey_init",
+        "main-call-plankton_init",
+        "main-call-__scheduler__",
+        "main-call-proc_export_csv",
+        "main-call-proc_make_plots",
+        "main-call-proc_summary"
+      ],
+      "input_parameters": []
+    }
+  }
+}
