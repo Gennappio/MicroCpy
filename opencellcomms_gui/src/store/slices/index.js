@@ -11,4 +11,5 @@ export { createLibrarySlice } from './librarySlice';
 export { createWorkflowIOSlice } from './workflowIOSlice';
 export { createLogSlice } from './logSlice';
 export { createPlannerSlice } from './plannerSlice';
+export { createAbmSlice } from './abmSlice';
 

@@ -271,17 +271,25 @@ export const createWorkflowIOSlice = (set, get) => ({
       newStageEdges[subworkflowName] = allEdges;
     });
 
-    // Load or infer subworkflow_kinds
+    // Load or infer subworkflow_kinds (backward compat: legacy JSON has only composer/subworkflow)
     const loadedKinds = workflowJson.metadata?.gui?.subworkflow_kinds || {};
     const subworkflowKinds = {};
-
     Object.keys(subworkflows).forEach(name => {
-      if (loadedKinds[name]) {
-        subworkflowKinds[name] = loadedKinds[name];
-      } else {
-        subworkflowKinds[name] = name === 'main' ? 'composer' : 'subworkflow';
-      }
+      subworkflowKinds[name] = loadedKinds[name] || (name === 'main' ? 'composer' : 'subworkflow');
     });
+
+    // ABM metadata (absent on legacy v2 JSON — default to empty)
+    const guiMeta = workflowJson.metadata?.gui || {};
+    const agentKinds = guiMeta.agent_kinds || [];
+    const environment = guiMeta.environment || { init_subworkflow: null, behavior_subworkflows: [] };
+    const scheduler = guiMeta.scheduler || { subworkflow: '__scheduler__' };
+    const processing = guiMeta.processing || { behavior_subworkflows: [] };
+    const mainIsSynthesized = guiMeta.main_is_synthesized || false;
+
+    // Determine initial stage: prefer scheduler, else first non-synthesized subworkflow
+    const schedulerName = scheduler.subworkflow || '__scheduler__';
+    const initialStage = newStageNodes[schedulerName] ? schedulerName :
+      (mainIsSynthesized ? Object.keys(subworkflows).find(n => n !== 'main') || 'main' : 'main');
 
     set((state) => ({
       workflow: {
@@ -290,17 +298,20 @@ export const createWorkflowIOSlice = (set, get) => ({
         metadata: {
           ...workflowJson.metadata,
           gui: {
-            ...workflowJson.metadata?.gui,
-            subworkflow_kinds: subworkflowKinds
+            ...guiMeta,
+            subworkflow_kinds: subworkflowKinds,
+            agent_kinds: agentKinds,
+            environment,
+            scheduler,
+            processing,
+            main_is_synthesized: mainIsSynthesized,
           }
         },
-        subworkflows: {
-          ...subworkflows
-        }
+        subworkflows,
       },
       stageNodes: newStageNodes,
       stageEdges: newStageEdges,
-      currentStage: 'main'
+      currentStage: initialStage,
     }));
 
     // Always sync planner tabs: restore from loaded workflow or clear stale state
@@ -475,7 +486,81 @@ export const createWorkflowIOSlice = (set, get) => ({
       };
     });
 
-    // Phase 6: Make library paths relative to workflow file
+    // Synthesize 'main' composer from ABM structure (if this is an ABM-style workflow)
+    const guiMeta = workflow.metadata?.gui || {};
+    const agentKinds = guiMeta.agent_kinds || [];
+    const environment = guiMeta.environment || {};
+    const processingMeta = guiMeta.processing || {};
+    const schedulerMeta = guiMeta.scheduler || {};
+    const schedulerName = schedulerMeta.subworkflow || '__scheduler__';
+
+    const hasAbmContent = agentKinds.length > 0 || environment.init_subworkflow ||
+      (environment.behavior_subworkflows || []).length > 0 ||
+      (processingMeta.behavior_subworkflows || []).length > 0 ||
+      subworkflows[schedulerName];
+
+    if (hasAbmContent) {
+      const mainCalls = [];
+      let callY = 200;
+      const makeMainCall = (name, desc) => {
+        const call = {
+          id: `main-call-${name}`,
+          type: 'subworkflow_call',
+          subworkflow_name: name,
+          iterations: 1,
+          parameters: {},
+          enabled: true,
+          position: { x: 400, y: callY },
+          description: desc,
+          parameter_nodes: [],
+        };
+        callY += 120;
+        return call;
+      };
+
+      // 1. Environment init
+      if (environment.init_subworkflow) {
+        mainCalls.push(makeMainCall(environment.init_subworkflow, 'Environment initialization'));
+      }
+      // 2. Each agent kind init
+      agentKinds.forEach((k) => {
+        if (k.init_subworkflow) {
+          mainCalls.push(makeMainCall(k.init_subworkflow, `${k.name} initialization`));
+        }
+      });
+      // 3. Scheduler (main loop)
+      if (subworkflows[schedulerName]) {
+        const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 100;
+        const loopCall = makeMainCall(schedulerName, 'Main simulation loop');
+        loopCall.iterations = loopSteps;
+        mainCalls.push(loopCall);
+      }
+      // 4. Processing behaviors
+      (processingMeta.behavior_subworkflows || []).forEach((b) => {
+        mainCalls.push(makeMainCall(b, `Processing: ${b}`));
+      });
+
+      const mainExecutionOrder = mainCalls.map((c) => c.id);
+      subworkflows['main'] = {
+        description: 'Synthesized main workflow (do not edit — managed by ABM structure)',
+        enabled: true,
+        deletable: false,
+        controller: {
+          id: 'controller-main',
+          type: 'controller',
+          label: 'MAIN CONTROLLER',
+          position: { x: 100, y: 100 },
+          number_of_steps: 1,
+        },
+        functions: [],
+        subworkflow_calls: mainCalls,
+        parameters: [],
+        execution_order: mainExecutionOrder,
+        input_parameters: [],
+      };
+    }
+
+    // Make library paths relative to workflow file
     const exportedMetadata = { ...workflow.metadata };
     if (state.workflowFilePath && exportedMetadata.gui?.function_libraries) {
       const workflowDir = pathUtils.dirname(state.workflowFilePath);
@@ -487,6 +572,16 @@ export const createWorkflowIOSlice = (set, get) => ({
           path: pathUtils.makeRelative(lib.path, workflowDir)
         }));
     }
+
+    // Always emit ABM fields and mark synthesis
+    exportedMetadata.gui = {
+      ...exportedMetadata.gui,
+      agent_kinds: agentKinds,
+      environment,
+      scheduler: schedulerMeta,
+      processing: processingMeta,
+      main_is_synthesized: hasAbmContent,
+    };
 
     // Include planner tabs in exported metadata
     const { plannerTabs } = state;

@@ -21,7 +21,9 @@ import {
   createWorkflowIOSlice,
   createLogSlice,
   createPlannerSlice,
+  createAbmSlice,
 } from './slices';
+import { KINDS, SCHEDULER_NAME } from './subworkflowKinds';
 
 /**
  * Workflow Store - Manages the entire workflow state
@@ -39,49 +41,48 @@ const useWorkflowStore = create((set, get) => ({
       author: '',
       created: new Date().toISOString().split('T')[0],
       gui: {
-        // Subworkflow kind classification: 'composer' | 'subworkflow'
         subworkflow_kinds: {
-          main: 'composer'  // main is always a composer
+          [SCHEDULER_NAME]: KINDS.SCHEDULER,
         },
-        // Function libraries (Phase 5)
-        function_libraries: []
+        function_libraries: [],
+        agent_kinds: [],
+        environment: { init_subworkflow: null, behavior_subworkflows: [] },
+        scheduler: { subworkflow: SCHEDULER_NAME },
+        processing: { behavior_subworkflows: [] },
+        main_is_synthesized: false,
       }
     },
-    // V2.0 sub-workflows
     subworkflows: {
-      main: {
-        description: 'Main workflow entry point',
+      [SCHEDULER_NAME]: {
+        description: 'Main simulation loop — order behaviors here',
         enabled: true,
         deletable: false,
         controller: {
-          id: 'controller-main',
+          id: `controller-${SCHEDULER_NAME}`,
           type: 'initNode',
-          label: 'MAIN CONTROLLER',
+          label: 'SCHEDULER',
           position: { x: 100, y: 100 },
-          number_of_steps: 1
+          number_of_steps: 100,
         },
         functions: [],
         subworkflow_calls: [],
         parameters: [],
         execution_order: [],
-        input_parameters: []
-      }
-    }
+        input_parameters: [],
+      },
+    },
   },
 
-  // Current active subworkflow
-  currentStage: 'main',
+  currentStage: SCHEDULER_NAME,
 
-  // Current main tab: 'composers' | 'subworkflows' | 'planner' | 'results'
-  currentMainTab: 'composers',
+  currentMainTab: 'agents',
 
-  // React Flow nodes and edges for each subworkflow
   stageNodes: {
-    main: []
+    [SCHEDULER_NAME]: [],
   },
 
   stageEdges: {
-    main: []
+    [SCHEDULER_NAME]: [],
   },
 
   // ===== Core Actions =====
@@ -120,6 +121,9 @@ const useWorkflowStore = create((set, get) => ({
 
   // Planner: multiple parameter configurations
   ...createPlannerSlice(set, get),
+
+  // ABM: agent kinds, environment, scheduler, processing
+  ...createAbmSlice(set, get),
 }));
 
 export default useWorkflowStore;

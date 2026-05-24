@@ -27,8 +27,8 @@ export const createSubworkflowSlice = (set, get) => ({
         return state;
       }
 
-      // Determine kind: use provided kind, or infer from currentMainTab
-      const subworkflowKind = kind || (state.currentMainTab === 'composers' ? 'composer' : 'subworkflow');
+      // Use provided kind, or fall back to 'subworkflow'
+      const subworkflowKind = kind || 'subworkflow';
 
       return {
         workflow: {
