@@ -1,27 +1,34 @@
-import { Layers, Workflow, BarChart3, ListChecks } from 'lucide-react';
+import { Users, Globe, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
 import './MainTabSelector.css';
 
-/**
- * MainTabSelector - Top-level navigation between Workflow Designer and Results
- */
 const MainTabSelector = ({ currentMainTab, onTabChange }) => {
   return (
     <div className="main-tab-selector">
-      {/* Workflow Designer group */}
+      {/* ABM design tabs */}
       <div className="main-tab-group">
         <button
-          className={`main-tab ${currentMainTab === 'composers' ? 'active' : ''}`}
-          onClick={() => onTabChange('composers')}
+          className={`main-tab agents-tab ${currentMainTab === 'agents' ? 'active' : ''}`}
+          onClick={() => onTabChange('agents')}
+          title="Define agent kinds and their behaviors"
         >
-          <Layers size={18} />
-          <span>Composers</span>
+          <Users size={18} />
+          <span>Agents</span>
         </button>
         <button
-          className={`main-tab ${currentMainTab === 'subworkflows' ? 'active' : ''}`}
-          onClick={() => onTabChange('subworkflows')}
+          className={`main-tab environment-tab ${currentMainTab === 'environment' ? 'active' : ''}`}
+          onClick={() => onTabChange('environment')}
+          title="Define environment behaviors and initialization"
         >
-          <Workflow size={18} />
-          <span>Sub-workflows</span>
+          <Globe size={18} />
+          <span>Environment</span>
+        </button>
+        <button
+          className={`main-tab scheduler-tab ${currentMainTab === 'scheduler' ? 'active' : ''}`}
+          onClick={() => onTabChange('scheduler')}
+          title="Order behaviors into the main simulation loop"
+        >
+          <Layers size={18} />
+          <span>Scheduler</span>
         </button>
       </div>
 
@@ -30,17 +37,27 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
         <button
           className={`main-tab planner-tab ${currentMainTab === 'planner' ? 'active' : ''}`}
           onClick={() => onTabChange('planner')}
+          title="Configure simulation parameters and batch runs"
         >
           <ListChecks size={18} />
           <span>Planner</span>
         </button>
       </div>
 
-      {/* Results */}
+      {/* Processing & Results */}
       <div className="main-tab-group">
+        <button
+          className={`main-tab processing-tab ${currentMainTab === 'processing' ? 'active' : ''}`}
+          onClick={() => onTabChange('processing')}
+          title="Define post-simulation processing behaviors"
+        >
+          <Sparkles size={18} />
+          <span>Processing</span>
+        </button>
         <button
           className={`main-tab results-tab ${currentMainTab === 'results' ? 'active' : ''}`}
           onClick={() => onTabChange('results')}
+          title="View simulation results and plots"
         >
           <BarChart3 size={18} />
           <span>Results</span>
@@ -51,4 +68,3 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
 };
 
 export default MainTabSelector;
-

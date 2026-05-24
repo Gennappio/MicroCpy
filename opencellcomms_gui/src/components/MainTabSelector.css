@@ -52,27 +52,51 @@
   background: rgba(59, 130, 246, 0.12);
 }
 
-/* Run Simulation tab accent */
-.main-tab.run-tab.active {
+/* Agents tab — blue */
+.main-tab.agents-tab.active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
 }
+.main-tab.agents-tab.active:hover { background: rgba(59, 130, 246, 0.12); }
 
-/* Planner tab accent */
+/* Environment tab — green */
+.main-tab.environment-tab.active {
+  color: #10b981;
+  border-bottom-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+.main-tab.environment-tab.active:hover { background: rgba(16, 185, 129, 0.12); }
+
+/* Scheduler tab — slate */
+.main-tab.scheduler-tab.active {
+  color: #94a3b8;
+  border-bottom-color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+}
+.main-tab.scheduler-tab.active:hover { background: rgba(148, 163, 184, 0.12); }
+
+/* Planner tab — amber */
 .main-tab.planner-tab.active {
   color: #f59e0b;
   border-bottom-color: #f59e0b;
   background: rgba(245, 158, 11, 0.08);
 }
+.main-tab.planner-tab.active:hover { background: rgba(245, 158, 11, 0.12); }
 
-.main-tab.planner-tab.active:hover {
-  background: rgba(245, 158, 11, 0.12);
+/* Processing tab — purple */
+.main-tab.processing-tab.active {
+  color: #8b5cf6;
+  border-bottom-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.08);
 }
+.main-tab.processing-tab.active:hover { background: rgba(139, 92, 246, 0.12); }
 
-/* Results tab accent */
+/* Results tab — blue */
 .main-tab.results-tab.active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .main-tab svg {

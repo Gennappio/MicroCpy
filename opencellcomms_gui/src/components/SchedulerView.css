@@ -1,0 +1,18 @@
+.scheduler-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+.scheduler-header {
+  padding: 8px 16px;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+}
+
+.scheduler-hint {
+  font-size: 12px;
+  color: #64748b;
+}
