@@ -13,12 +13,26 @@ import './ExportBehaviorButton.css';
  * POSTs /api/function/scaffold per group, marks them exported, and refreshes
  * the registry.
  */
+/**
+ * Derive the .subworkflow.json sibling path from a function's file_path.
+ * e.g. "opencellcomms_adapters/X/functions/intracellular/foo.py" + "foo"
+ *      → "opencellcomms_adapters/X/functions/intracellular/foo.subworkflow.json"
+ */
+const derivePairedJsonPath = (anchorPyPath, behaviorName) => {
+  if (!anchorPyPath) return null;
+  // Pop the filename, keep the directory
+  const lastSep = Math.max(anchorPyPath.lastIndexOf('/'), anchorPyPath.lastIndexOf('\\'));
+  const dir = lastSep >= 0 ? anchorPyPath.slice(0, lastSep) : '.';
+  return `${dir}/${behaviorName}.subworkflow.json`;
+};
+
 const ExportBehaviorButton = () => {
   const {
     workflow,
     currentStage,
     stageNodes,
     markUserFunctionExported,
+    exportSingleSubworkflow,
   } = useWorkflowStore();
   const [exporting, setExporting] = useState(false);
 
@@ -43,51 +57,111 @@ const ExportBehaviorButton = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      if (pending.length === 0) {
-        alert(`Nothing to export — no unsaved functions for behavior "${currentStage}".`);
+      // Determine an anchor path for the paired .subworkflow.json. Prefer the
+      // first staged user_function's directory; otherwise prompt the user.
+      let anchorPath = null;
+      if (pending.length > 0 && pending[0].file_path) {
+        anchorPath = pending[0].file_path;
+      } else {
+        const allUserFns = workflow.metadata?.gui?.user_functions || [];
+        const anyForBehavior = allUserFns.find((f) => f.behavior === currentStage && f.file_path);
+        if (anyForBehavior) anchorPath = anyForBehavior.file_path;
+      }
+
+      // ── Step 1: scaffold .py files for any pending functions ──────────
+      const pyResults = [];
+      if (pending.length > 0) {
+        const byFile = new Map();
+        for (const f of pending) {
+          if (!f.file_path) {
+            alert(`Function "${f.name}" has no file_path — re-create it via "New Function".`);
+            return;
+          }
+          if (!byFile.has(f.file_path)) byFile.set(f.file_path, []);
+          byFile.get(f.file_path).push({ name: f.name, parameters: f.parameters || [] });
+        }
+
+        for (const [filePath, fns] of byFile.entries()) {
+          const res = await fetch('http://localhost:5001/api/function/scaffold', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_path: filePath, functions: fns }),
+          });
+          const data = await res.json();
+          pyResults.push({ filePath, data });
+          if (!data.success) {
+            alert(`Failed to export to ${filePath}: ${data.error}`);
+            return;
+          }
+        }
+        for (const f of pending) markUserFunctionExported(f.name);
+      }
+
+      // ── Step 2: pick the .subworkflow.json target path ────────────────
+      // If we still have no anchor (behavior built entirely from existing
+      // registry functions), ask the user via the native save dialog.
+      let jsonTargetPath;
+      if (anchorPath) {
+        jsonTargetPath = derivePairedJsonPath(anchorPath, currentStage);
+      } else {
+        const dialogRes = await fetch('http://localhost:5001/api/filesystem/save-dialog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            default_path: `opencellcomms_engine/exports/${currentStage}.subworkflow.json`,
+          }),
+        });
+        const dialogData = await dialogRes.json();
+        if (dialogData.cancelled || !dialogData.path) {
+          if (pyResults.length > 0) {
+            alert('Wrote .py file(s) but skipped .subworkflow.json (no target selected).');
+          } else {
+            alert('Export cancelled.');
+          }
+          await fetchRegistry();
+          return;
+        }
+        jsonTargetPath = dialogData.path;
+      }
+
+      // ── Step 3: build and write the paired .subworkflow.json ──────────
+      const exportData = exportSingleSubworkflow(currentStage);
+      if (!exportData) {
+        alert('Failed to build subworkflow JSON for ' + currentStage);
+        return;
+      }
+      const jsonContent = JSON.stringify(exportData, null, 2);
+
+      const writeRes = await fetch('http://localhost:5001/api/filesystem/write-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_path: jsonTargetPath, content: jsonContent }),
+      });
+      const writeData = await writeRes.json();
+      if (!writeData.success) {
+        alert(`Wrote .py file(s) but failed to write .subworkflow.json: ${writeData.error}`);
         return;
       }
 
-      // Group by file path
-      const byFile = new Map();
-      for (const f of pending) {
-        if (!f.file_path) {
-          alert(`Function "${f.name}" has no file_path — re-create it via "New Function".`);
-          return;
-        }
-        if (!byFile.has(f.file_path)) byFile.set(f.file_path, []);
-        byFile.get(f.file_path).push({ name: f.name, parameters: f.parameters || [] });
-      }
-
-      const results = [];
-      for (const [filePath, fns] of byFile.entries()) {
-        const res = await fetch('http://localhost:5001/api/function/scaffold', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ file_path: filePath, functions: fns }),
-        });
-        const data = await res.json();
-        results.push({ filePath, data });
-        if (!data.success) {
-          alert(`Failed to export to ${filePath}: ${data.error}`);
-          return;
-        }
-      }
-
-      for (const f of pending) markUserFunctionExported(f.name);
+      // ── Step 4: refresh registry and summarise ────────────────────────
       await fetchRegistry();
 
-      const summary = results
+      const pySummary = pyResults
         .map(
           (r) =>
-            `${r.filePath}\n  added: ${r.data.added_functions?.join(', ') || 'none'}` +
+            `  ${r.filePath}\n    added: ${r.data.added_functions?.join(', ') || 'none'}` +
             (r.data.skipped_existing?.length
-              ? `\n  skipped (existing): ${r.data.skipped_existing.join(', ')}`
-              : '') +
-            (r.data.reload_warning ? `\n  ⚠ ${r.data.reload_warning}` : '')
+              ? `\n    skipped: ${r.data.skipped_existing.join(', ')}`
+              : '')
         )
-        .join('\n\n');
-      alert(`Exported behavior "${currentStage}":\n\n${summary}`);
+        .join('\n');
+      const jsonLine = `  ${writeData.file_path}` + (writeData.backup_path ? ' (existing backed up)' : ' (new)');
+      const noPy = pyResults.length === 0 ? '\n(no new .py files written — all functions were already exported)\n' : '\n';
+      alert(
+        `Exported behavior "${currentStage}":\n` +
+          (pySummary ? `\nPython files:\n${pySummary}` : noPy) +
+          `\nStructure file:\n${jsonLine}`
+      );
     } catch (e) {
       alert('Export failed: ' + e.message);
     } finally {
@@ -95,15 +169,23 @@ const ExportBehaviorButton = () => {
     }
   };
 
+  // Disable only when there's truly nothing in the behavior at all
+  const canvasNodeCount = (stageNodes?.[currentStage] || []).filter(
+    (n) => n.type === 'workflowFunction'
+  ).length;
+  const hasAnything = canvasNodeCount > 0 || pending.length > 0;
+
   return (
     <button
       className={`export-behavior-btn ${pending.length > 0 ? 'has-pending' : ''}`}
       onClick={handleExport}
-      disabled={exporting}
+      disabled={exporting || !hasAnything}
       title={
-        pending.length > 0
-          ? `Write ${pending.length} pending function(s) to disk`
-          : 'No unsaved functions to export'
+        !hasAnything
+          ? 'Add function nodes first'
+          : pending.length > 0
+          ? `Write ${pending.length} pending .py file(s) + the structure .subworkflow.json`
+          : 'Write the structure .subworkflow.json (no .py changes)'
       }
     >
       <Upload size={14} />

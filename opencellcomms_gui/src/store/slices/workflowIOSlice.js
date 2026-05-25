@@ -1111,6 +1111,11 @@ export const createWorkflowIOSlice = (set, get) => ({
           kind,
           isAutoDependency: isAutoDep
         });
+
+        // Phase 13: auto-attach ABM-kind behaviors to the appropriate group
+        // so the user doesn't have to wire them up manually after import.
+        const targetAgentKind = options.attachToAgentKind || null;
+        get()._attachImportedToAbm(targetName, kind, targetAgentKind);
       } else {
         results.failed.push({ name: originalName, error: 'Import failed' });
       }
@@ -1118,6 +1123,104 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     console.log('[STORE] Import results:', results);
     return results;
+  },
+
+  /**
+   * Phase 13: hook a freshly imported subworkflow into the right ABM group
+   * based on its kind. Idempotent.
+   */
+  _attachImportedToAbm: (name, kind, targetAgentKind = null) => {
+    set((state) => {
+      const gui = state.workflow.metadata?.gui;
+      if (!gui) return state;
+
+      // Env behavior
+      if (kind === 'env_behavior') {
+        const env = gui.environment || { init_subworkflow: null, behavior_subworkflows: [] };
+        if (env.behavior_subworkflows.includes(name)) return state;
+        return {
+          workflow: {
+            ...state.workflow,
+            metadata: {
+              ...state.workflow.metadata,
+              gui: {
+                ...gui,
+                environment: {
+                  ...env,
+                  behavior_subworkflows: [...env.behavior_subworkflows, name],
+                },
+              },
+            },
+          },
+        };
+      }
+
+      // Env init
+      if (kind === 'env_init') {
+        const env = gui.environment || { init_subworkflow: null, behavior_subworkflows: [] };
+        return {
+          workflow: {
+            ...state.workflow,
+            metadata: {
+              ...state.workflow.metadata,
+              gui: {
+                ...gui,
+                environment: { ...env, init_subworkflow: name },
+              },
+            },
+          },
+        };
+      }
+
+      // Processing behavior
+      if (kind === 'processing_behavior') {
+        const proc = gui.processing || { behavior_subworkflows: [] };
+        if (proc.behavior_subworkflows.includes(name)) return state;
+        return {
+          workflow: {
+            ...state.workflow,
+            metadata: {
+              ...state.workflow.metadata,
+              gui: {
+                ...gui,
+                processing: {
+                  ...proc,
+                  behavior_subworkflows: [...proc.behavior_subworkflows, name],
+                },
+              },
+            },
+          },
+        };
+      }
+
+      // Agent behavior / agent init — needs a target agent kind. If the caller
+      // did not specify one, attach to the first existing kind, or skip silently
+      // (the user can attach manually from the Agents tab).
+      if (kind === 'agent_behavior' || kind === 'agent_init') {
+        const kinds = gui.agent_kinds || [];
+        if (kinds.length === 0) return state;
+
+        const targetName = targetAgentKind || kinds[0].name;
+        const newKinds = kinds.map((k) => {
+          if (k.name !== targetName) return k;
+          if (kind === 'agent_init') return { ...k, init_subworkflow: name };
+          if (k.behavior_subworkflows.includes(name)) return k;
+          return { ...k, behavior_subworkflows: [...k.behavior_subworkflows, name] };
+        });
+
+        return {
+          workflow: {
+            ...state.workflow,
+            metadata: {
+              ...state.workflow.metadata,
+              gui: { ...gui, agent_kinds: newKinds },
+            },
+          },
+        };
+      }
+
+      return state;
+    });
   },
 
   /**

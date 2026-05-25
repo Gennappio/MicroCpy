@@ -728,6 +728,67 @@ def save_function_source():
         return jsonify({'error': f'Unexpected error: {e}'}), 500
 
 
+@app.route('/api/filesystem/write-file', methods=['POST'])
+def write_file():
+    """
+    Write arbitrary text content to a path inside the project tree.
+
+    Used by the GUI to persist .subworkflow.json files next to their .py
+    counterparts. Strictly limited to paths under the engine source tree
+    and the adapters directory.
+
+    Request body:
+        { "file_path": "<abs or repo-relative>", "content": "<text>" }
+
+    Returns:
+        { success, file_path, created, backup_path? }
+    """
+    try:
+        data = request.json or {}
+        raw_path = data.get('file_path')
+        content = data.get('content')
+        if not raw_path or content is None:
+            return jsonify({'error': 'file_path and content are required'}), 400
+
+        engine_dir = get_engine_path().parent  # opencellcomms_engine/
+        repo_root = engine_dir.parent
+        target = Path(raw_path)
+        if not target.is_absolute():
+            target = (repo_root / target).resolve()
+        else:
+            target = target.resolve()
+
+        # Safety: must be under the adapters tree or the engine source tree.
+        allowed_roots = [
+            (repo_root / 'opencellcomms_adapters').resolve(),
+            (engine_dir / 'src').resolve(),
+            (engine_dir / 'exports').resolve(),
+        ]
+        if not any(str(target).startswith(str(root) + os.sep) for root in allowed_roots):
+            return jsonify({
+                'error': f'Refused to write outside allowed roots. Target: {target}'
+            }), 400
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        backup_path = None
+        created = not target.exists()
+        if not created:
+            backup_path = str(target.with_suffix(target.suffix + '.bak'))
+            shutil.copy2(target, backup_path)
+
+        target.write_text(content, encoding='utf-8')
+
+        return jsonify({
+            'success': True,
+            'file_path': str(target.relative_to(repo_root) if target.is_relative_to(repo_root) else target),
+            'created': created,
+            'backup_path': backup_path,
+        })
+    except Exception as e:
+        return jsonify({'error': f'Write failed: {e}'}), 500
+
+
 @app.route('/api/filesystem/save-dialog', methods=['POST'])
 def save_dialog():
     """
