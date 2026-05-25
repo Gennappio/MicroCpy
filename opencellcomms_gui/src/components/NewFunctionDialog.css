@@ -76,3 +76,55 @@
   align-items: center;
 }
 .nf-del-param:hover { border-color: #f87171; color: #f87171; }
+
+/* ── Phase 12: path field + browse button ───────────────────────────── */
+
+.nf-path-row {
+  display: flex;
+  gap: 6px;
+}
+.nf-path-input { flex: 1; font-family: monospace; font-size: 11px; }
+
+.nf-browse-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #cbd5e1;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nf-browse-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.nf-browse-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.nf-path-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+.nf-path-hint code {
+  background: #1e293b;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.nf-browse-error {
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+  border-radius: 3px;
+  color: #fca5a5;
+  font-size: 11px;
+}

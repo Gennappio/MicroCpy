@@ -728,12 +728,139 @@ def save_function_source():
         return jsonify({'error': f'Unexpected error: {e}'}), 500
 
 
+@app.route('/api/filesystem/save-dialog', methods=['POST'])
+def save_dialog():
+    """
+    Open a native cross-platform Save-As dialog (via tkinter in a subprocess)
+    and return the chosen path. Cancellation returns {cancelled: true}.
+    """
+    try:
+        data = request.json or {}
+        default_path = data.get('default_path', '')
+        engine_dir = get_engine_path().parent
+        repo_root = engine_dir.parent
+        initial_dir = data.get('initial_dir') or str(repo_root)
+
+        if default_path:
+            default_path_obj = Path(default_path)
+            initial_file = default_path_obj.name
+            if default_path_obj.parent and str(default_path_obj.parent) != '.':
+                # If a parent directory was given, use it as the initial_dir
+                p = default_path_obj.parent
+                if not p.is_absolute():
+                    p = (repo_root / p).resolve()
+                if p.exists():
+                    initial_dir = str(p)
+        else:
+            initial_file = ''
+
+        # Use a subprocess so tkinter mainloop doesn't interfere with Flask
+        script = (
+            "import sys, tkinter as tk\n"
+            "from tkinter import filedialog\n"
+            "root = tk.Tk(); root.withdraw(); root.attributes('-topmost', True)\n"
+            f"p = filedialog.asksaveasfilename(\n"
+            f"    defaultextension='.py',\n"
+            f"    filetypes=[('Python', '*.py'), ('All files', '*.*')],\n"
+            f"    initialdir={initial_dir!r},\n"
+            f"    initialfile={initial_file!r},\n"
+            f"    title='Save function file')\n"
+            "root.destroy()\n"
+            "sys.stdout.write(p or '')\n"
+        )
+        try:
+            proc = subprocess.run(
+                [sys.executable, '-c', script],
+                capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Save dialog timed out'}), 500
+
+        chosen = (proc.stdout or '').strip()
+        if proc.returncode != 0 and not chosen:
+            return jsonify({'error': f'Dialog failed: {proc.stderr.strip() or "unknown"}'}), 500
+        if not chosen:
+            return jsonify({'cancelled': True})
+        return jsonify({'path': chosen})
+
+    except Exception as e:
+        return jsonify({'error': f'Save dialog failed: {e} — type the path manually'}), 500
+
+
+def _path_to_module_name(file_path, engine_dir):
+    """
+    Map a filesystem path to its dotted module name based on known roots.
+    Returns (module_name, register_path_or_None) or (None, None) if the path
+    isn't within a known import root.
+    """
+    p = Path(file_path).resolve()
+    adapters_dir = (engine_dir.parent / 'opencellcomms_adapters').resolve()
+    engine_src = (engine_dir / 'src').resolve()
+
+    try:
+        rel = p.relative_to(adapters_dir)
+        parts = list(rel.parts)
+        if not parts:
+            return None, None
+        parts[-1] = parts[-1].removesuffix('.py')
+        adapter_name = parts[0]
+        register_path = adapters_dir / adapter_name / 'register.py'
+        module_name = 'opencellcomms_adapters.' + '.'.join(parts)
+        return module_name, register_path
+    except ValueError:
+        pass
+
+    try:
+        rel = p.relative_to(engine_src)
+        parts = list(rel.parts)
+        if not parts:
+            return None, None
+        parts[-1] = parts[-1].removesuffix('.py')
+        module_name = 'src.' + '.'.join(parts)
+        return module_name, None
+    except ValueError:
+        pass
+
+    return None, None
+
+
+def _auto_reload_module(module_name):
+    """
+    Import or reload a module by name so any @register_function decorators
+    re-run immediately. Returns (ok, warning_message_or_None).
+    """
+    import importlib
+    try:
+        engine_dir = get_engine_path().parent
+        # Ensure both the engine dir (so `src.workflow.*` resolves) and the
+        # repo root (so `opencellcomms_adapters.*` resolves) are on sys.path.
+        for p in [str(engine_dir.parent), str(engine_dir)]:
+            if p not in sys.path:
+                sys.path.insert(0, p)
+
+        importlib.invalidate_caches()
+        if module_name in sys.modules:
+            importlib.reload(sys.modules[module_name])
+        else:
+            importlib.import_module(module_name)
+        return True, None
+    except Exception as e:
+        return False, f'Auto-reload failed: {type(e).__name__}: {e}'
+
+
 @app.route('/api/function/scaffold', methods=['POST'])
 def scaffold_behavior_code():
     """
-    Idempotently create a Python file for a behavior subworkflow.
+    Idempotently create a Python file for a behavior subworkflow and live-load it
+    into the registry (no backend restart required).
 
-    Request body:
+    NEW request body (preferred):
+        {
+            "file_path": "opencellcomms_adapters/jayatilake/functions/intracellular/cell_init.py",
+            "functions": [{"name": "evaluate_de_inputs", "parameters": [...]}, ...]
+        }
+
+    LEGACY request body (still accepted):
         {
             "behavior_name": "differentiation",
             "category": "intracellular",
@@ -742,35 +869,52 @@ def scaffold_behavior_code():
         }
 
     Returns:
-        { success, file_path, created, added_functions, skipped_existing }
+        { success, file_path, created, added_functions, skipped_existing,
+          module_name, reload_warning? }
     """
-    import ast
-    import shutil
     import textwrap
 
     try:
         data = request.json or {}
-        behavior_name = data.get('behavior_name', '').strip()
-        category = data.get('category', 'intracellular').strip()
-        adapter = (data.get('adapter') or '').strip() or None
         functions = data.get('functions', [])
-
-        if not behavior_name:
-            return jsonify({'error': 'behavior_name is required'}), 400
         if not functions:
             return jsonify({'error': 'functions list is required'}), 400
 
         engine_dir = get_engine_path().parent  # opencellcomms_engine/
 
-        if adapter:
-            # Adapter-specific path: opencellcomms_adapters/<adapter>/functions/<category>/<behavior>.py
-            adapters_dir = engine_dir.parent / 'opencellcomms_adapters'
-            file_path = adapters_dir / adapter / 'functions' / category / f'{behavior_name}.py'
-            register_path = adapters_dir / adapter / 'register.py'
+        # Resolve file_path: prefer explicit, fall back to legacy fields
+        explicit_path = data.get('file_path')
+        if explicit_path:
+            file_path = Path(explicit_path)
+            if not file_path.is_absolute():
+                file_path = (engine_dir.parent / file_path).resolve()
+            if file_path.suffix != '.py':
+                return jsonify({'error': 'file_path must end with .py'}), 400
+
+            module_name, register_path = _path_to_module_name(file_path, engine_dir)
+            if module_name is None:
+                return jsonify({
+                    'error': f'file_path must be within an importable tree '
+                             f'(opencellcomms_adapters/ or opencellcomms_engine/src/). '
+                             f'Got: {file_path}'
+                }), 400
+
+            # Derive category for the decorator (the parent folder name)
+            category = file_path.parent.name
+            behavior_name = file_path.stem
         else:
-            # Generic engine path
-            file_path = engine_dir / 'src' / 'workflow' / 'functions' / category / f'{behavior_name}.py'
-            register_path = None
+            behavior_name = data.get('behavior_name', '').strip()
+            category = data.get('category', 'intracellular').strip()
+            adapter = (data.get('adapter') or '').strip() or None
+            if not behavior_name:
+                return jsonify({'error': 'either file_path or behavior_name is required'}), 400
+
+            if adapter:
+                adapters_dir = engine_dir.parent / 'opencellcomms_adapters'
+                file_path = adapters_dir / adapter / 'functions' / category / f'{behavior_name}.py'
+            else:
+                file_path = engine_dir / 'src' / 'workflow' / 'functions' / category / f'{behavior_name}.py'
+            module_name, register_path = _path_to_module_name(file_path, engine_dir)
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -903,21 +1047,27 @@ def {fn_name}(
 
         file_path.write_text(existing_source, encoding='utf-8')
 
-        # Update adapter register.py (idempotent)
-        if register_path and register_path.exists() and added:
+        # Update adapter register.py (idempotent) so the import persists across restarts.
+        # `module_name` is set for both adapter and engine paths via _path_to_module_name.
+        if register_path and register_path.exists() and added and module_name and module_name.startswith('opencellcomms_adapters.'):
             reg_source = register_path.read_text(encoding='utf-8')
             lines_to_add = []
             for fn_name in added:
-                import_line = (
-                    f'from opencellcomms_adapters.{adapter}.functions.{category}.{behavior_name} '
-                    f'import {fn_name}'
-                )
+                import_line = f'from {module_name} import {fn_name}'
                 if import_line not in reg_source:
                     lines_to_add.append(import_line)
             if lines_to_add:
                 shutil.copy2(register_path, register_path.with_suffix('.py.bak'))
                 register_path.write_text(reg_source.rstrip() + '\n' + '\n'.join(lines_to_add) + '\n',
                                           encoding='utf-8')
+
+        # Auto-reload the module so newly-added functions register immediately —
+        # no backend restart required.
+        reload_warning = None
+        if module_name and added:
+            ok, warn = _auto_reload_module(module_name)
+            if not ok:
+                reload_warning = warn
 
         rel_path = str(file_path.relative_to(engine_dir.parent))
         return jsonify({
@@ -926,6 +1076,8 @@ def {fn_name}(
             'created': created,
             'added_functions': added,
             'skipped_existing': skipped,
+            'module_name': module_name,
+            'reload_warning': reload_warning,
         })
 
     except Exception as e:

@@ -138,6 +138,23 @@ export const createLibrarySlice = (set, get) => ({
     });
   },
 
+  markUserFunctionExported: (functionName) => {
+    set((state) => ({
+      workflow: {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            user_functions: (state.workflow.metadata.gui.user_functions || []).map((f) =>
+              f.name === functionName ? { ...f, exported: true } : f
+            ),
+          },
+        },
+      },
+    }));
+  },
+
   removeUserFunction: (functionName) => {
     set((state) => ({
       workflow: {

@@ -151,3 +151,11 @@
 .init-generate-btn:hover {
   background: rgba(255,255,255,0.25);
 }
+
+.init-generate-btn.has-pending {
+  background: rgba(245, 158, 11, 0.4);
+  border-color: #fbbf24;
+}
+.init-generate-btn.has-pending:hover {
+  background: rgba(245, 158, 11, 0.55);
+}

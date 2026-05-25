@@ -19,7 +19,6 @@ const FunctionPalette = ({ currentStage }) => {
 
   const [expanded, setExpanded] = useState({});
   const [showNewFunc, setShowNewFunc] = useState(false);
-  const [reloadHint, setReloadHint] = useState(null);
   const [registryCache, setRegistryCache] = useState({});
   const workflowFileRef = useRef(null);
 
@@ -104,41 +103,31 @@ const FunctionPalette = ({ currentStage }) => {
     e.target.value = '';
   };
 
-  // ─── Create new function ────────────────────────────────────────────────
+  // ─── Create new function (staging only — no file written yet) ──────────
 
-  const handleCreateFunction = async (def) => {
-    try {
-      const response = await fetch('http://localhost:5001/api/function/scaffold', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          behavior_name: currentStage,
-          category: def.category,
-          adapter: def.adapter,
-          functions: [{ name: def.name, parameters: def.parameters }],
-        }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        addUserFunction({
-          name: def.name,
-          category: def.category,
-          adapter: def.adapter,
-          behavior: currentStage,
-          parameters: def.parameters,
-          file_path: result.file_path,
-        });
-        setShowNewFunc(false);
-        setReloadHint(`Function "${def.name}" was scaffolded at ${result.file_path}. Restart the backend so it appears in the registry.`);
-        // Try to refresh registry — works if backend reloads on each request
-        const reg = await fetchRegistry();
-        setRegistryCache(reg || {});
-      } else {
-        alert('Scaffold failed: ' + (result.error || 'unknown'));
-      }
-    } catch (err) {
-      alert('Failed to reach backend: ' + err.message);
-    }
+  const handleCreateFunction = (def) => {
+    // Just stage the function in metadata.gui.user_functions. The actual
+    // Python file is written later when the user clicks Export Behavior on
+    // the canvas. This lets users edit/discard before committing to disk.
+    addUserFunction({
+      name: def.name,
+      file_path: def.file_path,
+      behavior: currentStage,
+      parameters: def.parameters,
+      exported: false,
+    });
+    setShowNewFunc(false);
+  };
+
+  // Build a default file path suggestion for the dialog based on current canvas
+  const buildDefaultFilePath = () => {
+    const behavior = currentStage || 'new_behavior';
+    const categoryGuess =
+      currentKind === 'agent_init' || currentKind === 'env_init' ? 'initialization'
+      : currentKind === 'env_behavior' ? 'diffusion'
+      : currentKind === 'processing_behavior' ? 'finalization'
+      : 'intracellular';
+    return `opencellcomms_adapters/jayatilake/functions/${categoryGuess}/${behavior}.py`;
   };
 
   // ─── Sub-workflow palette section (cross-canvas calls) ─────────────────
@@ -154,9 +143,20 @@ const FunctionPalette = ({ currentStage }) => {
 
   const renderFunctionItem = (name, source = null) => {
     const meta = registryCache[name];
-    const description = meta?.description || (source === 'user' ? '(custom — restart backend to load)' : 'No description');
-    const paramCount = meta?.parameters?.length ?? 0;
+    const userFn = userFunctions.find((f) => f.name === name);
+    const isStaged = source === 'user' && userFn && userFn.exported === false;
 
+    // For staged functions: use the user's declared parameters (file doesn't exist yet).
+    // For exported/library functions: use registry metadata.
+    const description = meta?.description
+      || (isStaged ? '✱ unsaved — click Export Behavior to write the file' : 'No description');
+    const paramList = isStaged
+      ? (userFn?.parameters || [])
+      : (meta?.parameters || []);
+    const paramCount = paramList.length;
+
+    // Draggable payload — even staged functions can be dragged onto the canvas.
+    // The function_name + parameters travel with the drag.
     const payload = {
       type: 'function',
       name,
@@ -164,27 +164,31 @@ const FunctionPalette = ({ currentStage }) => {
       label: meta?.display_name || name,
       description,
       category: meta?.category,
-      parameters: (meta?.parameters || []).reduce((acc, p) => {
-        acc[p.name] = p.default;
-        return acc;
-      }, {}),
+      parameters: paramList.reduce((acc, p) => { acc[p.name] = p.default; return acc; }, {}),
     };
+
+    // Draggable as long as we have either backend metadata OR a staged spec
+    const draggable = !!meta || isStaged;
+    const title = isStaged
+      ? '✱ unsaved — drag onto canvas, then click Export Behavior to write the file'
+      : (!meta ? 'Not loaded in backend registry yet — restart backend or open the originating workflow' : '');
 
     return (
       <div
         key={`${source || 'lib'}-${name}`}
-        className={`function-item ${!meta ? 'unloaded' : ''}`}
-        draggable={!!meta}
-        title={meta ? '' : 'Not loaded in backend registry yet — restart backend first'}
-        onDragStart={meta ? (e) => onDragStart(e, payload) : undefined}
+        className={`function-item ${!meta && !isStaged ? 'unloaded' : ''} ${isStaged ? 'unsaved' : ''}`}
+        draggable={draggable}
+        title={title}
+        onDragStart={draggable ? (e) => onDragStart(e, payload) : undefined}
       >
-        <div className="function-item-name">{name}</div>
+        <div className="function-item-name">
+          {isStaged && <span className="unsaved-marker" title="Not yet exported">✱</span>}
+          {name}
+        </div>
         <div className="function-item-description">{description}</div>
-        {meta && (
-          <div className="function-item-params">
-            {paramCount} parameter{paramCount !== 1 ? 's' : ''}
-          </div>
-        )}
+        <div className="function-item-params">
+          {paramCount} parameter{paramCount !== 1 ? 's' : ''}
+        </div>
       </div>
     );
   };
@@ -221,13 +225,6 @@ const FunctionPalette = ({ currentStage }) => {
           onChange={handleWorkflowFileSelected}
         />
       </div>
-
-      {reloadHint && (
-        <div className="palette-hint-banner">
-          <span>{reloadHint}</span>
-          <button onClick={() => setReloadHint(null)} title="Dismiss"><X size={12} /></button>
-        </div>
-      )}
 
       <div className="palette-content">
 
@@ -373,15 +370,7 @@ const FunctionPalette = ({ currentStage }) => {
       {showNewFunc && (
         <NewFunctionDialog
           behaviorName={currentStage}
-          defaultCategory={
-            currentKind === KINDS.AGENT_INIT || currentKind === KINDS.ENV_INIT
-              ? 'initialization'
-              : currentKind === KINDS.ENV_BEHAVIOR
-                ? 'diffusion'
-                : currentKind === KINDS.PROCESSING_BEHAVIOR
-                  ? 'finalization'
-                  : 'intracellular'
-          }
+          defaultPath={buildDefaultFilePath()}
           onCreate={handleCreateFunction}
           onCancel={() => setShowNewFunc(false)}
         />

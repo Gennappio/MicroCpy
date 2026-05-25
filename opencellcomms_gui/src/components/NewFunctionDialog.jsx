@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, X, FolderOpen } from 'lucide-react';
 import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
-const CATEGORIES = ['initialization', 'intracellular', 'diffusion', 'intercellular', 'finalization', 'output'];
 
 const defaultForType = (t) => {
   switch (t) {
@@ -16,12 +15,33 @@ const defaultForType = (t) => {
   }
 };
 
-const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter = 'jayatilake', behaviorName = '', onCreate, onCancel }) => {
+/**
+ * Dialog for defining a new function. Does NOT scaffold a file immediately —
+ * the caller stages the function in metadata.gui.user_functions and the file
+ * is written later when the user clicks "Export Behavior".
+ *
+ * Props:
+ *   behaviorName        : current canvas (used as default basename for the .py file)
+ *   defaultPath         : suggested file path (relative or absolute)
+ *   onCreate(def)       : invoked with { name, file_path, parameters }
+ *   onCancel
+ */
+const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCancel }) => {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState(defaultCategory);
-  const [adapter, setAdapter] = useState(defaultAdapter);
+  const [filePath, setFilePath] = useState(defaultPath);
   const [parameters, setParameters] = useState([]);
+  const [browsing, setBrowsing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [browseError, setBrowseError] = useState(null);
+
+  // When the user types a function name, auto-suggest the file basename
+  useEffect(() => {
+    if (!filePath && name) {
+      setFilePath(name + '.py');
+    }
+    // Only auto-fill once on first name entry; user can change after
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
 
   const addParam = () => setParameters([...parameters, { name: '', type: 'FLOAT', default: 0.0 }]);
   const removeParam = (i) => setParameters(parameters.filter((_, idx) => idx !== i));
@@ -36,13 +56,37 @@ const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter =
 
   const canSubmit = name.trim() &&
     /^[a-zA-Z][a-zA-Z0-9_]*$/.test(name.trim()) &&
+    filePath.trim().endsWith('.py') &&
     parameters.every((p) => p.name.trim() && /^[a-zA-Z][a-zA-Z0-9_]*$/.test(p.name.trim()));
 
-  const handleSubmit = async () => {
+  const handleBrowse = async () => {
+    setBrowsing(true);
+    setBrowseError(null);
+    try {
+      const res = await fetch('http://localhost:5001/api/filesystem/save-dialog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ default_path: filePath || (name && `${name}.py`) || `${behaviorName || 'new_behavior'}.py` }),
+      });
+      const data = await res.json();
+      if (data.cancelled) {
+        // user cancelled; do nothing
+      } else if (data.path) {
+        setFilePath(data.path);
+      } else if (data.error) {
+        setBrowseError(data.error);
+      }
+    } catch (err) {
+      setBrowseError('Browse failed: ' + err.message + ' — type the path manually');
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
+  const handleSubmit = () => {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      // Coerce defaults to right type for JSON
       const coerced = parameters.map((p) => {
         let def = p.default;
         if (p.type === 'INT') def = parseInt(def, 10) || 0;
@@ -51,10 +95,9 @@ const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter =
         else if (p.type === 'DICT') def = typeof def === 'object' ? def : {};
         return { name: p.name.trim(), type: p.type, default: def };
       });
-      await onCreate({
+      onCreate({
         name: name.trim(),
-        category,
-        adapter: adapter.trim() || null,
+        file_path: filePath.trim(),
         parameters: coerced,
       });
     } finally {
@@ -78,16 +121,24 @@ const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter =
           />
         </div>
 
-        <div className="nf-row nf-two-col">
-          <div>
-            <label>Category</label>
-            <select className="dialog-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+        <div className="nf-row">
+          <label>File path (where the Python file will be written)</label>
+          <div className="nf-path-row">
+            <input
+              className="dialog-input nf-path-input"
+              placeholder="e.g. opencellcomms_adapters/MyAdapter/functions/intracellular/my_behavior.py"
+              value={filePath}
+              onChange={(e) => setFilePath(e.target.value)}
+            />
+            <button className="nf-browse-btn" onClick={handleBrowse} disabled={browsing} title="Open a save dialog">
+              <FolderOpen size={14} />
+              {browsing ? '...' : 'Browse'}
+            </button>
           </div>
-          <div>
-            <label>Adapter (blank = engine generic)</label>
-            <input className="dialog-input" placeholder="e.g. jayatilake" value={adapter} onChange={(e) => setAdapter(e.target.value)} />
+          {browseError && <div className="nf-browse-error">{browseError}</div>}
+          <div className="nf-path-hint">
+            Must end with <code>.py</code> and be inside <code>opencellcomms_adapters/</code> or <code>opencellcomms_engine/src/</code>.
+            The file isn't written until you click <em>Export Behavior</em> on the canvas.
           </div>
         </div>
 
@@ -122,12 +173,7 @@ const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter =
                   <option value="true">true</option>
                 </select>
               ) : p.type === 'DICT' ? (
-                <input
-                  className="dialog-input nf-param-default"
-                  value="{}"
-                  disabled
-                  title="Dictionary defaults are empty {}"
-                />
+                <input className="dialog-input nf-param-default" value="{}" disabled title="Dict defaults are empty {}" />
               ) : (
                 <input
                   className="dialog-input nf-param-default"
@@ -146,7 +192,7 @@ const NewFunctionDialog = ({ defaultCategory = 'intracellular', defaultAdapter =
         <div className="dialog-actions">
           <button className="btn btn-secondary" onClick={onCancel} disabled={submitting}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || submitting}>
-            {submitting ? 'Creating…' : 'Create Function'}
+            {submitting ? 'Adding…' : 'Add to Project'}
           </button>
         </div>
       </div>

@@ -504,3 +504,18 @@
 .function-item.unloaded:hover {
   border-color: #475569;
 }
+
+/* ── Phase 12: staged (unsaved) functions ──────────────────────────── */
+
+.function-item.unsaved {
+  border-style: dashed;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.04);
+}
+.function-item.unsaved:hover { background: rgba(245, 158, 11, 0.08); }
+
+.unsaved-marker {
+  color: #f59e0b;
+  font-weight: bold;
+  margin-right: 5px;
+}
