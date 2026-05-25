@@ -4,6 +4,7 @@ import WorkflowCanvas from './WorkflowCanvas';
 import FunctionPalette from './FunctionPalette';
 import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
+import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
 import './ProcessingView.css';
 
@@ -75,6 +76,7 @@ const ProcessingView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMo
               <div className="resize-handle resize-handle-right" onMouseDown={onMouseDownPalette} />
             </div>
             <div className="grid-canvas">
+              <ExportBehaviorButton />
               <WorkflowCanvas key={currentStage} stage={currentStage} />
             </div>
             {inspectorOpen && (
