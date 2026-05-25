@@ -1,0 +1,134 @@
+{
+  "format": "subworkflow",
+  "name": "fate_update",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "MicroC: fate_update",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-fate_update",
+      "type": "controller",
+      "label": "FATE_UPDATE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "fate_update-mark_necrotic",
+        "function_name": "mark_necrotic_cells",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "Mark cells as necrotic based on user-defined conditions",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": [
+          "fate_update-param_necrosis_params"
+        ]
+      },
+      {
+        "id": "fate_update-mark_growth_arrest",
+        "function_name": "mark_growth_arrest_cells",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "description": "Track cells in Growth_Arrest state with time limit",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": [
+          "fate_update-param_max_growth_arrest_steps"
+        ]
+      },
+      {
+        "id": "fate_update-mark_apoptotic",
+        "function_name": "mark_apoptotic_cells",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "fate_update-mark_proliferating",
+        "function_name": "mark_proliferating_cells",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "Mark cells as Proliferation or Quiescence based on gene network",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [
+      {
+        "id": "fate_update-param_necrosis_params",
+        "type": "dictParameterNode",
+        "label": "Necrosis Parameters",
+        "target_param": "necrosis_params",
+        "entries": [
+          {
+            "key": "oxygen_threshold",
+            "valueType": "float",
+            "value": 0.011
+          },
+          {
+            "key": "glucose_threshold",
+            "valueType": "float",
+            "value": 0.39
+          },
+          {
+            "key": "require_both",
+            "valueType": "bool",
+            "value": true
+          }
+        ],
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "fate_update-param_max_growth_arrest_steps",
+        "label": "Max Growth Arrest Steps",
+        "parameters": {
+          "max_growth_arrest_steps": 100
+        },
+        "position": {
+          "x": 100,
+          "y": 500
+        }
+      }
+    ],
+    "execution_order": [
+      "fate_update-mark_necrotic",
+      "fate_update-mark_growth_arrest",
+      "fate_update-mark_apoptotic",
+      "fate_update-mark_proliferating"
+    ],
+    "input_parameters": []
+  }
+}

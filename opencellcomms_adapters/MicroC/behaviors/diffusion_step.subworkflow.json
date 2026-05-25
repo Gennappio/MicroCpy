@@ -1,0 +1,121 @@
+{
+  "format": "subworkflow",
+  "name": "diffusion_step",
+  "kind": "env_behavior",
+  "subworkflow": {
+    "description": "MicroC: diffusion_step",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-diffusion_step",
+      "type": "controller",
+      "label": "DIFFUSION_STEP CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "diffusion_step-run_diffusion_coupled",
+        "function_name": "run_diffusion_solver_coupled",
+        "function_file": "",
+        "parameters": {
+          "lactate_conversion_factor": 1,
+          "glucose_conversion_factor": 1,
+          "oxygen_conversion_factor": 1
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
+        "custom_name": "run_diffusion_solver_coupled",
+        "step_count": 1,
+        "parameter_nodes": [
+          "diffusion_step-param_max_iterations",
+          "diffusion_step-param_tolerance",
+          "diffusion_step-param_solver_type",
+          "diffusion_step-param_max_coupling_iterations",
+          "diffusion_step-param_coupling_tolerance",
+          "diffusion_step-param_relaxation_factor"
+        ]
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [
+      {
+        "id": "diffusion_step-param_max_iterations",
+        "label": "Max Iterations",
+        "parameters": {
+          "max_iterations": 1000
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "diffusion_step-param_tolerance",
+        "label": "Tolerance",
+        "parameters": {
+          "tolerance": 1e-06
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "diffusion_step-param_solver_type",
+        "label": "Solver Type",
+        "parameters": {
+          "solver_type": "steady_state"
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "diffusion_step-param_max_coupling_iterations",
+        "label": "Max Coupling Iterations",
+        "parameters": {
+          "max_coupling_iterations": 10
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "diffusion_step-param_coupling_tolerance",
+        "label": "Coupling Tolerance",
+        "parameters": {
+          "coupling_tolerance": 0.0001
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      },
+      {
+        "id": "diffusion_step-param_relaxation_factor",
+        "label": "Relaxation Factor (\u03b1)",
+        "parameters": {
+          "relaxation_factor": 0.7
+        },
+        "position": {
+          "x": 100,
+          "y": 400
+        }
+      }
+    ],
+    "execution_order": [
+      "diffusion_step-run_diffusion_coupled"
+    ],
+    "input_parameters": []
+  }
+}

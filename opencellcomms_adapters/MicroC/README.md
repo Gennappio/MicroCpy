@@ -29,6 +29,14 @@ python opencellcomms_engine/run_workflow.py --workflow opencellcomms_adapters/Mi
 
 Should reproduce the same per-step cell counts and final plots as the v7 jayatilake workflow.
 
+## Per-behavior subworkflow files
+
+Because MicroC behaviors reference functions across multiple `.py` files
+(engine + adapter), the per-behavior `.subworkflow.json` files live under
+`MicroC/behaviors/` rather than next to a single `.py` file. These are in the
+same format the GUI produces with **Export Behavior**, and can be re-imported
+individually via **Import Subworkflow** in the palette.
+
 ## Regenerating the workflow
 
 If parameters change in the v7 source, rebuild:

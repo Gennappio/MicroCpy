@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "plankton_drift",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "plankton behavior: drift",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-plankton_drift",
+      "type": "controller",
+      "label": "PLANKTON_DRIFT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-28",
+        "function_name": "plankton_brownian",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 580
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-29",
+        "function_name": "plankton_current",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 640
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-30",
+        "function_name": "plankton_tide",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-28",
+      "func-1779714057705-29",
+      "func-1779714057705-30"
+    ],
+    "input_parameters": []
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "env_init",
+  "kind": "env_init",
+  "subworkflow": {
+    "description": "Environment initialization",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-env_init",
+      "type": "controller",
+      "label": "ENV_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-37",
+        "function_name": "setup_test_domain",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-38",
+        "function_name": "setup_test_substances",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 580
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-39",
+        "function_name": "log_env_ready",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 640
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-37",
+      "func-1779714057705-38",
+      "func-1779714057705-39"
+    ],
+    "input_parameters": []
+  }
+}

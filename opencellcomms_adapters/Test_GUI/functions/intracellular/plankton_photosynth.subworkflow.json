@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "plankton_photosynth",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "plankton behavior: photosynth",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-plankton_photosynth",
+      "type": "controller",
+      "label": "PLANKTON_PHOTOSYNTH CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-31",
+        "function_name": "plankton_capture",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-32",
+        "function_name": "plankton_convert",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-33",
+        "function_name": "plankton_store",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-31",
+      "func-1779714057705-32",
+      "func-1779714057705-33"
+    ],
+    "input_parameters": []
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "format": "subworkflow",
+  "name": "iteration_plots",
+  "kind": "env_behavior",
+  "subworkflow": {
+    "description": "MicroC: iteration_plots",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-iteration_plots",
+      "type": "controller",
+      "label": "ITERATION_PLOTS CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "iteration_plots-gen_loop_plots",
+        "function_name": "generate_iteration_plots",
+        "function_file": "",
+        "parameters": {
+          "substances_to_plot": "Oxygen,Glucose,Lactate",
+          "plot_interval": "1"
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
+        "custom_name": "generate_iteration_plots",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "iteration_plots-gen_loop_plots"
+    ],
+    "input_parameters": []
+  }
+}

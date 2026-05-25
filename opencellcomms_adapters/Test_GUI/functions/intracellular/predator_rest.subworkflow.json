@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "predator_rest",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "predator behavior: rest",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-predator_rest",
+      "type": "controller",
+      "label": "PREDATOR_REST CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-7",
+        "function_name": "predator_idle",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-8",
+        "function_name": "predator_sleep",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 580
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-9",
+        "function_name": "predator_dream",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 640
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-7",
+      "func-1779714057705-8",
+      "func-1779714057705-9"
+    ],
+    "input_parameters": []
+  }
+}

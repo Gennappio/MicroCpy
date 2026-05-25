@@ -1,0 +1,69 @@
+{
+  "format": "subworkflow",
+  "name": "gene_update",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "MicroC: gene_update",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-gene_update",
+      "type": "controller",
+      "label": "GENE_UPDATE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "gene_update-apply_associations",
+        "function_name": "apply_associations_to_inputs",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "Translate substance concentrations \u2192 gene input states via associations",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "gene_update-propagate_genes_netlogo",
+        "function_name": "propagate_gene_networks_netlogo",
+        "function_file": "",
+        "parameters": {
+          "propagation_steps": "5",
+          "reversible": false,
+          "verbose": false,
+          "debug_steps": false,
+          "oscillation": "true",
+          "oscillation_period": "100",
+          "ran_refresh": false,
+          "diffusion_step": 0,
+          "reset_fate": true
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "description": "NetLogo-faithful graph walking gene network propagation",
+        "custom_name": "propagate_gene_networks_netlogo",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "gene_update-apply_associations",
+      "gene_update-propagate_genes_netlogo"
+    ],
+    "input_parameters": []
+  }
+}

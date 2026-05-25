@@ -348,6 +348,28 @@ def main():
     print(f'  scheduler steps: {len(scheduler_order)} × 30 iterations')
     print(f'  processing behaviors: 1')
 
+    # Phase 13: also emit per-behavior .subworkflow.json files. MicroC's
+    # behaviors reference functions across multiple .py files (engine +
+    # adapter), so there's no natural sibling location — collect them under
+    # a dedicated MicroC/behaviors/ folder.
+    behaviors_dir = HERE / 'behaviors'
+    behaviors_dir.mkdir(parents=True, exist_ok=True)
+    sw_count = 0
+    for name, sw in subworkflows.items():
+        kind = kinds.get(name)
+        if kind in (None, 'composer', 'scheduler'):
+            continue
+        target = behaviors_dir / f'{name}.subworkflow.json'
+        export_data = {
+            'format': 'subworkflow',
+            'name': name,
+            'kind': kind,
+            'subworkflow': sw,
+        }
+        target.write_text(json.dumps(export_data, indent=2), encoding='utf-8')
+        sw_count += 1
+    print(f'Wrote {sw_count} per-behavior .subworkflow.json files under {behaviors_dir.relative_to(REPO)}/')
+
 
 if __name__ == '__main__':
     main()

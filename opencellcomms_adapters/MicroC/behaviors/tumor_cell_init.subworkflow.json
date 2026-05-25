@@ -1,0 +1,95 @@
+{
+  "format": "subworkflow",
+  "name": "tumor_cell_init",
+  "kind": "agent_init",
+  "subworkflow": {
+    "description": "MicroC: tumor_cell_init (merged from v7 Setup_population, Init_gene_networks)",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-tumor_cell_init",
+      "type": "controller",
+      "label": "TUMOR_CELL_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "agentinit-Setup_population-setup_pop",
+        "function_name": "setup_population",
+        "function_file": "",
+        "parameters": {
+          "enable_gene_network": true,
+          "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "Initialize population with gene network support",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "agentinit-Setup_population-read_checkpoint",
+        "function_name": "read_checkpoint",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": [
+          "agentinit-Setup_population-param_checkpoint_file"
+        ]
+      },
+      {
+        "id": "agentinit-Init_gene_networks-init_netlogo_gn",
+        "function_name": "initialize_netlogo_gene_networks",
+        "function_file": "",
+        "parameters": {
+          "bnd_file": "../data/jaya_microc.bnd",
+          "random_initialization": true
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "description": "Initialize NetLogo-faithful gene networks for all cells",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [
+      {
+        "id": "agentinit-Setup_population-param_checkpoint_file",
+        "label": "Checkpoint File",
+        "parameters": {
+          "file_path": "../data/initial_cells_1000_center_1500.csv"
+        },
+        "position": {
+          "x": 100,
+          "y": 500
+        }
+      }
+    ],
+    "execution_order": [
+      "agentinit-Setup_population-setup_pop",
+      "agentinit-Setup_population-read_checkpoint",
+      "agentinit-Init_gene_networks-init_netlogo_gn"
+    ],
+    "input_parameters": []
+  }
+}

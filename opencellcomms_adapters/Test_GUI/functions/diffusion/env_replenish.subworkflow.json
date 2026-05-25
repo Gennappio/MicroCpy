@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "env_replenish",
+  "kind": "env_behavior",
+  "subworkflow": {
+    "description": "Environment behavior: env_replenish",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-env_replenish",
+      "type": "controller",
+      "label": "ENV_REPLENISH CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-43",
+        "function_name": "refill_food",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-44",
+        "function_name": "refill_oxygen",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-45",
+        "function_name": "log_replenish",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-43",
+      "func-1779714057705-44",
+      "func-1779714057705-45"
+    ],
+    "input_parameters": []
+  }
+}

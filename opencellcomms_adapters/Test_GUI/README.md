@@ -22,6 +22,13 @@ python opencellcomms_engine/run_workflow.py --workflow opencellcomms_adapters/Te
 
 GUI: open the project in the OpenCellComms GUI, then **Import Project** → select `workflows/test_gui.json`. Every tab will populate with the structures described above.
 
+## Per-behavior subworkflow files
+
+Each behavior also produces a sibling `.subworkflow.json` next to its `.py`,
+e.g. `functions/intracellular/predator_hunt.{py,subworkflow.json}`. These are
+in the same format the GUI produces with **Export Behavior**, and can be
+re-imported individually via **Import Subworkflow** in the palette.
+
 ## Regenerating
 
 If you need to change the spec (more kinds, more behaviors, different scheduler order, etc.), edit `_build_test_gui.py` and re-run:

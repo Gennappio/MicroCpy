@@ -1,0 +1,59 @@
+{
+  "format": "subworkflow",
+  "name": "division",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "MicroC: division",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-division",
+      "type": "controller",
+      "label": "DIVISION CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "division-cell_division",
+        "function_name": "update_cell_division",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "Handle cell division for proliferating cells",
+        "custom_name": "update_cell_division",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "division-remove_apoptotic",
+        "function_name": "remove_apoptotic_cells",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "description": "Remove cells with Apoptosis phenotype from population",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "division-cell_division",
+      "division-remove_apoptotic"
+    ],
+    "input_parameters": []
+  }
+}

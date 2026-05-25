@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "prey_reproduce",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "prey behavior: reproduce",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-prey_reproduce",
+      "type": "controller",
+      "label": "PREY_REPRODUCE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-22",
+        "function_name": "prey_pair",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-23",
+        "function_name": "prey_nest",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-24",
+        "function_name": "prey_hatch",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-22",
+      "func-1779714057705-23",
+      "func-1779714057705-24"
+    ],
+    "input_parameters": []
+  }
+}

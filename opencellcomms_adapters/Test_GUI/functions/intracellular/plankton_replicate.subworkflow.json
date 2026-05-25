@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "plankton_replicate",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "plankton behavior: replicate",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-plankton_replicate",
+      "type": "controller",
+      "label": "PLANKTON_REPLICATE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-34",
+        "function_name": "plankton_divide",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-35",
+        "function_name": "plankton_scatter",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-36",
+        "function_name": "plankton_settle",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-34",
+      "func-1779714057705-35",
+      "func-1779714057705-36"
+    ],
+    "input_parameters": []
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "predator_reproduce",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "predator behavior: reproduce",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-predator_reproduce",
+      "type": "controller",
+      "label": "PREDATOR_REPRODUCE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-10",
+        "function_name": "predator_court",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-11",
+        "function_name": "predator_mate",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-12",
+        "function_name": "predator_spawn_offspring",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-10",
+      "func-1779714057705-11",
+      "func-1779714057705-12"
+    ],
+    "input_parameters": []
+  }
+}

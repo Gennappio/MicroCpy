@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "predator_hunt",
+  "kind": "agent_behavior",
+  "subworkflow": {
+    "description": "predator behavior: hunt",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-predator_hunt",
+      "type": "controller",
+      "label": "PREDATOR_HUNT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-4",
+        "function_name": "predator_stalk",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-5",
+        "function_name": "predator_strike",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-6",
+        "function_name": "predator_digest",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-4",
+      "func-1779714057705-5",
+      "func-1779714057705-6"
+    ],
+    "input_parameters": []
+  }
+}

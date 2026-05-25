@@ -390,6 +390,40 @@ def write_workflow():
     return out
 
 
+def _category_dir_for_behavior(behavior_name):
+    """Return the .py folder for a Test_GUI behavior, matching write_all_function_files()."""
+    if behavior_name.startswith('env_'):
+        return FN_DIR / 'diffusion'
+    if behavior_name.startswith('proc_'):
+        return FN_DIR / 'finalization'
+    return FN_DIR / 'intracellular'
+
+
+def write_per_behavior_subworkflow_jsons(wf):
+    """For every behavior subworkflow in the workflow, emit a sibling
+    <behavior>.subworkflow.json next to its .py file. Matches the format
+    produced by exportSingleSubworkflow in the GUI."""
+    kinds_map = wf['metadata']['gui']['subworkflow_kinds']
+    written = []
+    # Skip composer/scheduler — only emit per-behavior files
+    for name, sw in wf['subworkflows'].items():
+        kind = kinds_map.get(name)
+        if kind in (None, 'composer', 'scheduler'):
+            continue
+        target_dir = _category_dir_for_behavior(name)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / f'{name}.subworkflow.json'
+        export_data = {
+            'format': 'subworkflow',
+            'name': name,
+            'kind': kind,
+            'subworkflow': sw,
+        }
+        target.write_text(json.dumps(export_data, indent=2), encoding='utf-8')
+        written.append(target)
+    return written
+
+
 # ============================================================
 # Register.py generator
 # ============================================================
@@ -426,8 +460,17 @@ if __name__ == '__main__':
     created = write_all_function_files()
     write_register_py()
     out = write_workflow()
+    # Re-parse to feed the per-behavior writer (decouples it from build_workflow's locals)
+    wf = json.loads(out.read_text(encoding='utf-8'))
+    sw_jsons = write_per_behavior_subworkflow_jsons(wf)
+
     print(f'Wrote {len(created)} function files')
     for p in created:
         print(f'  {p.relative_to(HERE)}')
     print(f'Wrote register.py')
     print(f'Wrote workflow: {out.relative_to(HERE)}')
+    print(f'Wrote {len(sw_jsons)} per-behavior .subworkflow.json files')
+    for p in sw_jsons[:5]:
+        print(f'  {p.relative_to(HERE)}')
+    if len(sw_jsons) > 5:
+        print(f'  ... and {len(sw_jsons) - 5} more')

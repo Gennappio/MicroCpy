@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "env_log",
+  "kind": "env_behavior",
+  "subworkflow": {
+    "description": "Environment behavior: env_log",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-env_log",
+      "type": "controller",
+      "label": "ENV_LOG CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-46",
+        "function_name": "snapshot_state",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-47",
+        "function_name": "dump_grid",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-48",
+        "function_name": "log_env_step",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 580
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-46",
+      "func-1779714057705-47",
+      "func-1779714057705-48"
+    ],
+    "input_parameters": []
+  }
+}

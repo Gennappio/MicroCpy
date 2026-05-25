@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "proc_make_plots",
+  "kind": "processing_behavior",
+  "subworkflow": {
+    "description": "Processing: proc_make_plots",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-proc_make_plots",
+      "type": "controller",
+      "label": "PROC_MAKE_PLOTS CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-52",
+        "function_name": "plot_populations",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-53",
+        "function_name": "plot_environment",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-54",
+        "function_name": "plot_interactions",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-52",
+      "func-1779714057705-53",
+      "func-1779714057705-54"
+    ],
+    "input_parameters": []
+  }
+}

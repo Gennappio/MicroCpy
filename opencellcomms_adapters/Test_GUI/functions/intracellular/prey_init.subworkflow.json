@@ -1,0 +1,84 @@
+{
+  "format": "subworkflow",
+  "name": "prey_init",
+  "kind": "agent_init",
+  "subworkflow": {
+    "description": "prey initialization",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-prey_init",
+      "type": "controller",
+      "label": "PREY_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "func-1779714057705-13",
+        "function_name": "prey_spawn",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-14",
+        "function_name": "prey_set_state",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "func-1779714057705-15",
+        "function_name": "prey_log_init",
+        "function_file": "",
+        "parameters": {
+          "intensity": 1.0,
+          "verbose": false
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "func-1779714057705-13",
+      "func-1779714057705-14",
+      "func-1779714057705-15"
+    ],
+    "input_parameters": []
+  }
+}
