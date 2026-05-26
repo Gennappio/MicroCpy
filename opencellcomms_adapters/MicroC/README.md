@@ -37,12 +37,9 @@ Because MicroC behaviors reference functions across multiple `.py` files
 same format the GUI produces with **Export Behavior**, and can be re-imported
 individually via **Import Subworkflow** in the palette.
 
-## Regenerating the workflow
+## Editing the workflow
 
-If parameters change in the v7 source, rebuild:
-```bash
-python opencellcomms_adapters/MicroC/_build_workflow.py
-```
+Edit `workflows/microc.json` directly, or open it in the GUI and re-export via **Export Project**.
 
 ## Conflict note
 
