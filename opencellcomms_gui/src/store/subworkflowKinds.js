@@ -7,11 +7,13 @@ export const KINDS = {
   ENV_BEHAVIOR: 'env_behavior',
   PROCESSING_BEHAVIOR: 'processing_behavior',
   SCHEDULER: 'scheduler',
+  INIT_SEQUENCE: 'init_sequence',
 };
 
 export const MAIN_TABS = {
   AGENTS: 'agents',
   ENVIRONMENT: 'environment',
+  INITIALIZATION: 'initialization',
   SCHEDULER: 'scheduler',
   PLANNER: 'planner',
   PROCESSING: 'processing',
@@ -19,11 +21,20 @@ export const MAIN_TABS = {
 };
 
 export const SCHEDULER_NAME = '__scheduler__';
+export const INIT_SEQUENCE_NAME = '__init_sequence__';
 
 export const BEHAVIOR_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
   KINDS.ENV_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
+]);
+
+// Kinds that represent an init canvas — used by the Initialization tab palette
+// (only these are draggable into __init_sequence__) and by the Scheduler palette
+// (which must explicitly EXCLUDE these).
+export const INIT_KINDS = new Set([
+  KINDS.AGENT_INIT,
+  KINDS.ENV_INIT,
 ]);
 
 // All canvases where function nodes can be placed (everything except scheduler).
@@ -52,6 +63,7 @@ export const variantForKind = (kind) => {
     case KINDS.COMPOSER:
       return 'orange';
     case KINDS.SCHEDULER:
+    case KINDS.INIT_SEQUENCE:
       return 'slate';
     default:
       return 'purple';

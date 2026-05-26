@@ -5,6 +5,7 @@ import ResultsExplorer from './components/ResultsExplorer';
 import PlannerView from './components/PlannerView';
 import AgentsView from './components/AgentsView';
 import EnvironmentView from './components/EnvironmentView';
+import InitSequenceView from './components/InitSequenceView';
 import SchedulerView from './components/SchedulerView';
 import ProcessingView from './components/ProcessingView';
 import useWorkflowStore from './store/workflowStore';
@@ -292,6 +293,15 @@ function App() {
 
       {currentMainTab === 'environment' && (
         <EnvironmentView
+          paletteWidth={paletteWidth}
+          inspectorWidth={inspectorWidth}
+          onMouseDownPalette={handleMouseDown('palette')}
+          onMouseDownInspector={handleMouseDown('inspector')}
+        />
+      )}
+
+      {currentMainTab === 'initialization' && (
+        <InitSequenceView
           paletteWidth={paletteWidth}
           inspectorWidth={inspectorWidth}
           onMouseDownPalette={handleMouseDown('palette')}

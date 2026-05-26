@@ -23,12 +23,58 @@ import {
   createPlannerSlice,
   createAbmSlice,
 } from './slices';
-import { KINDS, SCHEDULER_NAME } from './subworkflowKinds';
+import { SCHEDULER_NAME, INIT_SEQUENCE_NAME } from './subworkflowKinds';
+import { computeSubworkflowKinds } from './computeSubworkflowKinds';
 
 /**
  * Workflow Store - Manages the entire workflow state
  * Compatible with workflow JSON format
  */
+// Phase 14B: subworkflow_kinds is derived from ABM metadata, not seeded.
+const _defaultGuiMeta = {
+  function_libraries: [],
+  agent_kinds: [],
+  environment: { init_subworkflow: null, behavior_subworkflows: [] },
+  init_sequence: { subworkflow: INIT_SEQUENCE_NAME },
+  scheduler: { subworkflow: SCHEDULER_NAME },
+  processing: { behavior_subworkflows: [] },
+  main_is_synthesized: false,
+  user_functions: [],
+};
+
+const _makeEmptyControllerSubworkflow = (name, label, steps, description) => ({
+  description,
+  enabled: true,
+  deletable: false,
+  controller: {
+    id: `controller-${name}`,
+    type: 'initNode',
+    label,
+    position: { x: 100, y: 100 },
+    number_of_steps: steps,
+  },
+  functions: [],
+  subworkflow_calls: [],
+  parameters: [],
+  execution_order: [],
+  input_parameters: [],
+});
+
+const _defaultSubworkflows = {
+  [INIT_SEQUENCE_NAME]: _makeEmptyControllerSubworkflow(
+    INIT_SEQUENCE_NAME,
+    'INIT SEQUENCE',
+    1,
+    'Initialization order — drag init subworkflows here',
+  ),
+  [SCHEDULER_NAME]: _makeEmptyControllerSubworkflow(
+    SCHEDULER_NAME,
+    'SCHEDULER',
+    100,
+    'Main simulation loop — order behaviors here',
+  ),
+};
+
 const useWorkflowStore = create((set, get) => ({
   // ===== Core Workflow State =====
 
@@ -41,37 +87,14 @@ const useWorkflowStore = create((set, get) => ({
       author: '',
       created: new Date().toISOString().split('T')[0],
       gui: {
-        subworkflow_kinds: {
-          [SCHEDULER_NAME]: KINDS.SCHEDULER,
-        },
-        function_libraries: [],
-        agent_kinds: [],
-        environment: { init_subworkflow: null, behavior_subworkflows: [] },
-        scheduler: { subworkflow: SCHEDULER_NAME },
-        processing: { behavior_subworkflows: [] },
-        main_is_synthesized: false,
-        user_functions: [],
+        ..._defaultGuiMeta,
+        subworkflow_kinds: computeSubworkflowKinds({
+          metadata: { gui: _defaultGuiMeta },
+          subworkflows: _defaultSubworkflows,
+        }),
       }
     },
-    subworkflows: {
-      [SCHEDULER_NAME]: {
-        description: 'Main simulation loop — order behaviors here',
-        enabled: true,
-        deletable: false,
-        controller: {
-          id: `controller-${SCHEDULER_NAME}`,
-          type: 'initNode',
-          label: 'SCHEDULER',
-          position: { x: 100, y: 100 },
-          number_of_steps: 100,
-        },
-        functions: [],
-        subworkflow_calls: [],
-        parameters: [],
-        execution_order: [],
-        input_parameters: [],
-      },
-    },
+    subworkflows: _defaultSubworkflows,
   },
 
   currentStage: SCHEDULER_NAME,
@@ -79,10 +102,12 @@ const useWorkflowStore = create((set, get) => ({
   currentMainTab: 'agents',
 
   stageNodes: {
+    [INIT_SEQUENCE_NAME]: [],
     [SCHEDULER_NAME]: [],
   },
 
   stageEdges: {
+    [INIT_SEQUENCE_NAME]: [],
     [SCHEDULER_NAME]: [],
   },
 

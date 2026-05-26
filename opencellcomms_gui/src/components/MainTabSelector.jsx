@@ -1,4 +1,4 @@
-import { Users, Globe, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
+import { Users, Globe, PlayCircle, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
 import './MainTabSelector.css';
 
 const MainTabSelector = ({ currentMainTab, onTabChange }) => {
@@ -21,6 +21,14 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
         >
           <Globe size={18} />
           <span>Environment</span>
+        </button>
+        <button
+          className={`main-tab initialization-tab ${currentMainTab === 'initialization' ? 'active' : ''}`}
+          onClick={() => onTabChange('initialization')}
+          title="Order init subworkflows that run once at the start"
+        >
+          <PlayCircle size={18} />
+          <span>Initialization</span>
         </button>
         <button
           className={`main-tab scheduler-tab ${currentMainTab === 'scheduler' ? 'active' : ''}`}

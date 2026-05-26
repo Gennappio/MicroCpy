@@ -222,8 +222,43 @@ def make_scheduler_subwf(behaviors):
     }
 
 
-def make_main_subwf(env_init_name, agent_inits, scheduler_steps, processing_behaviors):
-    """The synthesized 'main' composer — env init → agent inits → loop scheduler N times → processing."""
+def make_init_sequence_subwf(init_order):
+    """Phase 14C: __init_sequence__ subworkflow — runs once before the loop."""
+    controller = {
+        'id': 'controller-__init_sequence__',
+        'type': 'controller',
+        'label': 'INIT SEQUENCE',
+        'position': {'x': 100, 'y': 100},
+        'number_of_steps': 1,
+    }
+    calls = []
+    for i, name in enumerate(init_order):
+        calls.append({
+            'id': f'init-call-{name}',
+            'type': 'subworkflow_call',
+            'subworkflow_name': name,
+            'iterations': 1,
+            'parameters': {},
+            'enabled': True,
+            'position': {'x': 400, 'y': 100 + i * 120},
+            'description': name,
+            'parameter_nodes': [],
+        })
+    return {
+        'description': 'Initialization order — env init + agent inits',
+        'enabled': True,
+        'deletable': False,
+        'controller': controller,
+        'functions': [],
+        'subworkflow_calls': calls,
+        'parameters': [],
+        'execution_order': [c['id'] for c in calls],
+        'input_parameters': [],
+    }
+
+
+def make_main_subwf(init_seq_name, scheduler_steps, processing_behaviors):
+    """The synthesized 'main' composer — init_sequence → loop scheduler N times → processing."""
     controller = {
         'id': 'controller-main',
         'type': 'controller',
@@ -250,13 +285,10 @@ def make_main_subwf(env_init_name, agent_inits, scheduler_steps, processing_beha
         })
         y += 120
 
-    if env_init_name:
-        add(env_init_name, 1, 'Environment init')
-    for init in agent_inits:
-        add(init, 1, 'Agent init')
+    add(init_seq_name, 1, 'Initialization sequence')
     add('__scheduler__', scheduler_steps, 'Main loop')
     for proc in processing_behaviors:
-        add(proc, 1, 'Processing')
+        add(proc, 1, f'Processing: {proc}')
 
     return {
         'description': 'Synthesized main (do not edit — managed by ABM structure)',
@@ -337,10 +369,15 @@ def build_workflow():
     subworkflows['__scheduler__'] = make_scheduler_subwf(scheduler_order)
     kinds['__scheduler__'] = 'scheduler'
 
-    # Synthesized main
+    # Phase 14C: Initialization sequence — env init then each agent init.
     agent_init_names = [k['init_subworkflow'] for k in agent_kinds_meta]
+    init_order = ['env_init'] + agent_init_names
+    subworkflows['__init_sequence__'] = make_init_sequence_subwf(init_order)
+    kinds['__init_sequence__'] = 'init_sequence'
+
+    # Synthesized main
     main_steps = subworkflows['__scheduler__']['controller']['number_of_steps']
-    subworkflows['main'] = make_main_subwf('env_init', agent_init_names, main_steps, processing_names)
+    subworkflows['main'] = make_main_subwf('__init_sequence__', main_steps, processing_names)
     kinds['main'] = 'composer'
 
     # Planner tabs
@@ -363,13 +400,15 @@ def build_workflow():
             'author': 'Test_GUI generator',
             'created': time.strftime('%Y-%m-%d'),
             'gui': {
-                'subworkflow_kinds': kinds,
+                # Phase 14B: subworkflow_kinds is derived at GUI load time from
+                # the ABM metadata below; it is no longer persisted to JSON.
                 'function_libraries': [],
                 'agent_kinds': agent_kinds_meta,
                 'environment': {
                     'init_subworkflow': 'env_init',
                     'behavior_subworkflows': env_behavior_names,
                 },
+                'init_sequence': {'subworkflow': '__init_sequence__'},
                 'scheduler': {'subworkflow': '__scheduler__'},
                 'processing': {'behavior_subworkflows': processing_names},
                 'main_is_synthesized': True,
@@ -379,15 +418,15 @@ def build_workflow():
         },
         'subworkflows': subworkflows,
     }
-    return workflow
+    return workflow, kinds
 
 
 def write_workflow():
     WF_DIR.mkdir(parents=True, exist_ok=True)
     out = WF_DIR / 'test_gui.json'
-    wf = build_workflow()
+    wf, kinds = build_workflow()
     out.write_text(json.dumps(wf, indent=2), encoding='utf-8')
-    return out
+    return out, wf, kinds
 
 
 def _category_dir_for_behavior(behavior_name):
@@ -399,16 +438,15 @@ def _category_dir_for_behavior(behavior_name):
     return FN_DIR / 'intracellular'
 
 
-def write_per_behavior_subworkflow_jsons(wf):
+def write_per_behavior_subworkflow_jsons(wf, kinds_map):
     """For every behavior subworkflow in the workflow, emit a sibling
     <behavior>.subworkflow.json next to its .py file. Matches the format
     produced by exportSingleSubworkflow in the GUI."""
-    kinds_map = wf['metadata']['gui']['subworkflow_kinds']
     written = []
-    # Skip composer/scheduler — only emit per-behavior files
+    # Skip composer/scheduler/init_sequence — only emit per-behavior files
     for name, sw in wf['subworkflows'].items():
         kind = kinds_map.get(name)
-        if kind in (None, 'composer', 'scheduler'):
+        if kind in (None, 'composer', 'scheduler', 'init_sequence'):
             continue
         target_dir = _category_dir_for_behavior(name)
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -459,10 +497,8 @@ if __name__ == '__main__':
     write_init_files()
     created = write_all_function_files()
     write_register_py()
-    out = write_workflow()
-    # Re-parse to feed the per-behavior writer (decouples it from build_workflow's locals)
-    wf = json.loads(out.read_text(encoding='utf-8'))
-    sw_jsons = write_per_behavior_subworkflow_jsons(wf)
+    out, wf, kinds = write_workflow()
+    sw_jsons = write_per_behavior_subworkflow_jsons(wf, kinds)
 
     print(f'Wrote {len(created)} function files')
     for p in created:

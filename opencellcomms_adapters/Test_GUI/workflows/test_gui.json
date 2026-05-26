@@ -4,31 +4,8 @@
   "description": "Stress-test workflow: 3 agent kinds, mixed scheduler, planner runs, processing.",
   "metadata": {
     "author": "Test_GUI generator",
-    "created": "2026-05-25",
+    "created": "2026-05-26",
     "gui": {
-      "subworkflow_kinds": {
-        "predator_init": "agent_init",
-        "predator_hunt": "agent_behavior",
-        "predator_rest": "agent_behavior",
-        "predator_reproduce": "agent_behavior",
-        "prey_init": "agent_init",
-        "prey_graze": "agent_behavior",
-        "prey_flee": "agent_behavior",
-        "prey_reproduce": "agent_behavior",
-        "plankton_init": "agent_init",
-        "plankton_drift": "agent_behavior",
-        "plankton_photosynth": "agent_behavior",
-        "plankton_replicate": "agent_behavior",
-        "env_init": "env_init",
-        "env_diffuse": "env_behavior",
-        "env_replenish": "env_behavior",
-        "env_log": "env_behavior",
-        "proc_export_csv": "processing_behavior",
-        "proc_make_plots": "processing_behavior",
-        "proc_summary": "processing_behavior",
-        "__scheduler__": "scheduler",
-        "main": "composer"
-      },
       "function_libraries": [],
       "agent_kinds": [
         {
@@ -66,6 +43,9 @@
           "env_replenish",
           "env_log"
         ]
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
       },
       "scheduler": {
         "subworkflow": "__scheduler__"
@@ -144,7 +124,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-1",
+          "id": "func-1779800068602-1",
           "function_name": "predator_spawn",
           "function_file": "",
           "parameters": {
@@ -162,7 +142,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-2",
+          "id": "func-1779800068602-2",
           "function_name": "predator_set_energy",
           "function_file": "",
           "parameters": {
@@ -180,7 +160,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-3",
+          "id": "func-1779800068602-3",
           "function_name": "predator_log_init",
           "function_file": "",
           "parameters": {
@@ -201,9 +181,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-1",
-        "func-1779714057705-2",
-        "func-1779714057705-3"
+        "func-1779800068602-1",
+        "func-1779800068602-2",
+        "func-1779800068602-3"
       ],
       "input_parameters": []
     },
@@ -223,7 +203,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-4",
+          "id": "func-1779800068602-4",
           "function_name": "predator_stalk",
           "function_file": "",
           "parameters": {
@@ -241,7 +221,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-5",
+          "id": "func-1779800068602-5",
           "function_name": "predator_strike",
           "function_file": "",
           "parameters": {
@@ -259,7 +239,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-6",
+          "id": "func-1779800068602-6",
           "function_name": "predator_digest",
           "function_file": "",
           "parameters": {
@@ -280,9 +260,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-4",
-        "func-1779714057705-5",
-        "func-1779714057705-6"
+        "func-1779800068602-4",
+        "func-1779800068602-5",
+        "func-1779800068602-6"
       ],
       "input_parameters": []
     },
@@ -302,7 +282,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-7",
+          "id": "func-1779800068602-7",
           "function_name": "predator_idle",
           "function_file": "",
           "parameters": {
@@ -320,7 +300,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-8",
+          "id": "func-1779800068602-8",
           "function_name": "predator_sleep",
           "function_file": "",
           "parameters": {
@@ -338,7 +318,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-9",
+          "id": "func-1779800068602-9",
           "function_name": "predator_dream",
           "function_file": "",
           "parameters": {
@@ -359,9 +339,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-7",
-        "func-1779714057705-8",
-        "func-1779714057705-9"
+        "func-1779800068602-7",
+        "func-1779800068602-8",
+        "func-1779800068602-9"
       ],
       "input_parameters": []
     },
@@ -381,7 +361,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-10",
+          "id": "func-1779800068602-10",
           "function_name": "predator_court",
           "function_file": "",
           "parameters": {
@@ -399,7 +379,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-11",
+          "id": "func-1779800068602-11",
           "function_name": "predator_mate",
           "function_file": "",
           "parameters": {
@@ -417,7 +397,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-12",
+          "id": "func-1779800068602-12",
           "function_name": "predator_spawn_offspring",
           "function_file": "",
           "parameters": {
@@ -438,9 +418,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-10",
-        "func-1779714057705-11",
-        "func-1779714057705-12"
+        "func-1779800068602-10",
+        "func-1779800068602-11",
+        "func-1779800068602-12"
       ],
       "input_parameters": []
     },
@@ -460,7 +440,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-13",
+          "id": "func-1779800068602-13",
           "function_name": "prey_spawn",
           "function_file": "",
           "parameters": {
@@ -478,7 +458,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-14",
+          "id": "func-1779800068602-14",
           "function_name": "prey_set_state",
           "function_file": "",
           "parameters": {
@@ -496,7 +476,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-15",
+          "id": "func-1779800068602-15",
           "function_name": "prey_log_init",
           "function_file": "",
           "parameters": {
@@ -517,9 +497,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-13",
-        "func-1779714057705-14",
-        "func-1779714057705-15"
+        "func-1779800068602-13",
+        "func-1779800068602-14",
+        "func-1779800068602-15"
       ],
       "input_parameters": []
     },
@@ -539,7 +519,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-16",
+          "id": "func-1779800068602-16",
           "function_name": "prey_forage",
           "function_file": "",
           "parameters": {
@@ -557,7 +537,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-17",
+          "id": "func-1779800068602-17",
           "function_name": "prey_chew",
           "function_file": "",
           "parameters": {
@@ -575,7 +555,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-18",
+          "id": "func-1779800068602-18",
           "function_name": "prey_swallow",
           "function_file": "",
           "parameters": {
@@ -596,9 +576,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-16",
-        "func-1779714057705-17",
-        "func-1779714057705-18"
+        "func-1779800068602-16",
+        "func-1779800068602-17",
+        "func-1779800068602-18"
       ],
       "input_parameters": []
     },
@@ -618,7 +598,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-19",
+          "id": "func-1779800068602-19",
           "function_name": "prey_detect_threat",
           "function_file": "",
           "parameters": {
@@ -636,7 +616,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-20",
+          "id": "func-1779800068602-20",
           "function_name": "prey_sprint",
           "function_file": "",
           "parameters": {
@@ -654,7 +634,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-21",
+          "id": "func-1779800068602-21",
           "function_name": "prey_hide",
           "function_file": "",
           "parameters": {
@@ -675,9 +655,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-19",
-        "func-1779714057705-20",
-        "func-1779714057705-21"
+        "func-1779800068602-19",
+        "func-1779800068602-20",
+        "func-1779800068602-21"
       ],
       "input_parameters": []
     },
@@ -697,7 +677,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-22",
+          "id": "func-1779800068602-22",
           "function_name": "prey_pair",
           "function_file": "",
           "parameters": {
@@ -715,7 +695,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-23",
+          "id": "func-1779800068602-23",
           "function_name": "prey_nest",
           "function_file": "",
           "parameters": {
@@ -733,7 +713,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-24",
+          "id": "func-1779800068602-24",
           "function_name": "prey_hatch",
           "function_file": "",
           "parameters": {
@@ -754,9 +734,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-22",
-        "func-1779714057705-23",
-        "func-1779714057705-24"
+        "func-1779800068602-22",
+        "func-1779800068602-23",
+        "func-1779800068602-24"
       ],
       "input_parameters": []
     },
@@ -776,7 +756,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-25",
+          "id": "func-1779800068602-25",
           "function_name": "plankton_spawn",
           "function_file": "",
           "parameters": {
@@ -794,7 +774,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-26",
+          "id": "func-1779800068602-26",
           "function_name": "plankton_set_state",
           "function_file": "",
           "parameters": {
@@ -812,7 +792,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-27",
+          "id": "func-1779800068602-27",
           "function_name": "plankton_log_init",
           "function_file": "",
           "parameters": {
@@ -833,9 +813,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-25",
-        "func-1779714057705-26",
-        "func-1779714057705-27"
+        "func-1779800068602-25",
+        "func-1779800068602-26",
+        "func-1779800068602-27"
       ],
       "input_parameters": []
     },
@@ -855,7 +835,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-28",
+          "id": "func-1779800068602-28",
           "function_name": "plankton_brownian",
           "function_file": "",
           "parameters": {
@@ -873,7 +853,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-29",
+          "id": "func-1779800068602-29",
           "function_name": "plankton_current",
           "function_file": "",
           "parameters": {
@@ -891,7 +871,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-30",
+          "id": "func-1779800068602-30",
           "function_name": "plankton_tide",
           "function_file": "",
           "parameters": {
@@ -912,9 +892,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-28",
-        "func-1779714057705-29",
-        "func-1779714057705-30"
+        "func-1779800068602-28",
+        "func-1779800068602-29",
+        "func-1779800068602-30"
       ],
       "input_parameters": []
     },
@@ -934,7 +914,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-31",
+          "id": "func-1779800068602-31",
           "function_name": "plankton_capture",
           "function_file": "",
           "parameters": {
@@ -952,7 +932,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-32",
+          "id": "func-1779800068602-32",
           "function_name": "plankton_convert",
           "function_file": "",
           "parameters": {
@@ -970,7 +950,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-33",
+          "id": "func-1779800068602-33",
           "function_name": "plankton_store",
           "function_file": "",
           "parameters": {
@@ -991,9 +971,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-31",
-        "func-1779714057705-32",
-        "func-1779714057705-33"
+        "func-1779800068602-31",
+        "func-1779800068602-32",
+        "func-1779800068602-33"
       ],
       "input_parameters": []
     },
@@ -1013,7 +993,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-34",
+          "id": "func-1779800068602-34",
           "function_name": "plankton_divide",
           "function_file": "",
           "parameters": {
@@ -1031,7 +1011,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-35",
+          "id": "func-1779800068602-35",
           "function_name": "plankton_scatter",
           "function_file": "",
           "parameters": {
@@ -1049,7 +1029,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-36",
+          "id": "func-1779800068602-36",
           "function_name": "plankton_settle",
           "function_file": "",
           "parameters": {
@@ -1070,9 +1050,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-34",
-        "func-1779714057705-35",
-        "func-1779714057705-36"
+        "func-1779800068602-34",
+        "func-1779800068602-35",
+        "func-1779800068602-36"
       ],
       "input_parameters": []
     },
@@ -1092,7 +1072,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-37",
+          "id": "func-1779800068602-37",
           "function_name": "setup_test_domain",
           "function_file": "",
           "parameters": {
@@ -1110,7 +1090,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-38",
+          "id": "func-1779800068602-38",
           "function_name": "setup_test_substances",
           "function_file": "",
           "parameters": {
@@ -1128,7 +1108,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-39",
+          "id": "func-1779800068602-39",
           "function_name": "log_env_ready",
           "function_file": "",
           "parameters": {
@@ -1149,9 +1129,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-37",
-        "func-1779714057705-38",
-        "func-1779714057705-39"
+        "func-1779800068602-37",
+        "func-1779800068602-38",
+        "func-1779800068602-39"
       ],
       "input_parameters": []
     },
@@ -1171,7 +1151,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-40",
+          "id": "func-1779800068602-40",
           "function_name": "diffuse_food",
           "function_file": "",
           "parameters": {
@@ -1189,7 +1169,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-41",
+          "id": "func-1779800068602-41",
           "function_name": "diffuse_oxygen",
           "function_file": "",
           "parameters": {
@@ -1207,7 +1187,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-42",
+          "id": "func-1779800068602-42",
           "function_name": "log_diffusion",
           "function_file": "",
           "parameters": {
@@ -1228,9 +1208,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-40",
-        "func-1779714057705-41",
-        "func-1779714057705-42"
+        "func-1779800068602-40",
+        "func-1779800068602-41",
+        "func-1779800068602-42"
       ],
       "input_parameters": []
     },
@@ -1250,7 +1230,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-43",
+          "id": "func-1779800068602-43",
           "function_name": "refill_food",
           "function_file": "",
           "parameters": {
@@ -1268,7 +1248,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-44",
+          "id": "func-1779800068602-44",
           "function_name": "refill_oxygen",
           "function_file": "",
           "parameters": {
@@ -1286,7 +1266,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-45",
+          "id": "func-1779800068602-45",
           "function_name": "log_replenish",
           "function_file": "",
           "parameters": {
@@ -1307,9 +1287,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-43",
-        "func-1779714057705-44",
-        "func-1779714057705-45"
+        "func-1779800068602-43",
+        "func-1779800068602-44",
+        "func-1779800068602-45"
       ],
       "input_parameters": []
     },
@@ -1329,7 +1309,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-46",
+          "id": "func-1779800068602-46",
           "function_name": "snapshot_state",
           "function_file": "",
           "parameters": {
@@ -1347,7 +1327,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-47",
+          "id": "func-1779800068602-47",
           "function_name": "dump_grid",
           "function_file": "",
           "parameters": {
@@ -1365,7 +1345,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-48",
+          "id": "func-1779800068602-48",
           "function_name": "log_env_step",
           "function_file": "",
           "parameters": {
@@ -1386,9 +1366,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-46",
-        "func-1779714057705-47",
-        "func-1779714057705-48"
+        "func-1779800068602-46",
+        "func-1779800068602-47",
+        "func-1779800068602-48"
       ],
       "input_parameters": []
     },
@@ -1408,7 +1388,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-49",
+          "id": "func-1779800068602-49",
           "function_name": "write_predators_csv",
           "function_file": "",
           "parameters": {
@@ -1426,7 +1406,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-50",
+          "id": "func-1779800068602-50",
           "function_name": "write_prey_csv",
           "function_file": "",
           "parameters": {
@@ -1444,7 +1424,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-51",
+          "id": "func-1779800068602-51",
           "function_name": "write_plankton_csv",
           "function_file": "",
           "parameters": {
@@ -1465,9 +1445,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-49",
-        "func-1779714057705-50",
-        "func-1779714057705-51"
+        "func-1779800068602-49",
+        "func-1779800068602-50",
+        "func-1779800068602-51"
       ],
       "input_parameters": []
     },
@@ -1487,7 +1467,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-52",
+          "id": "func-1779800068602-52",
           "function_name": "plot_populations",
           "function_file": "",
           "parameters": {
@@ -1505,7 +1485,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-53",
+          "id": "func-1779800068602-53",
           "function_name": "plot_environment",
           "function_file": "",
           "parameters": {
@@ -1523,7 +1503,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-54",
+          "id": "func-1779800068602-54",
           "function_name": "plot_interactions",
           "function_file": "",
           "parameters": {
@@ -1544,9 +1524,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-52",
-        "func-1779714057705-53",
-        "func-1779714057705-54"
+        "func-1779800068602-52",
+        "func-1779800068602-53",
+        "func-1779800068602-54"
       ],
       "input_parameters": []
     },
@@ -1566,7 +1546,7 @@
       },
       "functions": [
         {
-          "id": "func-1779714057705-55",
+          "id": "func-1779800068602-55",
           "function_name": "print_counts",
           "function_file": "",
           "parameters": {
@@ -1584,7 +1564,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-56",
+          "id": "func-1779800068602-56",
           "function_name": "print_max_step",
           "function_file": "",
           "parameters": {
@@ -1602,7 +1582,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "func-1779714057705-57",
+          "id": "func-1779800068602-57",
           "function_name": "print_final_message",
           "function_file": "",
           "parameters": {
@@ -1623,9 +1603,9 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "func-1779714057705-55",
-        "func-1779714057705-56",
-        "func-1779714057705-57"
+        "func-1779800068602-55",
+        "func-1779800068602-56",
+        "func-1779800068602-57"
       ],
       "input_parameters": []
     },
@@ -1646,7 +1626,7 @@
       "functions": [],
       "subworkflow_calls": [
         {
-          "id": "sched-call-1779714057705-58",
+          "id": "sched-call-1779800068602-58",
           "type": "subworkflow_call",
           "subworkflow_name": "env_diffuse",
           "iterations": 1,
@@ -1660,7 +1640,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-59",
+          "id": "sched-call-1779800068602-59",
           "type": "subworkflow_call",
           "subworkflow_name": "predator_hunt",
           "iterations": 1,
@@ -1674,7 +1654,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-60",
+          "id": "sched-call-1779800068602-60",
           "type": "subworkflow_call",
           "subworkflow_name": "prey_flee",
           "iterations": 1,
@@ -1688,7 +1668,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-61",
+          "id": "sched-call-1779800068602-61",
           "type": "subworkflow_call",
           "subworkflow_name": "plankton_drift",
           "iterations": 1,
@@ -1702,7 +1682,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-62",
+          "id": "sched-call-1779800068602-62",
           "type": "subworkflow_call",
           "subworkflow_name": "env_replenish",
           "iterations": 1,
@@ -1716,7 +1696,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-63",
+          "id": "sched-call-1779800068602-63",
           "type": "subworkflow_call",
           "subworkflow_name": "predator_rest",
           "iterations": 1,
@@ -1730,7 +1710,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-64",
+          "id": "sched-call-1779800068602-64",
           "type": "subworkflow_call",
           "subworkflow_name": "prey_graze",
           "iterations": 1,
@@ -1744,7 +1724,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-65",
+          "id": "sched-call-1779800068602-65",
           "type": "subworkflow_call",
           "subworkflow_name": "plankton_photosynth",
           "iterations": 1,
@@ -1758,7 +1738,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-66",
+          "id": "sched-call-1779800068602-66",
           "type": "subworkflow_call",
           "subworkflow_name": "env_log",
           "iterations": 1,
@@ -1772,7 +1752,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-67",
+          "id": "sched-call-1779800068602-67",
           "type": "subworkflow_call",
           "subworkflow_name": "predator_reproduce",
           "iterations": 1,
@@ -1786,7 +1766,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-68",
+          "id": "sched-call-1779800068602-68",
           "type": "subworkflow_call",
           "subworkflow_name": "prey_reproduce",
           "iterations": 1,
@@ -1800,7 +1780,7 @@
           "parameter_nodes": []
         },
         {
-          "id": "sched-call-1779714057705-69",
+          "id": "sched-call-1779800068602-69",
           "type": "subworkflow_call",
           "subworkflow_name": "plankton_replicate",
           "iterations": 1,
@@ -1816,18 +1796,100 @@
       ],
       "parameters": [],
       "execution_order": [
-        "sched-call-1779714057705-58",
-        "sched-call-1779714057705-59",
-        "sched-call-1779714057705-60",
-        "sched-call-1779714057705-61",
-        "sched-call-1779714057705-62",
-        "sched-call-1779714057705-63",
-        "sched-call-1779714057705-64",
-        "sched-call-1779714057705-65",
-        "sched-call-1779714057705-66",
-        "sched-call-1779714057705-67",
-        "sched-call-1779714057705-68",
-        "sched-call-1779714057705-69"
+        "sched-call-1779800068602-58",
+        "sched-call-1779800068602-59",
+        "sched-call-1779800068602-60",
+        "sched-call-1779800068602-61",
+        "sched-call-1779800068602-62",
+        "sched-call-1779800068602-63",
+        "sched-call-1779800068602-64",
+        "sched-call-1779800068602-65",
+        "sched-call-1779800068602-66",
+        "sched-call-1779800068602-67",
+        "sched-call-1779800068602-68",
+        "sched-call-1779800068602-69"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order \u2014 env init + agent inits",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-env_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "env_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "env_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-predator_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "predator_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "predator_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-prey_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "prey_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "prey_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-plankton_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "plankton_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "plankton_init",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-env_init",
+        "init-call-predator_init",
+        "init-call-prey_init",
+        "init-call-plankton_init"
       ],
       "input_parameters": []
     },
@@ -1848,9 +1910,9 @@
       "functions": [],
       "subworkflow_calls": [
         {
-          "id": "main-call-env_init",
+          "id": "main-call-__init_sequence__",
           "type": "subworkflow_call",
-          "subworkflow_name": "env_init",
+          "subworkflow_name": "__init_sequence__",
           "iterations": 1,
           "parameters": {},
           "enabled": true,
@@ -1858,49 +1920,7 @@
             "x": 400,
             "y": 200
           },
-          "description": "Environment init",
-          "parameter_nodes": []
-        },
-        {
-          "id": "main-call-predator_init",
-          "type": "subworkflow_call",
-          "subworkflow_name": "predator_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 320
-          },
-          "description": "Agent init",
-          "parameter_nodes": []
-        },
-        {
-          "id": "main-call-prey_init",
-          "type": "subworkflow_call",
-          "subworkflow_name": "prey_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 440
-          },
-          "description": "Agent init",
-          "parameter_nodes": []
-        },
-        {
-          "id": "main-call-plankton_init",
-          "type": "subworkflow_call",
-          "subworkflow_name": "plankton_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 560
-          },
-          "description": "Agent init",
+          "description": "Initialization sequence",
           "parameter_nodes": []
         },
         {
@@ -1912,7 +1932,7 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 680
+            "y": 320
           },
           "description": "Main loop",
           "parameter_nodes": []
@@ -1926,9 +1946,9 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 800
+            "y": 440
           },
-          "description": "Processing",
+          "description": "Processing: proc_export_csv",
           "parameter_nodes": []
         },
         {
@@ -1940,9 +1960,9 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 920
+            "y": 560
           },
-          "description": "Processing",
+          "description": "Processing: proc_make_plots",
           "parameter_nodes": []
         },
         {
@@ -1954,18 +1974,15 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 1040
+            "y": 680
           },
-          "description": "Processing",
+          "description": "Processing: proc_summary",
           "parameter_nodes": []
         }
       ],
       "parameters": [],
       "execution_order": [
-        "main-call-env_init",
-        "main-call-predator_init",
-        "main-call-prey_init",
-        "main-call-plankton_init",
+        "main-call-__init_sequence__",
         "main-call-__scheduler__",
         "main-call-proc_export_csv",
         "main-call-proc_make_plots",

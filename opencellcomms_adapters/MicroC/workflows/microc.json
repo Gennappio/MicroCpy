@@ -6,18 +6,6 @@
     "author": "MicroC builder",
     "created": "2026-05-25",
     "gui": {
-      "subworkflow_kinds": {
-        "environment_init": "env_init",
-        "tumor_cell_init": "agent_init",
-        "diffusion_step": "env_behavior",
-        "iteration_plots": "env_behavior",
-        "gene_update": "agent_behavior",
-        "fate_update": "agent_behavior",
-        "division": "agent_behavior",
-        "final_summary": "processing_behavior",
-        "__scheduler__": "scheduler",
-        "main": "composer"
-      },
       "function_libraries": [],
       "agent_kinds": [
         {
@@ -46,7 +34,10 @@
         ]
       },
       "main_is_synthesized": true,
-      "user_functions": []
+      "user_functions": [],
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      }
     }
   },
   "subworkflows": {
@@ -981,7 +972,7 @@
       "input_parameters": []
     },
     "main": {
-      "description": "Synthesized main composer for MicroC (do not edit)",
+      "description": "Synthesized main composer (do not edit \u2014 managed by ABM structure)",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -997,9 +988,9 @@
       "functions": [],
       "subworkflow_calls": [
         {
-          "id": "main-call-environment_init",
+          "id": "main-call-__init_sequence__",
           "type": "subworkflow_call",
-          "subworkflow_name": "environment_init",
+          "subworkflow_name": "__init_sequence__",
           "iterations": 1,
           "parameters": {},
           "enabled": true,
@@ -1007,21 +998,7 @@
             "x": 400,
             "y": 200
           },
-          "description": "Environment init",
-          "parameter_nodes": []
-        },
-        {
-          "id": "main-call-tumor_cell_init",
-          "type": "subworkflow_call",
-          "subworkflow_name": "tumor_cell_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 320
-          },
-          "description": "Agent init",
+          "description": "Initialization sequence",
           "parameter_nodes": []
         },
         {
@@ -1033,9 +1010,9 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 440
+            "y": 320
           },
-          "description": "Main loop",
+          "description": "Main simulation loop",
           "parameter_nodes": []
         },
         {
@@ -1047,18 +1024,69 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 560
+            "y": 440
           },
-          "description": "Processing",
+          "description": "Processing: final_summary",
           "parameter_nodes": []
         }
       ],
       "parameters": [],
       "execution_order": [
-        "main-call-environment_init",
-        "main-call-tumor_cell_init",
+        "main-call-__init_sequence__",
         "main-call-__scheduler__",
         "main-call-final_summary"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order \u2014 env init + agent inits",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-environment_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "environment_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "environment_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tumor_cell_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tumor_cell_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "tumor_cell_init",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-environment_init",
+        "init-call-tumor_cell_init"
       ],
       "input_parameters": []
     }

@@ -1,0 +1,83 @@
+import { Users, Globe, Plus, Check } from 'lucide-react';
+import useWorkflowStore from '../store/workflowStore';
+import { INIT_SEQUENCE_NAME } from '../store/subworkflowKinds';
+import './InitSequencePalette.css';
+
+const InitSequencePalette = () => {
+  const { workflow, addToInitSequence } = useWorkflowStore();
+
+  const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
+  const envMeta = workflow.metadata?.gui?.environment || {};
+  const calls = workflow.subworkflows?.[INIT_SEQUENCE_NAME]?.subworkflow_calls || [];
+  const scheduled = new Set(calls.map((c) => c.subworkflow_name));
+
+  const envInit = envMeta.init_subworkflow;
+  const hasContent = !!envInit || agentKinds.some((k) => k.init_subworkflow);
+
+  return (
+    <div className="init-sequence-palette">
+      <div className="init-sequence-palette-title">Available Inits</div>
+
+      {envInit && (
+        <section className="initseq-section">
+          <div className="initseq-section-header env">
+            <Globe size={13} />
+            <span>Environment</span>
+          </div>
+          <InitItem
+            name={envInit}
+            color="#10b981"
+            scheduled={scheduled.has(envInit)}
+            onAdd={() => addToInitSequence(envInit)}
+          />
+        </section>
+      )}
+
+      {agentKinds.map((kind) => (
+        kind.init_subworkflow && (
+          <section key={kind.name} className="initseq-section">
+            <div className="initseq-section-header agent">
+              <Users size={13} />
+              <span>{kind.name}</span>
+            </div>
+            <InitItem
+              name={kind.init_subworkflow}
+              color="#3b82f6"
+              scheduled={scheduled.has(kind.init_subworkflow)}
+              onAdd={() => addToInitSequence(kind.init_subworkflow)}
+            />
+          </section>
+        )
+      ))}
+
+      {!hasContent && (
+        <div className="initseq-empty">
+          Define init canvases in the Agents and Environment tabs first.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InitItem = ({ name, color, scheduled, onAdd }) => (
+  <div
+    className={`initseq-item ${scheduled ? 'scheduled' : ''}`}
+    style={{ '--color': color }}
+  >
+    <span className="initseq-item-dot" style={{ background: color }} />
+    <span className="initseq-item-name">{name}</span>
+    {scheduled ? (
+      <Check size={13} className="initseq-item-check" />
+    ) : (
+      <button
+        className="initseq-item-add"
+        onClick={onAdd}
+        title={`Add ${name} to init sequence`}
+      >
+        <Plus size={13} />
+      </button>
+    )}
+  </div>
+);
+
+export default InitSequencePalette;

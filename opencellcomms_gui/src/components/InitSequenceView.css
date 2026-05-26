@@ -1,0 +1,41 @@
+.init-sequence-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+.init-sequence-header {
+  padding: 8px 16px;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+}
+
+.init-sequence-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.init-sequence-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(234, 179, 8, 0.12);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.35);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.init-sequence-warning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #facc15;
+}
+
+.init-sequence-warning strong {
+  color: #fef3c7;
+  font-weight: 600;
+}

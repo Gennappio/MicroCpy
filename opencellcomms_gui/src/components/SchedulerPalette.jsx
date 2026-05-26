@@ -1,6 +1,6 @@
 import { Users, Globe, Plus, Check } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
-import { SCHEDULER_NAME } from '../store/subworkflowKinds';
+import { SCHEDULER_NAME, INIT_KINDS } from '../store/subworkflowKinds';
 import './SchedulerPalette.css';
 
 const SchedulerPalette = () => {
@@ -8,10 +8,14 @@ const SchedulerPalette = () => {
 
   const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
   const envMeta = workflow.metadata?.gui?.environment || {};
+  const kindsMap = workflow.metadata?.gui?.subworkflow_kinds || {};
   const schedulerCalls = workflow.subworkflows?.[SCHEDULER_NAME]?.subworkflow_calls || [];
   const scheduled = new Set(schedulerCalls.map((c) => c.subworkflow_name));
 
-  const envBehaviors = envMeta.behavior_subworkflows || [];
+  // Phase 14C: defensive — never expose init kinds in the scheduler palette.
+  // Inits belong in the Initialization tab and run exactly once before the loop.
+  const isNotInit = (name) => !INIT_KINDS.has(kindsMap[name]);
+  const envBehaviors = (envMeta.behavior_subworkflows || []).filter(isNotInit);
 
   return (
     <div className="scheduler-palette">
@@ -37,14 +41,16 @@ const SchedulerPalette = () => {
       )}
 
       {/* Per-agent-kind behaviors */}
-      {agentKinds.map((kind) => (
-        (kind.behavior_subworkflows || []).length > 0 && (
+      {agentKinds.map((kind) => {
+        const behaviors = (kind.behavior_subworkflows || []).filter(isNotInit);
+        if (behaviors.length === 0) return null;
+        return (
           <section key={kind.name} className="sched-section">
             <div className="sched-section-header agent">
               <Users size={13} />
               <span>{kind.name}</span>
             </div>
-            {kind.behavior_subworkflows.map((name) => (
+            {behaviors.map((name) => (
               <BehaviorItem
                 key={name}
                 name={name}
@@ -54,10 +60,10 @@ const SchedulerPalette = () => {
               />
             ))}
           </section>
-        )
-      ))}
+        );
+      })}
 
-      {envBehaviors.length === 0 && agentKinds.every((k) => (k.behavior_subworkflows || []).length === 0) && (
+      {envBehaviors.length === 0 && agentKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0) && (
         <div className="sched-empty">
           Define behaviors in the Agents or Environment tabs first.
         </div>

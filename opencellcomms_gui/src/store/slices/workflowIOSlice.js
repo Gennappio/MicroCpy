@@ -8,6 +8,11 @@
 
 import { validateWorkflow } from '../../utils/workflowValidation';
 import pathUtils from '../pathUtils';
+import {
+  computeSubworkflowKinds,
+  validateAbmMetadata,
+} from '../computeSubworkflowKinds';
+import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
 
 /**
  * Creates the workflow I/O slice
@@ -271,21 +276,147 @@ export const createWorkflowIOSlice = (set, get) => ({
       newStageEdges[subworkflowName] = allEdges;
     });
 
-    // Load or infer subworkflow_kinds (backward compat: legacy JSON has only composer/subworkflow)
-    const loadedKinds = workflowJson.metadata?.gui?.subworkflow_kinds || {};
-    const subworkflowKinds = {};
-    Object.keys(subworkflows).forEach(name => {
-      subworkflowKinds[name] = loadedKinds[name] || (name === 'main' ? 'composer' : 'subworkflow');
-    });
+    // Phase 14B: ABM metadata is REQUIRED. Legacy v2.0 workflows without ABM
+    // metadata are no longer supported — fail loudly so the user can see what's
+    // missing rather than silently producing a broken state.
+    const missing = validateAbmMetadata(workflowJson);
+    if (missing.length > 0) {
+      const errorMsg =
+        `Workflow JSON is missing required ABM metadata: ${missing.join(', ')}.\n\n` +
+        `Legacy v2.0 workflows without ABM structure are no longer supported.`;
+      console.error(`[STORE] ${errorMsg}`);
+      alert(errorMsg);
+      throw new Error(errorMsg);
+    }
 
-    // ABM metadata (absent on legacy v2 JSON — default to empty)
-    const guiMeta = workflowJson.metadata?.gui || {};
-    const agentKinds = guiMeta.agent_kinds || [];
-    const environment = guiMeta.environment || { init_subworkflow: null, behavior_subworkflows: [] };
-    const scheduler = guiMeta.scheduler || { subworkflow: '__scheduler__' };
-    const processing = guiMeta.processing || { behavior_subworkflows: [] };
+    const guiMeta = workflowJson.metadata.gui;
+    const agentKinds = guiMeta.agent_kinds;
+    const environment = guiMeta.environment;
+    const scheduler = guiMeta.scheduler;
+    const processing = guiMeta.processing;
     const mainIsSynthesized = guiMeta.main_is_synthesized || false;
     const userFunctions = guiMeta.user_functions || [];
+
+    // Phase 14C: Initialization sequence. If the workflow lacks an
+    // `__init_sequence__` subworkflow (or it's empty), auto-populate it from
+    // environment.init_subworkflow + each agent_kinds[i].init_subworkflow in
+    // array order. This is a one-shot bootstrap that keeps Phase-13-era
+    // workflows running without manual edits — user-reordering after this
+    // never re-fires the auto-populate because the seq won't be empty.
+    const initSeqMeta = guiMeta.init_sequence || { subworkflow: INIT_SEQUENCE_NAME };
+    const initSeqName = initSeqMeta.subworkflow || INIT_SEQUENCE_NAME;
+    const existingInitSeq = subworkflows[initSeqName];
+    const initSeqIsEmpty = !existingInitSeq || (existingInitSeq.subworkflow_calls || []).length === 0;
+
+    if (initSeqIsEmpty) {
+      const autoOrder = [];
+      if (environment.init_subworkflow) autoOrder.push(environment.init_subworkflow);
+      agentKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
+
+      const newCalls = autoOrder.map((name, i) => ({
+        id: `init-call-${name}-${i}`,
+        type: 'subworkflow_call',
+        subworkflow_name: name,
+        iterations: 1,
+        parameters: {},
+        enabled: true,
+        position: { x: 400, y: 100 + i * 120 },
+        description: name,
+        parameter_nodes: [],
+      }));
+
+      const baseSw = existingInitSeq || {
+        description: 'Initialization order — drag init subworkflows here',
+        enabled: true,
+        deletable: false,
+        controller: {
+          id: `controller-${initSeqName}`,
+          type: 'controller',
+          label: 'INIT SEQUENCE',
+          position: { x: 100, y: 100 },
+          number_of_steps: 1,
+        },
+        functions: [],
+        parameters: [],
+        input_parameters: [],
+      };
+      const populatedSw = {
+        ...baseSw,
+        subworkflow_calls: newCalls,
+        execution_order: newCalls.map((c) => c.id),
+      };
+      subworkflows[initSeqName] = populatedSw;
+
+      const controllerId = populatedSw.controller.id;
+      const seqNodes = [
+        {
+          id: controllerId,
+          type: 'initNode',
+          position: populatedSw.controller.position || { x: 100, y: 100 },
+          data: { label: populatedSw.controller.label, numberOfSteps: 1 },
+          deletable: false,
+        },
+        ...newCalls.map((call) => ({
+          id: call.id,
+          type: 'subworkflowCall',
+          position: call.position,
+          data: {
+            label: call.subworkflow_name,
+            subworkflowName: call.subworkflow_name,
+            iterations: 1,
+            enabled: true,
+            description: call.description,
+          },
+        })),
+      ];
+
+      const seqEdges = [];
+      if (newCalls.length > 0) {
+        seqEdges.push({
+          id: `e-${controllerId}-${newCalls[0].id}`,
+          source: controllerId,
+          sourceHandle: 'func-out',
+          target: newCalls[0].id,
+          targetHandle: 'func-in',
+          type: 'default',
+          animated: true,
+          markerEnd: { type: 'arrowclosed', width: 10, height: 10 },
+          style: { strokeWidth: 6 },
+        });
+        for (let i = 0; i < newCalls.length - 1; i++) {
+          seqEdges.push({
+            id: `e-${newCalls[i].id}-${newCalls[i + 1].id}`,
+            source: newCalls[i].id,
+            sourceHandle: 'func-out',
+            target: newCalls[i + 1].id,
+            targetHandle: 'func-in',
+            type: 'default',
+            animated: true,
+            markerEnd: { type: 'arrowclosed', width: 10, height: 10 },
+            style: { strokeWidth: 6 },
+          });
+        }
+      }
+      newStageNodes[initSeqName] = seqNodes;
+      newStageEdges[initSeqName] = seqEdges;
+    }
+
+    // Phase 14B: derive subworkflow_kinds from ABM metadata (never read from JSON).
+    const guiWithInitSeq = { ...guiMeta, init_sequence: initSeqMeta };
+    const subworkflowKinds = computeSubworkflowKinds({
+      metadata: { gui: guiWithInitSeq },
+      subworkflows,
+    });
+    const orphans = Object.keys(subworkflows).filter((n) => !(n in subworkflowKinds));
+    if (orphans.length > 0) {
+      const errorMsg =
+        `Workflow contains subworkflows not referenced by any ABM field: ${orphans.join(', ')}.\n\n` +
+        `Every subworkflow must be reachable from agent_kinds, environment, scheduler, ` +
+        `init_sequence, processing, or be 'main'.`;
+      console.error(`[STORE] ${errorMsg}`);
+      alert(errorMsg);
+      throw new Error(errorMsg);
+    }
 
     // Determine initial stage: prefer scheduler, else first non-synthesized subworkflow
     const schedulerName = scheduler.subworkflow || '__scheduler__';
@@ -303,6 +434,7 @@ export const createWorkflowIOSlice = (set, get) => ({
             subworkflow_kinds: subworkflowKinds,
             agent_kinds: agentKinds,
             environment,
+            init_sequence: initSeqMeta,
             scheduler,
             processing,
             main_is_synthesized: mainIsSynthesized,
@@ -494,7 +626,9 @@ export const createWorkflowIOSlice = (set, get) => ({
     const environment = guiMeta.environment || {};
     const processingMeta = guiMeta.processing || {};
     const schedulerMeta = guiMeta.scheduler || {};
+    const initSeqMeta = guiMeta.init_sequence || { subworkflow: INIT_SEQUENCE_NAME };
     const schedulerName = schedulerMeta.subworkflow || '__scheduler__';
+    const initSeqName = initSeqMeta.subworkflow || INIT_SEQUENCE_NAME;
 
     const hasAbmContent = agentKinds.length > 0 || environment.init_subworkflow ||
       (environment.behavior_subworkflows || []).length > 0 ||
@@ -504,12 +638,12 @@ export const createWorkflowIOSlice = (set, get) => ({
     if (hasAbmContent) {
       const mainCalls = [];
       let callY = 200;
-      const makeMainCall = (name, desc) => {
+      const makeMainCall = (name, desc, iterations = 1) => {
         const call = {
           id: `main-call-${name}`,
           type: 'subworkflow_call',
           subworkflow_name: name,
-          iterations: 1,
+          iterations,
           parameters: {},
           enabled: true,
           position: { x: 400, y: callY },
@@ -520,24 +654,17 @@ export const createWorkflowIOSlice = (set, get) => ({
         return call;
       };
 
-      // 1. Environment init
-      if (environment.init_subworkflow) {
-        mainCalls.push(makeMainCall(environment.init_subworkflow, 'Environment initialization'));
+      // Phase 14C: main is now `init_sequence → scheduler × N → processing`.
+      // 1. Initialization sequence (once)
+      if (subworkflows[initSeqName]) {
+        mainCalls.push(makeMainCall(initSeqName, 'Initialization sequence'));
       }
-      // 2. Each agent kind init
-      agentKinds.forEach((k) => {
-        if (k.init_subworkflow) {
-          mainCalls.push(makeMainCall(k.init_subworkflow, `${k.name} initialization`));
-        }
-      });
-      // 3. Scheduler (main loop)
+      // 2. Scheduler (main loop)
       if (subworkflows[schedulerName]) {
         const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 100;
-        const loopCall = makeMainCall(schedulerName, 'Main simulation loop');
-        loopCall.iterations = loopSteps;
-        mainCalls.push(loopCall);
+        mainCalls.push(makeMainCall(schedulerName, 'Main simulation loop', loopSteps));
       }
-      // 4. Processing behaviors
+      // 3. Processing behaviors
       (processingMeta.behavior_subworkflows || []).forEach((b) => {
         mainCalls.push(makeMainCall(b, `Processing: ${b}`));
       });
@@ -575,11 +702,16 @@ export const createWorkflowIOSlice = (set, get) => ({
         }));
     }
 
-    // Always emit ABM fields and mark synthesis
+    // Always emit ABM fields and mark synthesis. Phase 14B: `subworkflow_kinds`
+    // is intentionally omitted — it is derived at load time from the ABM
+    // metadata below, so persisting it would create a redundant second source
+    // of truth that could silently disagree.
+    const { subworkflow_kinds: _droppedKinds, ...guiWithoutKinds } = exportedMetadata.gui || {};
     exportedMetadata.gui = {
-      ...exportedMetadata.gui,
+      ...guiWithoutKinds,
       agent_kinds: agentKinds,
       environment,
+      init_sequence: initSeqMeta,
       scheduler: schedulerMeta,
       processing: processingMeta,
       main_is_synthesized: hasAbmContent,
