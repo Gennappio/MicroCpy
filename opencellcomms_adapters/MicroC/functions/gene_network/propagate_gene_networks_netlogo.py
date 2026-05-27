@@ -52,6 +52,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from collections import Counter
 import random
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 # =============================================================================
 # OSCILLATION CONSTANTS (mirrors gene_network_workflow_oscillation_simulator.py)
@@ -99,7 +100,7 @@ _DELAYED_ON_INPUTS  = {'cMET_stimulus'}
     compatible_kernels=["biophysics"]
 )
 def propagate_gene_networks_netlogo(
-    context: Dict[str, Any] = None,
+    env: BiologicalContext,
     propagation_steps: int = 500,
     reversible: bool = True,
     verbose: bool = False,
@@ -111,30 +112,6 @@ def propagate_gene_networks_netlogo(
     reset_fate: bool = False,
     **kwargs
 ) -> bool:
-    """
-    Propagate gene networks using NetLogo-faithful graph walking.
-
-    Expects networks to have been set up by ``initialize_netlogo_gene_networks``
-    (output links, _last_node, _fate, _cell_ran1/2 already initialized).
-
-    Loop structure mirrors the simulator's ``simulate_batch_off``: step-outer,
-    cell-inner — all cells advance 1 graph-walk step per tick in lockstep.
-
-    Args:
-        context: Workflow context with 'population' and 'gene_networks'
-        propagation_steps: Number of graph-walk steps (ticks) per call
-        reversible: True = keep updating until Necrosis, False = stop at first fate
-        verbose: Enable detailed logging
-        debug_steps: Print step-by-step propagation details
-        oscillation: Toggle MCT1_stimulus/cMET_stimulus periodically
-        oscillation_period: ON/OFF period in steps
-        ran_refresh: Re-randomize _cell_ran1/_cell_ran2 at each diffusion_step
-        diffusion_step: Steps between input refresh
-        reset_fate: Clear _fate before propagation so cells are re-evaluated
-
-    Returns:
-        True if successful, False otherwise
-    """
     if verbose:
         flags = []
         if oscillation:
@@ -146,43 +123,30 @@ def propagate_gene_networks_netlogo(
               f"({propagation_steps} steps each){flag_str}")
         print(f"  Mode: {'REVERSIBLE' if reversible else 'NON-REVERSIBLE'}")
 
-    # =========================================================================
-    # VALIDATE CONTEXT
-    # =========================================================================
-    if not context:
-        print("[ERROR] No context provided")
-        return False
-
-    population = context.get('population')
-    if not population:
+    num_cells = len(env.cells)
+    if num_cells == 0:
         print("[ERROR] No population in context")
         return False
 
-    gene_networks = context.get('gene_networks', {})
-    if not gene_networks:
+    ctx = env.raw_context
+    if not ctx.get('gene_networks'):
         print("[ERROR] No gene networks in context "
               "- run 'Initialize NetLogo Gene Networks' first")
         return False
 
-    cells = population.state.cells
-    num_cells = len(cells)
-
-    # =========================================================================
-    # BUILD ACTIVE CELL LIST & ENSURE NETLOGO ATTRIBUTES
-    # =========================================================================
     # Build once before the step loop (matches simulator: fixed population list
-    # per propagation call).  Daughter cells added during this call are NOT
+    # per propagation call). Daughter cells added during this call are NOT
     # included — they will be picked up in the next loop iteration.
     active_cells: List[Tuple] = []
     cells_without_gn = 0
 
-    for cell_id, cell in cells.items():
-        cell_gn = gene_networks.get(cell_id)
+    for cell in env.cells:
+        cell_gn = env.gene_network(cell)
         if cell_gn is None:
             cells_without_gn += 1
             continue
         _ensure_netlogo_attrs(cell_gn)
-        active_cells.append((cell_id, cell, cell_gn))
+        active_cells.append((cell.id, cell, cell_gn))
 
     # =========================================================================
     # RESET FATE (allow re-evaluation when spatial inputs change each iteration)
@@ -204,7 +168,7 @@ def propagate_gene_networks_netlogo(
         # --- Input refresh at diffusion_step intervals ---
         if step > 0 and diffusion_step > 0 and step % diffusion_step == 0:
             _refresh_inputs_step(
-                context, active_cells,
+                ctx, active_cells,
                 oscillation, step, oscillation_period, ran_refresh,
             )
 
@@ -254,9 +218,7 @@ def propagate_gene_networks_netlogo(
         # - mark_apoptotic_cells
         # - mark_growth_arrest_cells
         # - mark_proliferating_cells
-        cell.state = cell.state.with_updates(
-            gene_states=gene_states,
-        )
+        cell.set_gene_state_snapshot(gene_states)
 
     # =========================================================================
     # LOG SUMMARY
