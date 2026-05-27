@@ -7,6 +7,7 @@ to actual Python implementations and managing execution order.
 
 import importlib
 import importlib.util
+import inspect
 import sys
 import time
 from pathlib import Path
@@ -20,6 +21,7 @@ from .schema import (
     ControllerNode
 )
 from .registry import FunctionRegistry, get_default_registry
+from src.biology.context import BiologicalContext
 
 # Observability imports (optional - graceful degradation if not available)
 try:
@@ -28,6 +30,59 @@ try:
 except ImportError:
     OBSERVABILITY_AVAILABLE = False
     ValidatedContext = None  # Fallback for type hints
+
+
+_typed_env_cache: Dict[int, bool] = {}
+
+
+def _wants_typed_env(func: Callable) -> bool:
+    """Return True if `func` opts into the typed `env: BiologicalContext` API.
+
+    A function opts in by declaring its first non-self parameter as `env`,
+    annotated `BiologicalContext` (string or class). Annotation is matched
+    by class identity OR by name to tolerate `from __future__ import annotations`.
+
+    Result is cached per function (keyed by id) since signatures are immutable.
+    """
+    key = id(func)
+    cached = _typed_env_cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        sig = inspect.signature(func)
+    except (ValueError, TypeError):
+        _typed_env_cache[key] = False
+        return False
+    params = list(sig.parameters.values())
+    if not params:
+        _typed_env_cache[key] = False
+        return False
+    first = params[0]
+    if first.name == 'self':
+        params = params[1:]
+        if not params:
+            _typed_env_cache[key] = False
+            return False
+        first = params[0]
+    if first.name != 'env':
+        _typed_env_cache[key] = False
+        return False
+    annotation = first.annotation
+    if annotation is inspect.Parameter.empty:
+        _typed_env_cache[key] = False
+        return False
+    if annotation is BiologicalContext:
+        _typed_env_cache[key] = True
+        return True
+    if isinstance(annotation, str):
+        # `from __future__ import annotations` keeps annotations as strings.
+        name = annotation.split('[')[0].split('.')[-1].strip()
+        result = name == 'BiologicalContext'
+        _typed_env_cache[key] = result
+        return result
+    # Some other annotation in the `env` slot — be conservative.
+    _typed_env_cache[key] = False
+    return False
 
 
 def create_path_resolver(engine_root: Path, workflow_dir: Optional[Path] = None):
@@ -502,17 +557,23 @@ class WorkflowExecutor:
         self._coerce_parameters(kwargs, metadata)
 
         # Add context data based on function inputs
+        wants_env = _wants_typed_env(func)
         if metadata:
             for input_name in metadata.inputs:
                 # Special handling for 'context' - pass the whole context dict
                 if input_name == 'context':
-                    kwargs['context'] = context
+                    if wants_env:
+                        kwargs['env'] = BiologicalContext(context)
+                    else:
+                        kwargs['context'] = context
                 elif input_name in context:
                     kwargs[input_name] = context[input_name]
 
         # For custom functions (with function_file), ensure context is first
-        if function_file and 'context' not in kwargs:
+        if function_file and not wants_env and 'context' not in kwargs:
             kwargs = {'context': context, **kwargs}
+        if function_file and wants_env and 'env' not in kwargs:
+            kwargs = {'env': BiologicalContext(context), **kwargs}
 
         # Always add config if available (for standard functions that need it)
         if self.config is not None and not function_file and 'config' not in kwargs:
@@ -756,16 +817,22 @@ class WorkflowExecutor:
             tracked_context['verbose'] = workflow_func.verbose
 
         # Add context data based on function inputs
+        wants_env = _wants_typed_env(func)
         if metadata:
             for input_name in metadata.inputs:
                 if input_name == 'context':
-                    kwargs['context'] = tracked_context
+                    if wants_env:
+                        kwargs['env'] = BiologicalContext(tracked_context)
+                    else:
+                        kwargs['context'] = tracked_context
                 elif input_name in tracked_context:
                     kwargs[input_name] = tracked_context[input_name]
 
         # For custom functions, ensure context is first
-        if function_file and 'context' not in kwargs:
+        if function_file and not wants_env and 'context' not in kwargs:
             kwargs = {'context': tracked_context, **kwargs}
+        if function_file and wants_env and 'env' not in kwargs:
+            kwargs = {'env': BiologicalContext(tracked_context), **kwargs}
 
         # Always add config if available
         if self.config is not None and not function_file and 'config' not in kwargs:
