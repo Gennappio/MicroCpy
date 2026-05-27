@@ -1,6 +1,7 @@
 """Test_GUI prey_flee — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def prey_detect_threat(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_detect_threat(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_flee/prey_detect_threat] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_detect_threat fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_detect_threat fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def prey_detect_threat(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def prey_sprint(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_sprint(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_flee/prey_sprint] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_sprint fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_sprint fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def prey_sprint(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def prey_hide(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_hide(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_flee/prey_hide] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_hide fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_hide fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

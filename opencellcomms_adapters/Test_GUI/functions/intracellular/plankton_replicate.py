@@ -1,6 +1,7 @@
 """Test_GUI plankton_replicate — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def plankton_divide(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def plankton_divide(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/plankton/plankton_replicate/plankton_divide] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: plankton_divide fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: plankton_divide fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def plankton_divide(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def plankton_scatter(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def plankton_scatter(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/plankton/plankton_replicate/plankton_scatter] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: plankton_scatter fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: plankton_scatter fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def plankton_scatter(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def plankton_settle(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def plankton_settle(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/plankton/plankton_replicate/plankton_settle] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: plankton_settle fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: plankton_settle fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

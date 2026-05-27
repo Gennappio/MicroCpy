@@ -1,6 +1,7 @@
 """Test_GUI proc_summary — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def print_counts(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def print_counts(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_summary/print_counts] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: print_counts fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: print_counts fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def print_counts(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def print_max_step(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def print_max_step(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_summary/print_max_step] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: print_max_step fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: print_max_step fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def print_max_step(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def print_final_message(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def print_final_message(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_summary/print_final_message] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: print_final_message fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: print_final_message fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

@@ -1,6 +1,7 @@
 """Test_GUI prey_graze — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def prey_forage(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_forage(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_graze/prey_forage] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_forage fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_forage fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def prey_forage(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def prey_chew(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_chew(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_graze/prey_chew] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_chew fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_chew fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def prey_chew(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def prey_swallow(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def prey_swallow(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/prey/prey_graze/prey_swallow] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: prey_swallow fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: prey_swallow fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

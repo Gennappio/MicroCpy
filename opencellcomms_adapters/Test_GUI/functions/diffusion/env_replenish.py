@@ -1,6 +1,7 @@
 """Test_GUI env_replenish — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def refill_food(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def refill_food(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_replenish/refill_food] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: refill_food fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: refill_food fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def refill_food(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def refill_oxygen(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def refill_oxygen(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_replenish/refill_oxygen] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: refill_oxygen fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: refill_oxygen fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def refill_oxygen(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def log_replenish(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def log_replenish(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_replenish/log_replenish] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: log_replenish fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: log_replenish fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

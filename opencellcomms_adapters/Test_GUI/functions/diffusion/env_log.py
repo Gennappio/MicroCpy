@@ -1,6 +1,7 @@
 """Test_GUI env_log — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def snapshot_state(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def snapshot_state(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_log/snapshot_state] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: snapshot_state fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: snapshot_state fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def snapshot_state(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def dump_grid(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def dump_grid(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_log/dump_grid] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: dump_grid fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: dump_grid fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def dump_grid(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def log_env_step(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def log_env_step(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/environment/env_log/log_env_step] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: log_env_step fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: log_env_step fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

@@ -1,6 +1,7 @@
 """Test_GUI predator_reproduce — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def predator_court(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_court(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_reproduce/predator_court] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_court fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_court fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def predator_court(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def predator_mate(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_mate(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_reproduce/predator_mate] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_mate fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_mate fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def predator_mate(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def predator_spawn_offspring(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_spawn_offspring(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_reproduce/predator_spawn_offspring] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_spawn_offspring fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_spawn_offspring fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

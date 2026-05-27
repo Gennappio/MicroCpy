@@ -1,6 +1,7 @@
 """Test_GUI predator_rest — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def predator_idle(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_idle(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_rest/predator_idle] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_idle fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_idle fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def predator_idle(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def predator_sleep(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_sleep(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_rest/predator_sleep] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_sleep fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_sleep fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def predator_sleep(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def predator_dream(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def predator_dream(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/predator/predator_rest/predator_dream] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: predator_dream fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: predator_dream fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True

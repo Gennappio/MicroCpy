@@ -1,6 +1,7 @@
 """Test_GUI proc_export_csv — generated print-only functions."""
 
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -16,11 +17,11 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False,
 )
-def write_predators_csv(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def write_predators_csv(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_export_csv/write_predators_csv] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: write_predators_csv fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: write_predators_csv fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -36,11 +37,11 @@ def write_predators_csv(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def write_prey_csv(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def write_prey_csv(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_export_csv/write_prey_csv] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: write_prey_csv fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: write_prey_csv fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
 
 @register_function(
@@ -56,9 +57,9 @@ def write_prey_csv(context=None, intensity=1.0, verbose=False, **kwargs):
     outputs=[],
     cloneable=False,
 )
-def write_plankton_csv(context=None, intensity=1.0, verbose=False, **kwargs):
-    step = (context or {}).get('current_step', '?')
+def write_plankton_csv(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
+    step = (env.raw_context if env else {}).get('current_step', '?')
     print(f"[Test_GUI/processing/proc_export_csv/write_plankton_csv] step={step} intensity={intensity}")
     if verbose:
-        print(f"  -> verbose: write_plankton_csv fired (context keys: {list((context or {}).keys())[:5]})")
+        print(f"  -> verbose: write_plankton_csv fired (context keys: {list((env.raw_context if env else {}).keys())[:5]})")
     return True
