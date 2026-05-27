@@ -17,6 +17,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
 from src.interfaces.base import IConfig
+from src.biology.context import BiologicalContext
 
 
 def _generate_plots_to_directory(
@@ -122,48 +123,30 @@ def _generate_plots_to_directory(
     cloneable=True
 )
 def generate_summary_plots(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     marker: str = "",
     substances_to_plot: str = "",
     clean_directory: bool = False,
     add_timestamp: bool = False,
     **kwargs
 ) -> bool:
-    """
-    Generate summary plots (typically INITIAL or FINAL).
+    ctx = env.raw_context
 
-    Output directory: config.plots_dir  (the timestamped results folder
-    created by setup_simulation), so all plots end up together in
-    results/$timestamp/plots/heatmaps/.
-
-    Args:
-        context:            Workflow context.
-        marker:             Appended to filenames ("INITIAL", "FINAL").
-        substances_to_plot: Comma-separated list (empty = all).
-        clean_directory:    Wipe image files from target dir first.
-        add_timestamp:      Append HHMMSS to filenames.
-        **kwargs:           Ignored.
-
-    Returns:
-        True on success, False on error.
-    """
     # If marker not provided as parameter, check context
-    if not marker and 'marker' in context:
-        marker = context['marker']
+    if not marker and 'marker' in ctx:
+        marker = ctx['marker']
 
     # --- resolve output directory -----------------------------------------
-    # Use context['plots_dir'] set by executor (GUI-viewable subworkflow folder)
-    if 'plots_dir' in context:
-        output_path = Path(context['plots_dir'])
+    if 'plots_dir' in ctx:
+        output_path = Path(ctx['plots_dir'])
     else:
-        # Fallback to config.plots_dir or default
-        config: Optional[IConfig] = context.get('config')
+        config: Optional[IConfig] = env.config
         if config and hasattr(config, 'plots_dir') and config.plots_dir:
             output_path = Path(config.plots_dir)
         else:
             output_path = Path('results/plots')
 
-    running_from_gui = context.get('running_from_gui', False)
+    running_from_gui = ctx.get('running_from_gui', False)
     mode = "GUI" if running_from_gui else "CLI"
     print(f"[WORKFLOW] Generating plots ({mode} mode) to: {output_path}")
 
@@ -174,7 +157,7 @@ def generate_summary_plots(
 
     try:
         count = _generate_plots_to_directory(
-            context, output_path,
+            ctx, output_path,
             marker=marker,
             substances_to_plot=substances_to_plot,
             clean_directory=clean_directory,

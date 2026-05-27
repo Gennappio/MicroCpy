@@ -20,6 +20,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
 from src.interfaces.base import IConfig
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -54,7 +55,7 @@ from src.interfaces.base import IConfig
     cloneable=True
 )
 def generate_iteration_plots(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     substances_to_plot: str = "",
     clean_directory: bool = False,
     plot_interval: int = 1,
@@ -73,7 +74,7 @@ def generate_iteration_plots(
       - filename  → e.g. Oxygen_heatmap_t5.000_ITER_003.png
       - title     → e.g. "Oxygen Distribution at t = 5.000 [Iteration 3] ..."
 
-    Output directory: context['plots_dir'] (GUI-viewable subworkflow folder).
+    Output directory: ctx['plots_dir'] (GUI-viewable subworkflow folder).
 
     Args:
         context:            Workflow context.
@@ -97,18 +98,17 @@ def generate_iteration_plots(
     from visualization.auto_plotter import AutoPlotter
 
     # --- pull objects from context ----------------------------------------
-    population       = context.get('population')
-    simulator        = context.get('simulator')
-    config: Optional[IConfig] = context.get('config')
-    results          = context.get('results', {})
+    ctx = env.raw_context
+    population       = env.cells.raw
+    simulator        = env.environment.raw_simulator
+    config: Optional[IConfig] = env.config
+    results          = ctx.get('results', {})
 
     # The executor sets loop_iteration (1-based) for every sub-workflow
     # iteration.  Fall back to clock.step for legacy callers.
-    iteration = context.get('loop_iteration', 0)
+    iteration = ctx.get('loop_iteration', 0)
     if iteration == 0:
-        _clock = context.get('clock')
-        _clock_step = _clock.step if _clock is not None else 0
-        iteration = context.get('macrostep', _clock_step)
+        iteration = ctx.get('macrostep', env.step)
 
     # --- coerce string parameters from JSON --------------------------------
     plot_interval = int(plot_interval)
@@ -135,17 +135,17 @@ def generate_iteration_plots(
     # Executor sets paths differently for GUI vs CLI:
     #   GUI: plots_dir = .../subworkflows/<name>          (no /plots suffix)
     #   CLI: plots_dir = .../subworkflows/<name>/plots    (has /plots suffix)
-    if redirect_to_subworkflow and 'plots_dir' in context:
-        current_plots = Path(context['plots_dir'])
-        running_from_gui = context.get('running_from_gui', False)
+    if redirect_to_subworkflow and 'plots_dir' in ctx:
+        current_plots = Path(ctx['plots_dir'])
+        running_from_gui = ctx.get('running_from_gui', False)
         if running_from_gui:
             # GUI: replace the last path component (subworkflow name)
             output_path = current_plots.parent / redirect_to_subworkflow
         else:
             # CLI: replace second-to-last component, keep 'plots' leaf
             output_path = current_plots.parent.parent / redirect_to_subworkflow / current_plots.name
-    elif 'plots_dir' in context:
-        output_path = Path(context['plots_dir'])
+    elif 'plots_dir' in ctx:
+        output_path = Path(ctx['plots_dir'])
     else:
         # Fallback to config.plots_dir or default
         if config and hasattr(config, 'plots_dir') and config.plots_dir:

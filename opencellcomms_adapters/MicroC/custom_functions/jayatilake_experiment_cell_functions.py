@@ -1459,7 +1459,7 @@ def check_cell_death(cell_state: Dict[str, Any], local_environment: Dict[str, fl
     outputs=["metabolic_rates"],
     cloneable=True
 )
-def advanced_metabolism_decorated(context: Dict[str, Any], ph_sensitivity: float = 0.1,
+def advanced_metabolism_decorated(env: 'BiologicalContext', ph_sensitivity: float = 0.1,
                                   temperature_effect: float = 1.0,
                                   enable_lactate_feedback: bool = True, **kwargs) -> Dict[str, float]:
     """
@@ -1507,7 +1507,7 @@ def advanced_metabolism_decorated(context: Dict[str, Any], ph_sensitivity: float
     outputs=["can_divide"],
     cloneable=True
 )
-def custom_division_check_decorated(context: Dict[str, Any], atp_threshold: float = 0.8,
+def custom_division_check_decorated(env: 'BiologicalContext', atp_threshold: float = 0.8,
                                     min_cell_age: float = 24.0, **kwargs) -> bool:
     """
     Example decorated division check function.
@@ -1517,8 +1517,8 @@ def custom_division_check_decorated(context: Dict[str, Any], atp_threshold: floa
     print(f"[DECORATED] Division check called with ATP threshold={atp_threshold}, "
           f"min age={min_cell_age}")
 
-    # Example implementation
-    cell_state = context.get('cell_state', {})
+    # Example implementation (stub — looks up state from raw context)
+    cell_state = env.raw_context.get('cell_state', {})
     atp_rate = cell_state.get('metabolic_state', {}).get('atp_rate', 0.0)
     cell_age = cell_state.get('age', 0.0)
 
@@ -1558,7 +1558,7 @@ def custom_division_check_decorated(context: Dict[str, Any], atp_threshold: floa
     outputs=["population"],
     cloneable=True
 )
-def initialize_custom_cells_decorated(context: Dict[str, Any], num_cells: int = 50,
+def initialize_custom_cells_decorated(env: 'BiologicalContext', num_cells: int = 50,
                                       placement_pattern: str = "spheroid",
                                       initial_atp: float = 0.5, **kwargs) -> None:
     """
