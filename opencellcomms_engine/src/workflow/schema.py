@@ -970,8 +970,12 @@ class WorkflowDefinition:
             if name.lower() in reserved_names and name != 'main':
                 errors.append(f"Sub-workflow name '{name}' is reserved. Please choose a different name.")
 
-            # Check naming convention
-            if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name):
+            # Check naming convention. User-facing names start with a letter.
+            # System subworkflows use a dunder convention (e.g. '__scheduler__',
+            # '__init_sequence__') and are exempt.
+            is_user_name = re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name)
+            is_system_name = re.match(r'^__[a-zA-Z][a-zA-Z0-9_]*__$', name)
+            if not (is_user_name or is_system_name):
                 errors.append(
                     f"Sub-workflow name '{name}' is invalid. "
                     f"Must start with a letter and contain only letters, numbers, and underscores."

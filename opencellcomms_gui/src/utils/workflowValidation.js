@@ -8,7 +8,10 @@
  * - Reference integrity
  */
 
+// User-facing names start with a letter. System subworkflows use a dunder
+// convention (e.g. '__scheduler__', '__init_sequence__') and are exempt.
 const SUBWORKFLOW_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+const SYSTEM_SUBWORKFLOW_NAME_PATTERN = /^__[a-zA-Z][a-zA-Z0-9_]*__$/;
 
 /**
  * Get the kind of a subworkflow (composer or subworkflow)
@@ -22,7 +25,7 @@ export function getSubworkflowKind(workflow, subworkflowName) {
  * Validate subworkflow name format
  */
 export function validateSubworkflowName(name) {
-  if (!SUBWORKFLOW_NAME_PATTERN.test(name)) {
+  if (!SUBWORKFLOW_NAME_PATTERN.test(name) && !SYSTEM_SUBWORKFLOW_NAME_PATTERN.test(name)) {
     return {
       valid: false,
       error: `Invalid subworkflow name '${name}'. Must start with a letter and contain only letters, numbers, and underscores.`

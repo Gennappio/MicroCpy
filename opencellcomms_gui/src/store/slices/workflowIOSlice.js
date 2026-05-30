@@ -894,7 +894,9 @@ export const createWorkflowIOSlice = (set, get) => ({
       return false;
     }
 
-    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
+    // User-facing names start with a letter; system subworkflows use a dunder
+    // convention (e.g. '__scheduler__', '__init_sequence__') and are exempt.
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name) && !/^__[a-zA-Z][a-zA-Z0-9_]*__$/.test(name)) {
       console.error(`[STORE] Invalid subworkflow name: ${name}`);
       return false;
     }
