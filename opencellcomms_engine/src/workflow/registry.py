@@ -146,7 +146,17 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.gene_network.apply_associations_to_inputs
     import src.workflow.functions.gene_network.print_gene_network_states
 
-    # Import adapter functions (experiment-specific)
+    # Import adapter functions (experiment-specific). Adapters live in
+    # `opencellcomms_adapters/` at the repository root (sibling of the engine),
+    # so ensure that root is importable regardless of cwd / entry point
+    # (CLI subprocess, GUI in-process, tests). registry.py is at
+    # <repo>/opencellcomms_engine/src/workflow/registry.py → parents[3] == <repo>.
+    import sys
+    from pathlib import Path
+    repo_root = str(Path(__file__).resolve().parents[3])
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
     try:
         import opencellcomms_adapters.jayatilake.register  # noqa: F401
     except ImportError as e:
