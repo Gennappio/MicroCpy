@@ -274,13 +274,20 @@ def run_simulation():
             log_queue.put(f"[ERROR] {error_msg}\n")
             return jsonify({'error': error_msg}), 400
 
-        # Check if entry_subworkflow is a composer (Section 9.2)
+        # Check if entry_subworkflow is a composer (Section 9.2).
+        # Phase 14B: subworkflow_kinds is no longer persisted to JSON (the GUI
+        # derives it at load time and strips it on export), so fall back to the
+        # same default the engine uses: 'main' is a composer, others are not.
         metadata = workflow_data.get('metadata', {})
         gui_metadata = metadata.get('gui', {})
         subworkflow_kinds = gui_metadata.get('subworkflow_kinds', {})
 
-        if subworkflow_kinds.get(entry_subworkflow) != 'composer':
-            error_msg = f'Entry subworkflow "{entry_subworkflow}" must be a composer (found: {subworkflow_kinds.get(entry_subworkflow)})'
+        entry_kind = subworkflow_kinds.get(
+            entry_subworkflow,
+            'composer' if entry_subworkflow == 'main' else 'subworkflow'
+        )
+        if entry_kind != 'composer':
+            error_msg = f'Entry subworkflow "{entry_subworkflow}" must be a composer (found: {entry_kind})'
             log_queue.put(f"[ERROR] {error_msg}\n")
             return jsonify({'error': error_msg}), 400
 
