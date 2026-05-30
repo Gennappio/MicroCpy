@@ -270,10 +270,10 @@
 
 /* Inputs */
 .param-input {
-  background: #1e293b;
+  background: #ffffff;
   border: 1px solid #334155;
   border-radius: 4px;
-  color: #e2e8f0;
+  color: #0f172a;
   padding: 4px 8px;
   font-size: 13px;
   font-family: inherit;
@@ -420,10 +420,10 @@
 }
 
 .param-input-json {
-  background: #1e293b;
+  background: #ffffff;
   border: 1px solid #334155;
   border-radius: 4px;
-  color: #e2e8f0;
+  color: #0f172a;
   padding: 6px 8px;
   font-size: 12px;
   font-family: monospace;

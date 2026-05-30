@@ -6,6 +6,10 @@ import {
   SlidersHorizontal,
   Layers,
   Workflow,
+  Users,
+  Globe,
+  PlayCircle,
+  Sparkles,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -13,6 +17,33 @@ import useWorkflowStore from '../store/workflowStore';
 import './ParametersDashboard.css';
 
 const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictParameterNode']);
+
+// One entry per subworkflow kind: the section label, accent color, icon, and
+// the main tab its "Go to canvas" link should open. Kinds are rendered in this
+// order; only kinds that actually carry connected params show up.
+const KIND_META = {
+  agent_init: { label: 'Agent Init', accent: '#3b82f6', tab: 'agents', icon: <Users size={16} /> },
+  agent_behavior: { label: 'Agent Behaviors', accent: '#3b82f6', tab: 'agents', icon: <Users size={16} /> },
+  env_init: { label: 'Environment Init', accent: '#10b981', tab: 'environment', icon: <Globe size={16} /> },
+  env_behavior: { label: 'Environment Behaviors', accent: '#10b981', tab: 'environment', icon: <Globe size={16} /> },
+  init_sequence: { label: 'Initialization', accent: '#94a3b8', tab: 'initialization', icon: <PlayCircle size={16} /> },
+  scheduler: { label: 'Scheduler', accent: '#94a3b8', tab: 'scheduler', icon: <Layers size={16} /> },
+  processing_behavior: { label: 'Processing', accent: '#a855f7', tab: 'processing', icon: <Sparkles size={16} /> },
+  composer: { label: 'Composer (main)', accent: '#f59e0b', tab: null, icon: <Layers size={16} /> },
+  subworkflow: { label: 'Sub-workflows', accent: '#8b5cf6', tab: null, icon: <Workflow size={16} /> },
+};
+
+const KIND_ORDER = [
+  'agent_init',
+  'agent_behavior',
+  'env_init',
+  'env_behavior',
+  'init_sequence',
+  'scheduler',
+  'processing_behavior',
+  'composer',
+  'subworkflow',
+];
 
 /**
  * ParametersDashboard - Centralized view of all connected parameter nodes
@@ -130,10 +161,12 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
     [stageNodes, setStageNodes, onUpdateParam]
   );
 
-  // Navigate to canvas
+  // Navigate to the tab that owns this kind, then select the subworkflow stage.
   const goToCanvas = useCallback(
     (kind, stageName) => {
-      setCurrentMainTab(kind === 'composer' ? 'composers' : 'subworkflows');
+      const tab = KIND_META[kind]?.tab;
+      if (!tab) return; // synthesized main / orphan kinds have no editable tab
+      setCurrentMainTab(tab);
       setCurrentStage(stageName);
     },
     [setCurrentMainTab, setCurrentStage]
@@ -483,7 +516,7 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
             nodes via edges. To see parameters here:
           </p>
           <ol>
-            <li>Switch to a Composer or Sub-workflow canvas</li>
+            <li>Open a behavior or init canvas (Agents / Environment / Processing)</li>
             <li>Add a parameter node from the palette</li>
             <li>Connect it to a function node's parameter socket</li>
           </ol>
@@ -493,10 +526,10 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
   }
 
   // ===== Main render =====
-  const kindEntries = [
-    { key: 'composer', label: 'Composers', icon: <Layers size={16} />, accent: '#10b981' },
-    { key: 'subworkflow', label: 'Sub-workflows', icon: <Workflow size={16} />, accent: '#8b5cf6' },
-  ];
+  // Render every kind that actually carries connected params, in tab order.
+  const kindEntries = KIND_ORDER.filter(
+    (k) => groupedParams[k] && Object.keys(groupedParams[k]).length > 0
+  ).map((k) => ({ key: k, ...KIND_META[k] }));
 
   return (
     <div className="parameters-dashboard">
@@ -541,17 +574,19 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
                           <ChevronDown size={14} />
                         )}
                         <span className="param-stage-name">{stageName}</span>
-                        <button
-                          className="param-goto-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            goToCanvas(kindKey, stageName);
-                          }}
-                          title="Go to canvas"
-                        >
-                          <ExternalLink size={12} />
-                          <span>Go to canvas</span>
-                        </button>
+                        {KIND_META[kindKey]?.tab && (
+                          <button
+                            className="param-goto-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goToCanvas(kindKey, stageName);
+                            }}
+                            title="Go to canvas"
+                          >
+                            <ExternalLink size={12} />
+                            <span>Go to canvas</span>
+                          </button>
+                        )}
                       </div>
 
                       {!stageCollapsed &&
