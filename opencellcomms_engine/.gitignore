@@ -145,6 +145,8 @@ cython_debug/
 # MicroC specific
 results/
 output/
+# but keep the source output functions package (not a results dir)
+!src/workflow/functions/output/
 simulation_output/
 *.h5
 *.hdf5
