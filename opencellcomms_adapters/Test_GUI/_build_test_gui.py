@@ -185,14 +185,24 @@ def make_subwf(name, description, deletable, fn_names):
     }
 
 
-def make_scheduler_subwf(behaviors):
-    """The scheduler subworkflow — only contains subworkflow_call nodes."""
+def make_scheduler_subwf(behaviors, number_of_steps=10):
+    """The scheduler subworkflow — subworkflow_call nodes + a steps parameter
+    node wired to the controller so the loop count is exposed in the Planner."""
+    steps_param_id = 'steps_param-__scheduler__'
     controller = {
         'id': 'controller-__scheduler__',
         'type': 'controller',
         'label': 'SCHEDULER',
         'position': {'x': 100, 'y': 100},
-        'number_of_steps': 10,
+        'number_of_steps': number_of_steps,
+        'parameter_nodes': [steps_param_id],
+    }
+    steps_param = {
+        'id': steps_param_id,
+        'type': 'parameterNode',
+        'label': 'Simulation Steps',
+        'parameters': {'steps': number_of_steps},
+        'position': {'x': 100, 'y': 340},
     }
     calls = []
     for i, behavior_name in enumerate(behaviors):
@@ -216,7 +226,7 @@ def make_scheduler_subwf(behaviors):
         'controller': controller,
         'functions': [],
         'subworkflow_calls': calls,
-        'parameters': [],
+        'parameters': [steps_param],
         'execution_order': execution_order,
         'input_parameters': [],
     }
@@ -388,7 +398,8 @@ def build_workflow():
         {'id': 'tab-lowfood', 'name': 'run_low_food', 'enabled': True,
          'parameterOverrides': {'env_replenish': {'intensity': 0.2}}},
         {'id': 'tab-long', 'name': 'run_long', 'enabled': True,
-         'parameterOverrides': {'__scheduler__': {'number_of_steps': 30}}},
+         'parameterOverrides': {
+             'steps_param-__scheduler__': {'label': 'Simulation Steps', 'parameters': {'steps': 30}}}},
         {'id': 'tab-silent', 'name': 'run_silent', 'enabled': False, 'parameterOverrides': {}},
     ]
 

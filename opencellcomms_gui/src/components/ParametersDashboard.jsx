@@ -95,12 +95,18 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
         const targetNode = nodeById[edge.target];
         if (!sourceNode || !targetNode) continue;
         if (!PARAM_NODE_TYPES.has(sourceNode.type)) continue;
-        if (targetNode.type !== 'workflowFunction') continue;
 
         const targetHandle = edge.targetHandle || '';
-        if (!targetHandle.startsWith('param-')) continue;
+        // Two accepted targets: a function's param- handle, or the scheduler/
+        // macrostep controller's "Number of steps" (steps-param) handle.
+        const isStepsParam =
+          targetHandle === 'steps-param' &&
+          (targetNode.type === 'initNode' || targetNode.type === 'controllerNode');
+        const isFnParam =
+          targetNode.type === 'workflowFunction' && targetHandle.startsWith('param-');
+        if (!isStepsParam && !isFnParam) continue;
 
-        const paramName = targetHandle.replace('param-', '');
+        const paramName = isStepsParam ? 'steps' : targetHandle.replace('param-', '');
 
         const entry = {
           stageName,

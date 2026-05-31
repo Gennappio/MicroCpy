@@ -886,7 +886,10 @@
           "x": 100,
           "y": 100
         },
-        "number_of_steps": 30
+        "number_of_steps": 30,
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ]
       },
       "functions": [],
       "subworkflow_calls": [
@@ -961,7 +964,20 @@
           "parameter_nodes": []
         }
       ],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "type": "parameterNode",
+          "label": "Simulation Steps",
+          "parameters": {
+            "steps": 30
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
       "execution_order": [
         "sched-call-diffusion_step",
         "sched-call-gene_update",

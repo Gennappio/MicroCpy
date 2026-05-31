@@ -217,6 +217,29 @@ const WorkflowConsole = ({ workflowName }) => {
         return merged;
       });
     }
+
+    // A scheduler "Number of steps" parameter node drives the loop count, but
+    // the run reads number_of_steps from the controller and the synthesized
+    // main's scheduler call — not from the param node. So when such a param is
+    // overridden, propagate its value into both.
+    for (const swName of Object.keys(patched.subworkflows)) {
+      const sw = patched.subworkflows[swName];
+      const ctrlParamIds = sw.controller?.parameter_nodes || [];
+      const overriddenId = ctrlParamIds.find((id) => overrides[id]);
+      if (!overriddenId) continue;
+      const pNode = (sw.parameters || []).find((p) => p.id === overriddenId);
+      const v = pNode?.parameters?.steps
+        ?? pNode?.parameters?.step_count
+        ?? pNode?.parameters?.numberOfSteps;
+      const steps = Number(v);
+      if (!Number.isFinite(steps)) continue;
+      sw.controller.number_of_steps = steps;
+      const main = patched.subworkflows.main;
+      (main?.subworkflow_calls || []).forEach((c) => {
+        if (c.subworkflow_name === swName) c.iterations = steps;
+      });
+    }
+
     return patched;
   };
 

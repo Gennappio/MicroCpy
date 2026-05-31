@@ -1621,7 +1621,10 @@
           "x": 100,
           "y": 100
         },
-        "number_of_steps": 10
+        "number_of_steps": 10,
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ]
       },
       "functions": [],
       "subworkflow_calls": [
@@ -1794,7 +1797,20 @@
           "parameter_nodes": []
         }
       ],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "type": "parameterNode",
+          "label": "Simulation Steps",
+          "parameters": {
+            "steps": 10
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
       "execution_order": [
         "sched-call-1779800068602-58",
         "sched-call-1779800068602-59",

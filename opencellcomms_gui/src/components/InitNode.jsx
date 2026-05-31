@@ -1,5 +1,6 @@
 import { Handle, Position } from 'reactflow';
 import { Zap, Settings } from 'lucide-react';
+import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import './InitNode.css';
 
 /**
@@ -10,9 +11,10 @@ import './InitNode.css';
 const InitNode = ({ id, data, selected }) => {
   const label = data?.label || 'INIT';
 
-  // Macrostep controller — the only canvas where the controller exposes a
-  // "Number of steps" parameter handle.
-  const isMacrostepController = id.includes('macrostep');
+  // Macrostep controller — the canvas where the controller exposes a
+  // "Number of steps" parameter handle. In the ABM model the Scheduler IS the
+  // main loop, so its controller owns the loop-count handle too.
+  const isMacrostepController = id.includes('macrostep') || id.includes(SCHEDULER_NAME);
   const numberOfSteps = data?.numberOfSteps || 1;
   const isParameterConnected = data?.isStepsParameterConnected || false;
   const connectedParameterValue = data?.connectedStepsValue;

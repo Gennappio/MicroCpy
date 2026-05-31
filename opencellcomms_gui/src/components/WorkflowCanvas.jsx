@@ -191,9 +191,16 @@ const WorkflowCanvas = ({ stage }) => {
     }
   }, [edges, stage, setStageEdges]);
 
-  // Track when steps-param is connected/disconnected and update controller node
+  // Track when steps-param is connected/disconnected and update controller node.
+  // The controller's id is `controller-<stage>` (ABM) or a legacy `init-`/
+  // macrostep id — locate it by type rather than assuming a fixed id.
   React.useEffect(() => {
-    const initNodeId = `init-${stage}`;
+    const controllerNode = nodes.find(
+      (n) => n.type === 'initNode' || n.type === 'controllerNode'
+    );
+    if (!controllerNode) return;
+    const initNodeId = controllerNode.id;
+
     const stepsParamEdge = edges.find(
       (edge) => edge.targetHandle === 'steps-param' && edge.target === initNodeId
     );
@@ -207,13 +214,24 @@ const WorkflowCanvas = ({ stage }) => {
       if (paramNode && paramNode.data.parameters) {
         // Extract the steps value from the parameter node
         // Could be "steps" or "step_count" depending on the parameter
-        connectedStepsValue = paramNode.data.parameters.steps ||
-                             paramNode.data.parameters.step_count ||
+        connectedStepsValue = paramNode.data.parameters.steps ??
+                             paramNode.data.parameters.step_count ??
                              paramNode.data.parameters.numberOfSteps;
       }
     }
 
-    // Update the controller node's connection status and value
+    // Bail out if nothing changed — this effect depends on `nodes` and calls
+    // `setNodes`, so an unconditional write would loop forever.
+    const needsUpdate =
+      controllerNode.data.isStepsParameterConnected !== isStepsParamConnected ||
+      controllerNode.data.connectedStepsValue !== connectedStepsValue ||
+      (isStepsParamConnected && connectedStepsValue !== undefined &&
+        controllerNode.data.numberOfSteps !== connectedStepsValue);
+    if (!needsUpdate) return;
+
+    // Update the controller node's connection status and value. When a
+    // parameter drives the count, mirror it into numberOfSteps so export and
+    // main-loop synthesis (which read number_of_steps) honor the connection.
     setNodes((nds) =>
       nds.map((node) =>
         node.id === initNodeId
@@ -223,6 +241,9 @@ const WorkflowCanvas = ({ stage }) => {
                 ...node.data,
                 isStepsParameterConnected: isStepsParamConnected,
                 connectedStepsValue: connectedStepsValue,
+                ...(isStepsParamConnected && connectedStepsValue !== undefined
+                  ? { numberOfSteps: connectedStepsValue }
+                  : {}),
               },
             }
           : node

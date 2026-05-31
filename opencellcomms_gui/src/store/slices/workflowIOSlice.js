@@ -223,6 +223,36 @@ export const createWorkflowIOSlice = (set, get) => ({
         }
       });
 
+      // Reconstruct the scheduler-style "Number of steps" parameter edge:
+      // a parameter node wired to the controller's steps-param handle. It is
+      // persisted as controller.parameter_nodes (mirroring the parameter_nodes
+      // convention used by functions/calls, but the target is the controller).
+      if (controllerNode && Array.isArray(controller?.parameter_nodes)) {
+        controller.parameter_nodes.forEach((paramNodeId) => {
+          const paramNode = paramNodeMap.get(paramNodeId);
+          allEdges.push({
+            id: `e-steps-${paramNodeId}-${controllerNode.id}`,
+            source: paramNodeId,
+            sourceHandle: 'params',
+            target: controllerNode.id,
+            targetHandle: 'steps-param',
+            type: 'default',
+            animated: false,
+            style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+          });
+          // Pre-seed display/connection data so the count is correct before the
+          // canvas effect runs.
+          const stepsVal = paramNode?.data?.parameters?.steps
+            ?? paramNode?.data?.parameters?.step_count
+            ?? paramNode?.data?.parameters?.numberOfSteps;
+          controllerNode.data.isStepsParameterConnected = true;
+          if (stepsVal !== undefined) {
+            controllerNode.data.connectedStepsValue = stepsVal;
+            controllerNode.data.numberOfSteps = stepsVal;
+          }
+        });
+      }
+
       // Create execution flow edges based on execution order
       if (controllerNode && executionOrder.length > 0) {
         allEdges.push({
@@ -598,13 +628,32 @@ export const createWorkflowIOSlice = (set, get) => ({
         })),
       ];
 
-      // Export controller
+      // Export controller. If a parameter node is wired to the controller's
+      // steps handle, resolve number_of_steps from it (authoritative regardless
+      // of canvas mount state, so Planner overrides on the steps node take
+      // effect) and persist the connection via parameter_nodes.
+      const stepsParamNodeIds = controllerNode
+        ? edges
+            .filter((e) => e.target === controllerNode.id && e.targetHandle === 'steps-param')
+            .map((e) => e.source)
+        : [];
+      let resolvedSteps = controllerNode?.data?.numberOfSteps || 1;
+      if (stepsParamNodeIds.length > 0) {
+        const pNode = nodes.find((n) => n.id === stepsParamNodeIds[0]);
+        const v = pNode?.data?.parameters?.steps
+          ?? pNode?.data?.parameters?.step_count
+          ?? pNode?.data?.parameters?.numberOfSteps;
+        if (v !== undefined && v !== '' && Number.isFinite(Number(v))) {
+          resolvedSteps = Number(v);
+        }
+      }
       const controller = controllerNode ? {
         id: controllerNode.id,
         type: 'controller',
         label: controllerNode.data.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
         position: controllerNode.position,
-        number_of_steps: controllerNode.data.numberOfSteps || 1
+        number_of_steps: resolvedSteps,
+        ...(stepsParamNodeIds.length > 0 ? { parameter_nodes: stepsParamNodeIds } : {}),
       } : null;
 
       subworkflows[subworkflowName] = {

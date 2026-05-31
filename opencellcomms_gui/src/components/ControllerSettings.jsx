@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Save, Info } from 'lucide-react';
+import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import './ControllerSettings.css';
 
 /**
@@ -24,8 +25,9 @@ const ControllerSettings = ({ node, onSave, onClose }) => {
   const stageName = node.id.replace('init-', '');
   const capitalizedStage = stageName.charAt(0).toUpperCase() + stageName.slice(1);
 
-  // Check if this is the macrostep controller
-  const isMacrostepController = node.id.includes('macrostep');
+  // Check if this is the macrostep controller. In the ABM model the Scheduler
+  // is the main loop, so its controller exposes "Number of Steps" too.
+  const isMacrostepController = node.id.includes('macrostep') || node.id.includes(SCHEDULER_NAME);
 
   // Check if the steps parameter is connected
   const isStepsParameterConnected = node.data.isStepsParameterConnected || false;
