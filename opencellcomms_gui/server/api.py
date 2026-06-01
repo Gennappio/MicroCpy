@@ -20,6 +20,8 @@ from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
 
+import agent  # In-GUI Claude coding agent (config + code generation)
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
@@ -666,9 +668,11 @@ def save_function_source():
         if not data:
             return jsonify({'error': 'Missing request body'}), 400
 
-        function_name = data.get('name')
+        # Accept both field-name variants used across the GUI
+        # (CodeViewer sends name/file; ParameterEditor sends function_name/file_path).
+        function_name = data.get('name') or data.get('function_name')
         source_code = data.get('source')
-        source_file = data.get('file')
+        source_file = data.get('file') or data.get('file_path')
 
         if not function_name or not source_code:
             return jsonify({'error': 'Missing required fields: name, source'}), 400
@@ -1824,6 +1828,57 @@ def get_observability_versions():
         return jsonify({'success': True, 'versions': versions})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# AI CODING AGENT (Claude) — config + per-node code generation
+# ============================================================================
+
+@app.route('/api/agent/config', methods=['GET'])
+def get_agent_config():
+    """Return whether an API key is configured (masked) and the chosen model."""
+    try:
+        return jsonify({'success': True, **agent.get_config()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/agent/config', methods=['POST'])
+def set_agent_config():
+    """Persist the user's Anthropic API key and/or model to the gitignored .env."""
+    try:
+        data = request.json or {}
+        api_key = data.get('api_key')
+        model = data.get('model')
+        if not api_key and not model:
+            return jsonify({'error': 'Provide api_key and/or model'}), 400
+        agent.set_config(api_key=api_key, model=model)
+        return jsonify({'success': True, **agent.get_config()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/agent/generate', methods=['POST'])
+def agent_generate():
+    """Generate the complete updated source file for a node's function from a prompt."""
+    try:
+        data = request.json or {}
+        prompt = (data.get('prompt') or '').strip()
+        if not prompt:
+            return jsonify({'error': 'Missing required field: prompt'}), 400
+
+        result = agent.generate_function(
+            prompt=prompt,
+            function_name=data.get('function_name') or '',
+            category=data.get('category') or '',
+            current_source=data.get('current_source') or '',
+            model=data.get('model'),
+        )
+        return jsonify({'success': True, **result})
+    except agent.AgentNotConfigured as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Generation failed: {e}'}), 500
 
 
 if __name__ == '__main__':

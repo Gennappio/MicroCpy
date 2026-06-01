@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink, ChevronUp, ChevronDown, List, Braces } from 'lucide-react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink, ChevronUp, ChevronDown, List, Braces, Sparkles } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
@@ -51,6 +51,12 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [editedCode, setEditedCode] = useState('');
   const [isSavingCode, setIsSavingCode] = useState(false);
   const codeTextareaRef = useRef(null);
+
+  // AI code generation state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState('');
+  const [aiError, setAiError] = useState('');
 
   const loadCode = async () => {
     setCodeLoading(true);
@@ -184,6 +190,39 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
+  const handleGenerate = async () => {
+    if (!aiPrompt.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    setAiError('');
+    setAiExplanation('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/agent/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          function_name: functionName,
+          source_file: resolvedSourcePath,
+          current_source: code,
+          category: functionMetadata?.category || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Drop the generated file into the existing editor for human review.
+        setEditedCode(data.code);
+        setIsEditingCode(true);
+        setAiExplanation(data.explanation || '');
+      } else {
+        setAiError(data.error || 'Generation failed');
+      }
+    } catch (err) {
+      setAiError(err.message || 'Generation failed');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   useEffect(() => {
     setParameters(node.data.parameters || {});
     setCustomName(node.data.customName || node.data.label || '');
@@ -207,6 +246,9 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setCode('');
     setCodeError('');
     setCodeLoading(false);
+    setAiPrompt('');
+    setAiExplanation('');
+    setAiError('');
   }, [node]);
 
 
@@ -995,6 +1037,36 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
           {/* Function Node Editor - Full interface with code viewer */}
           {isFunctionNode && showCode && (
             <div className="code-container">
+              <div className="ai-generate-box">
+                <label className="ai-generate-label">
+                  <Sparkles size={14} /> Generate with AI
+                </label>
+                <textarea
+                  className="ai-generate-input"
+                  placeholder="Describe the rule in plain English, e.g. 'mark cells necrotic when oxygen drops below 0.1'"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={2}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleGenerate}
+                  disabled={aiGenerating || !aiPrompt.trim()}
+                  title="Generate code from your description using Claude"
+                >
+                  <Sparkles size={14} />
+                  {aiGenerating ? 'Generating…' : 'Generate'}
+                </button>
+                {aiError && <div className="ai-generate-error">{aiError}</div>}
+                {aiExplanation && (
+                  <div className="ai-generate-explanation">
+                    <strong>What this does:</strong> {aiExplanation}
+                    <div className="ai-generate-hint">
+                      Review the code below, then click <strong>Save</strong> to write it to the file.
+                    </div>
+                  </div>
+                )}
+              </div>
               {codeLoading ? (
                 <div className="loading">Loading source code...</div>
               ) : codeError ? (

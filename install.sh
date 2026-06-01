@@ -83,8 +83,8 @@ pip install --upgrade pip > /dev/null 2>&1
 pip install -e . > /dev/null 2>&1
 print_status "OpenCellComms engine installed"
 
-# Install Flask server dependencies
-pip install flask flask-cors > /dev/null 2>&1
+# Install Flask server dependencies (anthropic powers the in-GUI coding agent)
+pip install flask flask-cors anthropic > /dev/null 2>&1
 print_status "Flask server dependencies installed"
 
 cd ..

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Save } from 'lucide-react';
+import { Download, Upload, FileJson, Save, Settings } from 'lucide-react';
 import MainTabSelector from './components/MainTabSelector';
+import AgentSettings from './components/AgentSettings';
 import ResultsExplorer from './components/ResultsExplorer';
 import PlannerView from './components/PlannerView';
 import AgentsView from './components/AgentsView';
@@ -27,6 +28,9 @@ function App() {
   const [paletteWidth, setPaletteWidth] = useState(308);  // Increased by 10% (280 * 1.1 = 308)
   const [inspectorWidth, setInspectorWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(null);
+
+  // AI coding agent settings modal
+  const [showAgentSettings, setShowAgentSettings] = useState(false);
 
   // Resize handlers
   const handleMouseDown = (panel) => (e) => {
@@ -272,8 +276,19 @@ function App() {
             <Download size={16} />
             Export Project
           </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowAgentSettings(true)}
+            title="AI coding agent settings (Claude API key)"
+          >
+            <Settings size={16} />
+          </button>
         </div>
       </header>
+
+      {showAgentSettings && (
+        <AgentSettings onClose={() => setShowAgentSettings(false)} />
+      )}
 
       {/* Main Tab Selector */}
       <MainTabSelector
