@@ -90,6 +90,10 @@ def stream_output(process, log_queue):
             for line in iter(pipe.readline, ''):
                 if line:
                     queue.put(f"{prefix}{line}")
+                    # Recovery channel: also mirror to the server terminal so logs
+                    # are visible even if the GUI SSE stream isn't delivering.
+                    sys.stdout.write(f"{prefix}{line}")
+                    sys.stdout.flush()
         except Exception as e:
             queue.put(f"[ERROR] Stream error: {e}\n")
         finally:
@@ -173,6 +177,12 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
 
         # Start subprocess with correct working directory
         # Create a new process group so we can kill the entire tree
+        # Force unbuffered stdout in the engine (and its nested subprocess, which
+        # copies os.environ) so log lines stream live instead of arriving in one
+        # block-buffered dump when the process exits.
+        child_env = os.environ.copy()
+        child_env["PYTHONUNBUFFERED"] = "1"
+
         popen_kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -180,6 +190,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             bufsize=1,
             universal_newlines=True,
             cwd=str(engine_dir),
+            env=child_env,
         )
         if IS_WINDOWS:
             popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -1825,5 +1836,11 @@ if __name__ == '__main__':
     print("Starting server on http://localhost:5001")
     print("=" * 60)
 
-    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)
+    # use_reloader=False: the Werkzeug auto-reloader restarts the server worker
+    # whenever a watched .py file changes. Because simulations run as detached
+    # subprocesses (start_new_session=True), a silent reloader restart orphans any
+    # in-flight run and can leave a zombie listener on the port (splitting /api/run
+    # and /api/logs across processes, so logs vanish). Sims still survive an
+    # intentional restart; we just give up hot-reload on backend edits.
+    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True, use_reloader=False)
 
