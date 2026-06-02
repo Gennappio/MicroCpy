@@ -134,11 +134,6 @@ def get_default_registry() -> FunctionRegistry:
     # Import MaBoSS functions
     import src.workflow.functions.initialization.setup_maboss
 
-    # PhysiCell codegen-only nodes (define_substrate / define_cell_type /
-    # define_hill_rule / run_physicell_simulation / select_project_template).
-    import src.workflow.functions.physicell  # noqa: F401
-
-
     # Import gene network functions (generic, 1 file per function)
     import src.workflow.functions.gene_network.initialize_population
     import src.workflow.functions.gene_network.initialize_gene_networks
@@ -171,6 +166,14 @@ def get_default_registry() -> FunctionRegistry:
         import opencellcomms_adapters.Test_GUI.register  # noqa: F401
     except ImportError as e:
         print(f"[Registry] Test_GUI adapter not available: {e}")
+
+    # PhysiBoSS / PhysiCell adapter — codegen-only node functions
+    # (define_substrate / define_cell_type / define_hill_rule /
+    # run_physicell_simulation / select_project_template / summarize_*).
+    try:
+        import opencellcomms_adapters.PhysiBoSS.register  # noqa: F401
+    except ImportError as e:
+        print(f"[Registry] PhysiBoSS adapter not available: {e}")
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry

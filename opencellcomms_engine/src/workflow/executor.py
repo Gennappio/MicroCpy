@@ -962,7 +962,7 @@ class WorkflowExecutor:
             kernel = getattr(self.workflow, "kernel", "biophysics") or "biophysics"
             if kernel == "physicell":
                 print("[BACKEND] physicell facade selected — bypassing Python stage executor")
-                from src.workflow.backends import physicell_backend
+                from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
                 return physicell_backend.run(self.workflow, context)
 
             if self.workflow.version == "2.0":

@@ -12,10 +12,10 @@ from typing import Any, Dict
 
 import pytest
 
-from src.workflow.functions.physicell.define_cell_type import define_cell_type
-from src.workflow.functions.physicell.define_hill_rule import define_hill_rule
-from src.workflow.functions.physicell.define_substrate import define_substrate
-from src.workflow.functions.physicell.summarize_physicell_events import (
+from opencellcomms_adapters.PhysiBoSS.functions.define_cell_type import define_cell_type
+from opencellcomms_adapters.PhysiBoSS.functions.define_hill_rule import define_hill_rule
+from opencellcomms_adapters.PhysiBoSS.functions.define_substrate import define_substrate
+from opencellcomms_adapters.PhysiBoSS.functions.summarize_physicell_events import (
     summarize_physicell_events,
 )
 

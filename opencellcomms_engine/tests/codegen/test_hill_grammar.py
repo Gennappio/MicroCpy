@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.codegen.physicell.hill_grammar import (
+from opencellcomms_adapters.PhysiBoSS.codegen.hill_grammar import (
     PHASE5_HINT,
     normalize_rule,
     validate_rule,

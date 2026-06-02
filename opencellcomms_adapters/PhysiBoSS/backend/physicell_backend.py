@@ -29,8 +29,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from src.codegen.physicell.scaffold import SpecError, generate_project
-from src.codegen.physicell.spec_from_workflow import (
+from opencellcomms_adapters.PhysiBoSS.codegen.scaffold import SpecError, generate_project
+from opencellcomms_adapters.PhysiBoSS.codegen.spec_from_workflow import (
     WorkflowSpecError,
     spec_from_workflow,
 )

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from src.codegen.physicell.runtime import (
+from opencellcomms_adapters.PhysiBoSS.codegen.runtime import (
     OBSERVABILITY_HEADER,
     OBSERVABILITY_SOURCE,
 )

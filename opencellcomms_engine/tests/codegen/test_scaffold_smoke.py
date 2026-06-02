@@ -22,7 +22,7 @@ from typing import Any, Dict
 
 import pytest
 
-from src.codegen.physicell.scaffold import SpecError, generate_project
+from opencellcomms_adapters.PhysiBoSS.codegen.scaffold import SpecError, generate_project
 
 # PhysiBoSS-master sits as a sibling of the OpenCellComms repo by convention.
 ENGINE_ROOT = Path(__file__).resolve().parents[2]
