@@ -14,8 +14,8 @@ from typing import Any, Dict
 
 import jinja2
 
-from src.codegen.physicell.hill_grammar import normalize_rule, validate_rules
-from src.codegen.physicell.runtime import (
+from opencellcomms_adapters.PhysiBoSS.codegen.hill_grammar import normalize_rule, validate_rules
+from opencellcomms_adapters.PhysiBoSS.codegen.runtime import (
     OBSERVABILITY_HEADER,
     OBSERVABILITY_SOURCE,
 )

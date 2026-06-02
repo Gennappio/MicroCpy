@@ -105,7 +105,7 @@ def test_both_kernels_registered():
 def test_execute_main_routes_physicell_to_backend(monkeypatch):
     """When kernel=physicell, execute_main hands off to physicell_backend.run."""
     from src.workflow import executor as ex_mod
-    from src.workflow.backends import physicell_backend
+    from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
 
     wf = WorkflowDefinition.from_dict(_physicell_workflow_dict())
     captured: Dict[str, Any] = {}

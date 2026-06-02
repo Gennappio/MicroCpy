@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import pytest
 
-from src.workflow.functions.physicell.select_project_template import select_project_template
+from opencellcomms_adapters.PhysiBoSS.functions.select_project_template import select_project_template
 
 
 PHYSIBOSS_ROOT = os.environ.get("PHYSIBOSS_ROOT")

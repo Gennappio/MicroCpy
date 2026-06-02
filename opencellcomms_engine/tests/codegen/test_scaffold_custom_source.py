@@ -14,7 +14,7 @@ from typing import Any, Dict
 
 import pytest
 
-from src.codegen.physicell.scaffold import SpecError, generate_project
+from opencellcomms_adapters.PhysiBoSS.codegen.scaffold import SpecError, generate_project
 
 PHYSIBOSS_ROOT = os.environ.get("PHYSIBOSS_ROOT")
 has_physiboss = pytest.mark.skipif(

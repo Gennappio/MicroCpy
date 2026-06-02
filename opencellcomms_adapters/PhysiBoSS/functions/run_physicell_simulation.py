@@ -147,7 +147,7 @@ def run_physicell_simulation(
     if custom_modules_source:
         spec["custom_modules_source"] = custom_modules_source
 
-    from src.workflow.backends import physicell_backend
+    from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
 
     name = context.get("workflow_name") or "physicell_workflow"
     output_dir = Path(
