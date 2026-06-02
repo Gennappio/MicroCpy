@@ -34,11 +34,52 @@
     "experiment": "spheroid_tnf_model (lite) — Phase 3 facade smoke",
     "notes": "Run via CLI: PHYSICELL_CPP=g++-14 PHYSIBOSS_ROOT=/path/to/PhysiBoSS-master python run_workflow.py --workflow opencellcomms_gui/server/workflows/spheroid_tnf_lite.json. Phase 5 will add: MaBoSS BND/CFG support, per-cell-type phenotype overrides, and custom main-cpp fragments (TNF pulse).",
     "gui": {
-      "subworkflow_kinds": {"main": "composer"}
+      "function_libraries": [],
+      "agent_kinds": [],
+      "environment": {"init_subworkflow": null, "behavior_subworkflows": []},
+      "init_sequence": {"subworkflow": "__init_sequence__"},
+      "scheduler": {"subworkflow": "__scheduler__"},
+      "processing": {"behavior_subworkflows": ["spheroid_tnf_setup"]},
+      "main_is_synthesized": false,
+      "user_functions": []
     }
   },
   "subworkflows": {
-    "main": {
+    "__init_sequence__": {
+      "description": "Initialization order — drag init subworkflows here",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "initNode",
+        "label": "INIT SEQUENCE",
+        "position": {"x": 100.0, "y": 100.0},
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Main simulation loop — order behaviors here",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "initNode",
+        "label": "SCHEDULER",
+        "position": {"x": 100.0, "y": 100.0},
+        "number_of_steps": 100
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "spheroid_tnf_setup": {
       "description": "Codegen-only: 2 substrates, 1 cell type, 2 Hill rules. Execution is handed off to physicell_backend.run() — these nodes are no-ops at sim time.",
       "enabled": true,
       "deletable": false,
@@ -49,8 +90,10 @@
         "rule_tnf_apoptosis",
         "rule_o2_migration"
       ],
+      "subworkflow_calls": [],
+      "input_parameters": [],
       "controller": {
-        "id": "controller-main",
+        "id": "controller-spheroid_tnf_setup",
         "type": "controller",
         "label": "PHYSICELL FACADE",
         "position": {"x": 600.0, "y": -120.0},
