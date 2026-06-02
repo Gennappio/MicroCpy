@@ -126,19 +126,16 @@ def get_required_environment_concentrations(local_environment: Dict[str, float],
 # Debug: Confirm custom functions are loaded
 #print("🔧 CUSTOM FUNCTIONS LOADED: jayatilake_experiment_custom_functions.py")
 
-# Import custom metabolism functions from separate file
+# Import the MicroC-local (vendored) custom metabolism module. This adapter is
+# self-contained and does NOT reach into the jayatilake adapter or a tests/ dir.
 try:
     import os
     import sys
-    # Add the current directory to path to import the metabolism file
+    # Add this file's own directory to path so the sibling metabolism module is
+    # importable whether this file is loaded as a package member or stand-alone.
     current_dir = os.path.dirname(os.path.abspath(__file__))
     if current_dir not in sys.path:
         sys.path.insert(0, current_dir)
-
-    # Also add tests/jayatilake_experiment to path for when running from main directory
-    tests_dir = os.path.join(os.getcwd(), 'tests', 'jayatilake_experiment')
-    if os.path.exists(tests_dir) and tests_dir not in sys.path:
-        sys.path.insert(0, tests_dir)
 
     import jayatilake_experiment_custom_metabolism as metabolism
     METABOLISM_FUNCTIONS_AVAILABLE = True

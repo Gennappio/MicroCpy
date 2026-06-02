@@ -117,7 +117,8 @@ def setup_maboss(
         context['maboss_nodes'] = node_names
 
         # 2. Store as module-level global for cross-stage access
-        import src.workflow.functions.initialization.setup_maboss as maboss_module
+        import sys
+        maboss_module = sys.modules[__name__]
         maboss_module._MABOSS_SIM = maboss_sim
         maboss_module._MABOSS_CONFIG = context['maboss_config']
         maboss_module._MABOSS_NODES = node_names

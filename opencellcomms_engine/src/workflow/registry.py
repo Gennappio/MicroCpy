@@ -131,15 +131,9 @@ def get_default_registry() -> FunctionRegistry:
     import src.workflow.functions.initialization.load_kernel
     import src.workflow.functions.initialization.store_simulation_dimensions
 
-    # Import MaBoSS functions
-    import src.workflow.functions.initialization.setup_maboss
-
-    # Import gene network functions (generic, 1 file per function)
-    import src.workflow.functions.gene_network.initialize_population
-    import src.workflow.functions.gene_network.initialize_gene_networks
-    import src.workflow.functions.gene_network.set_gene_network_inputs
-    import src.workflow.functions.gene_network.apply_associations_to_inputs
-    import src.workflow.functions.gene_network.print_gene_network_states
+    # Biology functions (gene networks, metabolism, cell division/death,
+    # population/gene-network/MaBoSS setup) now live in the `common` adapter and
+    # are registered via opencellcomms_adapters.common.register below.
 
     # Import adapter functions (experiment-specific). Adapters live in
     # `opencellcomms_adapters/` at the repository root (sibling of the engine),
@@ -151,6 +145,14 @@ def get_default_registry() -> FunctionRegistry:
     repo_root = str(Path(__file__).resolve().parents[3])
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
+
+    # Shared biology / ABM primitives (gene networks, metabolism, cell
+    # lifecycle, population/gene-network setup). Imported first because the
+    # experiment adapters below may depend on it.
+    try:
+        import opencellcomms_adapters.common.register  # noqa: F401
+    except ImportError as e:
+        print(f"[Registry] Common adapter not available: {e}")
 
     try:
         import opencellcomms_adapters.jayatilake.register  # noqa: F401
