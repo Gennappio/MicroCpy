@@ -223,6 +223,9 @@ const WorkflowConsole = ({ workflowName }) => {
             } else {
               setIsRunning(false);
             }
+            // Auto-flush buffered logs so the run's output (including the
+            // function's own print() lines) is visible without a manual Refresh.
+            handleRefresh();
             // Fetch final badge stats after a small delay to ensure files are written
             setTimeout(() => {
               fetchAllBadgeStats();
