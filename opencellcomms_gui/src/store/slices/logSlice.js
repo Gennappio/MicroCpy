@@ -53,6 +53,28 @@ export const createLogSlice = (set, get) => ({
     }));
   },
 
+  // Append a batch of already-timestamped log entries (used by the console
+  // when flushing its buffer). Persisted so logs survive page navigation.
+  appendWorkflowLogs: (workflowName, entries) => {
+    if (!entries || entries.length === 0) return;
+    set((state) => ({
+      workflowLogs: {
+        ...state.workflowLogs,
+        [workflowName]: [...(state.workflowLogs[workflowName] || []), ...entries],
+      }
+    }));
+  },
+
+  // Replace the log list for a workflow (used to seed the first line of a run).
+  setWorkflowLogs: (workflowName, entries) => {
+    set((state) => ({
+      workflowLogs: {
+        ...state.workflowLogs,
+        [workflowName]: entries,
+      }
+    }));
+  },
+
   // Call stack log actions
   addCallStackLog: (entry) => {
     set((state) => ({
