@@ -52,6 +52,8 @@ const WorkflowCanvas = ({ stage }) => {
     selectedNodeByStage,
     setSelectedNode: setSelectedNodeInStore,
     openInspector,
+    parameterEditRequest,
+    consumeParameterEditRequest,
   } = useWorkflowStore();
 
 
@@ -82,6 +84,15 @@ const WorkflowCanvas = ({ stage }) => {
       setShowParameterEditor(true);
     };
   }, [stage, setSelectedNodeInStore]);
+
+  // Open parameter editor when WorkflowFunctionNode requests it via the store.
+  React.useEffect(() => {
+    if (parameterEditRequest?.stage === stage) {
+      setSelectedNodeInStore(stage, parameterEditRequest.nodeId);
+      setShowParameterEditor(true);
+      consumeParameterEditRequest();
+    }
+  }, [parameterEditRequest, stage]);
 
   // Wrap onNodesChange to prevent deletion of Init node
   const onNodesChange = useCallback((changes) => {
@@ -135,15 +146,7 @@ const WorkflowCanvas = ({ stage }) => {
   // Sync local state with store when store changes (e.g., workflow loaded)
   React.useEffect(() => {
     isSyncingFromStore.current = true;
-    const rawNodes = stageNodes[stage] || [];
-
-    // onEdit is a live callback — never serialised to the store.
-    // Always re-attach it so the cog button works after loading from file.
-    const newNodes = rawNodes.map((n) =>
-      n.type === 'workflowFunction'
-        ? { ...n, data: { ...n.data, onEdit: createOnEditCallback(n.id) } }
-        : n
-    );
+    const newNodes = stageNodes[stage] || [];
 
     // Check for any controller/init node (either by type or by id pattern)
     const hasControllerNode = newNodes.some(n =>
