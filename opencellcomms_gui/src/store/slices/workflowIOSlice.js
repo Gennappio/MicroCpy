@@ -647,6 +647,11 @@ export const createWorkflowIOSlice = (set, get) => ({
           resolvedSteps = Number(v);
         }
       }
+      // Fall back to the persisted controller definition when the canvas for
+      // this subworkflow was never mounted (so no controller node exists in
+      // stageNodes). Without this the controller exports as null and downstream
+      // defaults take over (e.g. the scheduler loop count).
+      const persistedController = workflow.subworkflows[subworkflowName]?.controller;
       const controller = controllerNode ? {
         id: controllerNode.id,
         type: 'controller',
@@ -654,7 +659,13 @@ export const createWorkflowIOSlice = (set, get) => ({
         position: controllerNode.position,
         number_of_steps: resolvedSteps,
         ...(stepsParamNodeIds.length > 0 ? { parameter_nodes: stepsParamNodeIds } : {}),
-      } : null;
+      } : (persistedController ? {
+        id: persistedController.id || `controller-${subworkflowName}`,
+        type: 'controller',
+        label: persistedController.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
+        position: persistedController.position || { x: 100, y: 100 },
+        number_of_steps: persistedController.number_of_steps || 1,
+      } : null);
 
       subworkflows[subworkflowName] = {
         description: workflow.subworkflows[subworkflowName]?.description || '',
@@ -710,7 +721,7 @@ export const createWorkflowIOSlice = (set, get) => ({
       }
       // 2. Scheduler (main loop)
       if (subworkflows[schedulerName]) {
-        const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 100;
+        const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 1;
         mainCalls.push(makeMainCall(schedulerName, 'Main simulation loop', loopSteps));
       }
       // 3. Processing behaviors
