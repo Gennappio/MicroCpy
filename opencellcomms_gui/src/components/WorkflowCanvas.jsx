@@ -137,11 +137,10 @@ const WorkflowCanvas = ({ stage }) => {
     isSyncingFromStore.current = true;
     const rawNodes = stageNodes[stage] || [];
 
-    // onEdit is a live callback — it is never serialised to the store.
-    // Re-attach it to every workflowFunction node coming from the store so
-    // the cog button works after loading a workflow from file.
+    // onEdit is a live callback — never serialised to the store.
+    // Always re-attach it so the cog button works after loading from file.
     const newNodes = rawNodes.map((n) =>
-      n.type === 'workflowFunction' && !n.data.onEdit
+      n.type === 'workflowFunction'
         ? { ...n, data: { ...n.data, onEdit: createOnEditCallback(n.id) } }
         : n
     );

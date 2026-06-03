@@ -139,6 +139,7 @@ export const createWorkflowIOSlice = (set, get) => ({
       explicitParamNodes.forEach(node => createdParamNodeIds.add(node.id));
 
       // Create function nodes
+      // Note: onEdit is a live callback injected by WorkflowCanvas on mount — never stored here.
       const functionNodes = (subworkflow.functions || []).map((func) => ({
         id: func.id,
         type: 'workflowFunction',
@@ -153,7 +154,6 @@ export const createWorkflowIOSlice = (set, get) => ({
           functionFile: func.function_file || func.parameters?.function_file || '',
           customName: func.custom_name || '',
           stepCount: func.step_count || 1,
-          onEdit: () => {}
         }
       }));
 
