@@ -73,6 +73,16 @@ from src.workflow.registry import (
 # Flip this single flag to make the typed env mandatory.
 ENFORCE_TYPED_ENV = False
 
+# Whether to actually emit the per-function "legacy context-dict signature"
+# UserWarning. This nudge fires once for EVERY legacy function at import time,
+# and ~90 functions across the engine + adapters still use that signature — so
+# leaving it on floods stdout/stderr on every single run (and the GUI tags all
+# stderr as "[ERROR]", making benign nudges look like failures). It is a
+# developer-only migration aid, so default it OFF and let a developer opt in
+# with `OCC_WARN_LEGACY_CONTEXT=1`. Has no effect when ENFORCE_TYPED_ENV is on
+# (that path raises regardless).
+WARN_LEGACY_CONTEXT = os.environ.get("OCC_WARN_LEGACY_CONTEXT", "0").lower() not in ("0", "", "false", "no")
+
 
 # Global registry instance for decorator-based registrations
 _decorator_registry = FunctionRegistry()
@@ -377,7 +387,8 @@ def register_function(
                 raise ValueError(
                     f"\n{'='*80}\n❌ TYPED ENV REQUIRED\n{'='*80}\n{message}\n{'='*80}\n"
                 )
-            warnings.warn(message, stacklevel=2)
+            if WARN_LEGACY_CONTEXT:
+                warnings.warn(message, stacklevel=2)
 
         # Create metadata
         metadata = FunctionMetadata(

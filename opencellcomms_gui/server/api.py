@@ -101,7 +101,14 @@ def stream_output(process, log_queue):
         finally:
             pipe.close()
 
-    # Start threads for stdout and stderr
+    # Start threads for stdout and stderr.
+    # NOTE: the prefix is purely the *channel*, not a severity. Everything the
+    # subprocess writes to stderr is tagged "[ERROR]" — including benign Python
+    # warnings (e.g. the engine's legacy-signature UserWarnings) and library
+    # chatter. A red "[ERROR]" line in the GUI is therefore NOT necessarily a
+    # failure; only treat the process exit code / explicit error messages as
+    # fatal. (The legacy-signature flood is silenced at source by default; set
+    # OCC_WARN_LEGACY_CONTEXT=1 to bring it back.)
     stdout_thread = threading.Thread(
         target=enqueue_output,
         args=(process.stdout, log_queue, "[LOG] ")
