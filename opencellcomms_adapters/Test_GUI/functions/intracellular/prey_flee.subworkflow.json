@@ -4,8 +4,6 @@
   "kind": "agent_behavior",
   "subworkflow": {
     "description": "prey behavior: flee",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-prey_flee",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-19",
         "function_name": "prey_detect_threat",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 640
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-20",
         "function_name": "prey_sprint",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 100
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-21",
         "function_name": "prey_hide",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 160
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-19",
       "func-1779800068602-20",
       "func-1779800068602-21"
-    ],
-    "input_parameters": []
+    ]
   }
 }

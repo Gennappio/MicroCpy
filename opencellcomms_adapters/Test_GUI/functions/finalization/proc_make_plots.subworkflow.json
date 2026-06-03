@@ -4,8 +4,6 @@
   "kind": "processing_behavior",
   "subworkflow": {
     "description": "Processing: proc_make_plots",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-proc_make_plots",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-52",
         "function_name": "plot_populations",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 220
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-53",
         "function_name": "plot_environment",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 280
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-54",
         "function_name": "plot_interactions",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 340
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-52",
       "func-1779800068602-53",
       "func-1779800068602-54"
-    ],
-    "input_parameters": []
+    ]
   }
 }

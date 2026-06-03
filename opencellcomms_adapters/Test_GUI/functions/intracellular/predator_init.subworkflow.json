@@ -4,8 +4,6 @@
   "kind": "agent_init",
   "subworkflow": {
     "description": "predator initialization",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-predator_init",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-1",
         "function_name": "predator_spawn",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 160
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-2",
         "function_name": "predator_set_energy",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 220
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-3",
         "function_name": "predator_log_init",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 280
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-1",
       "func-1779800068602-2",
       "func-1779800068602-3"
-    ],
-    "input_parameters": []
+    ]
   }
 }

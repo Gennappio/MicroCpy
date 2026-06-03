@@ -4,8 +4,6 @@
   "kind": "env_behavior",
   "subworkflow": {
     "description": "Environment behavior: env_diffuse",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-env_diffuse",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-40",
         "function_name": "diffuse_food",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 100
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-41",
         "function_name": "diffuse_oxygen",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 160
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-42",
         "function_name": "log_diffusion",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 220
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-40",
       "func-1779800068602-41",
       "func-1779800068602-42"
-    ],
-    "input_parameters": []
+    ]
   }
 }

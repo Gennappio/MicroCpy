@@ -4,8 +4,6 @@
   "kind": "processing_behavior",
   "subworkflow": {
     "description": "MicroC: final_summary",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-final_summary",
       "type": "controller",
@@ -20,27 +18,19 @@
       {
         "id": "final_summary-gen_final_plots",
         "function_name": "generate_summary_plots",
-        "function_file": "",
         "parameters": {
           "marker": "FINAL",
           "substances_to_plot": "Oxygen,Glucose,Lactate"
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 100
         },
-        "description": "Generate final state visualization",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        "description": "Generate final state visualization"
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "final_summary-gen_final_plots"
-    ],
-    "input_parameters": []
+    ]
   }
 }
