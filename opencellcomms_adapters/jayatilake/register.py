@@ -36,3 +36,4 @@ from opencellcomms_adapters.jayatilake.functions.initialization.ffuyf_init impor
 from opencellcomms_adapters.jayatilake.functions.initialization.cellula_init import mettiqua
 from opencellcomms_adapters.jayatilake.functions.intracellular.altrobehaviour import spostati
 from opencellcomms_adapters.jayatilake.functions.initialization.agent_init import agente1
+from opencellcomms_adapters.jayatilake.functions.initialization.jnjkn_init import jklk
