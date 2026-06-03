@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw, Zap } from 'lucide-react';
+import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw, Zap, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './WorkflowConsole.css';
 
@@ -13,6 +13,11 @@ const WorkflowConsole = ({ workflowName }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  // "Run from terminal" helper
+  const [cliInfo, setCliInfo] = useState(null);
+  const [showCli, setShowCli] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(null);
 
   // Buffered logs: logs received from SSE but not yet displayed
   const [bufferedLogs, setBufferedLogs] = useState([]);
@@ -35,6 +40,8 @@ const WorkflowConsole = ({ workflowName }) => {
   const fetchAllBadgeStats = useWorkflowStore((state) => state.fetchAllBadgeStats);
   const clearObservabilityState = useWorkflowStore((state) => state.clearObservabilityState);
   const getActivePlannerTabs = useWorkflowStore((state) => state.getActivePlannerTabs);
+  // Path of the workflow file currently loaded in the GUI (null if unsaved).
+  const workflowFilePath = useWorkflowStore((state) => state.workflowFilePath);
 
   // Auto-scroll to bottom when displayed logs change (after refresh)
   useEffect(() => {
@@ -69,11 +76,69 @@ const WorkflowConsole = ({ workflowName }) => {
   useEffect(() => {
     connectToLogStream();
     checkStatus();
+    fetchCliInfo();
 
     return () => {
       disconnectFromLogStream();
     };
   }, []);
+
+  const fetchCliInfo = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/cli-info`);
+      if (res.ok) setCliInfo(await res.json());
+    } catch (err) {
+      // Non-fatal: the terminal-command helper just won't render.
+    }
+  };
+
+  // Quote a path only when it contains spaces, so simple paths stay clean.
+  const quote = (p) => (p && /\s/.test(p) ? `"${p}"` : p);
+
+  // Command to run the workflow currently loaded in the GUI from a terminal.
+  const buildRunCommand = () => {
+    if (!cliInfo) return '';
+    const wf = workflowFilePath || cliInfo.gui_temp_workflow;
+    return [
+      `cd ${quote(cliInfo.engine_dir)}`,
+      `${quote(cliInfo.python)} ${cliInfo.run_workflow} --workflow ${quote(wf)}`,
+    ].join('\n');
+  };
+
+  // Command that reproduces the exact run the GUI launches, with live
+  // unbuffered output, so prints can be followed in a terminal.
+  const buildFollowCommand = () => {
+    if (!cliInfo) return '';
+    return [
+      `cd ${quote(cliInfo.engine_dir)}`,
+      `PYTHONUNBUFFERED=1 ${quote(cliInfo.python)} ${cliInfo.run_workflow} ` +
+        `--workflow ${quote(cliInfo.gui_temp_workflow)} ` +
+        `--gui-results-dir ${quote(cliInfo.gui_results_dir)}`,
+    ].join('\n');
+  };
+
+  const handleCopy = async (key, text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);
+    } catch (err) {
+      // Clipboard may be unavailable (e.g. non-secure context); ignore.
+    }
+  };
+
+  const CommandBlock = ({ cmdKey, command }) => (
+    <div className="cli-command">
+      <pre className="cli-command-text">{command}</pre>
+      <button
+        className="cli-copy-btn"
+        onClick={() => handleCopy(cmdKey, command)}
+        title="Copy command"
+      >
+        {copiedKey === cmdKey ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+    </div>
+  );
 
   // Add a log to the buffer (not displayed immediately).
   // Uses ref as source of truth to avoid stale closure in SSE handler.
@@ -463,6 +528,48 @@ const WorkflowConsole = ({ workflowName }) => {
           </button>
         </div>
       </div>
+
+      {/* Run-from-terminal helper */}
+      {cliInfo && (
+        <div className="cli-helper">
+          <button
+            className="cli-helper-toggle"
+            onClick={() => setShowCli((v) => !v)}
+            title="How to run this workflow from a terminal"
+          >
+            {showCli ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            <Terminal size={13} />
+            <span>Run from terminal</span>
+          </button>
+
+          {showCli && (
+            <div className="cli-helper-body">
+              <div className="cli-section">
+                <div className="cli-section-title">Run the loaded workflow</div>
+                <CommandBlock cmdKey="run" command={buildRunCommand()} />
+                {!workflowFilePath && (
+                  <p className="cli-note">
+                    This workflow isn’t saved to a file yet, so the command points at the copy the
+                    GUI writes on each run. Save it to a <code>.json</code> to get a stable command.
+                  </p>
+                )}
+              </div>
+
+              {isRunning && (
+                <div className="cli-section">
+                  <div className="cli-section-title">Follow the running simulation live</div>
+                  <CommandBlock cmdKey="follow" command={buildFollowCommand()} />
+                  <p className="cli-note">
+                    Runs the exact workflow the GUI just launched, in your terminal, with live
+                    unbuffered prints. (This is an independent run — the GUI’s own output is also
+                    mirrored to the terminal where the server was started.)
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Logs Display - shows only displayedLogs, not real-time */}
       <div className="console-logs">

@@ -485,6 +485,28 @@ def health_check():
     })
 
 
+@app.route('/api/cli-info', methods=['GET'])
+def cli_info():
+    """
+    Return the paths the GUI needs to build 'run from terminal' commands.
+
+    Everything is resolved server-side so the displayed commands stay accurate
+    no matter where the project lives (engine dir, python interpreter, and the
+    temp file the GUI writes the current workflow to before each run).
+    """
+    engine_path = get_engine_path()
+    gui_dir = Path(__file__).parent.parent
+    return jsonify({
+        'python': sys.executable,
+        'engine_dir': str(engine_path.parent),
+        'run_workflow': engine_path.name,  # run_workflow.py
+        # Path the GUI writes the current workflow to on every (unlabeled) run.
+        # Must match the path built in run_simulation().
+        'gui_temp_workflow': str(Path(tempfile.gettempdir()) / "opencellcomms_workflow.json"),
+        'gui_results_dir': str((gui_dir / "GUI_results").absolute()),
+    })
+
+
 @app.route('/api/registry', methods=['GET'])
 def get_registry():
     """
