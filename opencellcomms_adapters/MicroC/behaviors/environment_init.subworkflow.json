@@ -3,7 +3,7 @@
   "name": "environment_init",
   "kind": "env_init",
   "subworkflow": {
-    "description": "MicroC: environment_init (merged from v7 Setup_simulation, Setup_substances, Setup_associations)",
+    "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
     "enabled": true,
     "deletable": true,
     "controller": {
@@ -59,6 +59,24 @@
           "envinit-Setup_simulation-param_domain_cell_height",
           "envinit-Setup_simulation-param_1771966627094"
         ]
+      },
+      {
+        "id": "envinit-Setup_population-setup_pop",
+        "function_name": "setup_population",
+        "function_file": "",
+        "parameters": {
+          "enable_gene_network": true,
+          "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
       },
       {
         "id": "envinit-Setup_substances-setup_all_substances",
@@ -295,6 +313,7 @@
     "execution_order": [
       "envinit-Setup_simulation-setup_sim",
       "envinit-Setup_simulation-setup_domain_node",
+      "envinit-Setup_population-setup_pop",
       "envinit-Setup_substances-setup_all_substances",
       "envinit-Setup_associations-setup_all_associations"
     ],

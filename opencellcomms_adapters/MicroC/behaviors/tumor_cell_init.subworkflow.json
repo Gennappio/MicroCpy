@@ -3,7 +3,7 @@
   "name": "tumor_cell_init",
   "kind": "agent_init",
   "subworkflow": {
-    "description": "MicroC: tumor_cell_init (merged from v7 Setup_population, Init_gene_networks)",
+    "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
     "enabled": true,
     "deletable": true,
     "controller": {
@@ -17,24 +17,6 @@
       "number_of_steps": 1
     },
     "functions": [
-      {
-        "id": "agentinit-Setup_population-setup_pop",
-        "function_name": "setup_population",
-        "function_file": "",
-        "parameters": {
-          "enable_gene_network": true,
-          "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
-        },
-        "enabled": true,
-        "position": {
-          "x": 400,
-          "y": 100
-        },
-        "description": "Initialize population with gene network support",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
-      },
       {
         "id": "agentinit-Setup_population-read_checkpoint",
         "function_name": "read_checkpoint",
@@ -57,7 +39,7 @@
         "function_name": "initialize_netlogo_gene_networks",
         "function_file": "",
         "parameters": {
-          "bnd_file": "../data/jaya_microc.bnd",
+          "bnd_file": "../data/jaya.bnd",
           "random_initialization": true
         },
         "enabled": true,
@@ -86,7 +68,6 @@
       }
     ],
     "execution_order": [
-      "agentinit-Setup_population-setup_pop",
       "agentinit-Setup_population-read_checkpoint",
       "agentinit-Init_gene_networks-init_netlogo_gn"
     ],
