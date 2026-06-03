@@ -128,3 +128,13 @@
   color: #fca5a5;
   font-size: 11px;
 }
+
+.nf-validation-error {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 3px solid #f59e0b;
+  border-radius: 3px;
+  color: #fbbf24;
+  font-size: 12px;
+}

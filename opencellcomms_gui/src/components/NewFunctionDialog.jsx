@@ -54,10 +54,23 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
     setParameters(next);
   };
 
-  const canSubmit = name.trim() &&
-    /^[a-zA-Z][a-zA-Z0-9_]*$/.test(name.trim()) &&
-    filePath.trim().endsWith('.py') &&
-    parameters.every((p) => p.name.trim() && /^[a-zA-Z][a-zA-Z0-9_]*$/.test(p.name.trim()));
+  const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
+
+  // Explain exactly why submit is blocked (empty = ok to submit).
+  const validationError = (() => {
+    if (!name.trim()) return 'Enter a function name.';
+    if (!isValidIdent(name)) return 'Function name must start with a letter and use only letters, numbers, or underscores.';
+    if (!filePath.trim().endsWith('.py')) return 'File path must end with .py';
+    const badParam = parameters.findIndex((p) => !isValidIdent(p.name));
+    if (badParam !== -1) {
+      return parameters[badParam].name.trim()
+        ? `Parameter ${badParam + 1} ("${parameters[badParam].name}") has an invalid name — use letters, numbers, or underscores.`
+        : `Parameter ${badParam + 1} needs a name.`;
+    }
+    return '';
+  })();
+
+  const canSubmit = !validationError;
 
   const handleBrowse = async () => {
     setBrowsing(true);
@@ -188,6 +201,8 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
             </div>
           ))}
         </div>
+
+        {validationError && <div className="nf-validation-error">{validationError}</div>}
 
         <div className="dialog-actions">
           <button className="btn btn-secondary" onClick={onCancel} disabled={submitting}>Cancel</button>

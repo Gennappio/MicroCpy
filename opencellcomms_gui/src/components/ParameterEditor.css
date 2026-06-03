@@ -73,6 +73,23 @@
   line-height: 1.5;
 }
 
+.editor-staged-banner {
+  padding: 12px 24px;
+  background: rgba(245, 158, 11, 0.1);
+  border-bottom: 1px solid #fcd34d;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.editor-staged-banner code {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
 .editor-tabs {
   display: flex;
   border-bottom: 1px solid #e5e7eb;
