@@ -33,3 +33,6 @@ from opencellcomms_adapters.jayatilake.functions.finalization.generate_summary_p
 # from opencellcomms_adapters.jayatilake.functions.finalization.plot_concentration_heatmaps import plot_concentration_heatmaps  # legacy
 # from opencellcomms_adapters.jayatilake.functions.finalization.save_maboss_results import save_maboss_results  # legacy
 from opencellcomms_adapters.jayatilake.functions.initialization.ffuyf_init import ciaociao
+from opencellcomms_adapters.jayatilake.functions.initialization.cellula_init import mettiqua
+from opencellcomms_adapters.jayatilake.functions.intracellular.altrobehaviour import spostati
+from opencellcomms_adapters.jayatilake.functions.initialization.agent_init import agente1

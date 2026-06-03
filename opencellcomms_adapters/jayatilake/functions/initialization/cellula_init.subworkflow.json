@@ -1,0 +1,52 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "cellula_init",
+  "kind": "agent_init",
+  "description": "Initialization for cellula",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-03T10:32:25.631Z",
+  "subworkflow": {
+    "description": "Initialization for cellula",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-cellula_init",
+      "label": "CELLULA_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "mettiqua_1780482735054",
+        "function_name": "mettiqua",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 89.01196953691505,
+          "y": 246.40914040046172
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "mettiqua_1780482735054"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "mettiqua"
+    ]
+  }
+}
