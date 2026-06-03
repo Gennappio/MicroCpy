@@ -337,6 +337,23 @@ const WorkflowConsole = ({ workflowName }) => {
         throw new Error(`Subworkflow '${workflowName}' not found`);
       }
 
+      // Count enabled function nodes across all subworkflows.
+      // Refuse to run if the canvas is empty — there is nothing to execute.
+      const enabledFunctionCount = Object.values(fullWorkflow.subworkflows || {})
+        .flatMap((sw) => sw.nodes || [])
+        .filter((n) => n.type === 'workflowFunction' && n.enabled !== false)
+        .length;
+
+      if (enabledFunctionCount === 0) {
+        const timestamp = new Date().toLocaleTimeString();
+        setDisplayedLogs([{
+          type: 'warning',
+          message: 'No functions on the canvas. Add and enable nodes before running.',
+          timestamp,
+        }]);
+        return;
+      }
+
       const activeTabs = getActivePlannerTabs();
       setIsRunning(true);
 
