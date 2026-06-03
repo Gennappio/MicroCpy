@@ -135,7 +135,16 @@ const WorkflowCanvas = ({ stage }) => {
   // Sync local state with store when store changes (e.g., workflow loaded)
   React.useEffect(() => {
     isSyncingFromStore.current = true;
-    const newNodes = stageNodes[stage] || [];
+    const rawNodes = stageNodes[stage] || [];
+
+    // onEdit is a live callback — it is never serialised to the store.
+    // Re-attach it to every workflowFunction node coming from the store so
+    // the cog button works after loading a workflow from file.
+    const newNodes = rawNodes.map((n) =>
+      n.type === 'workflowFunction' && !n.data.onEdit
+        ? { ...n, data: { ...n.data, onEdit: createOnEditCallback(n.id) } }
+        : n
+    );
 
     // Check for any controller/init node (either by type or by id pattern)
     const hasControllerNode = newNodes.some(n =>
