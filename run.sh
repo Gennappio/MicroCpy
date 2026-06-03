@@ -9,6 +9,25 @@ echo "║              OpenCellComms Launcher                          ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
+# Parse arguments
+VERBOSE=0
+for arg in "$@"; do
+    case "$arg" in
+        -v|--verbose)
+            VERBOSE=1
+            ;;
+        -h|--help)
+            echo "Usage: ./run.sh [-v|--verbose]"
+            echo "  -v, --verbose   Stream backend server activity logs to the terminal"
+            exit 0
+            ;;
+        *)
+            echo "[!] Unknown option: $arg (use --help)"
+            exit 1
+            ;;
+    esac
+done
+
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -45,8 +64,15 @@ trap cleanup SIGINT SIGTERM
 # Start Flask backend server
 echo "[...] Starting backend server..."
 cd opencellcomms_gui/server
-python api.py > /dev/null 2>&1 &
-BACKEND_PID=$!
+if [ "$VERBOSE" -eq 1 ]; then
+    echo "[i] Verbose mode: streaming backend logs below"
+    # Process substitution keeps BACKEND_PID as the python PID (not the prefixer)
+    python api.py > >(sed 's/^/[backend] /') 2>&1 &
+    BACKEND_PID=$!
+else
+    python api.py > /dev/null 2>&1 &
+    BACKEND_PID=$!
+fi
 cd ../..
 
 # Wait for backend to start
