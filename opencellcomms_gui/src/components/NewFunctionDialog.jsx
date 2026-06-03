@@ -85,7 +85,16 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
       if (data.cancelled) {
         // user cancelled; do nothing
       } else if (data.path) {
-        setFilePath(data.path);
+        // Prefer the repo-relative path; the system imports functions from
+        // inside the repo, so an absolute path elsewhere won't work.
+        const chosen = data.relative_path || data.path;
+        setFilePath(chosen);
+        if (!/^opencellcomms_adapters\/|^opencellcomms_engine\/src\//.test(chosen)) {
+          setBrowseError(
+            'That location is outside opencellcomms_adapters/ or opencellcomms_engine/src/, ' +
+            'so the function can’t be imported. Choose a folder inside one of those.'
+          );
+        }
       } else if (data.error) {
         setBrowseError(data.error);
       }

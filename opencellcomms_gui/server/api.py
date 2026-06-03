@@ -886,7 +886,16 @@ def save_dialog():
             return jsonify({'error': f'Dialog failed: {proc.stderr.strip() or "unknown"}'}), 500
         if not chosen:
             return jsonify({'cancelled': True})
-        return jsonify({'path': chosen})
+
+        # The native dialog returns an absolute path. Most of the app expects a
+        # repo-relative path (e.g. opencellcomms_adapters/...). Provide both so
+        # callers can show the clean relative form when the pick is inside the repo.
+        relative_path = None
+        try:
+            relative_path = str(Path(chosen).resolve().relative_to(repo_root))
+        except ValueError:
+            relative_path = None
+        return jsonify({'path': chosen, 'relative_path': relative_path})
 
     except Exception as e:
         return jsonify({'error': f'Save dialog failed: {e} — type the path manually'}), 500
