@@ -19,9 +19,17 @@ from pathlib import Path
 SERVER_DIR = Path(__file__).parent
 ENV_PATH = SERVER_DIR / ".env"
 
-KEY_VAR = "OPENCELLCOMMS_ANTHROPIC_KEY"
+ANTHROPIC_KEY_VAR = "OPENCELLCOMMS_ANTHROPIC_KEY"
+OPENROUTER_KEY_VAR = "OPENCELLCOMMS_OPENROUTER_KEY"
+PROVIDER_VAR = "OPENCELLCOMMS_AGENT_PROVIDER"
 MODEL_VAR = "OPENCELLCOMMS_AGENT_MODEL"
-DEFAULT_MODEL = "claude-sonnet-4-6"
+
+DEFAULT_PROVIDER = "anthropic"
+DEFAULT_MODELS = {
+    "anthropic": "claude-sonnet-4-6",
+    "openrouter": "anthropic/claude-3.5-sonnet",
+}
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 class AgentNotConfigured(Exception):
@@ -55,33 +63,52 @@ def _write_env_file(values):
         pass
 
 
-def set_config(api_key=None, model=None):
-    """Persist the API key and/or model to .env, preserving other values."""
+def set_config(provider=None, model=None, anthropic_key=None, openrouter_key=None):
+    """Persist provider/model/keys to .env, preserving other values.
+
+    Keys are stored per-provider so the user can switch providers without
+    re-entering credentials.
+    """
     values = _read_env_file()
-    if api_key:
-        values[KEY_VAR] = api_key
+    if provider:
+        values[PROVIDER_VAR] = provider
     if model:
         values[MODEL_VAR] = model
+    if anthropic_key:
+        values[ANTHROPIC_KEY_VAR] = anthropic_key
+    if openrouter_key:
+        values[OPENROUTER_KEY_VAR] = openrouter_key
     _write_env_file(values)
 
 
-def get_config():
-    """Return a safe, frontend-facing view of the config (never the raw key)."""
-    values = _read_env_file()
-    key = values.get(KEY_VAR, "")
-    model = values.get(MODEL_VAR, DEFAULT_MODEL)
+def _mask(key):
     if len(key) > 12:
-        masked = f"{key[:6]}…{key[-4:]}"
-    elif key:
-        masked = "set"
-    else:
-        masked = ""
-    return {"configured": bool(key), "model": model, "key_masked": masked}
+        return f"{key[:6]}…{key[-4:]}"
+    return "set" if key else ""
 
 
-def get_api_key():
-    """Return the configured key from .env, falling back to the process env."""
-    return _read_env_file().get(KEY_VAR, "") or os.environ.get(KEY_VAR, "")
+def get_config():
+    """Return a safe, frontend-facing view of the config (never the raw keys)."""
+    values = _read_env_file()
+    provider = values.get(PROVIDER_VAR, DEFAULT_PROVIDER)
+    model = values.get(MODEL_VAR) or DEFAULT_MODELS.get(provider, "")
+    anthropic_key = values.get(ANTHROPIC_KEY_VAR, "")
+    openrouter_key = values.get(OPENROUTER_KEY_VAR, "")
+    current_key = anthropic_key if provider == "anthropic" else openrouter_key
+    return {
+        "provider": provider,
+        "model": model,
+        "anthropic_configured": bool(anthropic_key),
+        "openrouter_configured": bool(openrouter_key),
+        "configured": bool(current_key),
+        "key_masked": _mask(current_key),
+    }
+
+
+def get_api_key(provider):
+    """Return the configured key for a provider, falling back to the process env."""
+    var = ANTHROPIC_KEY_VAR if provider == "anthropic" else OPENROUTER_KEY_VAR
+    return _read_env_file().get(var, "") or os.environ.get(var, "")
 
 
 # ---------------------------------------------------------------------------
@@ -190,39 +217,90 @@ def _split_code_and_explanation(text):
 # Claude call
 # ---------------------------------------------------------------------------
 
-def generate_function(prompt, function_name="", category="", current_source="", model=None):
-    """Generate the complete updated source file for a node's function.
-
-    Returns {"code": <full file>, "explanation": <prose>}.
-    Raises AgentNotConfigured if no key is set.
-    """
-    api_key = get_api_key()
-    if not api_key:
-        raise AgentNotConfigured(
-            "No Anthropic API key configured. Open Settings and add your key."
-        )
-
+def _call_anthropic(api_key, model, system, user):
     try:
         import anthropic
     except ImportError as e:
         raise RuntimeError(
             "The 'anthropic' package is not installed. Run: pip install anthropic"
         ) from e
-
-    chosen_model = model or _read_env_file().get(MODEL_VAR, DEFAULT_MODEL)
     client = anthropic.Anthropic(api_key=api_key)
-
     response = client.messages.create(
-        model=chosen_model,
+        model=model,
         max_tokens=4000,
-        system=build_system_prompt(category, current_source),
-        messages=[
-            {"role": "user", "content": build_user_message(prompt, function_name, category, current_source)}
-        ],
+        system=system,
+        messages=[{"role": "user", "content": user}],
     )
-
-    text = "".join(
+    return "".join(
         block.text for block in response.content if getattr(block, "type", None) == "text"
     )
+
+
+def _call_openrouter(api_key, model, system, user):
+    """Call OpenRouter's OpenAI-compatible chat endpoint (stdlib HTTP, no extra dep)."""
+    import json
+    import urllib.request
+    import urllib.error
+
+    payload = {
+        "model": model,
+        "max_tokens": 4000,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    }
+    req = urllib.request.Request(
+        OPENROUTER_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            # Optional attribution headers recommended by OpenRouter.
+            "HTTP-Referer": "https://github.com/Gennappio/MicroCpy",
+            "X-Title": "OpenCellComms",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "ignore")
+        raise RuntimeError(f"OpenRouter API error {e.code}: {detail[:300]}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Could not reach OpenRouter: {e.reason}")
+    return data["choices"][0]["message"]["content"]
+
+
+def generate_function(prompt, function_name="", category="", current_source="",
+                      model=None, provider=None):
+    """Generate the complete updated source file for a node's function.
+
+    Routes to the configured provider (Anthropic direct, or OpenRouter for any
+    model). Returns {"code": <full file>, "explanation": <prose>, "model", "provider"}.
+    Raises AgentNotConfigured if no key is set for the active provider.
+    """
+    values = _read_env_file()
+    provider = provider or values.get(PROVIDER_VAR, DEFAULT_PROVIDER)
+    chosen_model = model or values.get(MODEL_VAR) or DEFAULT_MODELS.get(provider, "")
+
+    api_key = get_api_key(provider)
+    if not api_key:
+        label = "OpenRouter" if provider == "openrouter" else "Anthropic"
+        raise AgentNotConfigured(
+            f"No {label} API key configured. Open Settings and add your key."
+        )
+    if not chosen_model:
+        raise AgentNotConfigured("No model selected. Open Settings and choose a model.")
+
+    system = build_system_prompt(category, current_source)
+    user = build_user_message(prompt, function_name, category, current_source)
+
+    if provider == "openrouter":
+        text = _call_openrouter(api_key, chosen_model, system, user)
+    else:
+        text = _call_anthropic(api_key, chosen_model, system, user)
+
     code, explanation = _split_code_and_explanation(text)
-    return {"code": code, "explanation": explanation, "model": chosen_model}
+    return {"code": code, "explanation": explanation, "model": chosen_model, "provider": provider}

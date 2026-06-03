@@ -1876,14 +1876,21 @@ def get_agent_config():
 
 @app.route('/api/agent/config', methods=['POST'])
 def set_agent_config():
-    """Persist the user's Anthropic API key and/or model to the gitignored .env."""
+    """Persist the provider, model, and per-provider API keys to the gitignored .env."""
     try:
         data = request.json or {}
-        api_key = data.get('api_key')
+        provider = data.get('provider')
         model = data.get('model')
-        if not api_key and not model:
-            return jsonify({'error': 'Provide api_key and/or model'}), 400
-        agent.set_config(api_key=api_key, model=model)
+        anthropic_key = data.get('anthropic_key')
+        openrouter_key = data.get('openrouter_key')
+        if not any([provider, model, anthropic_key, openrouter_key]):
+            return jsonify({'error': 'Nothing to update'}), 400
+        agent.set_config(
+            provider=provider,
+            model=model,
+            anthropic_key=anthropic_key,
+            openrouter_key=openrouter_key,
+        )
         return jsonify({'success': True, **agent.get_config()})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1904,6 +1911,7 @@ def agent_generate():
             category=data.get('category') or '',
             current_source=data.get('current_source') or '',
             model=data.get('model'),
+            provider=data.get('provider'),
         )
         return jsonify({'success': True, **result})
     except agent.AgentNotConfigured as e:

@@ -1,24 +1,45 @@
 import { useState, useEffect } from 'react';
-import { X, Save, KeyRound, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Save, KeyRound, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import './AgentSettings.css';
 
 const API_BASE_URL = 'http://localhost:5001';
 
-const MODEL_OPTIONS = [
+const PROVIDERS = [
+  { value: 'anthropic', label: 'Anthropic (direct)' },
+  { value: 'openrouter', label: 'OpenRouter (many LLMs)' },
+];
+
+// Suggested models per provider. Anthropic is a fixed list; OpenRouter is an
+// open text field with a few common suggestions (any openrouter.ai model id works).
+const ANTHROPIC_MODELS = [
   { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (fast, cheaper)' },
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (most capable)' },
 ];
+const OPENROUTER_SUGGESTIONS = [
+  'anthropic/claude-3.5-sonnet',
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
+  'google/gemini-2.0-flash-001',
+  'meta-llama/llama-3.3-70b-instruct',
+  'deepseek/deepseek-chat',
+];
+const DEFAULT_MODEL = { anthropic: 'claude-sonnet-4-6', openrouter: 'anthropic/claude-3.5-sonnet' };
 
 /**
  * AI Coding Agent settings modal.
- * Lets the user store their Claude API token (server-side in a gitignored .env)
- * and pick the model used for in-node code generation. The raw key is never
- * returned to the browser — only a masked preview and a "configured" flag.
+ * Stores the user's API key(s) server-side in a gitignored .env (never returned
+ * to the browser) and lets them pick a provider + model for in-node code
+ * generation. Keys are kept per-provider so switching providers does not require
+ * re-entering credentials.
  */
 const AgentSettings = ({ onClose }) => {
+  const [provider, setProvider] = useState('anthropic');
+  const [model, setModel] = useState(DEFAULT_MODEL.anthropic);
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('claude-sonnet-4-6');
-  const [config, setConfig] = useState({ configured: false, key_masked: '' });
+  const [config, setConfig] = useState({
+    anthropic_configured: false,
+    openrouter_configured: false,
+  });
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null); // { type: 'success'|'error', message }
 
@@ -31,7 +52,11 @@ const AgentSettings = ({ onClose }) => {
       const res = await fetch(`${API_BASE_URL}/api/agent/config`);
       const data = await res.json();
       if (data.success) {
-        setConfig({ configured: data.configured, key_masked: data.key_masked });
+        setConfig({
+          anthropic_configured: data.anthropic_configured,
+          openrouter_configured: data.openrouter_configured,
+        });
+        if (data.provider) setProvider(data.provider);
         if (data.model) setModel(data.model);
       }
     } catch (err) {
@@ -39,12 +64,25 @@ const AgentSettings = ({ onClose }) => {
     }
   };
 
+  const handleProviderChange = (newProvider) => {
+    setProvider(newProvider);
+    setModel(DEFAULT_MODEL[newProvider] || '');
+    setApiKey(''); // key field is per-provider; clear the input on switch
+    setStatus(null);
+  };
+
+  const isCurrentConfigured =
+    provider === 'anthropic' ? config.anthropic_configured : config.openrouter_configured;
+
   const handleSave = async () => {
     setSaving(true);
     setStatus(null);
     try {
-      const body = { model };
-      if (apiKey.trim()) body.api_key = apiKey.trim();
+      const body = { provider, model };
+      if (apiKey.trim()) {
+        if (provider === 'anthropic') body.anthropic_key = apiKey.trim();
+        else body.openrouter_key = apiKey.trim();
+      }
       const res = await fetch(`${API_BASE_URL}/api/agent/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,7 +90,10 @@ const AgentSettings = ({ onClose }) => {
       });
       const data = await res.json();
       if (data.success) {
-        setConfig({ configured: data.configured, key_masked: data.key_masked });
+        setConfig({
+          anthropic_configured: data.anthropic_configured,
+          openrouter_configured: data.openrouter_configured,
+        });
         setApiKey('');
         setStatus({ type: 'success', message: 'Settings saved.' });
       } else {
@@ -65,6 +106,11 @@ const AgentSettings = ({ onClose }) => {
     }
   };
 
+  const keyLabel = provider === 'anthropic' ? 'Anthropic API key' : 'OpenRouter API key';
+  const keyPlaceholder =
+    (provider === 'anthropic' ? 'sk-ant-...' : 'sk-or-...') +
+    (isCurrentConfigured ? '  (enter a new key to replace the current one)' : '');
+
   return (
     <div className="agent-settings-overlay" onClick={onClose}>
       <div className="agent-settings" onClick={(e) => e.stopPropagation()}>
@@ -75,39 +121,74 @@ const AgentSettings = ({ onClose }) => {
 
         <div className="agent-settings-body">
           <p className="agent-settings-desc">
-            Paste your Claude API key to generate function code from a prompt at any node.
-            The key is stored on your machine in the server's <code>.env</code> file
-            (gitignored) and never leaves your computer except to call the Claude API.
+            Generate function code from a prompt at any node. Choose a provider and model.
+            Keys are stored on your machine in the server's <code>.env</code> file (gitignored)
+            and never leave your computer except to call the chosen provider.
           </p>
 
+          <label className="agent-settings-label">Provider</label>
+          <select
+            className="agent-settings-input"
+            value={provider}
+            onChange={(e) => handleProviderChange(e.target.value)}
+          >
+            {PROVIDERS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+
           <div className="agent-settings-status-line">
-            {config.configured ? (
-              <span className="configured"><CheckCircle size={14} /> Key configured ({config.key_masked})</span>
+            {isCurrentConfigured ? (
+              <span className="configured"><CheckCircle size={14} /> Key configured for this provider</span>
             ) : (
-              <span className="not-configured"><AlertCircle size={14} /> No key configured yet</span>
+              <span className="not-configured"><AlertCircle size={14} /> No key configured for this provider</span>
             )}
           </div>
 
-          <label className="agent-settings-label">Claude API key</label>
+          <label className="agent-settings-label">{keyLabel}</label>
           <input
             type="password"
             className="agent-settings-input"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder={config.configured ? 'Enter a new key to replace the current one' : 'sk-ant-...'}
+            placeholder={keyPlaceholder}
             autoComplete="off"
           />
 
           <label className="agent-settings-label">Model</label>
-          <select
-            className="agent-settings-input"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          >
-            {MODEL_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          {provider === 'anthropic' ? (
+            <select
+              className="agent-settings-input"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            >
+              {ANTHROPIC_MODELS.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                type="text"
+                className="agent-settings-input"
+                list="openrouter-models"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. anthropic/claude-3.5-sonnet"
+              />
+              <datalist id="openrouter-models">
+                {OPENROUTER_SUGGESTIONS.map((m) => <option key={m} value={m} />)}
+              </datalist>
+              <a
+                className="agent-settings-link"
+                href="https://openrouter.ai/models"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Browse all OpenRouter models <ExternalLink size={12} />
+              </a>
+            </>
+          )}
 
           {status && (
             <div className={`agent-settings-message ${status.type}`}>
