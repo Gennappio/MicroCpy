@@ -16,6 +16,7 @@ from src.biology.context import BiologicalContext
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def prey_detect_threat(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -36,6 +37,7 @@ def prey_detect_threat(env: BiologicalContext = None, intensity=1.0, verbose=Fal
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def prey_sprint(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -56,6 +58,7 @@ def prey_sprint(env: BiologicalContext = None, intensity=1.0, verbose=False, **k
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def prey_hide(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')

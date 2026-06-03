@@ -11,8 +11,10 @@ A kernel defines:
 - Compatible function categories
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Type, Any, Callable, Optional
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Set, Type, Any, Callable, Optional, Union
 from abc import ABC
 
 from src.workflow.observability.validated_context import (
@@ -42,9 +44,32 @@ class KernelDefinition:
     # Initialization function that sets up the kernel
     # Returns True if successful, False otherwise
     initializer: Callable[[Dict[str, Any], Dict[str, Any]], bool]
-    
+
     # Compatible function categories (optional - for filtering in GUI)
     compatible_categories: Optional[List[str]] = None
+
+    # Stable identifier (defaults to `name`) and version, stored in workflow
+    # files for provenance.
+    kernel_id: Optional[str] = None
+    version: str = "1.0"
+
+    # Extra capability tokens this kernel provides beyond its core context keys.
+    # Reserved ontology tokens use the form "substance:<name>", "gene:<name>",
+    # "phenotype:<name>"; structural tokens are bare context keys.
+    extra_provides: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.kernel_id is None:
+            self.kernel_id = self.name
+
+    def provides(self) -> Set[str]:
+        """Capability tokens this kernel guarantees in the context.
+
+        Structural tokens are derived from `core_keys` (the context keys the
+        kernel sets up); `extra_provides` adds any further declared capabilities.
+        A function is compatible when its `requires` is a subset of this set.
+        """
+        return set(self.core_keys.keys()) | set(self.extra_provides)
 
 
 def _initialize_biophysics(context: Dict[str, Any], params: Dict[str, Any]) -> bool:
@@ -138,7 +163,9 @@ BIOPHYSICS_KERNEL = KernelDefinition(
         'mesh_manager': IMeshManager,
     },
     initializer=_initialize_biophysics,
-    compatible_categories=["INITIALIZATION", "INTRACELLULAR", "DIFFUSION", "INTERCELLULAR", "FINALIZATION", "UTILITY"]
+    compatible_categories=["INITIALIZATION", "INTRACELLULAR", "DIFFUSION", "INTERCELLULAR", "FINALIZATION", "UTILITY"],
+    kernel_id="biophysics",
+    version="1.0",
 )
 
 register_kernel(BIOPHYSICS_KERNEL)
@@ -168,8 +195,69 @@ PHYSICELL_KERNEL = KernelDefinition(
     required_interfaces={},
     initializer=_initialize_physicell,
     compatible_categories=["INITIALIZATION"],
+    kernel_id="physicell",
+    version="1.0",
 )
 
 register_kernel(PHYSICELL_KERNEL)
+
+
+# -- Data-file kernels -------------------------------------------------------
+#
+# Lightweight kernels declared as JSON so the default biological kernel can be
+# modified or extended without editing engine code. A data kernel only needs to
+# declare what it `provides`; it has no Python initializer or interfaces (those
+# are only required by the built-in kernels above).
+
+def _make_data_initializer(kernel_name: str) -> Callable[[Dict[str, Any], Dict[str, Any]], bool]:
+    def _init(context: Dict[str, Any], params: Dict[str, Any]) -> bool:
+        context['kernel_type'] = kernel_name
+        return True
+    return _init
+
+
+def load_kernel_files(directory: Union[str, Path]) -> int:
+    """Load and register data-file kernels from `directory`/*.json.
+
+    Each file declares: {kernel_id, name, description, provides,
+    compatible_categories, version}. Missing or malformed files are skipped
+    with a warning. Returns the number of kernels registered.
+    """
+    directory = Path(directory)
+    if not directory.is_dir():
+        return 0
+
+    count = 0
+    for path in sorted(directory.glob("*.json")):
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[KERNEL REGISTRY] Skipping {path.name}: {e}")
+            continue
+
+        name = data.get("name") or data.get("kernel_id")
+        if not name:
+            print(f"[KERNEL REGISTRY] Skipping {path.name}: missing 'name'/'kernel_id'")
+            continue
+
+        register_kernel(KernelDefinition(
+            name=name,
+            description=data.get("description", ""),
+            core_keys={},
+            required_interfaces={},
+            initializer=_make_data_initializer(name),
+            compatible_categories=data.get("compatible_categories"),
+            kernel_id=data.get("kernel_id", name),
+            version=data.get("version", "1.0"),
+            extra_provides=list(data.get("provides", [])),
+        ))
+        count += 1
+
+    return count
+
+
+# Load any data-file kernels shipped alongside the engine.
+load_kernel_files(Path(__file__).parent / "kernels")
 
 

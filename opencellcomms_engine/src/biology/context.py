@@ -29,6 +29,24 @@ if TYPE_CHECKING:
 Position = Union[Tuple[int, int], Tuple[int, int, int], Tuple[float, ...]]
 
 
+class KernelContractError(RuntimeError):
+    """Raised when a typed view is used but the capability backing it is absent.
+
+    Almost always means the function accessed (e.g.) ``env.cells`` without
+    declaring ``requires=['population']``, or is running under a kernel that does
+    not provide that capability. Failing loudly here beats silently returning
+    empty results that produce wrong science downstream.
+    """
+
+
+def _missing_capability(token: str, accessor: str) -> 'KernelContractError':
+    return KernelContractError(
+        f"{accessor} was used but the simulation context provides no '{token}'. "
+        f"Declare requires=['{token}'] on this function and run it under a kernel "
+        f"that provides '{token}' (e.g. the biophysics kernel)."
+    )
+
+
 class Phenotype(str, Enum):
     """Cell fate values.
 
@@ -187,22 +205,21 @@ class PopulationView:
     def _population(self) -> Optional['CellPopulation']:
         return self._env._ctx.get('population')
 
-    def __iter__(self) -> Iterator[CellHandle]:
+    def _require_population(self) -> 'CellPopulation':
         pop = self._population()
         if pop is None:
-            return iter(())
+            raise _missing_capability('population', 'env.cells')
+        return pop
+
+    def __iter__(self) -> Iterator[CellHandle]:
+        pop = self._require_population()
         return (CellHandle(c, self._env) for c in pop.state.cells.values())
 
     def __len__(self) -> int:
-        pop = self._population()
-        if pop is None:
-            return 0
-        return len(pop.state.cells)
+        return len(self._require_population().state.cells)
 
     def by_id(self, cell_id: str) -> Optional[CellHandle]:
-        pop = self._population()
-        if pop is None:
-            return None
+        pop = self._require_population()
         cell = pop.state.cells.get(cell_id)
         return CellHandle(cell, self._env) if cell is not None else None
 
@@ -213,17 +230,12 @@ class PopulationView:
     def add(self,
             position: Position,
             phenotype: Union[Phenotype, str] = Phenotype.GROWTH_ARREST) -> bool:
-        pop = self._population()
-        if pop is None:
-            return False
+        pop = self._require_population()
         value = phenotype.value if isinstance(phenotype, Phenotype) else str(phenotype)
         return pop.add_cell(position, value)
 
     def statistics(self) -> Dict[str, Any]:
-        pop = self._population()
-        if pop is None:
-            return {}
-        return pop.get_population_statistics()
+        return self._require_population().get_population_statistics()
 
     @property
     def raw(self) -> Optional['CellPopulation']:
@@ -248,7 +260,7 @@ class EnvironmentView:
         if self._cached_concentrations is None:
             sim = self._simulator()
             if sim is None:
-                self._cached_concentrations = {}
+                raise _missing_capability('simulator', 'env.environment / env.concentration')
             else:
                 try:
                     self._cached_concentrations = sim.get_substance_concentrations()
@@ -312,7 +324,7 @@ class EnvironmentView:
     def summary(self) -> Dict[str, Dict[str, float]]:
         sim = self._simulator()
         if sim is None:
-            return {}
+            raise _missing_capability('simulator', 'env.environment.summary')
         try:
             return sim.get_summary_statistics()
         except Exception:
@@ -527,4 +539,5 @@ __all__ = [
     'EnvironmentView',
     'ResultsView',
     'Phenotype',
+    'KernelContractError',
 ]

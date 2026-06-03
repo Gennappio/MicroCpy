@@ -232,6 +232,24 @@ class WorkflowExecutor:
                 error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
             raise ValueError(error_msg)
 
+        # Validate that every enabled function is compatible with the kernel.
+        # A function declares the capability tokens it `requires`; the kernel
+        # declares what it `provides`. Mismatches fail loudly here, before any
+        # step runs, instead of deep inside a per-cell loop.
+        from src.workflow.kernel_validation import validate_kernel_compatibility
+        kernel_violations = validate_kernel_compatibility(workflow, self.registry)
+        if kernel_violations:
+            error_msg = (
+                f"\n{'='*80}\n"
+                f"❌ KERNEL COMPATIBILITY ERROR\n"
+                f"{'='*80}\n"
+                f"Workflow kernel: {workflow.kernel}\n\n"
+                f"The following functions are incompatible with the selected kernel:\n"
+                + "\n".join(f"  - {v}" for v in kernel_violations)
+                + f"\n{'='*80}\n"
+            )
+            raise ValueError(error_msg)
+
     def initialize_observability(self) -> None:
         """Initialize observability systems. Call once before execution starts."""
         if self._event_emitter:

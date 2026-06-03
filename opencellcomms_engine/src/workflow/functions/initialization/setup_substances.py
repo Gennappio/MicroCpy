@@ -40,6 +40,7 @@ def _parse_substances(substances: List[Union[str, Dict[str, Any]]]) -> List[Dict
 
 
 @register_function(
+    requires=['simulator'],
     display_name="Setup Substances",
     description="Initialize substances and diffusion simulator",
     category="INITIALIZATION",

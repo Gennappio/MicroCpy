@@ -13,6 +13,7 @@ from src.interfaces.base import IGeneNetwork
 
 
 @register_function(
+    requires=['gene_networks'],
     display_name="Get Gene Network States",
     description="Retrieve current gene network states for specified cells",
     category="INTRACELLULAR",

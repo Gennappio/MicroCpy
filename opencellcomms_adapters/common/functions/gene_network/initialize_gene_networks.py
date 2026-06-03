@@ -44,6 +44,7 @@ def set_gene_network(context: Dict[str, Any], cell_id: str, gene_network: IGeneN
 
 
 @register_function(
+    requires=['gene_network', 'gene_networks', 'population'],
     display_name="Initialize Gene Networks",
     description="Create gene networks for all cells in population (stored in context['gene_networks'])",
     category="INITIALIZATION",

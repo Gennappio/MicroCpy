@@ -22,6 +22,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Update Cell Migration",
     description="Handle cell migration with chemotaxis and random walk",
     category="INTERCELLULAR",

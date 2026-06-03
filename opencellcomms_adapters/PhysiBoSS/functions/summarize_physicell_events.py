@@ -24,6 +24,7 @@ _RATE_LABELS = {
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Summarize PhysiCell Events",
     description=(
         "Read context['physicell']['events_jsonl'] and print a per-event-type "

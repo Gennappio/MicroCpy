@@ -17,6 +17,7 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulat
 
 
 @register_function(
+    requires=['gene_networks', 'population', 'simulator'],
     display_name="Update Gene Networks V2 (Fixed)",
     description="FIXED: Properly propagates gene networks using proven standalone logic. Logs mitoATP/glycoATP states.",
     category="INTRACELLULAR",

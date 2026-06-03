@@ -19,6 +19,7 @@ from ._mock_helpers import (
 
 
 @register_function(
+    requires=['gene_networks', 'simulator'],
     display_name="Initialize Population",
     description="Create a population with N cells (without gene networks). Works for both testing and full simulation.",
     category="INITIALIZATION",

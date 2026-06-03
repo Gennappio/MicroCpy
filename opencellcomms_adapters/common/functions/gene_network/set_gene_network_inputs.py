@@ -13,6 +13,7 @@ from src.interfaces.base import IGeneNetwork
 
 
 @register_function(
+    requires=['gene_networks', 'population'],
     display_name="Set Gene Network Input States",
     description="Set input node states for all cells. These stay FIXED during propagation.",
     category="INITIALIZATION",

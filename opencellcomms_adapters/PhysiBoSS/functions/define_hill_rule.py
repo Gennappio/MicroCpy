@@ -15,6 +15,7 @@ def _ensure_spec(context: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Define Hill Rule (PhysiCell)",
     description=(
         "Append a CBHG-grammar Hill rule to context['physicell_spec']. "

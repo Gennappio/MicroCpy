@@ -13,6 +13,7 @@ from src.interfaces.base import ICellPopulation, IConfig
 
 
 @register_function(
+    requires=['gene_networks', 'population', 'simulator'],
     display_name="Apply Associations to Inputs",
     description="Set gene input states based on substance concentrations and association thresholds",
     category="INITIALIZATION",

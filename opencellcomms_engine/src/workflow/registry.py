@@ -56,6 +56,7 @@ class FunctionMetadata:
     module_path: str = ""  # Where to find this function
     source_file: str = ""  # Path to source file (for GUI code viewer)
     compatible_kernels: Optional[List[str]] = None  # Which kernels this function works with (None = all kernels, ["*"] = all kernels, ["biophysics"] = only biophysics)
+    requires: Optional[List[str]] = None  # Capability tokens this function needs from the kernel (None/[] = no requirement). A workflow fails to load if its kernel does not provide all of these.
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -81,7 +82,9 @@ class FunctionMetadata:
             "outputs": self.outputs,
             "cloneable": self.cloneable,
             "module_path": self.module_path,
-            "source_file": self.source_file
+            "source_file": self.source_file,
+            "compatible_kernels": self.compatible_kernels,
+            "requires": self.requires
         }
 
 

@@ -12,6 +12,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Export Final State",
     description="Export final simulation state (cells and substances) to files",
     category="FINALIZATION",

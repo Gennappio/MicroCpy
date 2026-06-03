@@ -30,6 +30,8 @@ DEBUG_COUPLED_SOLVER = False
 
 
 @register_function(
+    requires=['population', 'simulator'],
+    typed_env_exempt=True,
     display_name="Run Diffusion Solver (Coupled)",
     description="Solve diffusion PDE with iterative coupling to prevent negative concentrations",
     category="DIFFUSION",

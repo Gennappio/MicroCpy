@@ -49,6 +49,7 @@ _DEFAULT_USER_PARAMETERS = {"number_of_cells": 5}
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Run PhysiCell Simulation",
     description=(
         "Codegen → make → spawn → tail. Reads substrates / cell types / "

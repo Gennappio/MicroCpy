@@ -16,6 +16,7 @@ from src.biology.context import BiologicalContext
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def snapshot_state(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -36,6 +37,7 @@ def snapshot_state(env: BiologicalContext = None, intensity=1.0, verbose=False, 
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def dump_grid(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -56,6 +58,7 @@ def dump_grid(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwa
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def log_env_step(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')

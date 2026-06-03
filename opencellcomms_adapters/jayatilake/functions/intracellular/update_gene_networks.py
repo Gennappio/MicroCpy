@@ -19,6 +19,7 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulat
 
 
 @register_function(
+    requires=['gene_networks', 'population', 'simulator'],
     display_name="Update Gene Networks",
     description="Update gene network states and propagate signals",
     category="INTRACELLULAR",

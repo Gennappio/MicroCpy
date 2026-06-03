@@ -54,6 +54,7 @@ See run_diffusion_solver.py for the canonical reference implementation.
 
 import inspect
 import os
+import warnings
 from typing import Callable, List, Dict, Any, Optional, Union
 from functools import wraps
 
@@ -64,6 +65,13 @@ from src.workflow.registry import (
     ParameterType,
     ParameterDefinition
 )
+
+
+# Migration policy for the typed `env: BiologicalContext` API.
+#   False -> warn on legacy `context`-dict signatures (gradual migration).
+#   True  -> reject them at registration (after migration is complete).
+# Flip this single flag to make the typed env mandatory.
+ENFORCE_TYPED_ENV = False
 
 
 # Global registry instance for decorator-based registrations
@@ -266,7 +274,9 @@ def register_function(
     inputs: Optional[List[str]] = None,
     outputs: Optional[List[str]] = None,
     cloneable: bool = False,
-    compatible_kernels: Optional[List[str]] = None
+    compatible_kernels: Optional[List[str]] = None,
+    requires: Optional[List[str]] = None,
+    typed_env_exempt: bool = False
 ) -> Callable:
     """
     Decorator for registering workflow functions.
@@ -295,6 +305,17 @@ def register_function(
         outputs: Optional list of output names
         cloneable: Whether the function can be cloned/customized in the GUI
         compatible_kernels: List of kernel names this function is compatible with (None or ["*"] = all kernels)
+        typed_env_exempt: Set True for functions that intentionally use the raw
+            `context` dict (e.g. PhysiCell-facade functions with no biological
+            context, or core functions doing low-level population/state surgery).
+            Suppresses the migration-to-`env` warning. Prefer `env` for new and
+            cell/substance/gene-centric functions.
+        requires: Capability tokens this function needs from the active kernel.
+            A workflow fails to load (loudly) if its kernel does not provide all
+            of these. Structural tokens are bare context keys the function reads
+            (e.g. "population", "simulator", "gene_networks"). Reserved ontology
+            tokens use the form "substance:<name>", "gene:<name>",
+            "phenotype:<name>". None/[] means the function runs under any kernel.
 
     Returns:
         Decorated function with registration metadata
@@ -341,6 +362,23 @@ def register_function(
         # =====================================================================
         _validate_function_signature(func, input_list, func_name, source_file)
 
+        # Nudge migration toward the typed `env: BiologicalContext` API. Legacy
+        # `context`-dict functions keep working (they get no type safety and
+        # access the context by string key), so warn rather than break — unless
+        # ENFORCE_TYPED_ENV is on, in which case reject.
+        first_param = next(iter(inspect.signature(func).parameters.values()), None)
+        if not typed_env_exempt and first_param is not None and first_param.name == 'context':
+            message = (
+                f"'{func_name}' ({source_file}) uses the legacy context-dict "
+                f"signature. Prefer 'env: BiologicalContext' for typed, "
+                f"duck-typing-free access to cells/substances/genes."
+            )
+            if ENFORCE_TYPED_ENV:
+                raise ValueError(
+                    f"\n{'='*80}\n❌ TYPED ENV REQUIRED\n{'='*80}\n{message}\n{'='*80}\n"
+                )
+            warnings.warn(message, stacklevel=2)
+
         # Create metadata
         metadata = FunctionMetadata(
             name=func_name,
@@ -353,7 +391,8 @@ def register_function(
             cloneable=cloneable,
             module_path=module_path,
             source_file=source_file,
-            compatible_kernels=compatible_kernels
+            compatible_kernels=compatible_kernels,
+            requires=requires
         )
 
         # Register in the decorator registry

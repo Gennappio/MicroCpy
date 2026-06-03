@@ -34,6 +34,7 @@ def _discover_physiboss_root() -> Path | None:
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Select Project Template",
     description=(
         "Choose which PhysiBoSS sample_project's custom_modules/ backs the "

@@ -11,6 +11,7 @@ from src.interfaces.base import ICellPopulation
 
 
 @register_function(
+    requires=['population'],
     display_name="Track Population Changes (Start)",
     description="Log cell count at start of intercellular stage",
     category="INTERCELLULAR",
@@ -41,6 +42,7 @@ def track_population_start(
 
 
 @register_function(
+    requires=['population'],
     display_name="Track Population Changes (End)",
     description="Log cell count at end of intercellular stage and detect changes",
     category="INTERCELLULAR",
