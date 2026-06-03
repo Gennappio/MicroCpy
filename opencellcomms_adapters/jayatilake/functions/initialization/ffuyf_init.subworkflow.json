@@ -1,0 +1,52 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "ffuyf_init",
+  "kind": "agent_init",
+  "description": "Initialization for ffuyf",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-03T09:37:57.485Z",
+  "subworkflow": {
+    "description": "Initialization for ffuyf",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-ffuyf_init",
+      "label": "FFUYF_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "ciaociao_1780476010122",
+        "function_name": "ciaociao",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 171.9273961963691,
+          "y": 233.94157673356503
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "ciaociao_1780476010122"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "ciaociao"
+    ]
+  }
+}
