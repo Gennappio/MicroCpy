@@ -12,6 +12,7 @@ A kernel defines:
 """
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Set, Type, Any, Callable, Optional, Union
@@ -110,9 +111,17 @@ KERNEL_REGISTRY: Dict[str, KernelDefinition] = {}
 
 
 def register_kernel(kernel: KernelDefinition) -> None:
-    """Register a kernel in the global registry."""
+    """Register a kernel in the global registry.
+
+    This runs at import time for the two built-in kernels (biophysics,
+    physicell), so it announces itself only under OCC_VERBOSE_STARTUP=1 —
+    otherwise it's startup noise on every run. Registration is cheap (just
+    storing the definition); the heavy backends are imported lazily when a
+    workflow actually selects that kernel.
+    """
     KERNEL_REGISTRY[kernel.name] = kernel
-    print(f"[KERNEL REGISTRY] Registered kernel: {kernel.name}")
+    if os.environ.get("OCC_VERBOSE_STARTUP", "0").lower() not in ("0", "", "false", "no"):
+        print(f"[KERNEL REGISTRY] Registered kernel: {kernel.name}")
 
 
 def get_kernel(kernel_name: str) -> Optional[KernelDefinition]:

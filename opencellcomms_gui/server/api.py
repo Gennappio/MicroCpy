@@ -173,10 +173,11 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             str(Path(gui_results_dir).absolute()),
         ]
 
-        # Add entry_subworkflow parameter if specified (Section 9.2)
+        # Add entry_subworkflow parameter if specified (Section 9.2).
+        # 'main' is the GUI-synthesized top-level composer — internal plumbing,
+        # so we don't surface it in the user-facing log.
         if entry_subworkflow:
             cmd.extend(["--entry-subworkflow", entry_subworkflow])
-            log_queue.put(f"[START] Running workflow from entry point: {entry_subworkflow}\n")
         else:
             log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
 

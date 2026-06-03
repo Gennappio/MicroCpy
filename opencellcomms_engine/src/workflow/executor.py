@@ -961,6 +961,26 @@ class WorkflowExecutor:
         """
         Execute the main workflow (for version 2.0 sub-workflow system).
 
+        Scaffold convention (why even an "empty" workflow logs three subworkflows)
+        -------------------------------------------------------------------------
+        The GUI always saves a v2.0 workflow with a fixed skeleton, regardless of
+        how much the user has filled in:
+
+          * ``main`` — the entry composer. It holds NO functions of its own; its
+            execution_order is just two subworkflow_calls: ``__init_sequence__``
+            then ``__scheduler__``. This is why running ``main`` recurses into the
+            other two and you see three "Executing sub-workflow" lines.
+          * ``__init_sequence__`` — the one-time setup phase (maps to the GUI
+            "Initialization" tab; agent/env init functions are dropped here).
+          * ``__scheduler__`` — the per-step loop (maps to the GUI "Scheduler"
+            tab; behaviour subworkflows run here each engine step).
+
+        The double-underscore names are reserved/GUI-managed (see the GUI's
+        ``store/subworkflowKinds.js``: SCHEDULER_NAME / INIT_SEQUENCE_NAME). When
+        these two are empty, ``execute_subworkflow`` still announces them and then
+        finds zero nodes to run — so a blank workflow produces the skeleton log
+        lines but does no actual work. That is expected, not an error.
+
         Args:
             context: Initial execution context
             entry_subworkflow: Name of the subworkflow to start from (default: "main").
