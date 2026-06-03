@@ -542,13 +542,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Return null only if this is a *function* node and we couldn't find metadata.
-  // Parameter nodes (simple, list, dict) and sub-workflow calls do not rely on
-  // registry metadata, so they should still render the editor even when
-  // functionMetadata is null.
-  if (isFunctionNode && !functionMetadata) {
-    return null;
-  }
+  // User-created functions won't be in the static registry — keep going and
+  // show what we can (name, file path, description, code viewer).
 
   // Determine the display name for the editor header based on node type
   let displayName;
