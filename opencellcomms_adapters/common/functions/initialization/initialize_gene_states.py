@@ -12,6 +12,7 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
+    requires=['gene_network', 'population'],
     display_name="Initialize Gene States",
     description="Randomize gene states for all cells after population setup. Ensures cells start with active metabolism.",
     category="INITIALIZATION",

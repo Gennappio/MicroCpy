@@ -1,0 +1,52 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "agent_init",
+  "kind": "agent_init",
+  "description": "Initialization for agent",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-03T10:37:52.815Z",
+  "subworkflow": {
+    "description": "Initialization for agent",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-agent_init",
+      "label": "AGENT_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "agente1_1780483069224",
+        "function_name": "agente1",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 156,
+          "y": 278.5
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "agente1_1780483069224"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "agente1"
+    ]
+  }
+}

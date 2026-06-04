@@ -48,7 +48,13 @@ from src.interfaces.base import ICellPopulation, IGeneNetwork  # Import interfac
     inputs=["context"],  # ← ALWAYS use ["context"] - this is the recommended pattern
     outputs=[],          # List any outputs this function produces (usually empty)
     cloneable=False,     # Set to True if users should be able to duplicate/customize this
-    compatible_kernels=["biophysics"]  # ← REQUIRED! List which kernels this works with
+    compatible_kernels=["biophysics"],  # ← REQUIRED! List which kernels this works with
+    requires=["population"]  # ← Capability tokens this function needs from the kernel.
+                             #    The workflow fails to load (loudly) if the kernel does not
+                             #    provide all of them. Structural tokens are bare context keys
+                             #    the function reads (e.g. "population", "simulator",
+                             #    "gene_networks"). Reserved ontology tokens use the form
+                             #    "substance:<name>", "gene:<name>", "phenotype:<name>".
 )
 def my_function_name(
     context: Dict[str, Any] = None,  # ← ONLY context in signature (recommended pattern)
@@ -136,6 +142,7 @@ def my_function_name(
 # [ ] All parameters have descriptions and sensible defaults
 # [ ] inputs=["context"] (recommended pattern - don't add other inputs)
 # [ ] compatible_kernels is specified
+# [ ] requires lists the capability tokens this function needs (or [] if none)
 # [ ] Function signature only has context + parameters (no other inputs)
 # [ ] Context validation is present (check if context exists)
 # [ ] Required context items are validated (check if they exist)

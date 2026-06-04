@@ -19,6 +19,7 @@ import SubWorkflowCallNode from './SubWorkflowCallNode';
 import ParameterEditor from './ParameterEditor';
 import ControllerSettings from './ControllerSettings';
 import useWorkflowStore from '../store/workflowStore';
+import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import { getDefaultParameters } from '../data/functionRegistry';
 import './WorkflowCanvas.css';
 
@@ -52,6 +53,8 @@ const WorkflowCanvas = ({ stage }) => {
     selectedNodeByStage,
     setSelectedNode: setSelectedNodeInStore,
     openInspector,
+    parameterEditRequest,
+    consumeParameterEditRequest,
   } = useWorkflowStore();
 
 
@@ -83,12 +86,28 @@ const WorkflowCanvas = ({ stage }) => {
     };
   }, [stage, setSelectedNodeInStore]);
 
+  // Open parameter editor when WorkflowFunctionNode requests it via the store.
+  React.useEffect(() => {
+    if (parameterEditRequest?.stage === stage) {
+      setSelectedNodeInStore(stage, parameterEditRequest.nodeId);
+      setShowParameterEditor(true);
+      consumeParameterEditRequest();
+    }
+  }, [parameterEditRequest, stage]);
+
   // Wrap onNodesChange to prevent deletion of Init node
   const onNodesChange = useCallback((changes) => {
     // Filter out delete operations for Init nodes
     const filteredChanges = changes.filter(change => {
       if (change.type === 'remove' && change.id.startsWith('init-')) {
         console.log('[CANVAS] Prevented deletion of Init node');
+        return false;
+      }
+      // The scheduler's "Simulation Steps" parameter node is permanent — the
+      // GUI has no palette entry to recreate one, so deleting it would strand
+      // the user with no way to set the step count.
+      if (change.type === 'remove' && change.id.startsWith('steps_param-')) {
+        console.log('[CANVAS] Prevented deletion of scheduler steps parameter');
         return false;
       }
       return true;
@@ -250,6 +269,47 @@ const WorkflowCanvas = ({ stage }) => {
       )
     );
   }, [edges, nodes, stage, setNodes]);
+
+  // The scheduler must ALWAYS expose a non-deletable "Simulation Steps"
+  // parameter node wired to its controller's steps handle. The current GUI has
+  // no palette entry to create one, so if it were ever missing the user would
+  // have no way to add it back. Mirror the "ensure controller node" guarantee
+  // above: create it when absent. The effect above then derives the
+  // controller's step count from it. Deletion is blocked in onNodesChange.
+  React.useEffect(() => {
+    if (stage !== SCHEDULER_NAME) return;
+    const controllerNode = nodes.find(
+      (n) => n.type === 'initNode' || n.type === 'controllerNode' || n.id.startsWith('controller-')
+    );
+    if (!controllerNode) return;                      // wait until the controller exists
+    const stepsId = `steps_param-${stage}`;
+    if (nodes.some((n) => n.id === stepsId)) return;  // already present → no-op
+
+    const currentSteps =
+      controllerNode.data?.connectedStepsValue ??
+      controllerNode.data?.numberOfSteps ??
+      1;
+
+    const stepsNode = {
+      id: stepsId,
+      type: 'parameterNode',
+      position: { x: 100, y: 340 },
+      data: { label: 'Simulation Steps', parameters: { steps: currentSteps } },
+      deletable: false,
+    };
+    const stepsEdge = {
+      id: `e-steps-${stepsId}-${controllerNode.id}`,
+      source: stepsId,
+      sourceHandle: 'params',
+      target: controllerNode.id,
+      targetHandle: 'steps-param',
+      type: 'default',
+      animated: false,
+      style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    };
+    setNodes((nds) => [...nds, stepsNode]);
+    setEdges((eds) => (eds.some((e) => e.id === stepsEdge.id) ? eds : [...eds, stepsEdge]));
+  }, [stage, nodes, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params) => {

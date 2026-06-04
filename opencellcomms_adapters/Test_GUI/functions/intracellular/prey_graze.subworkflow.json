@@ -4,8 +4,6 @@
   "kind": "agent_behavior",
   "subworkflow": {
     "description": "prey behavior: graze",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-prey_graze",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-16",
         "function_name": "prey_forage",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 460
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-17",
         "function_name": "prey_chew",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 520
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-18",
         "function_name": "prey_swallow",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 580
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-16",
       "func-1779800068602-17",
       "func-1779800068602-18"
-    ],
-    "input_parameters": []
+    ]
   }
 }

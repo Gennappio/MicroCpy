@@ -73,6 +73,23 @@
   line-height: 1.5;
 }
 
+.editor-staged-banner {
+  padding: 12px 24px;
+  background: rgba(245, 158, 11, 0.1);
+  border-bottom: 1px solid #fcd34d;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.editor-staged-banner code {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
 .editor-tabs {
   display: flex;
   border-bottom: 1px solid #e5e7eb;
@@ -595,4 +612,65 @@
 .btn-add-nested-key:hover {
   background: #fef9c3;
   border-color: #eab308;
+}
+
+/* === AI code generation box === */
+.ai-generate-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #c7d2fe;
+  background: #f5f3ff;
+  border-radius: 6px;
+}
+
+.ai-generate-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4338ca;
+}
+
+.ai-generate-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+.ai-generate-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.ai-generate-box .btn-sm {
+  align-self: flex-start;
+}
+
+.ai-generate-error {
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.ai-generate-explanation {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #3730a3;
+  background: #ede9fe;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+.ai-generate-hint {
+  margin-top: 6px;
+  color: #6d28d9;
 }

@@ -11,6 +11,7 @@ from src.interfaces.base import IConfig
 
 
 @register_function(
+    requires=['simulator'],
     display_name="Add Substance",
     description="Add a substance to the simulation (use one node per substance)",
     category="INITIALIZATION",

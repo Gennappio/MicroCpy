@@ -10,6 +10,7 @@ from src.interfaces.base import IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Export CSV Checkpoint",
     description="Export 2D simulation checkpoint (cells + substances) to CSV format",
     category="UTILITY",
@@ -100,6 +101,7 @@ def export_csv_checkpoint(
 
 
 @register_function(
+    requires=['population'],
     display_name="Export CSV Cells",
     description="Export only cell states to CSV format",
     category="UTILITY",
@@ -165,6 +167,7 @@ def export_csv_cells(
 
 
 @register_function(
+    requires=['simulator'],
     display_name="Export CSV Substances",
     description="Export only substance fields to CSV format",
     category="UTILITY",

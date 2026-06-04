@@ -16,6 +16,7 @@ from src.biology.context import BiologicalContext
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def predator_stalk(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -36,6 +37,7 @@ def predator_stalk(env: BiologicalContext = None, intensity=1.0, verbose=False, 
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def predator_strike(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -56,6 +58,7 @@ def predator_strike(env: BiologicalContext = None, intensity=1.0, verbose=False,
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['population'],
 )
 def predator_digest(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')

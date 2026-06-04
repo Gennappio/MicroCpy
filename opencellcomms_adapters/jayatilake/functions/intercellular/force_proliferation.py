@@ -20,6 +20,7 @@ from src.workflow.decorators import register_function
 from src.interfaces.base import ICellPopulation, IConfig
 
 @register_function(
+    requires=['population'],
     display_name="Force Proliferating Cells",
     description="Force cells as proliferating",
     category="INTERCELLULAR",

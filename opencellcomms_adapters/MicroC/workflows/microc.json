@@ -42,9 +42,7 @@
   },
   "subworkflows": {
     "environment_init": {
-      "description": "MicroC: environment_init (merged from v7 Setup_simulation, Setup_substances, Setup_associations)",
-      "enabled": true,
-      "deletable": true,
+      "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
       "controller": {
         "id": "controller-environment_init",
         "type": "controller",
@@ -59,16 +57,11 @@
         {
           "id": "envinit-Setup_simulation-setup_sim",
           "function_name": "setup_simulation",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
           "description": "Initialize simulation infrastructure",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "envinit-Setup_simulation-param_sim_name",
             "envinit-Setup_simulation-param_sim_total_steps",
@@ -79,16 +72,11 @@
         {
           "id": "envinit-Setup_simulation-setup_domain_node",
           "function_name": "setup_domain",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
           "description": "Define 2D spatial domain",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "envinit-Setup_simulation-param_domain_dimensions",
             "envinit-Setup_simulation-param_domain_size_x",
@@ -100,18 +88,26 @@
           ]
         },
         {
+          "id": "envinit-Setup_population-setup_pop",
+          "function_name": "setup_population",
+          "parameters": {
+            "enable_gene_network": true,
+            "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+          },
+          "position": {
+            "x": 400,
+            "y": 250
+          },
+          "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint)."
+        },
+        {
           "id": "envinit-Setup_substances-setup_all_substances",
           "function_name": "setup_substances",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 300
           },
           "description": "Configure all 8 substances for diffusion-reaction",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "envinit-Setup_substances-param_substances_list"
           ]
@@ -119,22 +115,16 @@
         {
           "id": "envinit-Setup_associations-setup_all_associations",
           "function_name": "setup_associations",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 400
           },
           "description": "Configure all substance-to-gene associations",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "envinit-Setup_associations-param_associations_dict"
           ]
         }
       ],
-      "subworkflow_calls": [],
       "parameters": [
         {
           "id": "envinit-Setup_simulation-param_sim_name",
@@ -193,7 +183,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_x",
-          "label": "Size X (\u03bcm)",
+          "label": "Size X (μm)",
           "parameters": {
             "size_x": 1500
           },
@@ -204,7 +194,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_y",
-          "label": "Size Y (\u03bcm)",
+          "label": "Size Y (μm)",
           "parameters": {
             "size_y": 1500
           },
@@ -237,7 +227,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_cell_height",
-          "label": "Cell Height (\u03bcm)",
+          "label": "Cell Height (μm)",
           "parameters": {
             "cell_height": 20
           },
@@ -334,15 +324,13 @@
       "execution_order": [
         "envinit-Setup_simulation-setup_sim",
         "envinit-Setup_simulation-setup_domain_node",
+        "envinit-Setup_population-setup_pop",
         "envinit-Setup_substances-setup_all_substances",
         "envinit-Setup_associations-setup_all_associations"
-      ],
-      "input_parameters": []
+      ]
     },
     "tumor_cell_init": {
-      "description": "MicroC: tumor_cell_init (merged from v7 Setup_population, Init_gene_networks)",
-      "enabled": true,
-      "deletable": true,
+      "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
       "controller": {
         "id": "controller-tumor_cell_init",
         "type": "controller",
@@ -355,36 +343,13 @@
       },
       "functions": [
         {
-          "id": "agentinit-Setup_population-setup_pop",
-          "function_name": "setup_population",
-          "function_file": "",
-          "parameters": {
-            "enable_gene_network": true,
-            "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
-          },
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 100
-          },
-          "description": "Initialize population with gene network support",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
-        },
-        {
           "id": "agentinit-Setup_population-read_checkpoint",
           "function_name": "read_checkpoint",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
           "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "agentinit-Setup_population-param_checkpoint_file"
           ]
@@ -392,23 +357,17 @@
         {
           "id": "agentinit-Init_gene_networks-init_netlogo_gn",
           "function_name": "initialize_netlogo_gene_networks",
-          "function_file": "",
           "parameters": {
-            "bnd_file": "../data/jaya_microc.bnd",
+            "bnd_file": "../data/jaya.bnd",
             "random_initialization": true
           },
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 300
           },
-          "description": "Initialize NetLogo-faithful gene networks for all cells",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Initialize NetLogo-faithful gene networks for all cells"
         }
       ],
-      "subworkflow_calls": [],
       "parameters": [
         {
           "id": "agentinit-Setup_population-param_checkpoint_file",
@@ -423,16 +382,12 @@
         }
       ],
       "execution_order": [
-        "agentinit-Setup_population-setup_pop",
         "agentinit-Setup_population-read_checkpoint",
         "agentinit-Init_gene_networks-init_netlogo_gn"
-      ],
-      "input_parameters": []
+      ]
     },
     "diffusion_step": {
       "description": "MicroC: diffusion_step",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-diffusion_step",
         "type": "controller",
@@ -447,20 +402,17 @@
         {
           "id": "diffusion_step-run_diffusion_coupled",
           "function_name": "run_diffusion_solver_coupled",
-          "function_file": "",
           "parameters": {
             "lactate_conversion_factor": 1,
             "glucose_conversion_factor": 1,
             "oxygen_conversion_factor": 1
           },
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
           "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
           "custom_name": "run_diffusion_solver_coupled",
-          "step_count": 1,
           "parameter_nodes": [
             "diffusion_step-param_max_iterations",
             "diffusion_step-param_tolerance",
@@ -471,7 +423,6 @@
           ]
         }
       ],
-      "subworkflow_calls": [],
       "parameters": [
         {
           "id": "diffusion_step-param_max_iterations",
@@ -530,7 +481,7 @@
         },
         {
           "id": "diffusion_step-param_relaxation_factor",
-          "label": "Relaxation Factor (\u03b1)",
+          "label": "Relaxation Factor (α)",
           "parameters": {
             "relaxation_factor": 0.7
           },
@@ -542,13 +493,10 @@
       ],
       "execution_order": [
         "diffusion_step-run_diffusion_coupled"
-      ],
-      "input_parameters": []
+      ]
     },
     "iteration_plots": {
       "description": "MicroC: iteration_plots",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-iteration_plots",
         "type": "controller",
@@ -563,33 +511,24 @@
         {
           "id": "iteration_plots-gen_loop_plots",
           "function_name": "generate_iteration_plots",
-          "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
             "plot_interval": "1"
           },
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
           "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
-          "custom_name": "generate_iteration_plots",
-          "step_count": 1,
-          "parameter_nodes": []
+          "custom_name": "generate_iteration_plots"
         }
       ],
-      "subworkflow_calls": [],
-      "parameters": [],
       "execution_order": [
         "iteration_plots-gen_loop_plots"
-      ],
-      "input_parameters": []
+      ]
     },
     "gene_update": {
       "description": "MicroC: gene_update",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-gene_update",
         "type": "controller",
@@ -604,22 +543,15 @@
         {
           "id": "gene_update-apply_associations",
           "function_name": "apply_associations_to_inputs",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Translate substance concentrations \u2192 gene input states via associations",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Translate substance concentrations → gene input states via associations"
         },
         {
           "id": "gene_update-propagate_genes_netlogo",
           "function_name": "propagate_gene_networks_netlogo",
-          "function_file": "",
           "parameters": {
             "propagation_steps": "5",
             "reversible": false,
@@ -631,29 +563,21 @@
             "diffusion_step": 0,
             "reset_fate": true
           },
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
           "description": "NetLogo-faithful graph walking gene network propagation",
-          "custom_name": "propagate_gene_networks_netlogo",
-          "step_count": 1,
-          "parameter_nodes": []
+          "custom_name": "propagate_gene_networks_netlogo"
         }
       ],
-      "subworkflow_calls": [],
-      "parameters": [],
       "execution_order": [
         "gene_update-apply_associations",
         "gene_update-propagate_genes_netlogo"
-      ],
-      "input_parameters": []
+      ]
     },
     "fate_update": {
       "description": "MicroC: fate_update",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-fate_update",
         "type": "controller",
@@ -668,16 +592,11 @@
         {
           "id": "fate_update-mark_necrotic",
           "function_name": "mark_necrotic_cells",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
           "description": "Mark cells as necrotic based on user-defined conditions",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "fate_update-param_necrosis_params"
           ]
@@ -685,16 +604,11 @@
         {
           "id": "fate_update-mark_growth_arrest",
           "function_name": "mark_growth_arrest_cells",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
           "description": "Track cells in Growth_Arrest state with time limit",
-          "custom_name": "",
-          "step_count": 1,
           "parameter_nodes": [
             "fate_update-param_max_growth_arrest_steps"
           ]
@@ -702,35 +616,22 @@
         {
           "id": "fate_update-mark_apoptotic",
           "function_name": "mark_apoptotic_cells",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 300
           },
-          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output"
         },
         {
           "id": "fate_update-mark_proliferating",
           "function_name": "mark_proliferating_cells",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 400
           },
-          "description": "Mark cells as Proliferation or Quiescence based on gene network",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Mark cells as Proliferation or Quiescence based on gene network"
         }
       ],
-      "subworkflow_calls": [],
       "parameters": [
         {
           "id": "fate_update-param_necrosis_params",
@@ -776,13 +677,10 @@
         "fate_update-mark_growth_arrest",
         "fate_update-mark_apoptotic",
         "fate_update-mark_proliferating"
-      ],
-      "input_parameters": []
+      ]
     },
     "division": {
       "description": "MicroC: division",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-division",
         "type": "controller",
@@ -797,46 +695,30 @@
         {
           "id": "division-cell_division",
           "function_name": "update_cell_division",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
           "description": "Handle cell division for proliferating cells",
-          "custom_name": "update_cell_division",
-          "step_count": 1,
-          "parameter_nodes": []
+          "custom_name": "update_cell_division"
         },
         {
           "id": "division-remove_apoptotic",
           "function_name": "remove_apoptotic_cells",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
-          "description": "Remove cells with Apoptosis phenotype from population",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Remove cells with Apoptosis phenotype from population"
         }
       ],
-      "subworkflow_calls": [],
-      "parameters": [],
       "execution_order": [
         "division-cell_division",
         "division-remove_apoptotic"
-      ],
-      "input_parameters": []
+      ]
     },
     "final_summary": {
       "description": "MicroC: final_summary",
-      "enabled": true,
-      "deletable": true,
       "controller": {
         "id": "controller-final_summary",
         "type": "controller",
@@ -851,32 +733,23 @@
         {
           "id": "final_summary-gen_final_plots",
           "function_name": "generate_summary_plots",
-          "function_file": "",
           "parameters": {
             "marker": "FINAL",
             "substances_to_plot": "Oxygen,Glucose,Lactate"
           },
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Generate final state visualization",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
+          "description": "Generate final state visualization"
         }
       ],
-      "subworkflow_calls": [],
-      "parameters": [],
       "execution_order": [
         "final_summary-gen_final_plots"
-      ],
-      "input_parameters": []
+      ]
     },
     "__scheduler__": {
       "description": "MicroC main simulation loop",
-      "enabled": true,
       "deletable": false,
       "controller": {
         "id": "controller-__scheduler__",
@@ -891,77 +764,56 @@
           "steps_param-__scheduler__"
         ]
       },
-      "functions": [],
       "subworkflow_calls": [
         {
           "id": "sched-call-diffusion_step",
           "type": "subworkflow_call",
           "subworkflow_name": "diffusion_step",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 120
           },
-          "description": "diffusion_step",
-          "parameter_nodes": []
+          "description": "diffusion_step"
         },
         {
           "id": "sched-call-gene_update",
           "type": "subworkflow_call",
           "subworkflow_name": "gene_update",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 230
           },
-          "description": "gene_update",
-          "parameter_nodes": []
+          "description": "gene_update"
         },
         {
           "id": "sched-call-fate_update",
           "type": "subworkflow_call",
           "subworkflow_name": "fate_update",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 340
           },
-          "description": "fate_update",
-          "parameter_nodes": []
+          "description": "fate_update"
         },
         {
           "id": "sched-call-division",
           "type": "subworkflow_call",
           "subworkflow_name": "division",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 450
           },
-          "description": "division",
-          "parameter_nodes": []
+          "description": "division"
         },
         {
           "id": "sched-call-iteration_plots",
           "type": "subworkflow_call",
           "subworkflow_name": "iteration_plots",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 560
           },
-          "description": "iteration_plots",
-          "parameter_nodes": []
+          "description": "iteration_plots"
         }
       ],
       "parameters": [
@@ -984,12 +836,10 @@
         "sched-call-fate_update",
         "sched-call-division",
         "sched-call-iteration_plots"
-      ],
-      "input_parameters": []
+      ]
     },
     "main": {
-      "description": "Synthesized main composer (do not edit \u2014 managed by ABM structure)",
-      "enabled": true,
+      "description": "Synthesized main composer (do not edit — managed by ABM structure)",
       "deletable": false,
       "controller": {
         "id": "controller-main",
@@ -1001,62 +851,47 @@
         },
         "number_of_steps": 1
       },
-      "functions": [],
       "subworkflow_calls": [
         {
           "id": "main-call-__init_sequence__",
           "type": "subworkflow_call",
           "subworkflow_name": "__init_sequence__",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 200
           },
-          "description": "Initialization sequence",
-          "parameter_nodes": []
+          "description": "Initialization sequence"
         },
         {
           "id": "main-call-__scheduler__",
           "type": "subworkflow_call",
           "subworkflow_name": "__scheduler__",
           "iterations": 30,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 320
           },
-          "description": "Main simulation loop",
-          "parameter_nodes": []
+          "description": "Main simulation loop"
         },
         {
           "id": "main-call-final_summary",
           "type": "subworkflow_call",
           "subworkflow_name": "final_summary",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 440
           },
-          "description": "Processing: final_summary",
-          "parameter_nodes": []
+          "description": "Processing: final_summary"
         }
       ],
-      "parameters": [],
       "execution_order": [
         "main-call-__init_sequence__",
         "main-call-__scheduler__",
         "main-call-final_summary"
-      ],
-      "input_parameters": []
+      ]
     },
     "__init_sequence__": {
-      "description": "Initialization order \u2014 env init + agent inits",
-      "enabled": true,
+      "description": "Initialization order — env init + agent inits",
       "deletable": false,
       "controller": {
         "id": "controller-__init_sequence__",
@@ -1068,43 +903,32 @@
         },
         "number_of_steps": 1
       },
-      "functions": [],
       "subworkflow_calls": [
         {
           "id": "init-call-environment_init",
           "type": "subworkflow_call",
           "subworkflow_name": "environment_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "environment_init",
-          "parameter_nodes": []
+          "description": "environment_init"
         },
         {
           "id": "init-call-tumor_cell_init",
           "type": "subworkflow_call",
           "subworkflow_name": "tumor_cell_init",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
           "position": {
             "x": 400,
             "y": 220
           },
-          "description": "tumor_cell_init",
-          "parameter_nodes": []
+          "description": "tumor_cell_init"
         }
       ],
-      "parameters": [],
       "execution_order": [
         "init-call-environment_init",
         "init-call-tumor_cell_init"
-      ],
-      "input_parameters": []
+      ]
     }
   }
 }

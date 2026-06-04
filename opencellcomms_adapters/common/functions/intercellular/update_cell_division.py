@@ -23,6 +23,7 @@ from src.biology.gene_network import HierarchicalBooleanNetwork
 
 
 @register_function(
+    requires=['population'],
     display_name="Update Cell Division",
     description="Handle cell division based on ATP and cell cycle",
     category="INTERCELLULAR",

@@ -13,6 +13,7 @@ from tools.csv_export import export_csv_cell_state, export_csv_substance_fields
 
 
 @register_function(
+    requires=['population'],
     display_name="Save Gene Network Checkpoint",
     description="Save gene network states for all cells to JSON file",
     category="UTILITY",
@@ -113,6 +114,7 @@ def save_gene_network_checkpoint(
 
 
 @register_function(
+    requires=['simulator'],
     display_name="Save Substance Checkpoint",
     description="Save substance concentration fields to files",
     category="UTILITY",
@@ -257,6 +259,7 @@ def save_full_checkpoint(
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Save Checkpoint (CSV Format)",
     description="Save checkpoint in unified CSV format compatible with read_checkpoint",
     category="UTILITY",

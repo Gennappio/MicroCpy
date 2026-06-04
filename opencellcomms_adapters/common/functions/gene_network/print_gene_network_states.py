@@ -11,6 +11,7 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
+    requires=['population'],
     display_name="Print Gene Network States",
     description="Print current gene network states from all cells",
     category="FINALIZATION",

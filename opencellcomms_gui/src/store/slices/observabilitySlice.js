@@ -55,6 +55,17 @@ export const createObservabilitySlice = (set, get) => ({
    */
   simulationRunCounter: 0,
 
+  /**
+   * Pending request to open the parameter editor for a specific node.
+   * Set by WorkflowFunctionNode; consumed (and cleared) by WorkflowCanvas.
+   * Shape: { stage: string, nodeId: string } | null
+   */
+  parameterEditRequest: null,
+
+  requestParameterEdit: (stage, nodeId) => set({ parameterEditRequest: { stage, nodeId } }),
+
+  consumeParameterEditRequest: () => set({ parameterEditRequest: null }),
+
   // ===== Selected Node Actions =====
 
   setSelectedNode: (stage, nodeId) => {

@@ -1,0 +1,52 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "altrobehaviour",
+  "kind": "agent_behavior",
+  "description": "cellula behavior: altrobehaviour",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-03T10:33:17.100Z",
+  "subworkflow": {
+    "description": "cellula behavior: altrobehaviour",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-altrobehaviour",
+      "label": "ALTROBEHAVIOUR CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "spostati_1780482779553",
+        "function_name": "spostati",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 117,
+          "y": 244
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "spostati_1780482779553"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "spostati"
+    ]
+  }
+}

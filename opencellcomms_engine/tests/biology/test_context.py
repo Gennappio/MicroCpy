@@ -24,6 +24,7 @@ from src.biology.context import (
     CellHandle,
     GeneNode,
     Phenotype,
+    KernelContractError,
 )
 from src.biology.cell import Cell
 
@@ -323,10 +324,22 @@ def test_raw_context_returns_underlying_dict():
     assert env.raw_context is ctx
 
 
-def test_empty_context_does_not_crash():
-    """BiologicalContext(None) and ({}) should be safe — empty stubs use this."""
+def test_empty_context_fails_loudly_on_typed_views():
+    """On an empty context, the typed views fail loudly (kernel contract), while
+    step/dt and the raw escape hatches stay safe."""
     env = BiologicalContext(None)
-    assert len(env.cells) == 0
-    assert env.environment.all_substances() == []
+
+    # Capability-backed views raise instead of silently returning empty results.
+    with pytest.raises(KernelContractError):
+        len(env.cells)
+    with pytest.raises(KernelContractError):
+        list(env.cells)
+    with pytest.raises(KernelContractError):
+        env.environment.all_substances()
+
+    # Step/dt have safe defaults; escape hatches return None without raising.
     assert env.step == 0
     assert env.dt == 1.0
+    assert env.cells.raw is None
+    assert env.environment.raw_simulator is None
+    assert env.gene_network('missing') is None

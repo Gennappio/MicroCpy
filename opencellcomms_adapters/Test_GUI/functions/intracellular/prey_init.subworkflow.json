@@ -4,8 +4,6 @@
   "kind": "agent_init",
   "subworkflow": {
     "description": "prey initialization",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-prey_init",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-13",
         "function_name": "prey_spawn",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 280
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-14",
         "function_name": "prey_set_state",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 340
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-15",
         "function_name": "prey_log_init",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 400
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-13",
       "func-1779800068602-14",
       "func-1779800068602-15"
-    ],
-    "input_parameters": []
+    ]
   }
 }

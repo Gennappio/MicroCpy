@@ -4,8 +4,6 @@
   "kind": "agent_behavior",
   "subworkflow": {
     "description": "plankton behavior: replicate",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-plankton_replicate",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-34",
         "function_name": "plankton_divide",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 340
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-35",
         "function_name": "plankton_scatter",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 400
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-36",
         "function_name": "plankton_settle",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 460
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-34",
       "func-1779800068602-35",
       "func-1779800068602-36"
-    ],
-    "input_parameters": []
+    ]
   }
 }

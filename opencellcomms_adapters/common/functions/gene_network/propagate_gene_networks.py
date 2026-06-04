@@ -13,6 +13,7 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation
 
 
 @register_function(
+    requires=['gene_networks', 'population'],
     display_name="Propagate Gene Networks",
     description="Propagate gene networks with configurable update algorithm",
     category="INTRACELLULAR",

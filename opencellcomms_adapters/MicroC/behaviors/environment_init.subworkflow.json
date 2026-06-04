@@ -3,9 +3,7 @@
   "name": "environment_init",
   "kind": "env_init",
   "subworkflow": {
-    "description": "MicroC: environment_init (merged from v7 Setup_simulation, Setup_substances, Setup_associations)",
-    "enabled": true,
-    "deletable": true,
+    "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
     "controller": {
       "id": "controller-environment_init",
       "type": "controller",
@@ -20,16 +18,11 @@
       {
         "id": "envinit-Setup_simulation-setup_sim",
         "function_name": "setup_simulation",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 100
         },
         "description": "Initialize simulation infrastructure",
-        "custom_name": "",
-        "step_count": 1,
         "parameter_nodes": [
           "envinit-Setup_simulation-param_sim_name",
           "envinit-Setup_simulation-param_sim_total_steps",
@@ -40,16 +33,11 @@
       {
         "id": "envinit-Setup_simulation-setup_domain_node",
         "function_name": "setup_domain",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 200
         },
         "description": "Define 2D spatial domain",
-        "custom_name": "",
-        "step_count": 1,
         "parameter_nodes": [
           "envinit-Setup_simulation-param_domain_dimensions",
           "envinit-Setup_simulation-param_domain_size_x",
@@ -61,18 +49,26 @@
         ]
       },
       {
+        "id": "envinit-Setup_population-setup_pop",
+        "function_name": "setup_population",
+        "parameters": {
+          "enable_gene_network": true,
+          "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+        },
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint)."
+      },
+      {
         "id": "envinit-Setup_substances-setup_all_substances",
         "function_name": "setup_substances",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 300
         },
         "description": "Configure all 8 substances for diffusion-reaction",
-        "custom_name": "",
-        "step_count": 1,
         "parameter_nodes": [
           "envinit-Setup_substances-param_substances_list"
         ]
@@ -80,22 +76,16 @@
       {
         "id": "envinit-Setup_associations-setup_all_associations",
         "function_name": "setup_associations",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 400
         },
         "description": "Configure all substance-to-gene associations",
-        "custom_name": "",
-        "step_count": 1,
         "parameter_nodes": [
           "envinit-Setup_associations-param_associations_dict"
         ]
       }
     ],
-    "subworkflow_calls": [],
     "parameters": [
       {
         "id": "envinit-Setup_simulation-param_sim_name",
@@ -154,7 +144,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_size_x",
-        "label": "Size X (\u03bcm)",
+        "label": "Size X (μm)",
         "parameters": {
           "size_x": 1500
         },
@@ -165,7 +155,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_size_y",
-        "label": "Size Y (\u03bcm)",
+        "label": "Size Y (μm)",
         "parameters": {
           "size_y": 1500
         },
@@ -198,7 +188,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_cell_height",
-        "label": "Cell Height (\u03bcm)",
+        "label": "Cell Height (μm)",
         "parameters": {
           "cell_height": 20
         },
@@ -295,9 +285,9 @@
     "execution_order": [
       "envinit-Setup_simulation-setup_sim",
       "envinit-Setup_simulation-setup_domain_node",
+      "envinit-Setup_population-setup_pop",
       "envinit-Setup_substances-setup_all_substances",
       "envinit-Setup_associations-setup_all_associations"
-    ],
-    "input_parameters": []
+    ]
   }
 }

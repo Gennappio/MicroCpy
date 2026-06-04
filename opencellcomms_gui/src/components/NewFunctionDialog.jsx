@@ -54,10 +54,23 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
     setParameters(next);
   };
 
-  const canSubmit = name.trim() &&
-    /^[a-zA-Z][a-zA-Z0-9_]*$/.test(name.trim()) &&
-    filePath.trim().endsWith('.py') &&
-    parameters.every((p) => p.name.trim() && /^[a-zA-Z][a-zA-Z0-9_]*$/.test(p.name.trim()));
+  const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
+
+  // Explain exactly why submit is blocked (empty = ok to submit).
+  const validationError = (() => {
+    if (!name.trim()) return 'Enter a function name.';
+    if (!isValidIdent(name)) return 'Function name must start with a letter and use only letters, numbers, or underscores.';
+    if (!filePath.trim().endsWith('.py')) return 'File path must end with .py';
+    const badParam = parameters.findIndex((p) => !isValidIdent(p.name));
+    if (badParam !== -1) {
+      return parameters[badParam].name.trim()
+        ? `Parameter ${badParam + 1} ("${parameters[badParam].name}") has an invalid name — use letters, numbers, or underscores.`
+        : `Parameter ${badParam + 1} needs a name.`;
+    }
+    return '';
+  })();
+
+  const canSubmit = !validationError;
 
   const handleBrowse = async () => {
     setBrowsing(true);
@@ -72,7 +85,16 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
       if (data.cancelled) {
         // user cancelled; do nothing
       } else if (data.path) {
-        setFilePath(data.path);
+        // Prefer the repo-relative path; the system imports functions from
+        // inside the repo, so an absolute path elsewhere won't work.
+        const chosen = data.relative_path || data.path;
+        setFilePath(chosen);
+        if (!/^opencellcomms_adapters\/|^opencellcomms_engine\/src\//.test(chosen)) {
+          setBrowseError(
+            'That location is outside opencellcomms_adapters/ or opencellcomms_engine/src/, ' +
+            'so the function can’t be imported. Choose a folder inside one of those.'
+          );
+        }
       } else if (data.error) {
         setBrowseError(data.error);
       }
@@ -188,6 +210,8 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
             </div>
           ))}
         </div>
+
+        {validationError && <div className="nf-validation-error">{validationError}</div>}
 
         <div className="dialog-actions">
           <button className="btn btn-secondary" onClick={onCancel} disabled={submitting}>Cancel</button>

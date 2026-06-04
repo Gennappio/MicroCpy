@@ -21,10 +21,11 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const workflow = useWorkflowStore((state) => state.workflow);
   const nodeBadgeStatsByScope = useWorkflowStore((state) => state.nodeBadgeStatsByScope);
   const openInspector = useWorkflowStore((state) => state.openInspector);
+  const requestParameterEdit = useWorkflowStore((state) => state.requestParameterEdit);
 
   const edges = useEdges(); // Use reactflow's useEdges hook
 
-  const { label, functionName, enabled, onEdit, functionFile, parameters, customName, stepCount, verbose } = data;
+  const { label, functionName, enabled, functionFile, parameters, customName, stepCount, verbose } = data;
 
   // Get function metadata from registry to get parameter definitions
   const funcMeta = getFunction(functionName);
@@ -129,18 +130,16 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
         </div>
-        {onEdit && (
-          <button
-            className="node-edit-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            title="Edit parameters"
-          >
-            <Settings size={14} />
-          </button>
-        )}
+        <button
+          className="node-edit-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            requestParameterEdit(currentStage, id);
+          }}
+          title="Edit parameters"
+        >
+          <Settings size={14} />
+        </button>
       </div>
 
       {/* Description hidden - only visible in settings dialog */}

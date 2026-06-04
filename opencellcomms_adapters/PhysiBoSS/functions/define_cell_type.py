@@ -15,6 +15,7 @@ def _ensure_spec(context: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Define Cell Type (PhysiCell)",
     description=(
         "Append a cell type to context['physicell_spec']. Phase 3 keeps the "

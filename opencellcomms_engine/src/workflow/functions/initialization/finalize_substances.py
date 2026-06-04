@@ -11,6 +11,7 @@ from src.interfaces.base import ISubstanceSimulator, IConfig
 
 
 @register_function(
+    requires=['simulator'],
     display_name="Finalize Substances",
     description="Initialize simulator with all configured substances (call after all add_substance)",
     category="INITIALIZATION",

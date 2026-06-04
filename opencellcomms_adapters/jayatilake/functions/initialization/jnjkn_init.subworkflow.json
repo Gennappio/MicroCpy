@@ -1,0 +1,32 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "jnjkn_init",
+  "kind": "agent_init",
+  "description": "Initialization for jnjkn",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-03T14:56:28.442Z",
+  "subworkflow": {
+    "description": "Initialization for jnjkn",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-jnjkn_init",
+      "label": "JNJKN_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": []
+  }
+}

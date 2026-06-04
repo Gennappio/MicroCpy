@@ -68,6 +68,19 @@ def category_for(behavior_name):
     return ('intracellular', 'INTRACELLULAR')
 
 
+def requires_for(category_const):
+    """Capability tokens a behavior in this category needs from the kernel.
+
+    DIFFUSION acts on the substance field (simulator); INTRACELLULAR/FINALIZATION
+    operate on the agent population. All are provided by the biophysics kernel.
+    """
+    return {
+        'DIFFUSION': ['simulator'],
+        'INTRACELLULAR': ['population'],
+        'FINALIZATION': ['population'],
+    }.get(category_const, [])
+
+
 def make_function_block(kind_scope, behavior, fn_name, category_const):
     """Generate a single @register_function block."""
     display = ' '.join(p.capitalize() for p in fn_name.split('_'))
@@ -84,6 +97,7 @@ def make_function_block(kind_scope, behavior, fn_name, category_const):
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires={requires_for(category_const)!r},
 )
 def {fn_name}(context=None, intensity=1.0, verbose=False, **kwargs):
     step = (context or {{}}).get('current_step', '?')

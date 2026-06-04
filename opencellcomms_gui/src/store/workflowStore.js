@@ -70,7 +70,7 @@ const _defaultSubworkflows = {
   [SCHEDULER_NAME]: _makeEmptyControllerSubworkflow(
     SCHEDULER_NAME,
     'SCHEDULER',
-    100,
+    1,
     'Main simulation loop — order behaviors here',
   ),
 };

@@ -11,6 +11,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Collect Statistics",
     description="Collect final simulation statistics (cell counts, phenotypes, substance stats)",
     category="FINALIZATION",

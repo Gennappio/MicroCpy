@@ -4,8 +4,6 @@
   "kind": "processing_behavior",
   "subworkflow": {
     "description": "Processing: proc_export_csv",
-    "enabled": true,
-    "deletable": true,
     "controller": {
       "id": "controller-proc_export_csv",
       "type": "controller",
@@ -20,65 +18,44 @@
       {
         "id": "func-1779800068602-49",
         "function_name": "write_predators_csv",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 640
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-50",
         "function_name": "write_prey_csv",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 100
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       },
       {
         "id": "func-1779800068602-51",
         "function_name": "write_plankton_csv",
-        "function_file": "",
         "parameters": {
           "intensity": 1.0,
           "verbose": false
         },
-        "enabled": true,
         "position": {
           "x": 400,
           "y": 160
-        },
-        "description": "",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
+        }
       }
     ],
-    "subworkflow_calls": [],
-    "parameters": [],
     "execution_order": [
       "func-1779800068602-49",
       "func-1779800068602-50",
       "func-1779800068602-51"
-    ],
-    "input_parameters": []
+    ]
   }
 }

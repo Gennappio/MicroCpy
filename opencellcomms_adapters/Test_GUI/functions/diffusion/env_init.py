@@ -16,6 +16,7 @@ from src.biology.context import BiologicalContext
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def setup_test_domain(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -36,6 +37,7 @@ def setup_test_domain(env: BiologicalContext = None, intensity=1.0, verbose=Fals
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def setup_test_substances(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')
@@ -56,6 +58,7 @@ def setup_test_substances(env: BiologicalContext = None, intensity=1.0, verbose=
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    requires=['simulator'],
 )
 def log_env_ready(env: BiologicalContext = None, intensity=1.0, verbose=False, **kwargs):
     step = (env.raw_context if env else {}).get('current_step', '?')

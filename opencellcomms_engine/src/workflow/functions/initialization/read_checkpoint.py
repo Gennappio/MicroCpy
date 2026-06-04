@@ -11,6 +11,7 @@ from src.interfaces.base import IConfig
 
 
 @register_function(
+    requires=['population'],
     display_name="Read Checkpoint",
     description="Load cell positions and gene states from a checkpoint CSV file",
     category="INITIALIZATION",

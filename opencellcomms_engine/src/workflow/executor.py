@@ -232,6 +232,24 @@ class WorkflowExecutor:
                 error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
             raise ValueError(error_msg)
 
+        # Validate that every enabled function is compatible with the kernel.
+        # A function declares the capability tokens it `requires`; the kernel
+        # declares what it `provides`. Mismatches fail loudly here, before any
+        # step runs, instead of deep inside a per-cell loop.
+        from src.workflow.kernel_validation import validate_kernel_compatibility
+        kernel_violations = validate_kernel_compatibility(workflow, self.registry)
+        if kernel_violations:
+            error_msg = (
+                f"\n{'='*80}\n"
+                f"❌ KERNEL COMPATIBILITY ERROR\n"
+                f"{'='*80}\n"
+                f"Workflow kernel: {workflow.kernel}\n\n"
+                f"The following functions are incompatible with the selected kernel:\n"
+                + "\n".join(f"  - {v}" for v in kernel_violations)
+                + f"\n{'='*80}\n"
+            )
+            raise ValueError(error_msg)
+
     def initialize_observability(self) -> None:
         """Initialize observability systems. Call once before execution starts."""
         if self._event_emitter:
@@ -943,6 +961,26 @@ class WorkflowExecutor:
         """
         Execute the main workflow (for version 2.0 sub-workflow system).
 
+        Scaffold convention (why even an "empty" workflow logs three subworkflows)
+        -------------------------------------------------------------------------
+        The GUI always saves a v2.0 workflow with a fixed skeleton, regardless of
+        how much the user has filled in:
+
+          * ``main`` — the entry composer. It holds NO functions of its own; its
+            execution_order is just two subworkflow_calls: ``__init_sequence__``
+            then ``__scheduler__``. This is why running ``main`` recurses into the
+            other two and you see three "Executing sub-workflow" lines.
+          * ``__init_sequence__`` — the one-time setup phase (maps to the GUI
+            "Initialization" tab; agent/env init functions are dropped here).
+          * ``__scheduler__`` — the per-step loop (maps to the GUI "Scheduler"
+            tab; behaviour subworkflows run here each engine step).
+
+        The double-underscore names are reserved/GUI-managed (see the GUI's
+        ``store/subworkflowKinds.js``: SCHEDULER_NAME / INIT_SEQUENCE_NAME). When
+        these two are empty, ``execute_subworkflow`` still announces them and then
+        finds zero nodes to run — so a blank workflow produces the skeleton log
+        lines but does no actual work. That is expected, not an error.
+
         Args:
             context: Initial execution context
             entry_subworkflow: Name of the subworkflow to start from (default: "main").
@@ -956,14 +994,17 @@ class WorkflowExecutor:
 
         status = "completed"
         try:
-            # Kernel-based dispatch. Workflows declaring kernel=physicell run
-            # through the codegen→make→spawn backend instead of the Python
-            # stage executor (see docs/Physicell_Facade_plan.md).
+            # Kernel-based dispatch. A facade kernel (one that registered a
+            # `backend` hook — e.g. PhysiCell's codegen→make→spawn pipeline)
+            # runs the whole workflow itself, bypassing the Python stage
+            # executor. The engine looks this up generically via the kernel
+            # registry; it does NOT know about any specific external kernel.
             kernel = getattr(self.workflow, "kernel", "biophysics") or "biophysics"
-            if kernel == "physicell":
-                print("[BACKEND] physicell facade selected — bypassing Python stage executor")
-                from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
-                return physicell_backend.run(self.workflow, context)
+            from .kernel_registry import get_kernel
+            kernel_def = get_kernel(kernel)
+            if kernel_def is not None and getattr(kernel_def, "backend", None) is not None:
+                print(f"[BACKEND] '{kernel}' facade kernel selected — bypassing Python stage executor")
+                return kernel_def.backend(self.workflow, context)
 
             if self.workflow.version == "2.0":
                 # Section 9.2: Support arbitrary entry point for composers

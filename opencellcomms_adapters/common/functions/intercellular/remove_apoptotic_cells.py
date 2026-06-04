@@ -17,6 +17,7 @@ from src.interfaces.base import ICellPopulation
 
 
 @register_function(
+    requires=['gene_networks', 'population'],
     display_name="Remove Apoptotic Cells",
     description="Remove cells marked with Apoptosis phenotype from population",
     category="INTERCELLULAR",

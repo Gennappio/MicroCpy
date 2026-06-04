@@ -11,6 +11,7 @@ from src.interfaces.base import IConfig
 
 
 @register_function(
+    requires=['population'],
     display_name="Load Cells from VTK File",
     description="Load initial cell state from a VTK file",
     category="INITIALIZATION",

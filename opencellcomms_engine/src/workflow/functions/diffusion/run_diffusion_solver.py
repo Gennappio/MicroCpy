@@ -60,6 +60,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Run Diffusion Solver",
     description="Solve diffusion PDE with optional cell reactions",
     category="DIFFUSION",
@@ -91,7 +92,10 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
     # Explicitly specify inputs - only 'context' since we pull everything from there
     inputs=["context"],
     outputs=[],
-    cloneable=False
+    cloneable=False,
+    # Reads the substance simulator and cell population from the context; only a
+    # kernel that provides both can run this function.
+    requires=["simulator", "population"]
 )
 def run_diffusion_solver(
     context: Dict[str, Any],

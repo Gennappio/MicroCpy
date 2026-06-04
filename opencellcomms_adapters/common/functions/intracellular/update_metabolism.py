@@ -35,6 +35,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Update Metabolism",
     description="Update intracellular metabolism (ATP, metabolites)",
     category="INTRACELLULAR",

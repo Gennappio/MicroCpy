@@ -21,6 +21,7 @@ def _ensure_spec(context: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Define Substrate (PhysiCell)",
     description=(
         "Append a diffusible substrate to the PhysiCell spec being assembled "

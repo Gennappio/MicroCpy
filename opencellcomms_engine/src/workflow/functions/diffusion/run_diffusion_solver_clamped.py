@@ -16,6 +16,8 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
+    requires=['simulator'],
+    typed_env_exempt=True,
     display_name="Run Diffusion Solver (Clamped)",
     description="Solve diffusion PDE with concentration clamping to prevent negative values",
     category="DIFFUSION",

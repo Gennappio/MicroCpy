@@ -10,6 +10,7 @@ from src.interfaces.base import IConfig
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Export VTK Checkpoint",
     description="Export 3D simulation checkpoint (cells + substances) to VTK format",
     category="UTILITY",

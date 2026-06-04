@@ -580,6 +580,7 @@ def save_simulation_data(
 
 
 @register_function(
+    requires=['population'],
     display_name="Print Simulation Summary",
     description="Print simulation summary (results, statistics, output paths)",
     category="FINALIZATION",

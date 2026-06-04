@@ -786,6 +786,10 @@ class WorkflowDefinition:
     # domain / overall / save / options overrides from kernel_config["physicell"]
     # (legacy: the workflow's top-level "physicell" key, preserved on load).
     kernel_config: Dict[str, Any] = field(default_factory=dict)
+    # Resolved kernel identity, written for provenance so a saved workflow/result
+    # records which kernel (and version) produced it. Default from `kernel` on load.
+    kernel_id: Optional[str] = None
+    kernel_version: Optional[str] = None
     stages: Dict[str, WorkflowStage] = field(default_factory=dict)
     subworkflows: Dict[str, SubWorkflow] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -816,11 +820,28 @@ class WorkflowDefinition:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
+        # Resolve kernel identity for provenance (falls back to the selector name).
+        kernel_id = self.kernel_id
+        kernel_version = self.kernel_version
+        if kernel_id is None or kernel_version is None:
+            try:
+                from src.workflow.kernel_registry import get_kernel
+                resolved = get_kernel(self.kernel)
+            except Exception:
+                resolved = None
+            if resolved is not None:
+                kernel_id = kernel_id or resolved.kernel_id
+                kernel_version = kernel_version or resolved.version
+            kernel_id = kernel_id or self.kernel
+            kernel_version = kernel_version or "1.0"
+
         result = {
             "version": self.version,
             "name": self.name,
             "description": self.description,
             "kernel": self.kernel,
+            "kernel_id": kernel_id,
+            "kernel_version": kernel_version,
             "metadata": self.metadata
         }
         if self.kernel_config:
@@ -867,6 +888,8 @@ class WorkflowDefinition:
                 description=data.get("description", ""),
                 kernel=data.get("kernel", "biophysics"),
                 kernel_config=kernel_config,
+                kernel_id=data.get("kernel_id"),
+                kernel_version=data.get("kernel_version"),
                 subworkflows=subworkflows,
                 metadata=data.get("metadata", {})
             )
@@ -882,6 +905,8 @@ class WorkflowDefinition:
                 description=data.get("description", ""),
                 kernel=data.get("kernel", "biophysics"),
                 kernel_config=kernel_config,
+                kernel_id=data.get("kernel_id"),
+                kernel_version=data.get("kernel_version"),
                 stages=stages,
                 metadata=data.get("metadata", {})
             )

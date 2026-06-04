@@ -6,10 +6,15 @@
   "kernel_config": {
     "physicell": {
       "domain": {
-        "x_min": -150.0, "x_max": 150.0,
-        "y_min": -150.0, "y_max": 150.0,
-        "z_min": -10.0, "z_max": 10.0,
-        "dx": 20.0, "dy": 20.0, "dz": 20.0,
+        "x_min": -150.0,
+        "x_max": 150.0,
+        "y_min": -150.0,
+        "y_max": 150.0,
+        "z_min": -10.0,
+        "z_max": 10.0,
+        "dx": 20.0,
+        "dy": 20.0,
+        "dz": 20.0,
         "use_2D": true
       },
       "overall": {
@@ -18,15 +23,22 @@
         "dt_mechanics": 0.1,
         "dt_phenotype": 0.1
       },
-      "parallel": {"omp_num_threads": 2},
+      "parallel": {
+        "omp_num_threads": 2
+      },
       "save": {
         "folder": "output",
         "full_data_interval": 1.0,
         "svg_interval": 1.0,
         "svg_enabled": false
       },
-      "options": {"random_seed": 7, "virtual_wall_at_domain_edge": true},
-      "user_parameters": {"number_of_cells": 3}
+      "options": {
+        "random_seed": 7,
+        "virtual_wall_at_domain_edge": true
+      },
+      "user_parameters": {
+        "number_of_cells": 3
+      }
     }
   },
   "metadata": {
@@ -36,10 +48,21 @@
     "gui": {
       "function_libraries": [],
       "agent_kinds": [],
-      "environment": {"init_subworkflow": null, "behavior_subworkflows": []},
-      "init_sequence": {"subworkflow": "__init_sequence__"},
-      "scheduler": {"subworkflow": "__scheduler__"},
-      "processing": {"behavior_subworkflows": ["physicell_setup"]},
+      "environment": {
+        "init_subworkflow": null,
+        "behavior_subworkflows": []
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "physicell_setup"
+        ]
+      },
       "main_is_synthesized": false,
       "user_functions": []
     }
@@ -47,85 +70,86 @@
   "subworkflows": {
     "__init_sequence__": {
       "description": "Initialization order — drag init subworkflows here",
-      "enabled": true,
       "deletable": false,
       "controller": {
         "id": "controller-__init_sequence__",
         "type": "initNode",
         "label": "INIT SEQUENCE",
-        "position": {"x": 100.0, "y": 100.0},
+        "position": {
+          "x": 100.0,
+          "y": 100.0
+        },
         "number_of_steps": 1
-      },
-      "functions": [],
-      "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
-      "input_parameters": []
+      }
     },
     "__scheduler__": {
       "description": "Main simulation loop — order behaviors here",
-      "enabled": true,
       "deletable": false,
       "controller": {
         "id": "controller-__scheduler__",
         "type": "initNode",
         "label": "SCHEDULER",
-        "position": {"x": 100.0, "y": 100.0},
+        "position": {
+          "x": 100.0,
+          "y": 100.0
+        },
         "number_of_steps": 100
-      },
-      "functions": [],
-      "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
-      "input_parameters": []
+      }
     },
     "physicell_setup": {
       "description": "Codegen-only: declares one substrate, one cell type, one Hill rule. Execution is handed off to physicell_backend.run() — these nodes are no-ops at sim time.",
-      "enabled": true,
       "deletable": false,
-      "execution_order": ["sub_o2", "ct_tumor", "rule_o2_necrosis"],
-      "subworkflow_calls": [],
-      "input_parameters": [],
+      "execution_order": [
+        "sub_o2",
+        "ct_tumor",
+        "rule_o2_necrosis"
+      ],
       "controller": {
         "id": "controller-physicell_setup",
         "type": "controller",
         "label": "PHYSICELL FACADE",
-        "position": {"x": 350.0, "y": -100.0},
+        "position": {
+          "x": 350.0,
+          "y": -100.0
+        },
         "number_of_steps": 1
       },
       "functions": [
         {
           "id": "sub_o2",
           "function_name": "define_substrate",
-          "parameters": {},
-          "enabled": true,
-          "position": {"x": 100.0, "y": 100.0},
+          "position": {
+            "x": 100.0,
+            "y": 100.0
+          },
           "description": "Oxygen substrate; high initial value + decay produces a falling signal over the run.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": ["pn_oxygen"]
+          "parameter_nodes": [
+            "pn_oxygen"
+          ]
         },
         {
           "id": "ct_tumor",
           "function_name": "define_cell_type",
-          "parameters": {},
-          "enabled": true,
-          "position": {"x": 400.0, "y": 100.0},
+          "position": {
+            "x": 400.0,
+            "y": 100.0
+          },
           "description": "Single tumor cell type; default phenotype values.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": ["pn_tumor"]
+          "parameter_nodes": [
+            "pn_tumor"
+          ]
         },
         {
           "id": "rule_o2_necrosis",
           "function_name": "define_hill_rule",
-          "parameters": {},
-          "enabled": true,
-          "position": {"x": 700.0, "y": 100.0},
+          "position": {
+            "x": 700.0,
+            "y": 100.0
+          },
           "description": "As oxygen increases, necrosis rate moves from 0 toward max_response=0.5.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": ["pn_rule_o2_necrosis"]
+          "parameter_nodes": [
+            "pn_rule_o2_necrosis"
+          ]
         }
       ],
       "parameters": [
@@ -134,15 +158,46 @@
           "type": "dictParameterNode",
           "label": "Oxygen (substrate)",
           "target_param": "substrate",
-          "position": {"x": 100.0, "y": 280.0},
+          "position": {
+            "x": 100.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "name", "value": "oxygen", "valueType": "string"},
-            {"key": "units", "value": "mmHg", "valueType": "string"},
-            {"key": "diffusion_coefficient", "value": 100000.0, "valueType": "float"},
-            {"key": "decay_rate", "value": 1.0, "valueType": "float"},
-            {"key": "initial_condition", "value": 38.0, "valueType": "float"},
-            {"key": "dirichlet_enabled", "value": false, "valueType": "bool"},
-            {"key": "dirichlet_value", "value": 0.0, "valueType": "float"}
+            {
+              "key": "name",
+              "value": "oxygen",
+              "valueType": "string"
+            },
+            {
+              "key": "units",
+              "value": "mmHg",
+              "valueType": "string"
+            },
+            {
+              "key": "diffusion_coefficient",
+              "value": 100000.0,
+              "valueType": "float"
+            },
+            {
+              "key": "decay_rate",
+              "value": 1.0,
+              "valueType": "float"
+            },
+            {
+              "key": "initial_condition",
+              "value": 38.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dirichlet_enabled",
+              "value": false,
+              "valueType": "bool"
+            },
+            {
+              "key": "dirichlet_value",
+              "value": 0.0,
+              "valueType": "float"
+            }
           ]
         },
         {
@@ -150,10 +205,21 @@
           "type": "dictParameterNode",
           "label": "Tumor (cell type)",
           "target_param": "cell_type",
-          "position": {"x": 400.0, "y": 280.0},
+          "position": {
+            "x": 400.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "name", "value": "tumor", "valueType": "string"},
-            {"key": "id", "value": 0, "valueType": "int"}
+            {
+              "key": "name",
+              "value": "tumor",
+              "valueType": "string"
+            },
+            {
+              "key": "id",
+              "value": 0,
+              "valueType": "int"
+            }
           ]
         },
         {
@@ -161,16 +227,51 @@
           "type": "dictParameterNode",
           "label": "Hill: O2 → necrosis",
           "target_param": "rule",
-          "position": {"x": 700.0, "y": 280.0},
+          "position": {
+            "x": 700.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "cell_type", "value": "tumor", "valueType": "string"},
-            {"key": "signal", "value": "oxygen", "valueType": "string"},
-            {"key": "direction", "value": "increases", "valueType": "string"},
-            {"key": "behavior", "value": "necrosis", "valueType": "string"},
-            {"key": "max_response", "value": 0.5, "valueType": "float"},
-            {"key": "half_max", "value": 5.0, "valueType": "float"},
-            {"key": "hill_power", "value": 8.0, "valueType": "float"},
-            {"key": "use_on_dead", "value": 0, "valueType": "int"}
+            {
+              "key": "cell_type",
+              "value": "tumor",
+              "valueType": "string"
+            },
+            {
+              "key": "signal",
+              "value": "oxygen",
+              "valueType": "string"
+            },
+            {
+              "key": "direction",
+              "value": "increases",
+              "valueType": "string"
+            },
+            {
+              "key": "behavior",
+              "value": "necrosis",
+              "valueType": "string"
+            },
+            {
+              "key": "max_response",
+              "value": 0.5,
+              "valueType": "float"
+            },
+            {
+              "key": "half_max",
+              "value": 5.0,
+              "valueType": "float"
+            },
+            {
+              "key": "hill_power",
+              "value": 8.0,
+              "valueType": "float"
+            },
+            {
+              "key": "use_on_dead",
+              "value": 0,
+              "valueType": "int"
+            }
           ]
         }
       ]

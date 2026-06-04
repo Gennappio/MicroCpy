@@ -20,6 +20,8 @@ from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
 
+import agent  # In-GUI Claude coding agent (config + code generation)
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
@@ -99,7 +101,14 @@ def stream_output(process, log_queue):
         finally:
             pipe.close()
 
-    # Start threads for stdout and stderr
+    # Start threads for stdout and stderr.
+    # NOTE: the prefix is purely the *channel*, not a severity. Everything the
+    # subprocess writes to stderr is tagged "[ERROR]" — including benign Python
+    # warnings (e.g. the engine's legacy-signature UserWarnings) and library
+    # chatter. A red "[ERROR]" line in the GUI is therefore NOT necessarily a
+    # failure; only treat the process exit code / explicit error messages as
+    # fatal. (The legacy-signature flood is silenced at source by default; set
+    # OCC_WARN_LEGACY_CONTEXT=1 to bring it back.)
     stdout_thread = threading.Thread(
         target=enqueue_output,
         args=(process.stdout, log_queue, "[LOG] ")
@@ -164,10 +173,11 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             str(Path(gui_results_dir).absolute()),
         ]
 
-        # Add entry_subworkflow parameter if specified (Section 9.2)
+        # Add entry_subworkflow parameter if specified (Section 9.2).
+        # 'main' is the GUI-synthesized top-level composer — internal plumbing,
+        # so we don't surface it in the user-facing log.
         if entry_subworkflow:
             cmd.extend(["--entry-subworkflow", entry_subworkflow])
-            log_queue.put(f"[START] Running workflow from entry point: {entry_subworkflow}\n")
         else:
             log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
 
@@ -483,6 +493,28 @@ def health_check():
     })
 
 
+@app.route('/api/cli-info', methods=['GET'])
+def cli_info():
+    """
+    Return the paths the GUI needs to build 'run from terminal' commands.
+
+    Everything is resolved server-side so the displayed commands stay accurate
+    no matter where the project lives (engine dir, python interpreter, and the
+    temp file the GUI writes the current workflow to before each run).
+    """
+    engine_path = get_engine_path()
+    gui_dir = Path(__file__).parent.parent
+    return jsonify({
+        'python': sys.executable,
+        'engine_dir': str(engine_path.parent),
+        'run_workflow': engine_path.name,  # run_workflow.py
+        # Path the GUI writes the current workflow to on every (unlabeled) run.
+        # Must match the path built in run_simulation().
+        'gui_temp_workflow': str(Path(tempfile.gettempdir()) / "opencellcomms_workflow.json"),
+        'gui_results_dir': str((gui_dir / "GUI_results").absolute()),
+    })
+
+
 @app.route('/api/registry', methods=['GET'])
 def get_registry():
     """
@@ -666,9 +698,11 @@ def save_function_source():
         if not data:
             return jsonify({'error': 'Missing request body'}), 400
 
-        function_name = data.get('name')
+        # Accept both field-name variants used across the GUI
+        # (CodeViewer sends name/file; ParameterEditor sends function_name/file_path).
+        function_name = data.get('name') or data.get('function_name')
         source_code = data.get('source')
-        source_file = data.get('file')
+        source_file = data.get('file') or data.get('file_path')
 
         if not function_name or not source_code:
             return jsonify({'error': 'Missing required fields: name, source'}), 400
@@ -860,7 +894,16 @@ def save_dialog():
             return jsonify({'error': f'Dialog failed: {proc.stderr.strip() or "unknown"}'}), 500
         if not chosen:
             return jsonify({'cancelled': True})
-        return jsonify({'path': chosen})
+
+        # The native dialog returns an absolute path. Most of the app expects a
+        # repo-relative path (e.g. opencellcomms_adapters/...). Provide both so
+        # callers can show the clean relative form when the pick is inside the repo.
+        relative_path = None
+        try:
+            relative_path = str(Path(chosen).resolve().relative_to(repo_root))
+        except ValueError:
+            relative_path = None
+        return jsonify({'path': chosen, 'relative_path': relative_path})
 
     except Exception as e:
         return jsonify({'error': f'Save dialog failed: {e} — type the path manually'}), 500
@@ -1824,6 +1867,65 @@ def get_observability_versions():
         return jsonify({'success': True, 'versions': versions})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# AI CODING AGENT (Claude) — config + per-node code generation
+# ============================================================================
+
+@app.route('/api/agent/config', methods=['GET'])
+def get_agent_config():
+    """Return whether an API key is configured (masked) and the chosen model."""
+    try:
+        return jsonify({'success': True, **agent.get_config()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/agent/config', methods=['POST'])
+def set_agent_config():
+    """Persist the provider, model, and per-provider API keys to the gitignored .env."""
+    try:
+        data = request.json or {}
+        provider = data.get('provider')
+        model = data.get('model')
+        anthropic_key = data.get('anthropic_key')
+        openrouter_key = data.get('openrouter_key')
+        if not any([provider, model, anthropic_key, openrouter_key]):
+            return jsonify({'error': 'Nothing to update'}), 400
+        agent.set_config(
+            provider=provider,
+            model=model,
+            anthropic_key=anthropic_key,
+            openrouter_key=openrouter_key,
+        )
+        return jsonify({'success': True, **agent.get_config()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/agent/generate', methods=['POST'])
+def agent_generate():
+    """Generate the complete updated source file for a node's function from a prompt."""
+    try:
+        data = request.json or {}
+        prompt = (data.get('prompt') or '').strip()
+        if not prompt:
+            return jsonify({'error': 'Missing required field: prompt'}), 400
+
+        result = agent.generate_function(
+            prompt=prompt,
+            function_name=data.get('function_name') or '',
+            category=data.get('category') or '',
+            current_source=data.get('current_source') or '',
+            model=data.get('model'),
+            provider=data.get('provider'),
+        )
+        return jsonify({'success': True, **result})
+    except agent.AgentNotConfigured as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Generation failed: {e}'}), 500
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink, ChevronUp, ChevronDown, List, Braces } from 'lucide-react';
+import { X, Save, Edit2, Plus, Trash2, Eye, Copy, Upload, Check, ExternalLink, ChevronUp, ChevronDown, List, Braces, Sparkles } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
@@ -51,6 +51,12 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [editedCode, setEditedCode] = useState('');
   const [isSavingCode, setIsSavingCode] = useState(false);
   const codeTextareaRef = useRef(null);
+
+  // AI code generation state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState('');
+  const [aiError, setAiError] = useState('');
 
   const loadCode = async () => {
     setCodeLoading(true);
@@ -184,6 +190,39 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
+  const handleGenerate = async () => {
+    if (!aiPrompt.trim() || aiGenerating) return;
+    setAiGenerating(true);
+    setAiError('');
+    setAiExplanation('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/agent/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          function_name: functionName,
+          source_file: resolvedSourcePath,
+          current_source: code,
+          category: functionMetadata?.category || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Drop the generated file into the existing editor for human review.
+        setEditedCode(data.code);
+        setIsEditingCode(true);
+        setAiExplanation(data.explanation || '');
+      } else {
+        setAiError(data.error || 'Generation failed');
+      }
+    } catch (err) {
+      setAiError(err.message || 'Generation failed');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   useEffect(() => {
     setParameters(node.data.parameters || {});
     setCustomName(node.data.customName || node.data.label || '');
@@ -207,6 +246,9 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setCode('');
     setCodeError('');
     setCodeLoading(false);
+    setAiPrompt('');
+    setAiExplanation('');
+    setAiError('');
   }, [node]);
 
 
@@ -500,13 +542,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     }
   };
 
-  // Return null only if this is a *function* node and we couldn't find metadata.
-  // Parameter nodes (simple, list, dict) and sub-workflow calls do not rely on
-  // registry metadata, so they should still render the editor even when
-  // functionMetadata is null.
-  if (isFunctionNode && !functionMetadata) {
-    return null;
-  }
+  // User-created functions won't be in the static registry — keep going and
+  // show what we can (name, file path, description, code viewer).
 
   // Determine the display name for the editor header based on node type
   let displayName;
@@ -530,7 +567,26 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const resolvedSourcePath = sourcePath || ((functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '');
   const displayCode = resolvedSourcePath ? `# File: ${resolvedSourcePath}\n\n${code}` : code;
 
-  const parametersList = functionMetadata ? functionMetadata.parameters : [];
+  // A staged user function is one created via "New Function" but not yet
+  // written to disk (exported: false). It has no registry metadata and no
+  // source file — show the parameters the user declared instead.
+  const stagedFn = isFunctionNode
+    ? (workflow.metadata?.gui?.user_functions || []).find(
+        (f) => f.name === node.data.functionName && f.exported === false
+      )
+    : null;
+  const isStaged = !!stagedFn;
+
+  const STAGED_TYPE_MAP = { INT: 'integer', FLOAT: 'float', BOOL: 'boolean', STRING: 'string', DICT: 'dict' };
+  const stagedParametersList = (stagedFn?.parameters || []).map((p) => ({
+    name: p.name,
+    type: STAGED_TYPE_MAP[p.type] || 'string',
+    default: p.default,
+  }));
+
+  const parametersList = functionMetadata
+    ? functionMetadata.parameters
+    : (isStaged ? stagedParametersList : []);
 
   return (
     <div className="parameter-editor-overlay" onClick={onClose}>
@@ -538,7 +594,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         <div className="editor-header">
           <h3>{displayName}</h3>
           {isParameterNode && <span className="parameter-badge">Parameter Storage</span>}
-          {isFunctionNode && (
+          {isFunctionNode && !isStaged && (
             <button className="btn btn-secondary" onClick={handleToggleCode}>
               <Eye size={14} />
               {showCode ? 'Hide Code' : 'View Code'}
@@ -563,6 +619,15 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 
         {!isParameterNode && functionMetadata && (
           <div className="editor-description">{functionMetadata.description}</div>
+        )}
+
+        {isStaged && (
+          <div className="editor-staged-banner">
+            <strong>Not exported yet.</strong> This function is defined but its Python file
+            hasn’t been written. Click <strong>Export Behavior</strong> on the canvas to write
+            {' '}<code>{stagedFn.file_path}</code>. You can set parameter values now — the source
+            code becomes viewable after export.
+          </div>
         )}
 
         <div className="editor-content">
@@ -995,6 +1060,36 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
           {/* Function Node Editor - Full interface with code viewer */}
           {isFunctionNode && showCode && (
             <div className="code-container">
+              <div className="ai-generate-box">
+                <label className="ai-generate-label">
+                  <Sparkles size={14} /> Generate with AI
+                </label>
+                <textarea
+                  className="ai-generate-input"
+                  placeholder="Describe the rule in plain English, e.g. 'mark cells necrotic when oxygen drops below 0.1'"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={2}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleGenerate}
+                  disabled={aiGenerating || !aiPrompt.trim()}
+                  title="Generate code from your description using Claude"
+                >
+                  <Sparkles size={14} />
+                  {aiGenerating ? 'Generating…' : 'Generate'}
+                </button>
+                {aiError && <div className="ai-generate-error">{aiError}</div>}
+                {aiExplanation && (
+                  <div className="ai-generate-explanation">
+                    <strong>What this does:</strong> {aiExplanation}
+                    <div className="ai-generate-hint">
+                      Review the code below, then click <strong>Save</strong> to write it to the file.
+                    </div>
+                  </div>
+                )}
+              </div>
               {codeLoading ? (
                 <div className="loading">Loading source code...</div>
               ) : codeError ? (
