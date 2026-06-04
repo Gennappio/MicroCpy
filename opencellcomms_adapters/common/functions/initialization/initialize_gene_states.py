@@ -6,9 +6,9 @@ This ensures cells start with random metabolic states (mitoATP, glycoATP, etc.)
 rather than all being False/inactive.
 """
 
-from typing import Dict, Any
 import random
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -35,7 +35,7 @@ from src.workflow.decorators import register_function
     cloneable=False
 )
 def initialize_gene_states(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     random_seed: int = 0,
     fate_nodes_false: bool = True,
     **kwargs
@@ -56,9 +56,9 @@ def initialize_gene_states(
     Returns:
         True if successful
     """
-    population = context.get('population')
-    gene_network = context.get('gene_network')
-    
+    population = env.cells.raw
+    gene_network = env.raw_context.get('gene_network')
+
     if not population:
         print("[ERROR] Population must be set up before initializing gene states")
         return False
@@ -81,17 +81,17 @@ def initialize_gene_states(
     fate_nodes = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
     
     # Track statistics
-    total_cells = len(population.state.cells)
+    total_cells = len(env.cells)
     cells_updated = 0
     gene_stats = {gene: 0 for gene in gene_node_names}
     
     # Update each cell's gene states
     updated_cells = {}
     
-    for cell_id, cell in population.state.cells.items():
+    for cell in env.cells:
         # Create random gene states for this cell
         new_gene_states = {}
-        
+
         for gene_name in gene_node_names:
             # Check if this is a fate node
             if fate_nodes_false and gene_name in fate_nodes:
@@ -102,10 +102,10 @@ def initialize_gene_states(
                 new_gene_states[gene_name] = random.choice([True, False])
                 if new_gene_states[gene_name]:
                     gene_stats[gene_name] += 1
-        
+
         # Update cell state with new gene states
-        cell.state = cell.state.with_updates(gene_states=new_gene_states)
-        updated_cells[cell_id] = cell
+        cell.set_gene_state_snapshot(new_gene_states)
+        updated_cells[cell.id] = cell.raw
         cells_updated += 1
     
     # Update population state

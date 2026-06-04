@@ -29,9 +29,9 @@ Functions pull what they need from context and handle None gracefully.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -47,7 +47,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
     cloneable=False
 )
 def update_metabolism(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
@@ -70,19 +70,17 @@ def update_metabolism(
     """
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
+    # population via the raw escape hatch: this rebuilds population state in place
+    # and invokes per-cell custom_functions hooks; simulator is optional (the
+    # function falls back to an empty environment when absent).
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config: Optional[IConfig] = context.get('config')
-    _clock = context.get('clock')
-    dt = _clock.dt if _clock is not None else context.get('dt', 0.1)
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    population = env.cells.raw
     if population is None:
         print("[update_metabolism] No population in context - skipping")
         return
+    simulator = env.environment.raw_simulator
+    config = env.config
+    dt = env.dt
 
     # =========================================================================
     # GET SUBSTANCE CONCENTRATIONS (optional)
