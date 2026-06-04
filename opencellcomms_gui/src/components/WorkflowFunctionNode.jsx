@@ -29,7 +29,21 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   // Get function metadata from registry to get parameter definitions
   const funcMeta = getFunction(functionName);
-  const parameterDefs = funcMeta?.parameters || [];
+
+  // A function created via "New Function" but not yet exported to disk lives
+  // in metadata.gui.user_functions (not the backend registry). Fall back to
+  // its declared parameters so the node still shows sockets before export.
+  const STAGED_TYPE_MAP = { INT: 'integer', FLOAT: 'float', BOOL: 'boolean', STRING: 'string', DICT: 'dict' };
+  const stagedFn = !funcMeta
+    ? (workflow.metadata?.gui?.user_functions || []).find((f) => f.name === functionName)
+    : null;
+  const stagedParameterDefs = (stagedFn?.parameters || []).map((p) => ({
+    name: p.name,
+    type: STAGED_TYPE_MAP[p.type] || 'string',
+    default: p.default,
+  }));
+
+  const parameterDefs = funcMeta?.parameters || stagedParameterDefs;
 
   // Get badge stats for this node
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
