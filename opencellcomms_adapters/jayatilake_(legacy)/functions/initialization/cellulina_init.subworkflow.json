@@ -1,0 +1,68 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "cellulina_init",
+  "kind": "agent_init",
+  "description": "Initialization for cellulina",
+  "exported_from": "Untitled Workflow",
+  "exported_at": "2026-06-04T17:08:34.329Z",
+  "subworkflow": {
+    "description": "Initialization for cellulina",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-cellulina_init",
+      "label": "CELLULINA_INIT CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "cellulkina_1780592701382",
+        "function_name": "cellulkina",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 56.425808106543286,
+          "y": 322.0177332184609
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      },
+      {
+        "id": "gugugug_1780592847777",
+        "function_name": "gugugug",
+        "parameters": {},
+        "enabled": true,
+        "verbose": false,
+        "position": {
+          "x": 204.92612652247283,
+          "y": 424.61795321492133
+        },
+        "description": "✱ unsaved — click Export Behavior to write the file",
+        "custom_name": "",
+        "parameter_nodes": [],
+        "step_count": 1
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "cellulkina_1780592701382"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "cellulkina",
+      "gugugug"
+    ]
+  }
+}
