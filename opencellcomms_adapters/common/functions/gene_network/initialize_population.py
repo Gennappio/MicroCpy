@@ -20,6 +20,10 @@ from ._mock_helpers import (
 
 @register_function(
     requires=['gene_networks', 'simulator'],
+    # Test/setup scaffolding: this creates the population and writes core context
+    # keys (population/simulator/config); the typed env has no such setters, so it
+    # legitimately stays on the raw context dict.
+    typed_env_exempt=True,
     display_name="Initialize Population",
     description="Create a population with N cells (without gene networks). Works for both testing and full simulation.",
     category="INITIALIZATION",

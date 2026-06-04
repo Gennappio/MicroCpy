@@ -5,9 +5,9 @@ This function outputs statistics about gene network states across the population
 including fate nodes (Apoptosis, Proliferation, etc.) and metabolic nodes.
 """
 
-from typing import Dict, Any
 from collections import Counter
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -24,30 +24,18 @@ from src.workflow.decorators import register_function
     compatible_kernels=["biophysics"]
 )
 def print_gene_network_states(
-    context: Dict[str, Any] = None,
+    env: BiologicalContext,
     show_per_cell: bool = False,
     **kwargs
 ) -> bool:
     """
     Print gene network statistics from all cells.
     """
-    # =========================================================================
-    # VALIDATE CONTEXT
-    # =========================================================================
-    if not context:
-        print("[ERROR] [print_gene_network_states] No context provided")
-        return False
-
-    # =========================================================================
-    # GET REQUIRED ITEMS FROM CONTEXT
-    # =========================================================================
-    population = context.get('population')
-    if population is None:
+    if env.cells.raw is None:
         print("[ERROR] [print_gene_network_states] No population in context")
         return False
 
-    cells = population.state.cells
-    num_cells = len(cells)
+    num_cells = len(env.cells)
 
     if num_cells == 0:
         print("[ERROR] No cells in population")
@@ -61,9 +49,9 @@ def print_gene_network_states(
     node_stats = {node: Counter() for node in all_nodes}
     phenotype_counts = Counter()
 
-    for cell_id, cell in cells.items():
-        gene_states = cell.state.gene_states or {}
-        phenotype = cell.state.phenotype if hasattr(cell.state, 'phenotype') else None
+    for cell in env.cells:
+        gene_states = cell.gene_states or {}
+        phenotype = cell.phenotype
 
         # Count phenotypes (from hierarchical fate determination)
         if phenotype:
@@ -73,7 +61,7 @@ def print_gene_network_states(
             fate_str = ", ".join([f"{n}={'ON' if gene_states.get(n, False) else 'OFF'}" for n in fate_nodes])
             meta_str = ", ".join([f"{n}={'ON' if gene_states.get(n, False) else 'OFF'}" for n in metabolic_nodes])
             pheno_str = f"PHENOTYPE={phenotype}" if phenotype else "PHENOTYPE=None"
-            print(f"   {cell_id}: {pheno_str} | {fate_str} | {meta_str}")
+            print(f"   {cell.id}: {pheno_str} | {fate_str} | {meta_str}")
 
         for node in all_nodes:
             state = gene_states.get(node, False)

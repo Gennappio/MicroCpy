@@ -7,9 +7,8 @@ For each association (substance -> gene_input):
 - Set gene_input = ON if concentration > threshold, else OFF
 """
 
-from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, IConfig
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -23,7 +22,7 @@ from src.interfaces.base import ICellPopulation, IConfig
     cloneable=False
 )
 def apply_associations_to_inputs(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> bool:
     """
@@ -37,13 +36,16 @@ def apply_associations_to_inputs(
     context['substances'] values applied uniformly to all cells.
     """
     try:
-        population: Optional[ICellPopulation] = context.get('population')
-        config: Optional[IConfig] = context.get('config')
-        simulator = context.get('simulator')
+        # Population/simulator via the raw escape hatches: this reads neighbour-grid
+        # concentrations with custom grid geometry and writes node states across the
+        # gene-network dict, neither of which the typed views model.
+        population = env.cells.raw
+        config = env.config
+        simulator = env.environment.raw_simulator
 
         # Get associations and thresholds from either context or config
-        associations = context.get('associations', {})
-        thresholds = context.get('thresholds', {})
+        associations = env.raw_context.get('associations', {})
+        thresholds = env.raw_context.get('thresholds', {})
 
         # If not in context directly, try config object
         if not associations and config:
@@ -73,7 +75,7 @@ def apply_associations_to_inputs(
         else:
             grid_spacing_x = grid_spacing_y = 30.0
 
-        gene_networks = context.get('gene_networks', {})
+        gene_networks = env.raw_context.get('gene_networks', {})
 
         # --- Spatial model: per-cell local concentrations from simulator ---
         if population and substance_concentrations:
@@ -140,7 +142,7 @@ def apply_associations_to_inputs(
 
         # --- Fallback: no simulator (standalone gene network / initialization) ---
         elif population:
-            substances = context.get('substances', {})
+            substances = env.raw_context.get('substances', {})
             input_states = {}
 
             print(f"[ASSOCIATIONS] Applying {len(associations)} associations (flat, uniform):")
@@ -165,7 +167,7 @@ def apply_associations_to_inputs(
                         if node_name in cell.state.gene_network.nodes:
                             cell.state.gene_network.nodes[node_name].current_state = state
 
-            context['gene_network_inputs'] = input_states
+            env.raw_context['gene_network_inputs'] = input_states
         else:
             print("[WARNING] No population available")
 
