@@ -20,6 +20,12 @@ from src.workflow.kernel_registry import (
 )
 from src.workflow.kernel_validation import validate_kernel_compatibility
 
+# The `physicell` facade kernel is provided by the PhysiBoSS adapter (it
+# registers itself with a `backend` hook); the engine core no longer declares
+# it. Import the adapter so `get_kernel("physicell")` is available to the tests
+# below that don't otherwise build the default registry.
+import opencellcomms_adapters.PhysiBoSS.register  # noqa: E402,F401
+
 
 def _v1_workflow(kernel: str) -> WorkflowDefinition:
     """A minimal legacy (v1.0) workflow whose diffusion stage runs the solver.

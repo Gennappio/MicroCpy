@@ -994,14 +994,17 @@ class WorkflowExecutor:
 
         status = "completed"
         try:
-            # Kernel-based dispatch. Workflows declaring kernel=physicell run
-            # through the codegen→make→spawn backend instead of the Python
-            # stage executor (see docs/Physicell_Facade_plan.md).
+            # Kernel-based dispatch. A facade kernel (one that registered a
+            # `backend` hook — e.g. PhysiCell's codegen→make→spawn pipeline)
+            # runs the whole workflow itself, bypassing the Python stage
+            # executor. The engine looks this up generically via the kernel
+            # registry; it does NOT know about any specific external kernel.
             kernel = getattr(self.workflow, "kernel", "biophysics") or "biophysics"
-            if kernel == "physicell":
-                print("[BACKEND] physicell facade selected — bypassing Python stage executor")
-                from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
-                return physicell_backend.run(self.workflow, context)
+            from .kernel_registry import get_kernel
+            kernel_def = get_kernel(kernel)
+            if kernel_def is not None and getattr(kernel_def, "backend", None) is not None:
+                print(f"[BACKEND] '{kernel}' facade kernel selected — bypassing Python stage executor")
+                return kernel_def.backend(self.workflow, context)
 
             if self.workflow.version == "2.0":
                 # Section 9.2: Support arbitrary entry point for composers

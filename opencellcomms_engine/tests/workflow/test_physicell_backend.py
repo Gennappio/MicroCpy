@@ -97,9 +97,17 @@ def test_kernel_defaults_to_biophysics():
 
 
 def test_both_kernels_registered():
+    # `biophysics` is the engine's native kernel; `physicell` is a facade
+    # kernel provided by the PhysiBoSS adapter (it registers itself with a
+    # `backend` dispatch hook), so importing the adapter is what makes it
+    # available — the engine core no longer declares it.
+    import opencellcomms_adapters.PhysiBoSS.register  # noqa: F401
+
     assert "biophysics" in KERNEL_REGISTRY
     assert "physicell" in KERNEL_REGISTRY
     assert get_kernel("physicell").description.startswith("PhysiCell")
+    assert get_kernel("physicell").backend is not None
+    assert get_kernel("biophysics").backend is None
 
 
 def test_execute_main_routes_physicell_to_backend(monkeypatch):

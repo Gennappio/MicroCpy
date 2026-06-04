@@ -54,6 +54,15 @@ class KernelDefinition:
     kernel_id: Optional[str] = None
     version: str = "1.0"
 
+    # Optional dispatch hook. When set, the executor hands the whole workflow
+    # off to this callable — `(workflow, context) -> context` — instead of
+    # running the native Python stage loop. Facade kernels that delegate to an
+    # external engine (e.g. PhysiCell's codegen→make→spawn backend) set this and
+    # register themselves from their adapter, so the engine stays agnostic of
+    # any specific external kernel. The native `biophysics` kernel leaves this
+    # None and uses the stage executor.
+    backend: Optional[Callable[[Any, Dict[str, Any]], Dict[str, Any]]] = None
+
     # Extra capability tokens this kernel provides beyond its core context keys.
     # Reserved ontology tokens use the form "substance:<name>", "gene:<name>",
     # "phenotype:<name>"; structural tokens are bare context keys.
@@ -113,11 +122,11 @@ KERNEL_REGISTRY: Dict[str, KernelDefinition] = {}
 def register_kernel(kernel: KernelDefinition) -> None:
     """Register a kernel in the global registry.
 
-    This runs at import time for the two built-in kernels (biophysics,
-    physicell), so it announces itself only under OCC_VERBOSE_STARTUP=1 —
-    otherwise it's startup noise on every run. Registration is cheap (just
-    storing the definition); the heavy backends are imported lazily when a
-    workflow actually selects that kernel.
+    This runs at import time for the native `biophysics` kernel and again for
+    each facade kernel when its adapter is imported, so it announces itself only
+    under OCC_VERBOSE_STARTUP=1 — otherwise it's startup noise on every run.
+    Registration is cheap (just storing the definition); the heavy backends are
+    imported lazily when a workflow actually selects that kernel.
     """
     KERNEL_REGISTRY[kernel.name] = kernel
     if os.environ.get("OCC_VERBOSE_STARTUP", "0").lower() not in ("0", "", "false", "no"):
@@ -180,35 +189,12 @@ BIOPHYSICS_KERNEL = KernelDefinition(
 register_kernel(BIOPHYSICS_KERNEL)
 
 
-# -- PhysiCell black-box facade kernel ---------------------------------------
+# -- Facade kernels register themselves from their adapter -------------------
 #
-# Routing signal for the codegen→make→spawn pipeline (see
-# docs/Physicell_Facade_plan.md). Unlike biophysics, the simulation lives in
-# a generated C++ project; the Python "kernel" is just the dispatch token.
-
-def _initialize_physicell(context: Dict[str, Any], params: Dict[str, Any]) -> bool:
-    context['kernel_type'] = 'physicell'
-    print("[KERNEL] PhysiCell facade kernel selected — simulation will run via codegen + native binary")
-    return True
-
-
-PHYSICELL_KERNEL = KernelDefinition(
-    name="physicell",
-    description=(
-        "PhysiCell / PhysiBoSS black-box facade. Workflow nodes describe a "
-        "domain spec (substrates, cell types, Hill rules); the engine "
-        "generates a project, builds it against unmodified PhysiBoSS-master, "
-        "and runs the native binary while streaming occ_events.jsonl."
-    ),
-    core_keys={},
-    required_interfaces={},
-    initializer=_initialize_physicell,
-    compatible_categories=["INITIALIZATION"],
-    kernel_id="physicell",
-    version="1.0",
-)
-
-register_kernel(PHYSICELL_KERNEL)
+# The PhysiCell/PhysiBoSS facade kernel is NOT declared here: it sets a
+# `backend` dispatch hook and lives entirely in its adapter
+# (opencellcomms_adapters/PhysiBoSS/register.py), so the engine stays agnostic
+# of any specific external engine. See docs/Physicell_Facade_plan.md.
 
 
 # -- Data-file kernels -------------------------------------------------------
