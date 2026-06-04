@@ -98,31 +98,30 @@ const ExportBehaviorButton = () => {
       }
 
       // ── Step 2: pick the .subworkflow.json target path ────────────────
-      // If we still have no anchor (behavior built entirely from existing
-      // registry functions), ask the user via the native save dialog.
-      let jsonTargetPath;
-      if (anchorPath) {
-        jsonTargetPath = derivePairedJsonPath(anchorPath, currentStage);
-      } else {
-        const dialogRes = await fetch('http://localhost:5001/api/filesystem/save-dialog', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            default_path: `opencellcomms_engine/exports/${currentStage}.subworkflow.json`,
-          }),
-        });
-        const dialogData = await dialogRes.json();
-        if (dialogData.cancelled || !dialogData.path) {
-          if (pyResults.length > 0) {
-            alert('Wrote .py file(s) but skipped .subworkflow.json (no target selected).');
-          } else {
-            alert('Export cancelled.');
-          }
-          await fetchRegistry();
-          return;
+      // Always ask the user where to write the behavior structure file, so the
+      // behavior is decoupled from the function .py location (functions and the
+      // behavior can live in different folders). Pre-fill a smart default — next
+      // to the first function if there is one, else an exports/ path — but let
+      // the user navigate anywhere.
+      const defaultJsonPath = anchorPath
+        ? derivePairedJsonPath(anchorPath, currentStage)
+        : `opencellcomms_engine/exports/${currentStage}.subworkflow.json`;
+      const dialogRes = await fetch('http://localhost:5001/api/filesystem/save-dialog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ default_path: defaultJsonPath }),
+      });
+      const dialogData = await dialogRes.json();
+      if (dialogData.cancelled || !dialogData.path) {
+        if (pyResults.length > 0) {
+          alert('Wrote .py file(s) but skipped .subworkflow.json (no target selected).');
+        } else {
+          alert('Export cancelled.');
         }
-        jsonTargetPath = dialogData.path;
+        await fetchRegistry();
+        return;
       }
+      const jsonTargetPath = dialogData.path;
 
       // ── Step 3: build and write the paired .subworkflow.json ──────────
       const exportData = exportSingleSubworkflow(currentStage);

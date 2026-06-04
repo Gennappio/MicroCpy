@@ -488,8 +488,28 @@ export const createWorkflowIOSlice = (set, get) => ({
     const state = get();
     const { workflow, stageNodes, stageEdges } = state;
 
+    // The stored `subworkflows[*].execution_order` is a stale cache from the
+    // last load/export — it is NOT kept in sync as nodes are added or deleted
+    // on the canvas. Export regenerates it from the live graph below
+    // (findReachableNodes), so a node deleted on the canvas still lingers in the
+    // stored order until then. Validating that stale cache would crash export on
+    // a node the user already removed ("references unknown node ID ..."). Prune
+    // each order to the IDs that actually exist on the canvas before validating;
+    // the canvas is the source of truth for what gets exported.
+    const validationWorkflow = {
+      ...workflow,
+      subworkflows: Object.fromEntries(
+        Object.entries(workflow.subworkflows).map(([name, sw]) => {
+          const liveIds = new Set((stageNodes[name] || []).map((n) => n.id));
+          const order = sw.execution_order || [];
+          const prunedOrder = order.filter((id) => liveIds.has(id));
+          return [name, prunedOrder.length === order.length ? sw : { ...sw, execution_order: prunedOrder }];
+        })
+      ),
+    };
+
     // Comprehensive validation before export
-    const validationResult = validateWorkflow(workflow, stageNodes);
+    const validationResult = validateWorkflow(validationWorkflow, stageNodes);
 
     if (!validationResult.valid) {
       const errorMessage = 'Workflow validation failed:\n\n' + validationResult.errors.join('\n');
