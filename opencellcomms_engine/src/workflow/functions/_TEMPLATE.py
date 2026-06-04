@@ -13,9 +13,8 @@ Notes:
     - [Important note 2]
 """
 
-from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, IGeneNetwork  # Import interfaces as needed
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -57,7 +56,7 @@ from src.interfaces.base import ICellPopulation, IGeneNetwork  # Import interfac
                              #    "substance:<name>", "gene:<name>", "phenotype:<name>".
 )
 def my_function_name(
-    context: Dict[str, Any] = None,  # ← ONLY context in signature (recommended pattern)
+    env: BiologicalContext,           # ← typed biological context (recommended pattern)
     my_param: int = 100,              # Parameters from decorator
     enable_feature: bool = True,
     mode: str = "normal",
@@ -65,40 +64,22 @@ def my_function_name(
 ) -> bool:
     """
     [Function description - more detailed than the decorator description]
-    
-    This function does X, Y, and Z. It expects the following items in context:
-    - population: ICellPopulation instance
-    - [other required context items]
-    
+
     Args:
-        context: Workflow context containing population, simulator, config, etc.
+        env: Typed biological context (cells, substances, genes, results).
+            Declare what you read via `requires=[...]` above; the typed views
+            fail loudly if the kernel doesn't provide it, so no None-checks needed.
         my_param: Description of this parameter
         enable_feature: Description of this parameter
         mode: Description of this parameter
         **kwargs: Additional parameters (for forward compatibility)
-        
+
     Returns:
         True if successful, False otherwise
     """
-    # =========================================================================
-    # VALIDATE CONTEXT
-    # =========================================================================
-    if not context:
-        print("[ERROR] [my_function_name] No context provided")
-        return False
-    
-    # =========================================================================
-    # GET REQUIRED ITEMS FROM CONTEXT
-    # =========================================================================
-    population = context.get('population')
-    if population is None:
-        print("[ERROR] [my_function_name] No population in context")
-        return False
-    
-    # Get optional items with defaults
-    config = context.get('config')
-    gene_networks = context.get('gene_networks', {})
-    
+    # Config is always available; cells/substances are guaranteed by `requires`.
+    config = env.config
+
     # =========================================================================
     # VALIDATE PARAMETERS
     # =========================================================================
@@ -110,25 +91,25 @@ def my_function_name(
     # FUNCTION LOGIC
     # =========================================================================
     print(f"[MY_FUNCTION] Starting with mode={mode}, my_param={my_param}")
-    
-    cells = population.state.cells
-    num_cells = len(cells)
-    
-    # Example: Process each cell
+
+    num_cells = len(env.cells)
+
+    # Example: process each cell through the typed API
     processed_count = 0
-    for cell_id, cell in cells.items():
-        # Do something with the cell
-        # ...
+    for cell in env.cells:
+        # e.g. read the local environment and mark a phenotype:
+        #   if env.concentration('oxygen', cell) < my_param:
+        #       cell.mark_necrotic()
         processed_count += 1
-    
+
     print(f"[MY_FUNCTION] Processed {processed_count}/{num_cells} cells")
-    
+
     # =========================================================================
-    # UPDATE CONTEXT (if needed)
+    # STORE RESULTS (if needed)
     # =========================================================================
-    # Only update context if this function produces new data
-    # context['my_results'] = some_results
-    
+    # Only store if this function produces new data:
+    # env.results.store('my_results', some_results)
+
     return True
 
 
@@ -143,9 +124,8 @@ def my_function_name(
 # [ ] inputs=["context"] (recommended pattern - don't add other inputs)
 # [ ] compatible_kernels is specified
 # [ ] requires lists the capability tokens this function needs (or [] if none)
-# [ ] Function signature only has context + parameters (no other inputs)
-# [ ] Context validation is present (check if context exists)
-# [ ] Required context items are validated (check if they exist)
+# [ ] Function signature is (env: BiologicalContext, ...parameters)
+# [ ] Uses the typed env API (env.cells, cell.mark_*) — no manual None-checks needed
 # [ ] Error messages include function name for easy debugging
 # [ ] Function is imported in src/workflow/registry.py
 # [ ] Function has been tested with a workflow JSON

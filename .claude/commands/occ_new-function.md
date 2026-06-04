@@ -52,18 +52,19 @@ Inspect what `category` values existing functions in the target subworkflow use 
 
 If the subworkflow contains functions from multiple categories, or none of the above fit, use your judgment or ask the user.
 
-### Identify context keys available
+### Identify what the function needs (typed `env: BiologicalContext` API)
 
-Read the target workflow JSON and the existing functions in the chosen subworkflow to understand what `context` keys are available at that point in execution. Common patterns:
+Biological functions take a typed `env`, **not** the raw `context` dict. Read the target workflow and the existing functions in the chosen subworkflow to confirm what is available at that point, then use:
 
-- `context['population']` — cell population (available after population setup)
-- `context['simulator']` — diffusion simulator (available after substance setup)
-- `context['gene_networks']` — gene network dict keyed by cell ID (available after gene network init)
-- `context['associations']` — substance→gene mappings (available after association setup)
-- `context['current_step']`, `context['dt']` — simulation time info
-- `context['results']` — dict for storing outputs
+- Loop over cells → `for cell in env.cells:` (needs `"population"`)
+- Substance concentration at a cell → `env.concentration('substance_name', cell)` (needs `"simulator"`)
+- Mark phenotype → `cell.mark_necrotic()` / `cell.mark_apoptotic()` / `cell.mark_proliferating()` / `cell.mark_growth_arrested()` / `cell.mark_quiescent()`
+- Read a gene → `cell.gene('GeneName').is_on()` / `.turn_on()` / `.turn_off()` (needs `"gene_networks"`)
+- Step / dt / config → `env.step` / `env.dt` / `env.config`
+- Store a result → `env.results.store('key', value)`; record a GUI change → `env.results.record_change('category', {...})`
+- Escape hatch (rare) → `env.raw_context` (the underlying dict — "you are leaving the typed zone")
 
-**Important:** Not all workflows have all of these keys. Check what the workflow's initialization subworkflows actually set up. If unsure, read the initialization functions to see what they write to context.
+**Declare `requires`:** list the capability tokens the function reads (`"population"`, `"simulator"`, `"gene_networks"`) so a kernel that doesn't provide them fails loudly at load. Not all workflows set up every capability — check the initialization subworkflows if unsure.
 
 ### Derive a snake_case function name from the biological description
 Examples: `mark_hypoxic_cells`, `apply_glucose_gene_input`, `count_dead_cells`, `trigger_proliferation_from_gene`
@@ -79,8 +80,8 @@ Generate the complete file. Use this exact structure (from `_TEMPLATE.py`):
 <2–3 sentence explanation of what this rule models biologically and when it should be used.>
 """
 
-from typing import Dict, Any
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -100,42 +101,36 @@ from src.workflow.decorators import register_function
     inputs=["context"],
     outputs=[],
     cloneable=False,
-    compatible_kernels=["biophysics"]
+    compatible_kernels=["biophysics"],
+    requires=[<capability tokens, e.g. "population", "simulator">],
 )
 def <function_name>(
-    context: Dict[str, Any] = None,
+    env: BiologicalContext,
     <param_name>: <type> = <default>,
     **kwargs
 ) -> bool:
     """
     <Function description>
-
-    Expects in context:
-    - population: cell population
-    - <list other required context keys>
     """
+    count = 0
+    for cell in env.cells:
+        # <biological logic, e.g.:>
+        # if env.concentration('oxygen', cell) < <param_name>:
+        #     cell.mark_necrotic()
+        count += 1
 
-    if not context:
-        print("[ERROR] [<function_name>] No context provided")
-        return False
-
-    population = context.get('population')
-    if population is None:
-        print("[ERROR] [<function_name>] No population in context")
-        return False
-
-    # <biological logic here>
-
+    print(f"[<FUNCTION_NAME>] Processed {count} cells")
     return True
 ```
 
 **Important rules:**
+- Type the first argument as `env: BiologicalContext` and declare `requires=[...]` with the capability tokens the function reads. The typed views fail loudly if the kernel doesn't provide them, so you do **not** need manual `None`-checks for population/simulator.
 - `compatible_kernels=["biophysics"]` is always required
-- Always validate `context` and `population` at the top
-- Print errors with `[ERROR] [function_name]` format
+- Mutate phenotypes through methods (`cell.mark_necrotic()`), never by assigning strings
 - Return `True` on success, `False` on error
 - If the parameter set is complex (3+ related params), use a single `"type": "DICT"` parameter instead of many separate parameters
 - Add a print statement at the end: `print(f"[<FUNCTION_NAME>] Processed {count} cells")` if iterating over cells
+- **Rare exception:** if the function is *not* a biological behaviour — it creates the population, loads cells from a file, or sets up config (no typed setter exists) — keep `context: Dict[str, Any]` and add `typed_env_exempt=True` to the decorator instead of using `env`.
 
 ## Step 5 — Place the file and register it
 
