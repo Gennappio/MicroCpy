@@ -21,6 +21,7 @@ from src.biology.context import BiologicalContext
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Mark Necrotic Cells",
     description="Mark cells as necrotic based on user-defined conditions in necrosis_params",
     category="INTERCELLULAR",

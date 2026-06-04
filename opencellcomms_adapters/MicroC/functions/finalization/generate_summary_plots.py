@@ -100,6 +100,7 @@ def _generate_plots_to_directory(
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Generate Summary Plots",
     description="Generate summary plots (INITIAL / FINAL). "
                 "Output goes to config.plots_dir (timestamped results folder).",

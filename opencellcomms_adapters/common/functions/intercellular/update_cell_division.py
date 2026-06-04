@@ -14,10 +14,10 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import random
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, IConfig
+from src.biology.context import BiologicalContext
 from src.biology.cell import Cell
 from src.biology.gene_network import HierarchicalBooleanNetwork
 
@@ -33,7 +33,7 @@ from src.biology.gene_network import HierarchicalBooleanNetwork
     cloneable=False
 )
 def update_cell_division(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
@@ -61,16 +61,16 @@ def update_cell_division(
     """
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
+    # population via the raw escape hatch (this function rebuilds population
+    # state and constructs Cell objects); the division helpers also read several
+    # non-biological plumbing keys, so they operate on the raw context.
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    config: Optional[IConfig] = context.get('config')
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    population = env.cells.raw
     if population is None:
         print("[update_cell_division] No population in context - skipping")
         return
+    config = env.config
+    context = env.raw_context
 
     # Get division parameters from config
     atp_threshold = _get_config_param(config, 'atp_threshold', 0.8)

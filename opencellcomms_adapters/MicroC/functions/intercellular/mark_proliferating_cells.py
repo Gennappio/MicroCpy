@@ -20,6 +20,7 @@ _PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value}
 
 
 @register_function(
+    requires=['population'],
     display_name="Mark Proliferating Cells",
     description="Mark cells as proliferating based on gene network Proliferation output",
     category="INTERCELLULAR",

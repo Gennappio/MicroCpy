@@ -48,6 +48,7 @@ def _to_bool(val) -> bool:
 
 
 @register_function(
+    requires=['gene_networks', 'population'],
     display_name="Initialize NetLogo-Faithful Gene Networks",
     description="Create gene networks matching NetLogo: graph walking, probabilistic inputs, fate reversion",
     category="INITIALIZATION",
