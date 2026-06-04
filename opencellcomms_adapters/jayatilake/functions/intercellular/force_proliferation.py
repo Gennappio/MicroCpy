@@ -14,10 +14,9 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
 import random
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, IConfig
+from src.biology.context import BiologicalContext
 
 @register_function(
     requires=['population'],
@@ -37,7 +36,7 @@ from src.interfaces.base import ICellPopulation, IConfig
     cloneable=False
 )
 def force_proliferation(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     activation_probability: float = 0.01,
     **kwargs
 ) -> None:
@@ -71,15 +70,15 @@ def force_proliferation(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    config: Optional[IConfig] = context.get('config')
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    # population via the raw escape hatch: this rebuilds population state (with
+    # spatial grid) and constructs Cell objects; _perform_divisions also reads
+    # the gene-networks dict, so it operates on the raw context.
+    population = env.cells.raw
     if population is None:
-        print("[update_cell_division] No population in context - skipping")
+        print("[force_proliferation] No population in context - skipping")
         return
+    config = env.config
+    context = env.raw_context
 
     # Get division parameters from config
     atp_threshold = _get_config_param(config, 'atp_threshold', 0.8)
