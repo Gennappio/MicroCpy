@@ -107,7 +107,10 @@ export const createWorkflowIOSlice = (set, get) => ({
               label: param.label || 'List',
               listType: param.listType || 'string',
               items: param.items || [],
-              targetParam: param.targetParam || 'items',
+              // Canonical JSON key is snake_case target_param (used by
+              // hand-authored workflows and the codegen). Fall back to camelCase
+              // for files previously written by the GUI.
+              targetParam: param.target_param ?? param.targetParam ?? 'items',
               onEdit: () => {}
             }
           };
@@ -119,7 +122,7 @@ export const createWorkflowIOSlice = (set, get) => ({
             data: {
               label: param.label || 'Dictionary',
               entries: param.entries || [],
-              targetParam: param.targetParam,
+              targetParam: param.target_param ?? param.targetParam,
               onEdit: () => {}
             }
           };
@@ -635,7 +638,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           label: node.data.label || 'List',
           listType: node.data.listType || 'string',
           items: node.data.items || [],
-          targetParam: node.data.targetParam || 'items',
+          target_param: node.data.targetParam || 'items',
           position: node.position,
         })),
         ...dictParameterNodes.map((node) => ({
@@ -643,7 +646,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           type: 'dictParameterNode',
           label: node.data.label || 'Dictionary',
           entries: node.data.entries || [],
-          targetParam: node.data.targetParam,
+          target_param: node.data.targetParam,
           position: node.position,
         })),
       ];
@@ -1080,10 +1083,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       if (param.type === 'listParameterNode') {
         nodeData.data.listType = param.listType || 'string';
         nodeData.data.items = param.items || [];
-        nodeData.data.targetParam = param.targetParam || 'items';
+        nodeData.data.targetParam = param.target_param ?? param.targetParam ?? 'items';
       } else if (param.type === 'dictParameterNode') {
         nodeData.data.entries = param.entries || [];
-        nodeData.data.targetParam = param.targetParam;
+        nodeData.data.targetParam = param.target_param ?? param.targetParam;
       } else {
         nodeData.data.parameters = param.parameters || {};
       }
