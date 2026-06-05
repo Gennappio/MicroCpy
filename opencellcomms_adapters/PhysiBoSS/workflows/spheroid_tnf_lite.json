@@ -104,8 +104,7 @@
         "sub_tnf",
         "ct_default",
         "rule_tnf_apoptosis",
-        "rule_o2_migration",
-        "run_sim"
+        "rule_o2_migration"
       ],
       "controller": {
         "id": "controller-spheroid_tnf_setup",
@@ -176,21 +175,6 @@
           "description": "Visualization rule: cells migrate faster in oxygen-rich regions. Not in the upstream biology; included so the event stream shows >1 rate moving.",
           "parameter_nodes": [
             "pn_rule_o2_migration"
-          ]
-        },
-        {
-          "id": "run_sim",
-          "function_name": "run_physicell_simulation",
-          "position": {
-            "x": 1540.0,
-            "y": 100.0
-          },
-          "description": "Consumes the spec assembled by the define_* nodes above (context['physicell_spec']) and runs it: codegen -> make -> spawn -> tail. Writes the generated project, built binary, and event stream under the run's output dir, and stores them in context['physicell'].",
-          "parameter_nodes": [
-            "pn_domain",
-            "pn_overall",
-            "pn_save",
-            "pn_user_parameters"
           ]
         }
       ],
@@ -413,73 +397,6 @@
               "value": 0,
               "valueType": "int"
             }
-          ]
-        },
-        {
-          "id": "pn_domain",
-          "type": "dictParameterNode",
-          "label": "Domain",
-          "target_param": "domain",
-          "position": {
-            "x": 1540.0,
-            "y": 280.0
-          },
-          "entries": [
-            { "key": "x_min", "value": -150.0, "valueType": "float" },
-            { "key": "x_max", "value": 150.0, "valueType": "float" },
-            { "key": "y_min", "value": -150.0, "valueType": "float" },
-            { "key": "y_max", "value": 150.0, "valueType": "float" },
-            { "key": "z_min", "value": -10.0, "valueType": "float" },
-            { "key": "z_max", "value": 10.0, "valueType": "float" },
-            { "key": "dx", "value": 20.0, "valueType": "float" },
-            { "key": "dy", "value": 20.0, "valueType": "float" },
-            { "key": "dz", "value": 20.0, "valueType": "float" },
-            { "key": "use_2D", "value": true, "valueType": "bool" }
-          ]
-        },
-        {
-          "id": "pn_overall",
-          "type": "dictParameterNode",
-          "label": "Timing (minutes)",
-          "target_param": "overall",
-          "position": {
-            "x": 1760.0,
-            "y": 280.0
-          },
-          "entries": [
-            { "key": "max_time", "value": 60.0, "valueType": "float" },
-            { "key": "dt_diffusion", "value": 0.01, "valueType": "float" },
-            { "key": "dt_mechanics", "value": 0.1, "valueType": "float" },
-            { "key": "dt_phenotype", "value": 6.0, "valueType": "float" }
-          ]
-        },
-        {
-          "id": "pn_save",
-          "type": "dictParameterNode",
-          "label": "Save cadence",
-          "target_param": "save",
-          "position": {
-            "x": 1980.0,
-            "y": 280.0
-          },
-          "entries": [
-            { "key": "folder", "value": "output", "valueType": "string" },
-            { "key": "full_data_interval", "value": 30.0, "valueType": "float" },
-            { "key": "svg_interval", "value": 30.0, "valueType": "float" },
-            { "key": "svg_enabled", "value": false, "valueType": "bool" }
-          ]
-        },
-        {
-          "id": "pn_user_parameters",
-          "type": "dictParameterNode",
-          "label": "User parameters",
-          "target_param": "user_parameters",
-          "position": {
-            "x": 2200.0,
-            "y": 280.0
-          },
-          "entries": [
-            { "key": "number_of_cells", "value": 5, "valueType": "int" }
           ]
         }
       ]

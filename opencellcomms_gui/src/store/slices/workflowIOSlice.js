@@ -824,6 +824,13 @@ export const createWorkflowIOSlice = (set, get) => ({
       version: '2.0',
       name: workflow.name,
       description: workflow.description,
+      // Preserve the kernel selector and its config. Without these a workflow
+      // that declares `kernel: "physicell"` is exported as plain biophysics, so
+      // the engine never dispatches to the facade backend (it just runs the
+      // empty Python stage loop). Omitted entirely for default biophysics
+      // workflows, which carry no kernel field.
+      ...(workflow.kernel ? { kernel: workflow.kernel } : {}),
+      ...(workflow.kernel_config ? { kernel_config: workflow.kernel_config } : {}),
       metadata: exportedMetadata,
       subworkflows,
     };
