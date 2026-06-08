@@ -133,13 +133,18 @@ def run_physicell_simulation(
               " upstream of this one.")
         return False
 
+    # A set_physicell_config node upstream writes config groups into the spec;
+    # those win over this node's own params, which win over the defaults.
+    def _group(name: str, param_value, default):
+        return dict(accumulated.get(name) or param_value or default)
+
     spec = {
-        "domain": dict(domain or _DEFAULT_DOMAIN),
-        "overall": dict(overall or _DEFAULT_OVERALL),
-        "save": dict(save or _DEFAULT_SAVE),
-        "options": dict(options or _DEFAULT_OPTIONS),
-        "parallel": dict(parallel or _DEFAULT_PARALLEL),
-        "user_parameters": dict(user_parameters or _DEFAULT_USER_PARAMETERS),
+        "domain": _group("domain", domain, _DEFAULT_DOMAIN),
+        "overall": _group("overall", overall, _DEFAULT_OVERALL),
+        "save": _group("save", save, _DEFAULT_SAVE),
+        "options": _group("options", options, _DEFAULT_OPTIONS),
+        "parallel": _group("parallel", parallel, _DEFAULT_PARALLEL),
+        "user_parameters": _group("user_parameters", user_parameters, _DEFAULT_USER_PARAMETERS),
         "substrates": substrates,
         "cell_types": cell_types,
         "hill_rules": hill_rules,
@@ -147,6 +152,9 @@ def run_physicell_simulation(
     custom_modules_source = accumulated.get("custom_modules_source")
     if custom_modules_source:
         spec["custom_modules_source"] = custom_modules_source
+    custom_code = accumulated.get("custom_code")
+    if custom_code:
+        spec["custom_code"] = custom_code
 
     from opencellcomms_adapters.PhysiBoSS.backend import physicell_backend
 

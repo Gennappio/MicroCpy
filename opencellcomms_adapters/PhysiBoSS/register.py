@@ -19,7 +19,7 @@ from typing import Any, Dict
 
 from src.workflow.kernel_registry import KernelDefinition, register_kernel
 
-# Importing the package triggers registration of all six node functions
+# Importing the package triggers registration of all node functions
 # (see functions/__init__.py).
 import opencellcomms_adapters.PhysiBoSS.functions  # noqa: F401
 

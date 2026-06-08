@@ -52,6 +52,23 @@ export const computeSubworkflowKinds = (workflow) => {
 
   if (subworkflows.main) kinds.main = KINDS.COMPOSER;
 
+  // Composable workflows: any subworkflow reachable from main's subworkflow_calls
+  // (directly or transitively) that has no ABM-derived kind is treated as a
+  // generic composer child. This lets a bare `main → child composers` workflow
+  // (or a pure processing canvas) load and render without the full
+  // agent/environment ABM scaffolding.
+  const visit = (name) => {
+    const sw = subworkflows[name];
+    if (!sw) return;
+    (sw.subworkflow_calls || []).forEach((call) => {
+      const target = call.subworkflow_name;
+      if (!target || !(target in subworkflows) || target in kinds) return;
+      kinds[target] = KINDS.SUBWORKFLOW;
+      visit(target);
+    });
+  };
+  if (subworkflows.main) visit('main');
+
   return kinds;
 };
 

@@ -8,10 +8,7 @@
 
 import { validateWorkflow } from '../../utils/workflowValidation';
 import pathUtils from '../pathUtils';
-import {
-  computeSubworkflowKinds,
-  validateAbmMetadata,
-} from '../computeSubworkflowKinds';
+import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
 import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
 
 /**
@@ -309,24 +306,30 @@ export const createWorkflowIOSlice = (set, get) => ({
       newStageEdges[subworkflowName] = allEdges;
     });
 
-    // Phase 14B: ABM metadata is REQUIRED. Legacy v2.0 workflows without ABM
-    // metadata are no longer supported — fail loudly so the user can see what's
-    // missing rather than silently producing a broken state.
-    const missing = validateAbmMetadata(workflowJson);
-    if (missing.length > 0) {
-      const errorMsg =
-        `Workflow JSON is missing required ABM metadata: ${missing.join(', ')}.\n\n` +
-        `Legacy v2.0 workflows without ABM structure are no longer supported.`;
-      console.error(`[STORE] ${errorMsg}`);
-      alert(errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    const guiMeta = workflowJson.metadata.gui;
-    const agentKinds = guiMeta.agent_kinds;
-    const environment = guiMeta.environment;
-    const scheduler = guiMeta.scheduler;
-    const processing = guiMeta.processing;
+    // ABM metadata is optional. A workflow may use a bare composable/processing
+    // structure (e.g. main → child composers, or just a processing canvas)
+    // without the full agent/environment/scheduler scaffolding. Normalize any
+    // missing ABM fields to well-formed (always-iterable) shapes so such
+    // workflows both load AND can be edited — the ABM mutators (abmSlice) assume
+    // these arrays/objects always exist and would otherwise crash on first edit.
+    const guiMeta = (workflowJson.metadata && workflowJson.metadata.gui) || {};
+    const rawEnv = (guiMeta.environment && typeof guiMeta.environment === 'object') ? guiMeta.environment : {};
+    const rawSched = (guiMeta.scheduler && typeof guiMeta.scheduler === 'object') ? guiMeta.scheduler : {};
+    const rawProc = (guiMeta.processing && typeof guiMeta.processing === 'object') ? guiMeta.processing : {};
+    const agentKinds = (Array.isArray(guiMeta.agent_kinds) ? guiMeta.agent_kinds : []).map((k) => ({
+      ...k,
+      behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
+    }));
+    const environment = {
+      ...rawEnv,
+      init_subworkflow: rawEnv.init_subworkflow ?? null,
+      behavior_subworkflows: Array.isArray(rawEnv.behavior_subworkflows) ? rawEnv.behavior_subworkflows : [],
+    };
+    const scheduler = { ...rawSched, subworkflow: rawSched.subworkflow || '__scheduler__' };
+    const processing = {
+      ...rawProc,
+      behavior_subworkflows: Array.isArray(rawProc.behavior_subworkflows) ? rawProc.behavior_subworkflows : [],
+    };
     const mainIsSynthesized = guiMeta.main_is_synthesized || false;
     const userFunctions = guiMeta.user_functions || [];
 
@@ -442,13 +445,12 @@ export const createWorkflowIOSlice = (set, get) => ({
     });
     const orphans = Object.keys(subworkflows).filter((n) => !(n in subworkflowKinds));
     if (orphans.length > 0) {
-      const errorMsg =
-        `Workflow contains subworkflows not referenced by any ABM field: ${orphans.join(', ')}.\n\n` +
-        `Every subworkflow must be reachable from agent_kinds, environment, scheduler, ` +
-        `init_sequence, processing, or be 'main'.`;
-      console.error(`[STORE] ${errorMsg}`);
-      alert(errorMsg);
-      throw new Error(errorMsg);
+      // Non-fatal: unreferenced subworkflows are allowed (e.g. a work-in-progress
+      // canvas, or a composable workflow whose children aren't ABM-mapped). They
+      // still load; just warn rather than blocking the import.
+      console.warn(
+        `[STORE] Subworkflows not referenced by any ABM field: ${orphans.join(', ')}. Loading anyway.`
+      );
     }
 
     // Determine initial stage: prefer scheduler, else first non-synthesized subworkflow
