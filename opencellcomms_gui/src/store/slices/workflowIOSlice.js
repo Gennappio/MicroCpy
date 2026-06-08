@@ -8,10 +8,7 @@
 
 import { validateWorkflow } from '../../utils/workflowValidation';
 import pathUtils from '../pathUtils';
-import {
-  computeSubworkflowKinds,
-  validateAbmMetadata,
-} from '../computeSubworkflowKinds';
+import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
 import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
 
 /**
@@ -107,7 +104,10 @@ export const createWorkflowIOSlice = (set, get) => ({
               label: param.label || 'List',
               listType: param.listType || 'string',
               items: param.items || [],
-              targetParam: param.targetParam || 'items',
+              // Canonical JSON key is snake_case target_param (used by
+              // hand-authored workflows and the codegen). Fall back to camelCase
+              // for files previously written by the GUI.
+              targetParam: param.target_param ?? param.targetParam ?? 'items',
               onEdit: () => {}
             }
           };
@@ -119,7 +119,7 @@ export const createWorkflowIOSlice = (set, get) => ({
             data: {
               label: param.label || 'Dictionary',
               entries: param.entries || [],
-              targetParam: param.targetParam,
+              targetParam: param.target_param ?? param.targetParam,
               onEdit: () => {}
             }
           };
@@ -306,24 +306,30 @@ export const createWorkflowIOSlice = (set, get) => ({
       newStageEdges[subworkflowName] = allEdges;
     });
 
-    // Phase 14B: ABM metadata is REQUIRED. Legacy v2.0 workflows without ABM
-    // metadata are no longer supported — fail loudly so the user can see what's
-    // missing rather than silently producing a broken state.
-    const missing = validateAbmMetadata(workflowJson);
-    if (missing.length > 0) {
-      const errorMsg =
-        `Workflow JSON is missing required ABM metadata: ${missing.join(', ')}.\n\n` +
-        `Legacy v2.0 workflows without ABM structure are no longer supported.`;
-      console.error(`[STORE] ${errorMsg}`);
-      alert(errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    const guiMeta = workflowJson.metadata.gui;
-    const agentKinds = guiMeta.agent_kinds;
-    const environment = guiMeta.environment;
-    const scheduler = guiMeta.scheduler;
-    const processing = guiMeta.processing;
+    // ABM metadata is optional. A workflow may use a bare composable/processing
+    // structure (e.g. main → child composers, or just a processing canvas)
+    // without the full agent/environment/scheduler scaffolding. Normalize any
+    // missing ABM fields to well-formed (always-iterable) shapes so such
+    // workflows both load AND can be edited — the ABM mutators (abmSlice) assume
+    // these arrays/objects always exist and would otherwise crash on first edit.
+    const guiMeta = (workflowJson.metadata && workflowJson.metadata.gui) || {};
+    const rawEnv = (guiMeta.environment && typeof guiMeta.environment === 'object') ? guiMeta.environment : {};
+    const rawSched = (guiMeta.scheduler && typeof guiMeta.scheduler === 'object') ? guiMeta.scheduler : {};
+    const rawProc = (guiMeta.processing && typeof guiMeta.processing === 'object') ? guiMeta.processing : {};
+    const agentKinds = (Array.isArray(guiMeta.agent_kinds) ? guiMeta.agent_kinds : []).map((k) => ({
+      ...k,
+      behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
+    }));
+    const environment = {
+      ...rawEnv,
+      init_subworkflow: rawEnv.init_subworkflow ?? null,
+      behavior_subworkflows: Array.isArray(rawEnv.behavior_subworkflows) ? rawEnv.behavior_subworkflows : [],
+    };
+    const scheduler = { ...rawSched, subworkflow: rawSched.subworkflow || '__scheduler__' };
+    const processing = {
+      ...rawProc,
+      behavior_subworkflows: Array.isArray(rawProc.behavior_subworkflows) ? rawProc.behavior_subworkflows : [],
+    };
     const mainIsSynthesized = guiMeta.main_is_synthesized || false;
     const userFunctions = guiMeta.user_functions || [];
 
@@ -439,13 +445,12 @@ export const createWorkflowIOSlice = (set, get) => ({
     });
     const orphans = Object.keys(subworkflows).filter((n) => !(n in subworkflowKinds));
     if (orphans.length > 0) {
-      const errorMsg =
-        `Workflow contains subworkflows not referenced by any ABM field: ${orphans.join(', ')}.\n\n` +
-        `Every subworkflow must be reachable from agent_kinds, environment, scheduler, ` +
-        `init_sequence, processing, or be 'main'.`;
-      console.error(`[STORE] ${errorMsg}`);
-      alert(errorMsg);
-      throw new Error(errorMsg);
+      // Non-fatal: unreferenced subworkflows are allowed (e.g. a work-in-progress
+      // canvas, or a composable workflow whose children aren't ABM-mapped). They
+      // still load; just warn rather than blocking the import.
+      console.warn(
+        `[STORE] Subworkflows not referenced by any ABM field: ${orphans.join(', ')}. Loading anyway.`
+      );
     }
 
     // Determine initial stage: prefer scheduler, else first non-synthesized subworkflow
@@ -488,8 +493,28 @@ export const createWorkflowIOSlice = (set, get) => ({
     const state = get();
     const { workflow, stageNodes, stageEdges } = state;
 
+    // The stored `subworkflows[*].execution_order` is a stale cache from the
+    // last load/export — it is NOT kept in sync as nodes are added or deleted
+    // on the canvas. Export regenerates it from the live graph below
+    // (findReachableNodes), so a node deleted on the canvas still lingers in the
+    // stored order until then. Validating that stale cache would crash export on
+    // a node the user already removed ("references unknown node ID ..."). Prune
+    // each order to the IDs that actually exist on the canvas before validating;
+    // the canvas is the source of truth for what gets exported.
+    const validationWorkflow = {
+      ...workflow,
+      subworkflows: Object.fromEntries(
+        Object.entries(workflow.subworkflows).map(([name, sw]) => {
+          const liveIds = new Set((stageNodes[name] || []).map((n) => n.id));
+          const order = sw.execution_order || [];
+          const prunedOrder = order.filter((id) => liveIds.has(id));
+          return [name, prunedOrder.length === order.length ? sw : { ...sw, execution_order: prunedOrder }];
+        })
+      ),
+    };
+
     // Comprehensive validation before export
-    const validationResult = validateWorkflow(workflow, stageNodes);
+    const validationResult = validateWorkflow(validationWorkflow, stageNodes);
 
     if (!validationResult.valid) {
       const errorMessage = 'Workflow validation failed:\n\n' + validationResult.errors.join('\n');
@@ -615,7 +640,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           label: node.data.label || 'List',
           listType: node.data.listType || 'string',
           items: node.data.items || [],
-          targetParam: node.data.targetParam || 'items',
+          target_param: node.data.targetParam || 'items',
           position: node.position,
         })),
         ...dictParameterNodes.map((node) => ({
@@ -623,7 +648,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           type: 'dictParameterNode',
           label: node.data.label || 'Dictionary',
           entries: node.data.entries || [],
-          targetParam: node.data.targetParam,
+          target_param: node.data.targetParam,
           position: node.position,
         })),
       ];
@@ -804,6 +829,13 @@ export const createWorkflowIOSlice = (set, get) => ({
       version: '2.0',
       name: workflow.name,
       description: workflow.description,
+      // Preserve the kernel selector and its config. Without these a workflow
+      // that declares `kernel: "physicell"` is exported as plain biophysics, so
+      // the engine never dispatches to the facade backend (it just runs the
+      // empty Python stage loop). Omitted entirely for default biophysics
+      // workflows, which carry no kernel field.
+      ...(workflow.kernel ? { kernel: workflow.kernel } : {}),
+      ...(workflow.kernel_config ? { kernel_config: workflow.kernel_config } : {}),
       metadata: exportedMetadata,
       subworkflows,
     };
@@ -1053,10 +1085,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       if (param.type === 'listParameterNode') {
         nodeData.data.listType = param.listType || 'string';
         nodeData.data.items = param.items || [];
-        nodeData.data.targetParam = param.targetParam || 'items';
+        nodeData.data.targetParam = param.target_param ?? param.targetParam ?? 'items';
       } else if (param.type === 'dictParameterNode') {
         nodeData.data.entries = param.entries || [];
-        nodeData.data.targetParam = param.targetParam;
+        nodeData.data.targetParam = param.target_param ?? param.targetParam;
       } else {
         nodeData.data.parameters = param.parameters || {};
       }

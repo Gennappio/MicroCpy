@@ -24,6 +24,7 @@ from src.biology.context import BiologicalContext
 
 
 @register_function(
+    requires=['population', 'simulator'],
     display_name="Generate Iteration Plots",
     description="Generate plots for current iteration using the same AutoPlotter as FINAL plots. "
                 "Iteration number appears in filename and title. "

@@ -157,10 +157,9 @@ def get_default_registry() -> FunctionRegistry:
     except ImportError as e:
         print(f"[Registry] Common adapter not available: {e}")
 
-    try:
-        import opencellcomms_adapters.jayatilake.register  # noqa: F401
-    except ImportError as e:
-        print(f"[Registry] Jayatilake adapter not available: {e}")
+    # jayatilake adapter intentionally not loaded: the folder was renamed to
+    # 'jayatilake_(legacy)', which is not a valid Python module name. The
+    # legacy functions are kept on disk for reference only.
 
     try:
         import opencellcomms_adapters.MicroC.register  # noqa: F401

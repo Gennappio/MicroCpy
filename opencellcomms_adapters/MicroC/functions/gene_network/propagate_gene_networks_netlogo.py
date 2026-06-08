@@ -62,6 +62,7 @@ _DELAYED_ON_INPUTS  = {'cMET_stimulus'}
 
 
 @register_function(
+    requires=['gene_networks', 'population'],
     display_name="Propagate Gene Networks (NetLogo-Faithful)",
     description="NetLogo-faithful graph walking propagation (requires initialize_netlogo_gene_networks)",
     category="INTRACELLULAR",

@@ -16,14 +16,35 @@ const ANTHROPIC_MODELS = [
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (most capable)' },
 ];
 const OPENROUTER_SUGGESTIONS = [
-  'anthropic/claude-3.5-sonnet',
+  // Anthropic
+  'anthropic/claude-opus-4.8',
+  'anthropic/claude-sonnet-4.6',
+  'anthropic/claude-sonnet-4.5',
+  'anthropic/claude-haiku-4.5',
+  'anthropic/claude-3.5-haiku',
+  // OpenAI
+  'openai/gpt-5.2',
+  'openai/gpt-5.1',
+  'openai/gpt-4.1',
   'openai/gpt-4o',
   'openai/gpt-4o-mini',
-  'google/gemini-2.0-flash-001',
+  'openai/o3-mini',
+  // Google
+  'google/gemini-3.1-pro-preview',
+  'google/gemini-2.5-pro',
+  'google/gemini-2.5-flash',
+  // Meta
   'meta-llama/llama-3.3-70b-instruct',
+  'meta-llama/llama-3.1-70b-instruct',
+  // DeepSeek
   'deepseek/deepseek-chat',
+  'deepseek/deepseek-r1',
+  // Mistral / Qwen / xAI
+  'mistralai/mistral-large',
+  'qwen/qwen3-coder',
+  'x-ai/grok-4.3',
 ];
-const DEFAULT_MODEL = { anthropic: 'claude-sonnet-4-6', openrouter: 'anthropic/claude-3.5-sonnet' };
+const DEFAULT_MODEL = { anthropic: 'claude-sonnet-4-6', openrouter: 'anthropic/claude-sonnet-4.6' };
 
 /**
  * AI Coding Agent settings modal.
@@ -35,6 +56,7 @@ const DEFAULT_MODEL = { anthropic: 'claude-sonnet-4-6', openrouter: 'anthropic/c
 const AgentSettings = ({ onClose }) => {
   const [provider, setProvider] = useState('anthropic');
   const [model, setModel] = useState(DEFAULT_MODEL.anthropic);
+  const [customModel, setCustomModel] = useState(false); // OpenRouter: type a model id not in the list
   const [apiKey, setApiKey] = useState('');
   const [config, setConfig] = useState({
     anthropic_configured: false,
@@ -57,7 +79,13 @@ const AgentSettings = ({ onClose }) => {
           openrouter_configured: data.openrouter_configured,
         });
         if (data.provider) setProvider(data.provider);
-        if (data.model) setModel(data.model);
+        if (data.model) {
+          setModel(data.model);
+          // If a saved OpenRouter model isn't in our suggestion list, show the custom field.
+          if (data.provider === 'openrouter' && !OPENROUTER_SUGGESTIONS.includes(data.model)) {
+            setCustomModel(true);
+          }
+        }
       }
     } catch (err) {
       setStatus({ type: 'error', message: 'Could not reach the backend server.' });
@@ -67,6 +95,7 @@ const AgentSettings = ({ onClose }) => {
   const handleProviderChange = (newProvider) => {
     setProvider(newProvider);
     setModel(DEFAULT_MODEL[newProvider] || '');
+    setCustomModel(false);
     setApiKey(''); // key field is per-provider; clear the input on switch
     setStatus(null);
   };
@@ -168,17 +197,34 @@ const AgentSettings = ({ onClose }) => {
             </select>
           ) : (
             <>
-              <input
-                type="text"
+              <select
                 className="agent-settings-input"
-                list="openrouter-models"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="e.g. anthropic/claude-3.5-sonnet"
-              />
-              <datalist id="openrouter-models">
-                {OPENROUTER_SUGGESTIONS.map((m) => <option key={m} value={m} />)}
-              </datalist>
+                value={customModel ? '__custom__' : model}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') {
+                    setCustomModel(true);
+                    setModel('');
+                  } else {
+                    setCustomModel(false);
+                    setModel(e.target.value);
+                  }
+                }}
+              >
+                {OPENROUTER_SUGGESTIONS.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+                <option value="__custom__">Custom model…</option>
+              </select>
+              {customModel && (
+                <input
+                  type="text"
+                  className="agent-settings-input"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="e.g. cohere/command-r-plus"
+                  autoFocus
+                />
+              )}
               <a
                 className="agent-settings-link"
                 href="https://openrouter.ai/models"

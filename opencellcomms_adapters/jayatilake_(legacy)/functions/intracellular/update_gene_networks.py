@@ -13,9 +13,10 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulator, IConfig
+from src.interfaces.base import IGeneNetwork
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -33,7 +34,7 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation, ISubstanceSimulat
     cloneable=False
 )
 def update_gene_networks(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     propagation_steps: int = None,
     update_mode: str = None,
     **kwargs
@@ -61,16 +62,14 @@ def update_gene_networks(
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config: Optional[IConfig] = context.get('config')
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    # Population/simulator via the raw escape hatches: this reads neighbour-grid
+    # concentrations (custom grid geometry) and rebuilds population state in place.
+    population = env.cells.raw
     if population is None:
         print("[update_gene_networks] No population in context - skipping")
         return
+    simulator = env.environment.raw_simulator
+    config = env.config
 
     # =========================================================================
     # GET SUBSTANCE CONCENTRATIONS (optional)
@@ -109,7 +108,7 @@ def update_gene_networks(
     # =========================================================================
     # GET GENE NETWORKS FROM CONTEXT
     # =========================================================================
-    gene_networks = context.get('gene_networks', {})
+    gene_networks = env.raw_context.get('gene_networks', {})
 
     if not gene_networks:
         print("[GENE_NETWORK] No gene networks in context - run 'Initialize Gene Networks' first")
@@ -220,16 +219,15 @@ def update_gene_networks(
                 sample_outputs = sample_gn.get_output_states()
                 print(f"[GENE_NETWORK] Sample cell outputs: {sample_outputs}")
 
-    # Store changes in context for GUI display
-    context['changes'] = context.get('changes', {})
-    context['changes']['gene_network'] = {
+    # Record change for GUI display.
+    env.results.record_change('gene_network', {
         'cells_updated': cells_with_gn,
         'cells_skipped': cells_without_gn,
         'propagation_steps': propagation_steps,
         'associations_count': len(associations),
         'output_stats': output_stats,
         'sample_outputs': sample_outputs
-    }
+    })
 
 
 def _get_local_environment(position, substance_concentrations, config=None):

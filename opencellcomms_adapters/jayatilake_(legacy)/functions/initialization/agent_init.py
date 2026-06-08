@@ -4,8 +4,8 @@ agent_init — auto-generated behavior scaffold.
 Edit the function bodies below to implement the behavior logic.
 """
 
-from typing import Dict, Any
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 
@@ -21,13 +21,13 @@ from src.workflow.decorators import register_function
     cloneable=False,
 )
 def agente1(
-    context: Dict[str, Any] = None,
+    env: BiologicalContext = None,
     paraemntro: float = 0,
     **kwargs
 ) -> bool:
     print("ciaoicoicoaicoacoajcosajojcoijasiocjaoicaoisnciascihas")
     """TODO: implement agente1."""
-    if not context:
+    if env is None:
         print("[ERROR] [agente1] No context provided")
         return False
     # TODO: implement behavior

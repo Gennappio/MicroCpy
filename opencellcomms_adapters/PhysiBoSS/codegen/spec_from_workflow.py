@@ -27,6 +27,11 @@ _TARGET_PARAM_BY_FUNCTION = {
     "define_hill_rule":  "rule",
 }
 
+# Config groups owned by the set_physicell_config node. Keep in sync with
+# functions/set_physicell_config._CONFIG_GROUPS.
+_CONFIG_GROUPS = ("domain", "overall", "save", "options", "parallel",
+                  "user_parameters")
+
 
 class WorkflowSpecError(ValueError):
     """Raised when a workflow does not yield a usable PhysiCell spec."""
@@ -136,12 +141,67 @@ def _collect_definitions(
     return substrates, cell_types, hill_rules
 
 
+def _collect_config(workflow: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the config groups set by a ``set_physicell_config`` node.
+
+    Each of the node's six DICT params (domain / overall / save / options /
+    parallel / user_parameters) becomes a top-level spec key. The last such
+    node in the walk wins. Returns {} if the workflow has no config node.
+    """
+    config: Dict[str, Any] = {}
+    for sw in _iter_subworkflows(workflow):
+        params_by_id: Dict[str, Dict[str, Any]] = {
+            p["id"]: p for p in (sw.get("parameters") or []) if "id" in p
+        }
+        function_list = sw.get("functions") or sw.get("nodes") or ()
+        for node in function_list:
+            fn = node.get("function_name") or node.get("function")
+            if fn != "set_physicell_config":
+                continue
+            if node.get("enabled") is False:
+                continue
+            args = _node_arguments(node, params_by_id, fn)
+            for group in _CONFIG_GROUPS:
+                value = args.get(group)
+                if isinstance(value, dict):
+                    config[group] = value
+    return config
+
+
+def _collect_custom_code(workflow: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the C++ hooks set by a ``define_custom_code`` node.
+
+    The node's ``code`` DICT param maps hook name -> C++ snippet. The last
+    such node in the walk wins. Returns {} if there is no custom-code node.
+    """
+    code: Dict[str, Any] = {}
+    for sw in _iter_subworkflows(workflow):
+        params_by_id: Dict[str, Dict[str, Any]] = {
+            p["id"]: p for p in (sw.get("parameters") or []) if "id" in p
+        }
+        function_list = sw.get("functions") or sw.get("nodes") or ()
+        for node in function_list:
+            fn = node.get("function_name") or node.get("function")
+            if fn != "define_custom_code":
+                continue
+            if node.get("enabled") is False:
+                continue
+            args = _node_arguments(node, params_by_id, fn)
+            value = args.get("code")
+            if isinstance(value, dict):
+                code = {k: v for k, v in value.items()
+                        if isinstance(v, str) and v.strip()}
+    return code
+
+
 def spec_from_workflow(workflow: Dict[str, Any]) -> Dict[str, Any]:
     """Lift the PhysiCell spec out of a workflow dict.
 
-    The workflow may carry top-level ``physicell`` overrides for the
-    domain / overall / save / options / parallel / user_parameters fields;
-    anything missing is left to ``generate_project``'s defaulting.
+    Config (domain / overall / save / options / parallel / user_parameters)
+    comes from a ``set_physicell_config`` node when present. The legacy
+    top-level ``physicell`` block (mirrored from ``kernel_config['physicell']``)
+    is used as a fallback for any group the node does not set. Anything still
+    missing is left to ``generate_project``'s defaulting.
     """
     substrates, cell_types, hill_rules = _collect_definitions(workflow)
     if not substrates:
@@ -161,10 +221,16 @@ def spec_from_workflow(workflow: Dict[str, Any]) -> Dict[str, Any]:
         "hill_rules": hill_rules,
     }
     overrides = workflow.get("physicell") or {}
-    for key in ("domain", "overall", "parallel", "save", "options",
-                "user_parameters"):
-        if key in overrides:
+    node_config = _collect_config(workflow)
+    for key in _CONFIG_GROUPS:
+        if key in node_config:
+            spec[key] = node_config[key]
+        elif key in overrides:
             spec[key] = overrides[key]
+
+    custom_code = _collect_custom_code(workflow)
+    if custom_code:
+        spec["custom_code"] = custom_code
     return spec
 
 

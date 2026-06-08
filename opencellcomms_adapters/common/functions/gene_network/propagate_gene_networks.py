@@ -7,9 +7,10 @@ Supports multiple update modes selectable from the GUI.
 Gene networks are accessed from context['gene_networks'] (dict mapping cell_id → BooleanNetwork).
 """
 
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import IGeneNetwork, ICellPopulation
+from src.interfaces.base import IGeneNetwork
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -33,7 +34,7 @@ from src.interfaces.base import IGeneNetwork, ICellPopulation
     compatible_kernels=["biophysics"]
 )
 def propagate_gene_networks(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     propagation_steps: int = 500,
     update_mode: str = "netlogo",
     cell_ids: Optional[List[str]] = None,
@@ -63,15 +64,14 @@ def propagate_gene_networks(
     """
     print(f"[PROPAGATE] Propagating gene networks ({propagation_steps} steps, mode={update_mode})")
     
-    # Get gene networks from context
-    gene_networks = context.get('gene_networks', {})
-    
+    # Bulk gene-network dict access is not modelled by the typed views.
+    gene_networks = env.raw_context.get('gene_networks', {})
+
     if not gene_networks:
         print("[ERROR] No gene networks in context - run 'Initialize Gene Networks' first")
         return False
-    
-    # Get population
-    population: Optional[ICellPopulation] = context.get('population')
+
+    population = env.cells.raw
     if population is None:
         print("[ERROR] No population in context")
         return False
@@ -183,13 +183,12 @@ def propagate_gene_networks(
     
     print(f"   [+] Propagated {cells_propagated} cells (skipped {cells_skipped})")
     
-    # Store changes in context
-    context['changes'] = context.get('changes', {})
-    context['changes']['propagate_gene_networks'] = {
+    # Record change for GUI display.
+    env.results.record_change('propagate_gene_networks', {
         'cells_propagated': cells_propagated,
         'propagation_steps': propagation_steps,
         'update_mode': update_mode
-    }
-    
+    })
+
     return True
 

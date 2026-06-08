@@ -5,9 +5,8 @@ This function logs the cell count before and after the intercellular stage
 to detect any unexpected cell removals.
 """
 
-from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -21,23 +20,23 @@ from src.interfaces.base import ICellPopulation
     cloneable=False
 )
 def track_population_start(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
     Track population count at the start of intercellular stage.
-    
-    Args:
-        context: Workflow execution context containing population
-    """
-    population: Optional[ICellPopulation] = context.get('population')
 
-    if population is None:
+    Args:
+        env: Typed biological context (population access).
+    """
+    if env.cells.raw is None:
         print("[TRACK] No population in context")
         return
 
-    cell_count = len(population.state.cells)
-    context['_population_count_start'] = cell_count
+    cell_count = len(env.cells)
+    # Private cross-function handoff to track_population_end (not a biological
+    # result), so it lives on the raw context rather than env.results.
+    env.raw_context['_population_count_start'] = cell_count
     print(f"[TRACK-START] Population count: {cell_count} cells")
 
 
@@ -52,23 +51,21 @@ def track_population_start(
     cloneable=False
 )
 def track_population_end(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
     Track population count at the end of intercellular stage.
-    
-    Args:
-        context: Workflow execution context containing population
-    """
-    population: Optional[ICellPopulation] = context.get('population')
 
-    if population is None:
+    Args:
+        env: Typed biological context (population access).
+    """
+    if env.cells.raw is None:
         print("[TRACK] No population in context")
         return
 
-    cell_count = len(population.state.cells)
-    start_count = context.get('_population_count_start', cell_count)
+    cell_count = len(env.cells)
+    start_count = env.raw_context.get('_population_count_start', cell_count)
     
     change = cell_count - start_count
     

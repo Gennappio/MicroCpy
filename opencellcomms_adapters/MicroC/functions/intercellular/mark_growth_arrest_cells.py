@@ -16,6 +16,7 @@ from src.biology.context import BiologicalContext, Phenotype
 
 
 @register_function(
+    requires=['population'],
     display_name="Mark Growth Arrest Cells",
     description="Track and manage cells in Growth_Arrest state with time limit",
     category="INTERCELLULAR",

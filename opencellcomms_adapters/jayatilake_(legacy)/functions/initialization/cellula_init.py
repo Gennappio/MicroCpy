@@ -4,8 +4,8 @@ cellula_init — auto-generated behavior scaffold.
 Edit the function bodies below to implement the behavior logic.
 """
 
-from typing import Dict, Any
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 
@@ -21,13 +21,13 @@ from src.workflow.decorators import register_function
     cloneable=False,
 )
 def mettiqua(
-    context: Dict[str, Any] = None,
+    env: BiologicalContext = None,
     nome: float = 0,
     **kwargs
 ) -> bool:
     print("CIAOOOOOOOOOOOO")
     """TODO: implement mettiqua."""
-    if not context:
+    if env is None:
         print("[ERROR] [mettiqua] No context provided")
         return False
     # TODO: implement behavior

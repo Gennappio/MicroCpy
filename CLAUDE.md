@@ -159,6 +159,7 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Key References
 
+- `docs/BIOLOGICAL_CONTEXT.md` — Typed `env: BiologicalContext` authoring API (recommended for new functions)
 - `docs/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
 - `opencellcomms_engine/README.md` — Engine overview
 - `docs/engine/GETTING_STARTED.md` — Tutorial

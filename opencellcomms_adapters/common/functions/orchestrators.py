@@ -13,6 +13,7 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Load Config File",
     description="Load YAML configuration file and setup simulation infrastructure",
     category="INITIALIZATION",

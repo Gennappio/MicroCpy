@@ -12,6 +12,7 @@ from src.workflow.logging import log, log_always
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Setup Gene Network",
     description="Configure gene network parameters (propagation steps, BND file, etc.)",
     category="INITIALIZATION",

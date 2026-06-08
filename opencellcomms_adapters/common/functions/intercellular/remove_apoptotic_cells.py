@@ -11,9 +11,8 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -27,7 +26,7 @@ from src.interfaces.base import ICellPopulation
     cloneable=False
 )
 def remove_apoptotic_cells(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
@@ -39,21 +38,14 @@ def remove_apoptotic_cells(
     3. Apoptotic cells are cleared (unlike necrotic cells which remain)
 
     Args:
-        context: Workflow execution context containing:
-            - population: Cell population (REQUIRED)
+        env: Typed biological context (cells + gene networks + results).
         **kwargs: Additional parameters (ignored)
 
     Returns:
         None (modifies population in-place)
     """
-    # =========================================================================
-    # EXTRACT CORE CONTEXT ITEMS
-    # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    # Population object needed for the low-level state rebuild below.
+    population = env.cells.raw
     if population is None:
         print("[remove_apoptotic_cells] No population in context - skipping")
         return
@@ -61,27 +53,21 @@ def remove_apoptotic_cells(
     # =========================================================================
     # REMOVE APOPTOTIC CELLS
     # =========================================================================
-    initial_count = len(population.state.cells)
+    initial_count = len(env.cells)
     updated_cells = {}
     removed_count = 0
-    removed_cell_ids = []
 
-    # Get gene networks dict to clean up orphaned networks
-    gene_networks = context.get('gene_networks', {})
-
-    for cell_id, cell in population.state.cells.items():
+    for cell in env.cells:
         # Check if cell is marked as apoptotic
-        if cell.state.phenotype == 'Apoptosis':
-            # Remove apoptotic cell (don't add to updated_cells)
+        if cell.is_apoptotic:
+            # Remove apoptotic cell (don't add to updated_cells) and clean up
+            # its orphaned gene network.
             removed_count += 1
-            removed_cell_ids.append(cell_id[:8])  # Store short ID for logging
-            # Also remove the gene network for this cell
-            if cell_id in gene_networks:
-                del gene_networks[cell_id]
+            env.remove_gene_network(cell.id)
             continue
 
         # Keep non-apoptotic cells
-        updated_cells[cell_id] = cell
+        updated_cells[cell.id] = cell.raw
 
     # Update population state
     population.state = population.state.with_updates(cells=updated_cells, total_cells=len(updated_cells))
@@ -90,9 +76,8 @@ def remove_apoptotic_cells(
     if removed_count > 0:
         print(f"[REMOVE-APOPTOSIS] Removed {removed_count} cells. Population: {initial_count} -> {final_count}")
 
-    # Store changes in context for GUI display
-    context['changes'] = context.get('changes', {})
-    context['changes']['remove_apoptosis'] = {
+    # Record change for GUI display.
+    env.results.record_change('remove_apoptosis', {
         'removed': removed_count,
         'remaining': final_count
-    }
+    })

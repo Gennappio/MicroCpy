@@ -4,8 +4,8 @@ altrobehaviour — auto-generated behavior scaffold.
 Edit the function bodies below to implement the behavior logic.
 """
 
-from typing import Dict, Any
 from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
 
 
 
@@ -19,10 +19,10 @@ from src.workflow.decorators import register_function
     cloneable=False,
 )
 def spostati(
-    context: Dict[str, Any] = None, **kwargs
+    env: BiologicalContext = None, **kwargs
 ) -> bool:
     """TODO: implement spostati."""
-    if not context:
+    if env is None:
         print("[ERROR] [spostati] No context provided")
         return False
     # TODO: implement behavior

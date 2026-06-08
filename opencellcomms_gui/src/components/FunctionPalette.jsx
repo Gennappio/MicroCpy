@@ -119,16 +119,10 @@ const FunctionPalette = ({ currentStage }) => {
     setShowNewFunc(false);
   };
 
-  // Build a default file path suggestion for the dialog based on current canvas
-  const buildDefaultFilePath = () => {
-    const behavior = currentStage || 'new_behavior';
-    const categoryGuess =
-      currentKind === 'agent_init' || currentKind === 'env_init' ? 'initialization'
-      : currentKind === 'env_behavior' ? 'diffusion'
-      : currentKind === 'processing_behavior' ? 'finalization'
-      : 'intracellular';
-    return `opencellcomms_adapters/jayatilake/functions/${categoryGuess}/${behavior}.py`;
-  };
+  // Default file path suggestion for the dialog. Start at the adapters folder
+  // root so the user isn't defaulted into a specific adapter; they pick the
+  // adapter and file name themselves.
+  const buildDefaultFilePath = () => 'opencellcomms_adapters/';
 
   // ─── Sub-workflow palette section (cross-canvas calls) ─────────────────
 

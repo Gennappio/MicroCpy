@@ -16,6 +16,20 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const currentStage = useWorkflowStore((state) => state.currentStage);
   const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
 
+  // Only close on a backdrop click when the press ALSO started on the backdrop.
+  // Otherwise a text/drag selection that begins inside the dialog and releases
+  // outside it would fire a click on the overlay and close the editor.
+  const overlayPressOnBackdrop = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    overlayPressOnBackdrop.current = e.target === e.currentTarget;
+  };
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget && overlayPressOnBackdrop.current) {
+      onClose();
+    }
+    overlayPressOnBackdrop.current = false;
+  };
+
   const isParameterNode = node.type === 'parameterNode';
   const isListParameterNode = node.type === 'listParameterNode';
   const isDictParameterNode = node.type === 'dictParameterNode';
@@ -589,7 +603,11 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     : (isStaged ? stagedParametersList : []);
 
   return (
-    <div className="parameter-editor-overlay" onClick={onClose}>
+    <div
+      className="parameter-editor-overlay"
+      onMouseDown={handleOverlayMouseDown}
+      onClick={handleOverlayClick}
+    >
       <div className="parameter-editor" onClick={(e) => e.stopPropagation()}>
         <div className="editor-header">
           <h3>{displayName}</h3>

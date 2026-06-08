@@ -37,3 +37,5 @@ from opencellcomms_adapters.jayatilake.functions.initialization.cellula_init imp
 from opencellcomms_adapters.jayatilake.functions.intracellular.altrobehaviour import spostati
 from opencellcomms_adapters.jayatilake.functions.initialization.agent_init import agente1
 from opencellcomms_adapters.jayatilake.functions.initialization.jnjkn_init import jklk
+from opencellcomms_adapters.jayatilake.functions.initialization.cellulina_init import cellulkina
+from opencellcomms_adapters.jayatilake.functions.initialization.cellulina_init import gugugug

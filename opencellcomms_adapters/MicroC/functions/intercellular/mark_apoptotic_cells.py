@@ -14,6 +14,7 @@ from src.biology.context import BiologicalContext, Phenotype
 
 
 @register_function(
+    requires=['population'],
     display_name="Mark Apoptotic Cells",
     description="Mark cells with Apoptosis gene ON (sets phenotype to 'Apoptosis')",
     category="INTERCELLULAR",

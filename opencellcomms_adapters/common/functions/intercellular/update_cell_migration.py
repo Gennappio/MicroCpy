@@ -14,11 +14,10 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
 import random
 import math
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -32,7 +31,7 @@ from src.interfaces.base import ICellPopulation, ISubstanceSimulator, IConfig
     cloneable=False
 )
 def update_cell_migration(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
@@ -47,11 +46,7 @@ def update_cell_migration(
     Migration is only active for cells with 'Proliferation' phenotype.
 
     Args:
-        context: Workflow execution context containing:
-            - population: Cell population (REQUIRED)
-            - simulator: Diffusion simulator (OPTIONAL)
-            - config: Configuration object
-            - dt: Time step
+        env: Typed biological context (cells, environment, config, dt).
         **kwargs: Additional parameters (ignored)
 
     Returns:
@@ -59,19 +54,17 @@ def update_cell_migration(
     """
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
+    # population/simulator are accessed via the raw escape hatches: this function
+    # rebuilds population state in place and reads neighbour-grid concentrations
+    # for finite-difference gradients, neither of which the typed views model.
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    simulator: Optional[ISubstanceSimulator] = context.get('simulator')
-    config: Optional[IConfig] = context.get('config')
-    _clock = context.get('clock')
-    dt = _clock.dt if _clock is not None else context.get('dt', 0.1)
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    population = env.cells.raw
     if population is None:
         print("[update_cell_migration] No population in context - skipping")
         return
+    simulator = env.environment.raw_simulator
+    config = env.config
+    dt = env.dt
 
     # Get migration parameters from config
     migration_speed = _get_config_param(config, 'migration_speed', 0.0)

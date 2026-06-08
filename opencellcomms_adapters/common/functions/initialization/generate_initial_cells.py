@@ -35,6 +35,7 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Generate Initial Cells",
     description="Create N cells packed in a sphere (3D) or circle (2D), write VTK file",
     category="INITIALIZATION",

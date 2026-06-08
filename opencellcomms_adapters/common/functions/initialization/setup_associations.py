@@ -69,6 +69,7 @@ def _parse_associations(associations: Union[Dict, List[str], str]) -> Dict[str, 
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Setup Associations",
     description="Configure all substance-to-gene associations with thresholds (use one dict node)",
     category="INITIALIZATION",
@@ -189,6 +190,7 @@ def setup_associations(
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Add Association",
     description="Add a substance-to-gene association (use one node per association)",
     category="INITIALIZATION",

@@ -67,11 +67,26 @@ pip install --upgrade pip >nul 2>&1
 pip install -e . >nul 2>&1
 echo [OK] OpenCellComms engine installed
 
-REM Install Flask server dependencies
-pip install flask flask-cors >nul 2>&1
+REM Install Flask server dependencies (anthropic powers the in-GUI coding agent)
+pip install flask flask-cors anthropic >nul 2>&1
 echo [OK] Flask server dependencies installed
 
 cd ..
+
+echo.
+echo Installing adapter dependencies...
+
+for /d %%D in (opencellcomms_adapters\*) do (
+    if exist "%%D\requirements.txt" (
+        echo   %%~nxD adapter...
+        pip install -r "%%D\requirements.txt" >nul 2>&1
+        if errorlevel 1 (
+            echo [!] %%~nxD adapter: some dependencies failed ^(adapter will be skipped at runtime^)
+        ) else (
+            echo [OK] %%~nxD adapter dependencies installed
+        )
+    )
+)
 
 echo.
 echo Installing GUI dependencies...

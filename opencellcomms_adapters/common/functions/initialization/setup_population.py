@@ -11,6 +11,7 @@ from src.workflow.logging import log, log_always
 
 
 @register_function(
+    typed_env_exempt=True,
     requires=['gene_networks', 'mesh_manager'],
     display_name="Setup Cell Population",
     description="Initialize cell population and gene network",

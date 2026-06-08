@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from src.workflow.decorators import register_function
 from src.interfaces.base import IGeneNetwork
+from src.biology.context import BiologicalContext
 
 
 def get_gene_network(context: Dict[str, Any], cell_id: str) -> Optional[IGeneNetwork]:
@@ -56,7 +57,7 @@ def set_gene_network(context: Dict[str, Any], cell_id: str, gene_network: IGeneN
     cloneable=False
 )
 def initialize_gene_networks(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     bnd_file: str = "gene_network.bnd",
     random_initialization: bool = True,
     **kwargs
@@ -75,10 +76,15 @@ def initialize_gene_networks(
     """
     print(f"[GENE_NETWORK] Initializing gene networks for all cells")
 
-    population = context.get('population')
+    population = env.cells.raw
     if population is None:
         print("[ERROR] No population found. Run 'Initialize Population' first.")
         return False
+
+    # The gene-network construction below writes several plumbing keys
+    # (gene_network_config, gene_networks, reference_gene_network) that the typed
+    # views do not model, so it operates on the raw context.
+    context = env.raw_context
 
     try:
         # Ensure src is in path

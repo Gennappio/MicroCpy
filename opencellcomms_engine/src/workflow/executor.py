@@ -587,6 +587,12 @@ class WorkflowExecutor:
                 elif input_name in context:
                     kwargs[input_name] = context[input_name]
 
+        # Robustly inject the typed env for env-style functions even when their
+        # metadata.inputs does not include 'context' (e.g. functions that did not
+        # declare inputs=["context"] explicitly).
+        if wants_env and 'env' not in kwargs:
+            kwargs['env'] = BiologicalContext(context)
+
         # For custom functions (with function_file), ensure context is first
         if function_file and not wants_env and 'context' not in kwargs:
             kwargs = {'context': context, **kwargs}
@@ -845,6 +851,11 @@ class WorkflowExecutor:
                         kwargs['context'] = tracked_context
                 elif input_name in tracked_context:
                     kwargs[input_name] = tracked_context[input_name]
+
+        # Robustly inject the typed env for env-style functions even when their
+        # metadata.inputs does not include 'context'.
+        if wants_env and 'env' not in kwargs:
+            kwargs['env'] = BiologicalContext(tracked_context)
 
         # For custom functions, ensure context is first
         if function_file and not wants_env and 'context' not in kwargs:

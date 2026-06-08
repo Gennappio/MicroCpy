@@ -12,6 +12,7 @@ from src.workflow.logging import log, log_always
 
 
 @register_function(
+    typed_env_exempt=True,
     display_name="Setup MaBoSS",
     description="Initialize pyMaBoSS with Boolean network model and time parameters",
     category="INITIALIZATION",

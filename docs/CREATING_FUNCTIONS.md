@@ -136,6 +136,12 @@ def custom_metabolism(
 
 ## The Context Object
 
+> **Recommended:** new functions should use the typed `env: BiologicalContext`
+> API instead of the raw `context` dict shown below. It hides coordinate
+> conversion, makes phenotype/gene mutations explicit, and reads more clearly in
+> the GUI. See **`docs/BIOLOGICAL_CONTEXT.md`** for the full reference. The raw
+> `context` style documented here still works and is fully interoperable.
+
 All functions receive a `context` dictionary containing simulation state:
 
 ```python

@@ -14,10 +14,10 @@ See run_diffusion_solver.py for full documentation.
 ================================================================================
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import random
 from src.workflow.decorators import register_function
-from src.interfaces.base import ICellPopulation, IConfig
+from src.biology.context import BiologicalContext
 from src.biology.cell import Cell
 from src.biology.gene_network import HierarchicalBooleanNetwork
 
@@ -33,7 +33,7 @@ from src.biology.gene_network import HierarchicalBooleanNetwork
     cloneable=False
 )
 def update_cell_division(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     **kwargs
 ) -> None:
     """
@@ -61,16 +61,16 @@ def update_cell_division(
     """
     # =========================================================================
     # EXTRACT CORE CONTEXT ITEMS
+    # population via the raw escape hatch (this function rebuilds population
+    # state and constructs Cell objects); the division helpers also read several
+    # non-biological plumbing keys, so they operate on the raw context.
     # =========================================================================
-    population: Optional[ICellPopulation] = context.get('population')
-    config: Optional[IConfig] = context.get('config')
-
-    # =========================================================================
-    # VALIDATE REQUIRED CORE ITEMS
-    # =========================================================================
+    population = env.cells.raw
     if population is None:
         print("[update_cell_division] No population in context - skipping")
         return
+    config = env.config
+    context = env.raw_context
 
     # Get division parameters from config
     atp_threshold = _get_config_param(config, 'atp_threshold', 0.8)
@@ -309,9 +309,6 @@ def _create_fresh_daughter_network(context: Dict[str, Any]):
                 node.next_state = state
 
         # Build output links for graph walking
-        from src.workflow.functions.gene_network.initialize_netlogo_gene_networks import (
-            _build_output_links, _apply_input_states,
-        )
         _build_output_links(daughter_gn)
         daughter_gn._output_links_built = True
 
@@ -344,6 +341,51 @@ def _create_fresh_daughter_network(context: Dict[str, Any]):
     except Exception as e:
         print(f"[DIVISION] WARNING: Failed to create fresh daughter network: {e}")
         return None
+
+
+def _build_output_links(gene_network) -> None:
+    """Build output links (which nodes depend on each node) for graph walking.
+
+    Inlined from the netlogo gene-network adapters so this common function does
+    not depend on a specific experiment adapter (the previous import pointed at
+    a non-existent engine module, so daughter networks were never built).
+    """
+    for node in gene_network.nodes.values():
+        if not hasattr(node, 'outputs'):
+            node.outputs = set()
+
+    for node_name, node in gene_network.nodes.items():
+        if node.is_input or not node.update_function:
+            continue
+        dependencies = node.inputs if isinstance(node.inputs, set) else set(node.inputs)
+        for dep_name in dependencies:
+            if dep_name in gene_network.nodes:
+                gene_network.nodes[dep_name].outputs.add(node_name)
+
+
+def _apply_input_states(
+    gene_network,
+    input_states: Dict[str, bool],
+    MCT1I_concentration: float = 0.0,
+    GLUT1I_concentration: float = 0.0,
+) -> None:
+    """Apply input node states with probabilistic activation for MCT1I/GLUT1I.
+
+    Inlined from the netlogo gene-network adapters (see _build_output_links).
+    """
+    for node_name, state in input_states.items():
+        if node_name in gene_network.nodes:
+            gene_network.nodes[node_name].current_state = state
+
+    if MCT1I_concentration > 0 and 'MCT1I' in gene_network.nodes:
+        threshold = 1.0
+        hill_value = 0.85 * (1.0 - 1.0 / (1.0 + (MCT1I_concentration / threshold)))
+        gene_network.nodes['MCT1I'].current_state = (hill_value > gene_network._cell_ran1)
+
+    if GLUT1I_concentration > 0 and 'GLUT1I' in gene_network.nodes:
+        threshold = 1.0
+        hill_value = 0.85 * (1.0 - 1.0 / (1.0 + (GLUT1I_concentration / threshold)))
+        gene_network.nodes['GLUT1I'].current_state = (hill_value > gene_network._cell_ran2)
 
 
 def _find_daughter_position(parent_position, occupied_positions, domain_bounds,

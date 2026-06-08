@@ -171,6 +171,14 @@ def _write_custom_modules(
     custom_dir = project_dir / "custom_modules"
     source_info = spec.get("custom_modules_source")
 
+    if source_info and source_info.get("source_dir") and spec.get("custom_code"):
+        print(
+            "[WARN] [physicell] Both a project template (select_project_template) "
+            "and custom code (define_custom_code) are set. The template's "
+            "custom.cpp is copied verbatim — the custom_code is ignored. Remove "
+            "one of the two nodes."
+        )
+
     if source_info and source_info.get("source_dir"):
         source_dir = Path(source_info["source_dir"])
         # Detect .cpp and .h files (exclude occ_* which we own).
@@ -278,6 +286,7 @@ def generate_project(
         "cell_rules_enabled": spec["cell_rules_enabled"],
         "program_name": project_name,
         "use_occ_glue": use_occ_glue,
+        "custom_code": spec.get("custom_code") or {},
     }
 
     (project_dir / "config" / "PhysiCell_settings.xml").write_text(

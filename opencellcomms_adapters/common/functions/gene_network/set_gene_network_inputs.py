@@ -7,9 +7,10 @@ They stay FIXED at the values set here.
 Gene networks are accessed from context['gene_networks'] (dict mapping cell_id → BooleanNetwork).
 """
 
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, List, Optional, Union
 from src.workflow.decorators import register_function
 from src.interfaces.base import IGeneNetwork
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -40,7 +41,7 @@ from src.interfaces.base import IGeneNetwork
     cloneable=False
 )
 def set_gene_network_inputs(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     fixed_substances: Union[Dict, List, str] = None,
     **kwargs
 ) -> bool:
@@ -87,14 +88,14 @@ def set_gene_network_inputs(
     # Build input states dict from fixed_substances
     input_states = dict(fixed_substances)
 
-    # Store for later use
-    context['gene_network_inputs'] = input_states
+    # Store for later use (plumbing key consumed by propagation/division).
+    env.raw_context['gene_network_inputs'] = input_states
 
-    # Get gene networks from context
-    gene_networks = context.get('gene_networks', {})
+    # Bulk gene-network dict access is not modelled by the typed views.
+    gene_networks = env.raw_context.get('gene_networks', {})
 
     # Apply to all cells in population
-    population = context.get('population')
+    population = env.cells.raw
     cells_updated = 0
 
     if population and gene_networks:

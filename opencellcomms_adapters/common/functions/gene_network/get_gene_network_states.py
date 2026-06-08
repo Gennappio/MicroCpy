@@ -10,6 +10,7 @@ Gene networks are accessed from context['gene_networks'] (dict mapping cell_id â
 from typing import Dict, Any, List, Optional
 from src.workflow.decorators import register_function
 from src.interfaces.base import IGeneNetwork
+from src.biology.context import BiologicalContext
 
 
 @register_function(
@@ -27,7 +28,7 @@ from src.interfaces.base import IGeneNetwork
     compatible_kernels=["biophysics"]
 )
 def get_gene_network_states(
-    context: Dict[str, Any],
+    env: BiologicalContext,
     cell_ids: Optional[List[str]] = None,
     output_nodes_only: bool = False,
     **kwargs
@@ -45,8 +46,9 @@ def get_gene_network_states(
     Returns:
         Dict mapping cell_id â†’ gene_states dict
     """
-    # Get gene networks from context
-    gene_networks = context.get('gene_networks', {})
+    # Bulk gene-network dict access is not modelled by the typed views, so read
+    # it from the raw context.
+    gene_networks = env.raw_context.get('gene_networks', {})
     
     if not gene_networks:
         print("[GET_STATES] No gene networks in context")
@@ -86,7 +88,7 @@ def get_gene_network_states(
     print(f"[GET_STATES] Retrieved gene states for {len(gene_states_by_cell)} cells")
     
     # Store in context for downstream use
-    context['gene_states_by_cell'] = gene_states_by_cell
+    env.raw_context['gene_states_by_cell'] = gene_states_by_cell
     
     return gene_states_by_cell
 
