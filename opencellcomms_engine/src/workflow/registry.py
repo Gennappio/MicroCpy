@@ -179,6 +179,11 @@ def get_default_registry() -> FunctionRegistry:
     except ImportError as e:
         print(f"[Registry] PhysiBoSS adapter not available: {e}")
 
+    try:
+        import opencellcomms_adapters.demo1.register  # noqa: F401
+    except ImportError as e:
+        print(f"[Registry] demo1 adapter not available: {e}")
+
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
     return get_decorator_registry()

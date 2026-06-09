@@ -1040,8 +1040,20 @@ def scaffold_behavior_code():
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Derive category constant name (e.g. intracellular → INTRACELLULAR)
+        # Derive category constant name (e.g. intracellular → INTRACELLULAR).
+        # `category` comes from the parent folder name, which is only a valid
+        # FunctionCategory when the file lives under .../functions/<category>/.
+        # For flat layouts (e.g. opencellcomms_adapters/demo1/foo.py) the folder
+        # name is not a category and would make @register_function raise
+        # KeyError at import time, leaving the function unregistered. Fall back
+        # to a valid default so the scaffold always loads.
+        VALID_CATEGORIES = {
+            'INITIALIZATION', 'INTRACELLULAR', 'DIFFUSION',
+            'INTERCELLULAR', 'FINALIZATION', 'UTILITY',
+        }
         category_const = category.upper()
+        if category_const not in VALID_CATEGORIES:
+            category_const = 'INTRACELLULAR'
 
         # File header template
         header = f'''"""
