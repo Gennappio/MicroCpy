@@ -122,11 +122,6 @@ const FunctionPalette = ({ currentStage }) => {
     setShowNewFunc(false);
   };
 
-  // Default file path suggestion for the dialog. Start at the adapters folder
-  // root so the user isn't defaulted into a specific adapter; they pick the
-  // adapter and file name themselves.
-  const buildDefaultFilePath = () => 'opencellcomms_adapters/';
-
   // ─── Sub-workflow palette section (cross-canvas calls) ─────────────────
 
   const buildSubworkflowCallData = (name) => ({
@@ -367,7 +362,6 @@ const FunctionPalette = ({ currentStage }) => {
       {showNewFunc && (
         <NewFunctionDialog
           behaviorName={currentStage}
-          defaultPath={buildDefaultFilePath()}
           onCreate={handleCreateFunction}
           onCancel={() => setShowNewFunc(false)}
         />
