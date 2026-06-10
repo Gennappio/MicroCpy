@@ -136,6 +136,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# Scaffold / export backups (created when re-writing function files,
+# register.py, or .subworkflow.json structure files)
+*.py.bak
+*.json.bak
+
 # Spyder project settings
 .spyderproject
 .spyproject

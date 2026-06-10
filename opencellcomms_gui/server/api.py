@@ -1313,8 +1313,11 @@ from src.workflow.decorators import register_function
                     break
                 d = d.parent
 
-            # Create register.py with a header if the adapter is new.
-            if not register_path.exists():
+            # Create register.py with a header if the adapter is new. Track
+            # whether it pre-existed so we only back it up when we're modifying
+            # a real prior file (no .bak litter for a just-created register.py).
+            register_existed = register_path.exists()
+            if not register_existed:
                 register_path.write_text(
                     f'"""Plugin registry for the {adapter_dir.name} adapter.\n\n'
                     f'Importing this module registers the adapter\'s functions via\n'
@@ -1343,7 +1346,8 @@ from src.workflow.decorators import register_function
                 if import_line not in reg_source:
                     lines_to_add.append(import_line)
             if lines_to_add:
-                shutil.copy2(register_path, register_path.with_suffix('.py.bak'))
+                if register_existed:
+                    shutil.copy2(register_path, register_path.with_suffix('.py.bak'))
                 register_path.write_text(reg_source.rstrip() + '\n' + '\n'.join(lines_to_add) + '\n',
                                           encoding='utf-8')
 
