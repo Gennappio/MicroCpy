@@ -406,6 +406,30 @@ def register_function(
             requires=requires
         )
 
+        # Detect silent function-name collisions. Re-registering the same name
+        # from the SAME source file is fine (a module reload re-runs the
+        # decorator). A *different* file claiming an already-registered name is
+        # a conflict: hard-error when a plugin (adapter) is involved — the case
+        # the plugin system must never allow silently — and warn for
+        # engine-core vs engine-core duplicates (pre-existing, tracked).
+        existing = _decorator_registry.get(func_name)
+        if existing is not None and existing.source_file != source_file:
+            involves_plugin = (
+                'opencellcomms_adapters' in (existing.source_file or '')
+                or 'opencellcomms_adapters' in (source_file or '')
+            )
+            collision_msg = (
+                f"Function name '{func_name}' is already registered from "
+                f"{existing.source_file!r}; {source_file!r} would overwrite it. "
+                f"Function names must be unique across plugins."
+            )
+            if involves_plugin:
+                raise ValueError(
+                    f"\n{'='*80}\n❌ DUPLICATE FUNCTION NAME\n{'='*80}\n"
+                    f"{collision_msg}\n{'='*80}\n"
+                )
+            warnings.warn(collision_msg, stacklevel=2)
+
         # Register in the decorator registry
         _decorator_registry.register(metadata)
 

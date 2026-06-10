@@ -120,6 +120,32 @@ class FunctionRegistry:
         }
 
 
+def discover_adapter_names(adapters_root) -> List[str]:
+    """
+    Discover installed adapters (plugins) under `adapters_root`.
+
+    Returns the sorted names of every folder that has a `register.py` and a
+    Python-importable name. Folders whose names aren't valid module identifiers
+    (e.g. 'jayatilake_(legacy)', 'maboss_(legacy)') are skipped — they're kept
+    on disk for reference only. `common` is included; callers that need load
+    ordering should import it first.
+    """
+    import keyword
+    from pathlib import Path
+    root = Path(adapters_root)
+    names = []
+    if root.is_dir():
+        for child in sorted(root.iterdir()):
+            name = child.name
+            if not child.is_dir():
+                continue
+            if not name.isidentifier() or keyword.iskeyword(name):
+                continue
+            if (child / 'register.py').is_file():
+                names.append(name)
+    return names
+
+
 def get_default_registry() -> FunctionRegistry:
     """
     Get the default function registry with all decorator-based functions.
@@ -153,7 +179,6 @@ def get_default_registry() -> FunctionRegistry:
     # that has a `register.py` and a Python-importable name is loaded — no need
     # to hand-maintain a list here, so a newly created plugin works on restart.
     import importlib
-    import keyword
 
     def _load_adapter(pkg_name):
         try:
@@ -162,25 +187,13 @@ def get_default_registry() -> FunctionRegistry:
             print(f"[Registry] Adapter '{pkg_name}' not available: {e}")
 
     adapters_root = Path(repo_root) / 'opencellcomms_adapters'
-    discovered = []
-    if adapters_root.is_dir():
-        for child in sorted(adapters_root.iterdir()):
-            name = child.name
-            # Skip non-packages, the shared `common` (loaded first below), and
-            # folders whose names aren't valid module identifiers — e.g.
-            # 'jayatilake_(legacy)' / 'maboss_(legacy)', kept on disk for
-            # reference only.
-            if not child.is_dir() or name == 'common':
-                continue
-            if not name.isidentifier() or keyword.iskeyword(name):
-                continue
-            if (child / 'register.py').is_file():
-                discovered.append(name)
+    names = discover_adapter_names(adapters_root)
 
     # `common` (shared biology / ABM primitives) must load first because the
     # experiment adapters import from it.
-    _load_adapter('common')
-    for name in discovered:
+    for name in ['common'] + [n for n in names if n != 'common']:
+        if name == 'common' and 'common' not in names:
+            continue
         _load_adapter(name)
 
     # Get the decorator registry (all functions registered via @register_function)

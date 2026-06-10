@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "common"
+version = "0.1.0"
+description = "Shared biology / ABM primitives (gene networks, metabolism, cell lifecycle, population & gene-network setup) used by the experiment plugins."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["biophysics"]

@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "MicroC"
+version = "0.1.0"
+description = "MicroC model — a standalone re-expression of the Jayatilake v7 metabolic agent-based model."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["biophysics"]

@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "Test_GUI"
+version = "0.1.0"
+description = "Test plugin used during GUI development."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["*"]

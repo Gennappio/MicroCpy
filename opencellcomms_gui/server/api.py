@@ -599,6 +599,66 @@ def get_registry():
         }), 500
 
 
+@app.route('/api/plugins', methods=['GET'])
+def list_plugins():
+    """
+    List installed plugins (adapters): manifest metadata + their functions.
+
+    Returns:
+        { success, count, plugins: [
+            { name, path, has_manifest, manifest: {name, version, description,
+              author, engine_version, compatible_kernels}, functions: [...] }
+        ] }
+    """
+    try:
+        import tomllib
+
+        engine_dir = get_engine_path().parent
+        sys.path.insert(0, str(engine_dir))
+        sys.path.insert(0, str(engine_dir.parent))
+        from src.workflow.registry import get_default_registry, discover_adapter_names
+
+        adapters_root = engine_dir.parent / 'opencellcomms_adapters'
+        names = discover_adapter_names(adapters_root)
+        registry = get_default_registry()
+
+        plugins = []
+        for name in names:
+            manifest_path = adapters_root / name / 'plugin.toml'
+            has_manifest = manifest_path.is_file()
+            manifest = {}
+            if has_manifest:
+                try:
+                    manifest = tomllib.loads(manifest_path.read_text(encoding='utf-8')).get('plugin', {})
+                except Exception as e:
+                    manifest = {'_error': f'Failed to parse plugin.toml: {e}'}
+
+            # Functions whose source file lives under this plugin's folder.
+            marker = f'opencellcomms_adapters/{name}/'
+            functions = sorted(
+                fname for fname, md in registry.functions.items()
+                if marker in (md.source_file or '').replace('\\', '/')
+            )
+
+            plugins.append({
+                'name': name,
+                'path': f'opencellcomms_adapters/{name}',
+                'has_manifest': has_manifest,
+                'manifest': manifest,
+                'functions': functions,
+            })
+
+        return jsonify({'success': True, 'count': len(plugins), 'plugins': plugins})
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': f'Failed to list plugins: {e}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+
 @app.route('/api/function/source', methods=['GET'])
 def get_function_source():
     """
@@ -1260,6 +1320,20 @@ from src.workflow.decorators import register_function
                     f'Importing this module registers the adapter\'s functions via\n'
                     f'@register_function. The engine discovers and imports it\n'
                     f'automatically from opencellcomms_adapters/.\n"""\n',
+                    encoding='utf-8')
+
+            # Seed a plugin manifest so the new plugin has an identity.
+            manifest_path = adapter_dir / 'plugin.toml'
+            if not manifest_path.exists():
+                manifest_path.write_text(
+                    '# OpenCellComms plugin manifest. See docs/PLUGINS.md for the schema.\n'
+                    '[plugin]\n'
+                    f'name = "{adapter_dir.name}"\n'
+                    'version = "0.1.0"\n'
+                    'description = ""\n'
+                    'author = ""\n'
+                    'engine_version = ">=0.0.0"\n'
+                    'compatible_kernels = ["biophysics"]\n',
                     encoding='utf-8')
 
             reg_source = register_path.read_text(encoding='utf-8')
