@@ -39,3 +39,5 @@ from opencellcomms_adapters.jayatilake.functions.initialization.agent_init impor
 from opencellcomms_adapters.jayatilake.functions.initialization.jnjkn_init import jklk
 from opencellcomms_adapters.jayatilake.functions.initialization.cellulina_init import cellulkina
 from opencellcomms_adapters.jayatilake.functions.initialization.cellulina_init import gugugug
+from opencellcomms_adapters.jayatilake_(legacy).functions.initialization.agent_init import asdas
+from opencellcomms_adapters.jayatilake_(legacy).functions.cioa.dnakns import ksadkas

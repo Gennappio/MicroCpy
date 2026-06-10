@@ -49,6 +49,28 @@ export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.SUBWORKFLOW,
 ]);
 
+// Roles offered in the New Function dialog — the subset of function-hosting
+// kinds a biologist actually authors functions for. The chosen kind becomes the
+// function's folder (functions/<kind>/) so placement is self-describing.
+export const FUNCTION_ROLE_OPTIONS = [
+  { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
+  { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behaviour' },
+  { kind: KINDS.ENV_INIT, label: 'Environment · initialization' },
+  { kind: KINDS.ENV_BEHAVIOR, label: 'Environment · behaviour' },
+  { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Processing' },
+];
+
+// Engine execution category derived from a role/kind. The category no longer
+// drives execution (the workflow graph does) — it only satisfies the
+// @register_function enum and is never shown to the user.
+export const KIND_TO_CATEGORY = {
+  [KINDS.AGENT_INIT]: 'INITIALIZATION',
+  [KINDS.ENV_INIT]: 'INITIALIZATION',
+  [KINDS.AGENT_BEHAVIOR]: 'INTRACELLULAR',
+  [KINDS.ENV_BEHAVIOR]: 'DIFFUSION',
+  [KINDS.PROCESSING_BEHAVIOR]: 'FINALIZATION',
+};
+
 export const variantForKind = (kind) => {
   switch (kind) {
     case KINDS.AGENT_BEHAVIOR:

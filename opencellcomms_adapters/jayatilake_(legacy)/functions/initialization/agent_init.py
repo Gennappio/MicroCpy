@@ -33,3 +33,27 @@ def agente1(
     # TODO: implement behavior
     return True
 
+
+@register_function(
+    display_name="Asdas",
+    description="TODO: describe what asdas does",
+    category="INITIALIZATION",
+    parameters=[
+        {"name": "casassa", "type": "FLOAT", "description": "TODO", "default": 0},
+    ],
+    inputs=["context"],
+    outputs=[],
+    cloneable=False,
+)
+def asdas(
+    context: Dict[str, Any] = None,
+    casassa: float = 0,
+    **kwargs
+) -> bool:
+    """TODO: implement asdas."""
+    if not context:
+        print("[ERROR] [asdas] No context provided")
+        return False
+    # TODO: implement behavior
+    return True
+

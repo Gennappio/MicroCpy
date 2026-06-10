@@ -927,17 +927,28 @@ def save_dialog():
         else:
             initial_file = ''
 
+        # Match the dialog to what's actually being saved. Callers may override
+        # explicitly; otherwise infer the extension from default_path's suffix so
+        # the OS doesn't nag about a "wrong" extension (e.g. a .json saved under a
+        # hardcoded .py default).
+        suffix = Path(default_path).suffix if default_path else ''
+        ext = data.get('default_extension') or suffix or '.py'
+        type_label = {'.json': 'JSON', '.py': 'Python'}.get(ext, (ext.lstrip('.').upper() or 'File'))
+        filetypes = data.get('filetypes') or [(type_label, f'*{ext}'), ('All files', '*.*')]
+        filetypes = [tuple(ft) for ft in filetypes]
+        title = data.get('title') or f'Save {type_label} file'
+
         # Use a subprocess so tkinter mainloop doesn't interfere with Flask
         script = (
             "import sys, tkinter as tk\n"
             "from tkinter import filedialog\n"
             "root = tk.Tk(); root.withdraw(); root.attributes('-topmost', True)\n"
             f"p = filedialog.asksaveasfilename(\n"
-            f"    defaultextension='.py',\n"
-            f"    filetypes=[('Python', '*.py'), ('All files', '*.*')],\n"
+            f"    defaultextension={ext!r},\n"
+            f"    filetypes={filetypes!r},\n"
             f"    initialdir={initial_dir!r},\n"
             f"    initialfile={initial_file!r},\n"
-            f"    title='Save function file')\n"
+            f"    title={title!r})\n"
             "root.destroy()\n"
             "sys.stdout.write(p or '')\n"
         )
@@ -1324,6 +1335,26 @@ from src.workflow.decorators import register_function
                     f'@register_function. The engine discovers and imports it\n'
                     f'automatically from opencellcomms_adapters/.\n"""\n',
                     encoding='utf-8')
+
+                # Brand-new plugin: lay down the full role-based folder skeleton
+                # (one folder per authoring role, matching the GUI's v2 kinds),
+                # plus behaviors/ and workflows/. This gives the biologist a clear
+                # home for each kind of function up front. Existing plugins are
+                # left untouched.
+                ROLE_FOLDERS = [
+                    'agent_init', 'agent_behavior',
+                    'env_init', 'env_behavior',
+                    'processing_behavior',
+                ]
+                functions_root = adapter_dir / 'functions'
+                functions_root.mkdir(parents=True, exist_ok=True)
+                (functions_root / '__init__.py').touch()
+                for role_folder in ROLE_FOLDERS:
+                    role_dir = functions_root / role_folder
+                    role_dir.mkdir(parents=True, exist_ok=True)
+                    (role_dir / '__init__.py').touch()
+                for extra in ('behaviors', 'workflows'):
+                    (adapter_dir / extra).mkdir(parents=True, exist_ok=True)
 
             # Seed a plugin manifest so the new plugin has an identity.
             manifest_path = adapter_dir / 'plugin.toml'

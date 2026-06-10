@@ -32,6 +32,17 @@ export const createWorkflowIOSlice = (set, get) => ({
   loadWorkflow: (workflowJson, filePath = null) => {
     const version = workflowJson.version;
 
+    // A behavior file (.subworkflow.json) is not a full workflow — point the
+    // user at the right place instead of complaining about its version.
+    if (workflowJson.format === 'subworkflow') {
+      const errorMsg =
+        'This is a behavior file (.subworkflow.json), not a full workflow. ' +
+        'Load it from the Library panel\'s "Load File" button instead.';
+      console.error(`[STORE] ${errorMsg}`);
+      alert(errorMsg);
+      throw new Error(errorMsg);
+    }
+
     // Strict v2-only policy
     if (version !== '2.0') {
       const errorMsg = `Unsupported workflow version: ${version || 'undefined'}. Only version 2.0 is supported.`;

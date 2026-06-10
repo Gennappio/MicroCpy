@@ -5,7 +5,7 @@
   "kind": "agent_init",
   "description": "Initialization for agent",
   "exported_from": "Untitled Workflow",
-  "exported_at": "2026-06-03T10:37:52.815Z",
+  "exported_at": "2026-06-04T21:19:29.803Z",
   "subworkflow": {
     "description": "Initialization for agent",
     "enabled": true,
@@ -21,14 +21,14 @@
     },
     "functions": [
       {
-        "id": "agente1_1780483069224",
-        "function_name": "agente1",
+        "id": "asdas_1780607966265",
+        "function_name": "asdas",
         "parameters": {},
         "enabled": true,
         "verbose": false,
         "position": {
-          "x": 156,
-          "y": 278.5
+          "x": 155.00123711340206,
+          "y": 313.5036082474227
         },
         "description": "✱ unsaved — click Export Behavior to write the file",
         "custom_name": "",
@@ -39,14 +39,14 @@
     "subworkflow_calls": [],
     "parameters": [],
     "execution_order": [
-      "agente1_1780483069224"
+      "asdas_1780607966265"
     ],
     "input_parameters": []
   },
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
-      "agente1"
+      "asdas"
     ]
   }
 }

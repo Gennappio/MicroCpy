@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
+import { FUNCTION_ROLE_OPTIONS, KIND_TO_CATEGORY } from '../store/subworkflowKinds';
 import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
 
-// Simulation stages → the function's decorator category.
-const STAGES = ['INITIALIZATION', 'INTRACELLULAR', 'DIFFUSION', 'INTERCELLULAR', 'FINALIZATION', 'UTILITY'];
+const DEFAULT_ROLE = 'agent_behavior';
 
 // Capability tokens a typed function can declare it reads from the kernel.
 // These become `requires=[...]` and the typed env fails loudly if the active
@@ -44,17 +44,21 @@ const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
  *                    requires, typed_env_exempt }
  *   onCancel
  */
-const NewFunctionDialog = ({ behaviorName = '', onCreate, onCancel }) => {
+const NewFunctionDialog = ({ behaviorName = '', currentKind = '', onCreate, onCancel }) => {
   const [name, setName] = useState('');
   const [parameters, setParameters] = useState([]);
-  // Default the stage from the canvas behavior name when it matches a stage.
-  const [category, setCategory] = useState(() => {
-    const up = (behaviorName || '').toUpperCase();
-    return STAGES.includes(up) ? up : 'INTRACELLULAR';
-  });
+  // The function's "role" is the v2 canvas kind (Agent / Environment /
+  // Processing). Default to the current canvas's kind when it's a valid
+  // authoring role, so a function lands where the biologist is working.
+  const [role, setRole] = useState(() =>
+    FUNCTION_ROLE_OPTIONS.some((o) => o.kind === currentKind) ? currentKind : DEFAULT_ROLE
+  );
   const [requires, setRequires] = useState([]);
   // Setup functions (create population / load cells) keep the raw context dict.
   const [typedEnvExempt, setTypedEnvExempt] = useState(false);
+  // Capabilities / setup are developer concerns — hidden by default so the
+  // biologist sees only Name / Role / Plugin / Parameters.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Plugin selection. The function lives in a plugin; the file path is derived.
   const [plugins, setPlugins] = useState([]);
@@ -83,8 +87,8 @@ const NewFunctionDialog = ({ behaviorName = '', onCreate, onCancel }) => {
   }, []);
 
   const pluginName = (creatingNewPlugin ? newPluginName : selectedPlugin).trim();
-  const derivedPath = (pluginName && name.trim() && category)
-    ? `opencellcomms_adapters/${pluginName}/functions/${category.toLowerCase()}/${name.trim()}.py`
+  const derivedPath = (pluginName && name.trim() && role)
+    ? `opencellcomms_adapters/${pluginName}/functions/${role}/${name.trim()}.py`
     : '';
 
   const toggleRequire = (token) =>
@@ -134,7 +138,11 @@ const NewFunctionDialog = ({ behaviorName = '', onCreate, onCancel }) => {
         name: name.trim(),
         file_path: derivedPath,
         parameters: coerced,
-        category,
+        // The engine category is derived from the role and never shown — it only
+        // satisfies the @register_function enum; execution order comes from the
+        // workflow graph, not this tag.
+        category: KIND_TO_CATEGORY[role] || 'UTILITY',
+        kind: role,
         // Exempt (setup) functions use the raw context dict, so capability
         // tokens don't apply.
         requires: typedEnvExempt ? [] : requires,
@@ -162,13 +170,13 @@ const NewFunctionDialog = ({ behaviorName = '', onCreate, onCancel }) => {
         </div>
 
         <div className="nf-row">
-          <label>Stage (when it runs)</label>
+          <label>Role (what it belongs to)</label>
           <select
             className="dialog-input"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
           >
-            {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {FUNCTION_ROLE_OPTIONS.map((o) => <option key={o.kind} value={o.kind}>{o.label}</option>)}
           </select>
         </div>
 
@@ -267,33 +275,47 @@ const NewFunctionDialog = ({ behaviorName = '', onCreate, onCancel }) => {
           ))}
         </div>
 
-        <div className="nf-caps">
-          <label className="nf-exempt">
-            <input
-              type="checkbox"
-              checked={typedEnvExempt}
-              onChange={(e) => setTypedEnvExempt(e.target.checked)}
-            />
-            This is a <strong>setup</strong> function (creates the population / loads cells — uses the raw context)
-          </label>
+        <button
+          type="button"
+          className="nf-advanced-toggle"
+          onClick={() => setShowAdvanced((s) => !s)}
+        >
+          {showAdvanced ? '▾' : '▸'} Advanced
+        </button>
 
-          {!typedEnvExempt && (
-            <div className="nf-caps-list">
-              <div className="nf-caps-title">What does it read? (declares <code>requires</code>)</div>
-              {CAPABILITIES.map((c) => (
-                <label className="nf-cap-row" key={c.token} title={c.hint}>
-                  <input
-                    type="checkbox"
-                    checked={requires.includes(c.token)}
-                    onChange={() => toggleRequire(c.token)}
-                  />
-                  <span className="nf-cap-label">{c.label}</span>
-                  <code className="nf-cap-hint">{c.hint}</code>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+        {showAdvanced && (
+          <div className="nf-caps">
+            <label className="nf-exempt">
+              <input
+                type="checkbox"
+                checked={typedEnvExempt}
+                onChange={(e) => setTypedEnvExempt(e.target.checked)}
+              />
+              This function <strong>creates or loads the cells</strong> (a setup step that runs once at the start)
+            </label>
+
+            {!typedEnvExempt && (
+              <div className="nf-caps-list">
+                <div className="nf-caps-title">What does this function need to look at?</div>
+                <div className="nf-caps-subtitle">
+                  Tick what it uses. The simulation gives it access to these and warns you early if a chosen
+                  kernel can't provide one.
+                </div>
+                {CAPABILITIES.map((c) => (
+                  <label className="nf-cap-row" key={c.token} title={c.hint}>
+                    <input
+                      type="checkbox"
+                      checked={requires.includes(c.token)}
+                      onChange={() => toggleRequire(c.token)}
+                    />
+                    <span className="nf-cap-label">{c.label}</span>
+                    <code className="nf-cap-hint">{c.hint}</code>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {validationError && <div className="nf-validation-error">{validationError}</div>}
 
