@@ -22,9 +22,11 @@
   align-items: flex-start;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(234, 179, 8, 0.12);
-  border-bottom: 1px solid rgba(234, 179, 8, 0.35);
-  color: #fde68a;
+  /* Opaque dark-amber so the bar reads clearly no matter what's behind it
+     (a translucent yellow tint washed out to yellow-on-yellow). */
+  background: #78350f;
+  border-bottom: 2px solid #f59e0b;
+  color: #fffbeb;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -32,10 +34,10 @@
 .init-sequence-warning svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: #facc15;
+  color: #fde047;
 }
 
 .init-sequence-warning strong {
-  color: #fef3c7;
-  font-weight: 600;
+  color: #fde047;
+  font-weight: 700;
 }
