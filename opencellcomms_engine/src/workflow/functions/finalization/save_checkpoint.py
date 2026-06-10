@@ -10,7 +10,7 @@ from src.workflow.decorators import register_function
 
 
 @register_function(
-    display_name="Save Checkpoint",
+    display_name="Save Checkpoint (VTK)",
     description="Save cell positions and gene states to a VTK checkpoint file",
     category="FINALIZATION",
     parameters=[
@@ -32,7 +32,7 @@ from src.workflow.decorators import register_function
     outputs=[],
     cloneable=False
 )
-def save_checkpoint(
+def save_checkpoint_vtk(
     context: Dict[str, Any],
     file_path: str = "checkpoint.vtk",
     include_gene_states: bool = True,

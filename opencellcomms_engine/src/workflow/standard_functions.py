@@ -579,56 +579,10 @@ def save_simulation_data(
         return False
 
 
-@register_function(
-    requires=['population'],
-    display_name="Print Simulation Summary",
-    description="Print simulation summary (results, statistics, output paths)",
-    category="FINALIZATION",
-    outputs=[],
-    cloneable=False
-)
-def print_simulation_summary(
-    context: Dict[str, Any],
-    **kwargs
-) -> bool:
-    """
-    Print simulation summary in finalization stage.
-
-    This function prints a summary of the simulation results
-    that would normally be printed automatically in non-workflow mode.
-
-    Args:
-        context: Workflow context containing results, config, etc.
-        **kwargs: Additional parameters (ignored)
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        config = context['config']
-        results = context.get('results', {})
-        population = context.get('population')
-
-        print(f"\n" + "=" * 50)
-        print("[+] SIMULATION COMPLETED SUCCESSFULLY!")
-        print("=" * 50)
-        print(f"[STATS] Results summary:")
-        print(f"   * Substances simulated: {len(config.substances)}")
-        print(f"   * Simulation steps: {len(results.get('time', []))}")
-
-        if population:
-            print(f"   * Final cell count: {len(population.state.cells)}")
-
-        print(f"   * Output directory: {config.output_dir}")
-        print(f"   * Plots directory: {config.plots_dir}")
-
-        return True
-
-    except Exception as e:
-        print(f"[WORKFLOW] Error printing summary: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+# `print_simulation_summary` now lives in its own module —
+# src/workflow/functions/finalization/print_simulation_summary.py (a richer
+# version that also reports phenotype distribution). It was duplicated here,
+# which collided on the function name; the modular version is canonical.
 
 
 # =============================================================================
