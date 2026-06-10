@@ -16,8 +16,15 @@ Your project now has everything needed for easy team collaboration:
 
 ### ✅ Comprehensive Documentation
 - `README.md` - Project overview and quick start
+- `docs/PLUGINS.md` - Plugins (adapters): structure, manifest, sharing a model
 - `docs/INSTALL.md` - Detailed installation guide
 - `docs/USAGE.md` - Usage guide for GUI and CLI
+
+> **Sharing a model, not the whole project?** A biological model lives in a
+> **plugin** — a self-contained `opencellcomms_adapters/<name>/` folder (functions
+> + `register.py` + `plugin.toml`). Share that folder; the recipient drops it into
+> their `opencellcomms_adapters/` and it's auto-discovered on restart. See
+> `docs/PLUGINS.md`.
 
 ### ✅ Cross-Platform Support
 All scripts work on Windows, macOS, and Linux

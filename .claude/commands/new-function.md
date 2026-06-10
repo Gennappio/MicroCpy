@@ -122,29 +122,33 @@ def <function_name>(
 
 After showing the user the generated code and getting their approval (or if they say "go ahead"):
 
-**For generic (reusable) functions:**
+Most functions are experiment-specific and belong in a **plugin**. See
+`docs/PLUGINS.md` for the model.
+
+**For experiment-specific functions** (hardcoded gene names, thresholds,
+model-specific logic) — a plugin:
+
+1. **Write the file** to:
+   `opencellcomms_adapters/<plugin>/functions/<category>/<function_name>.py`
+
+2. **Add the import** to the plugin's register module:
+   `opencellcomms_adapters/<plugin>/register.py`
+   Add: `from opencellcomms_adapters.<plugin>.functions.<category>.<function_name> import <function_name>`
+
+3. **If the plugin is new**, also create `__init__.py` files (adapter root and
+   each `functions/<category>/` level), a `register.py`, and a `plugin.toml`
+   (`[plugin]` with name/version/description/author/engine_version/compatible_kernels).
+   The engine auto-discovers any plugin with a `register.py` — no `registry.py` edit.
+
+**For generic engine functions** (diffusion/IO/kernel — reusable across experiments):
 
 1. **Write the file** to:
    `opencellcomms_engine/src/workflow/functions/<category>/<function_name>.py`
 
 2. **Add the import** to the category's `__init__.py`:
    `opencellcomms_engine/src/workflow/functions/<category>/__init__.py`
-   Add: `from .<function_name> import <function_name>`
-   Add `'<function_name>'` to `__all__`
-
-3. **Add the import** to the registry:
-   `opencellcomms_engine/src/workflow/registry.py`
-   Inside `get_default_registry()`, after the block of similar category imports, add:
-   `import src.workflow.functions.<category>.<function_name>`
-
-**For experiment-specific functions** (hardcoded gene names, thresholds, model-specific logic):
-
-1. **Write the file** to:
-   `opencellcomms_adapters/<experiment>/functions/<category>/<function_name>.py`
-
-2. **Add the import** to the adapter's register module:
-   `opencellcomms_adapters/<experiment>/register.py`
-   Add: `from opencellcomms_adapters.<experiment>.functions.<category>.<function_name> import <function_name>`
+   Add: `from .<function_name> import <function_name>` and add it to `__all__`.
+   (Pulled in via `standard_functions.py` — no `registry.py` edit needed.)
 
 4. **Tell the user** the function is ready and give them two next steps:
    - To add it to a workflow: type `/add-to-workflow`

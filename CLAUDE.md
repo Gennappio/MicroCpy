@@ -159,6 +159,7 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Key References
 
+- `docs/PLUGINS.md` — What a plugin (adapter) is: structure, `plugin.toml` manifest, auto-discovery, name-collision rules
 - `docs/BIOLOGICAL_CONTEXT.md` — Typed `env: BiologicalContext` authoring API (recommended for new functions)
 - `docs/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
 - `opencellcomms_engine/README.md` — Engine overview
@@ -174,17 +175,33 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Adding a new function
 
-**Generic (reusable) functions** go in the engine:
+Most new functions are **experiment-specific** and belong in a **plugin** (an
+`opencellcomms_adapters/<plugin>/` package). See `docs/PLUGINS.md` for the full
+model. Use the typed `env: BiologicalContext` template
+(`src/workflow/functions/_TEMPLATE.py`).
+
+**Experiment-specific functions** (hardcoded gene names, substance thresholds,
+model-specific logic) go in a plugin:
+
+1. Create the file in `opencellcomms_adapters/<plugin>/functions/<category>/`
+2. Write the function and decorator (typed `env`, `requires=[...]`, `compatible_kernels`)
+3. Import it in `opencellcomms_adapters/<plugin>/register.py`
+4. Restart the backend — the plugin is **auto-discovered** (no `registry.py` edit)
+
+The GUI does steps 1–3 for you: **Library → New Function** picks/creates a plugin
+and derives the file path; **Export Behavior** writes the files and seeds
+`register.py` + `plugin.toml`.
+
+**Generic (reusable) engine functions** — diffusion solvers, IO, kernel setup —
+go in the engine:
 
 1. Create a new file in `opencellcomms_engine/src/workflow/functions/<category>/`
 2. Write the function and decorator
-3. Import the function in `opencellcomms_engine/src/workflow/functions/<category>/__init__.py`
-4. Import the module in `opencellcomms_engine/src/workflow/registry.py`
-5. Restart the backend server
-6. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point for new functions.
-7. if needed look for the CREATING_FUNCTIONS.md in `docs/CREATING_FUNCTIONS.md`
-
-**Experiment-specific functions** (hardcoded gene names, substance thresholds, model-specific logic) go in `opencellcomms_adapters/<experiment>/functions/<category>/`. Add the import to `opencellcomms_adapters/<experiment>/register.py` — the engine loads these automatically via `registry.py`.
+3. Import it in `opencellcomms_engine/src/workflow/functions/<category>/__init__.py`
+   (pulled in via `standard_functions.py` — no `registry.py` edit needed)
+4. Restart the backend server
+5. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point.
+6. If needed see `docs/CREATING_FUNCTIONS.md`.
 
 ---
 
@@ -279,26 +296,25 @@ context['results']['phenotype_counts'] = counts
 ### Full "add a function" recipe (mechanical steps)
 
 ```
-For GENERIC functions (reusable across experiments):
+For EXPERIMENT-SPECIFIC functions (hardcoded names/thresholds) — i.e. a PLUGIN:
+
+1. Create:  opencellcomms_adapters/<plugin>/functions/<category>/<my_function>.py
+            Copy _TEMPLATE.py as starting point; fill in decorator fields.
+2. Import:  opencellcomms_adapters/<plugin>/register.py
+            Add:  from opencellcomms_adapters.<plugin>.functions.<category>.<my_function> import <my_function>
+            (For a NEW plugin, also add __init__.py files + a plugin.toml — or
+             let the GUI's New Function / Export Behavior do all of this.)
+            The engine auto-discovers the plugin; no registry.py edit.
+
+For GENERIC engine functions (diffusion/IO/kernel — reusable across experiments):
 
 1. Create:  opencellcomms_engine/src/workflow/functions/<category>/<my_function>.py
             Copy _TEMPLATE.py as starting point; fill in decorator fields.
-
 2. Register in category:
             opencellcomms_engine/src/workflow/functions/<category>/__init__.py
             Add:  from .<my_function> import <my_function>
                   and add '<my_function>' to __all__
-
-3. Register in engine:
-            opencellcomms_engine/src/workflow/registry.py
-            Add:  import src.workflow.functions.<category>.<my_function>
-            (inside get_default_registry(), after similar imports)
-
-For EXPERIMENT-SPECIFIC functions (hardcoded names/thresholds):
-
-1. Create:  opencellcomms_adapters/<experiment>/functions/<category>/<my_function>.py
-2. Import:  opencellcomms_adapters/<experiment>/register.py
-            Add:  from opencellcomms_adapters.<experiment>.functions.<category>.<my_function> import <my_function>
+            (Pulled in via standard_functions.py — no registry.py edit.)
 
 Then for both:
 

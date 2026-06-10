@@ -190,13 +190,16 @@ opencellcomms_engine/src/workflow/functions/
    from .my_function import my_function
    ```
 
-4. **Import in registry.py** (for auto-discovery):
-   ```python
-   # In opencellcomms_engine/src/workflow/registry.py
-   import src.workflow.functions.intracellular.my_function
-   ```
+   That import is enough for an **engine** function — the category package is
+   pulled in via `standard_functions.py`, so the decorator runs. **No
+   `registry.py` edit is needed.**
 
-5. **Restart the backend server** to see your function in the GUI
+   For a **plugin** function, put the file under
+   `opencellcomms_adapters/<plugin>/functions/<category>/` and add the import to
+   that plugin's `register.py` instead. The engine auto-discovers any plugin
+   with a `register.py` (see `docs/PLUGINS.md`).
+
+4. **Restart the backend server** to see your function in the GUI
 
 ## Common Mistakes
 
@@ -249,16 +252,21 @@ def my_func(
 ):
 ```
 
-### ❌ Mistake 2: Forgetting to import in `registry.py`
+### ❌ Mistake 2: Forgetting to wire up the import
 
-Even with `@register_function`, the module must be imported so the decorator runs!
+Even with `@register_function`, the module must be imported somewhere so the
+decorator actually runs.
 
 **Symptom:** "Function 'my_function' not found in custom or standard functions"
 
-**Fix:** Add to `src/workflow/registry.py`:
-```python
-import src.workflow.functions.my_category.my_new_function  # ← Required!
-```
+**Fix:**
+- **Engine function:** add `from .my_new_function import my_new_function` to the
+  category's `__init__.py` (`src/workflow/functions/<category>/__init__.py`).
+- **Plugin function:** add `from opencellcomms_adapters.<plugin>.functions.<category>.my_new_function import my_new_function`
+  to the plugin's `register.py`.
+
+In both cases `registry.py` needs **no** edit — engine categories load via
+`standard_functions.py`, and plugins are auto-discovered.
 
 ### ❌ Mistake 3: Not checking if context items exist
 

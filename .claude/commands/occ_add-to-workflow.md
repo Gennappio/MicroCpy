@@ -8,7 +8,9 @@ Ask the user:
 1. **Which function do you want to add?** (e.g., "mark_hypoxic_cells", or describe it in plain English and you will look it up)
 2. **Which workflow JSON file?** (e.g., `opencellcomms_adapters/jayatilake/workflows/v7_microc_workflow.json`)
 
-If the user describes a function by name that you are not sure exists, scan the registry by reading `src/workflow/registry.py` and looking at the imports to find the actual Python function name.
+If the user describes a function by name that you are not sure exists, list the registered functions (registry.py auto-discovers plugins, so reading its imports won't help). From `opencellcomms_engine/`, run:
+`python -c "from src.workflow.registry import get_default_registry; print(sorted(f.name for f in get_default_registry().list_all()))"`
+(or `GET http://localhost:5001/api/registry` if the backend is running).
 
 ## Step 2 — Read the workflow and present subworkflows
 
@@ -25,7 +27,7 @@ This workflow has these subworkflows:
 
 Then ask: **"Which subworkflow should this function run in?"**
 
-Also report any registered functions not yet in this workflow (read `registry.py` to see all imported functions, compare against the workflow's nodes). Group by category. This helps the user discover what is available.
+Also report any registered functions not yet in this workflow (list them via the `get_default_registry()` one-liner or `GET /api/registry`, compare against the workflow's nodes). Group by category. This helps the user discover what is available.
 
 ## Step 3 — Understand the JSON node structure
 

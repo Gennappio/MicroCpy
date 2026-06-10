@@ -9,11 +9,13 @@ Ask the user:
 2. **Which workflow JSON file?** Default: `opencellcomms_adapters/jayatilake/workflows/v7_microc_workflow.json`
 3. **Which stage/subworkflow should it run in?** (e.g., "Intercellular", "Intracellular", "Initialization")
 
-If the user describes a function by name that you are not sure exists, scan the registry by reading `src/workflow/registry.py` and looking at the imports to find the actual Python function name.
+If the user describes a function by name that you are not sure exists, list the registered functions (registry.py auto-discovers plugins, so reading its imports won't help). From `opencellcomms_engine/`, run:
+`python -c "from src.workflow.registry import get_default_registry; print(sorted(f.name for f in get_default_registry().list_all()))"`
+(or `GET http://localhost:5001/api/registry` if the backend is running).
 
 ## Step 2 — Discover registered functions not yet in the workflow
 
-Read the target workflow JSON. Scan the `"nodes"` arrays in all subworkflows to collect function names already present. Then read `registry.py` to see all imported functions. Report any functions not yet in the workflow, grouped by category. This helps the user discover what is available.
+Read the target workflow JSON. Scan the `"nodes"` arrays in all subworkflows to collect function names already present. Then list all registered functions (via the `get_default_registry()` one-liner or `GET /api/registry`). Report any functions not yet in the workflow, grouped by category. This helps the user discover what is available.
 
 ## Step 3 — Understand the JSON node structure
 
