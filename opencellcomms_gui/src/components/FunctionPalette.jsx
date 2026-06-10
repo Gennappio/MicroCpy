@@ -114,6 +114,9 @@ const FunctionPalette = ({ currentStage }) => {
       file_path: def.file_path,
       behavior: currentStage,
       parameters: def.parameters,
+      category: def.category,
+      requires: def.requires,
+      typed_env_exempt: def.typed_env_exempt,
       exported: false,
     });
     setShowNewFunc(false);

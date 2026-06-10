@@ -994,8 +994,6 @@ def scaffold_behavior_code():
         { success, file_path, created, added_functions, skipped_existing,
           module_name, reload_warning? }
     """
-    import textwrap
-
     try:
         data = request.json or {}
         functions = data.get('functions', [])
@@ -1040,8 +1038,20 @@ def scaffold_behavior_code():
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Derive category constant name (e.g. intracellular → INTRACELLULAR)
+        # Derive category constant name (e.g. intracellular → INTRACELLULAR).
+        # `category` comes from the parent folder name, which is only a valid
+        # FunctionCategory when the file lives under .../functions/<category>/.
+        # For flat layouts (e.g. opencellcomms_adapters/demo1/foo.py) the folder
+        # name is not a category and would make @register_function raise
+        # KeyError at import time, leaving the function unregistered. Fall back
+        # to a valid default so the scaffold always loads.
+        VALID_CATEGORIES = {
+            'INITIALIZATION', 'INTRACELLULAR', 'DIFFUSION',
+            'INTERCELLULAR', 'FINALIZATION', 'UTILITY',
+        }
         category_const = category.upper()
+        if category_const not in VALID_CATEGORIES:
+            category_const = 'INTRACELLULAR'
 
         # File header template
         header = f'''"""
@@ -1077,6 +1087,24 @@ from src.workflow.decorators import register_function
                 if isinstance(node, ast.FunctionDef):
                     existing_funcs.add(node.name)
 
+        # If we're adding any typed-env functions, ensure the file imports
+        # BiologicalContext. The typed signature `env: BiologicalContext`
+        # evaluates the annotation at def time, so a missing import would raise
+        # NameError when the decorator registers the function.
+        wants_typed = any(
+            not bool(fn.get('typed_env_exempt')) and (fn.get('name') or '').strip()
+            for fn in functions
+        )
+        BIO_IMPORT = 'from src.biology.context import BiologicalContext'
+        if wants_typed and BIO_IMPORT not in existing_source:
+            anchor = 'from src.workflow.decorators import register_function'
+            if anchor in existing_source:
+                existing_source = existing_source.replace(
+                    anchor, anchor + '\n' + BIO_IMPORT, 1
+                )
+            else:
+                existing_source = BIO_IMPORT + '\n' + existing_source
+
         added = []
         skipped = []
 
@@ -1103,60 +1131,98 @@ from src.workflow.decorators import register_function
 
             display_name = fn_name.replace('_', ' ').title()
             fn_params = fn.get('parameters') or []
+            # Setup functions (population/file loading) keep the raw context dict;
+            # everything else uses the typed `env: BiologicalContext` API.
+            exempt = bool(fn.get('typed_env_exempt'))
+
+            # Per-function category (stage) override, falling back to the
+            # folder-derived default so the decorator category matches the
+            # canvas stage the biologist picked.
+            fn_cat = (fn.get('category') or category).strip().upper()
+            if fn_cat not in VALID_CATEGORIES:
+                fn_cat = category_const
+
+            # Capability tokens the typed function reads from the kernel.
+            fn_requires = [str(r).strip() for r in (fn.get('requires') or []) if str(r).strip()]
+            requires_repr = '[' + ', '.join(f'"{r}"' for r in fn_requires) + ']'
 
             # Build decorator parameters list
-            if fn_params:
-                decorator_param_lines = []
-                for p in fn_params:
-                    pname = p.get('name', '').strip()
-                    ptype = p.get('type', 'FLOAT')
-                    pdefault = p.get('default')
-                    if not pname:
-                        continue
-                    py_t = type_to_py.get(ptype, 'float')
-                    default_repr = fmt_default(pdefault, py_t)
-                    decorator_param_lines.append(
-                        f'        {{"name": "{pname}", "type": "{ptype}", '
-                        f'"description": "TODO", "default": {default_repr}}}'
-                    )
-                decorator_params_block = '[\n' + ',\n'.join(decorator_param_lines) + ',\n    ]'
+            decorator_param_lines = []
+            for p in fn_params:
+                pname = p.get('name', '').strip()
+                ptype = p.get('type', 'FLOAT')
+                pdefault = p.get('default')
+                if not pname:
+                    continue
+                py_t = type_to_py.get(ptype, 'float')
+                default_repr = fmt_default(pdefault, py_t)
+                decorator_param_lines.append(
+                    f'        {{"name": "{pname}", "type": "{ptype}", '
+                    f'"description": "TODO", "default": {default_repr}}}'
+                )
+            decorator_params_block = (
+                '[\n' + ',\n'.join(decorator_param_lines) + ',\n    ]'
+                if decorator_param_lines else '[]'
+            )
 
-                # Build signature
-                sig_lines = ['    context: Dict[str, Any] = None,']
-                for p in fn_params:
-                    pname = p.get('name', '').strip()
-                    if not pname:
-                        continue
-                    py_t = type_to_py.get(p.get('type', 'FLOAT'), 'float')
-                    default_repr = fmt_default(p.get('default'), py_t)
-                    sig_lines.append(f'    {pname}: {py_t} = {default_repr},')
-                sig_lines.append('    **kwargs')
-                sig_block = '\n'.join(sig_lines)
+            # Build signature: typed env (preferred) or raw context (exempt).
+            first_arg = '    context: Dict[str, Any] = None,' if exempt else '    env: BiologicalContext,'
+            sig_lines = [first_arg]
+            for p in fn_params:
+                pname = p.get('name', '').strip()
+                if not pname:
+                    continue
+                py_t = type_to_py.get(p.get('type', 'FLOAT'), 'float')
+                default_repr = fmt_default(p.get('default'), py_t)
+                sig_lines.append(f'    {pname}: {py_t} = {default_repr},')
+            sig_lines.append('    **kwargs')
+            sig_block = '\n'.join(sig_lines)
+
+            # Decorator tail + body differ by API style.
+            if exempt:
+                decorator_tail = (
+                    '    compatible_kernels=["biophysics"],\n'
+                    '    typed_env_exempt=True,'
+                )
+                body = (
+                    f'    """TODO: implement {fn_name}."""\n'
+                    f'    if not context:\n'
+                    f'        print("[ERROR] [{fn_name}] No context provided")\n'
+                    f'        return False\n'
+                    f'    # TODO: implement behavior\n'
+                    f'    return True\n'
+                )
             else:
-                decorator_params_block = '[]'
-                sig_block = '    context: Dict[str, Any] = None, **kwargs'
+                decorator_tail = (
+                    '    compatible_kernels=["biophysics"],\n'
+                    f'    requires={requires_repr},'
+                )
+                body = (
+                    f'    """TODO: implement {fn_name}."""\n'
+                    f'    # Available on env: env.config, env.step, env.dt, env.results\n'
+                    f'    # requires=["population"]    -> for cell in env.cells: ...\n'
+                    f"    # requires=[\"simulator\"]     -> env.concentration('substance', cell)\n"
+                    f'    # requires=["gene_networks"] -> cell.gene("GeneName").is_on()\n'
+                    f'    # TODO: implement behavior\n'
+                    f'    return True\n'
+                )
 
-            fn_block = textwrap.dedent(f'''
-@register_function(
-    display_name="{display_name}",
-    description="TODO: describe what {fn_name} does",
-    category="{category_const}",
-    parameters={decorator_params_block},
-    inputs=["context"],
-    outputs=[],
-    cloneable=False,
-)
-def {fn_name}(
-{sig_block}
-) -> bool:
-    """TODO: implement {fn_name}."""
-    if not context:
-        print("[ERROR] [{fn_name}] No context provided")
-        return False
-    # TODO: implement behavior
-    return True
-
-''')
+            fn_block = (
+                f'\n@register_function(\n'
+                f'    display_name="{display_name}",\n'
+                f'    description="TODO: describe what {fn_name} does",\n'
+                f'    category="{fn_cat}",\n'
+                f'    parameters={decorator_params_block},\n'
+                f'    inputs=["context"],\n'
+                f'    outputs=[],\n'
+                f'    cloneable=False,\n'
+                f'{decorator_tail}\n'
+                f')\n'
+                f'def {fn_name}(\n'
+                f'{sig_block}\n'
+                f') -> bool:\n'
+                f'{body}\n'
+            )
             existing_source += fn_block
             existing_funcs.add(fn_name)
             added.append(fn_name)

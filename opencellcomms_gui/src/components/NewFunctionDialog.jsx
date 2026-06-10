@@ -4,6 +4,18 @@ import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
 
+// Simulation stages → the function's decorator category.
+const STAGES = ['INITIALIZATION', 'INTRACELLULAR', 'DIFFUSION', 'INTERCELLULAR', 'FINALIZATION', 'UTILITY'];
+
+// Capability tokens a typed function can declare it reads from the kernel.
+// These become `requires=[...]` and the typed env fails loudly if the active
+// kernel doesn't provide them.
+const CAPABILITIES = [
+  { token: 'population', label: 'Cells / population', hint: 'loop env.cells, mark phenotypes' },
+  { token: 'simulator', label: 'Substance levels', hint: "env.concentration('oxygen', cell)" },
+  { token: 'gene_networks', label: 'Gene networks', hint: "cell.gene('X').is_on()" },
+];
+
 const defaultForType = (t) => {
   switch (t) {
     case 'INT': return 0;
@@ -30,6 +42,14 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
   const [name, setName] = useState('');
   const [filePath, setFilePath] = useState(defaultPath);
   const [parameters, setParameters] = useState([]);
+  // Default the stage from the canvas behavior name when it matches a stage.
+  const [category, setCategory] = useState(() => {
+    const up = (behaviorName || '').toUpperCase();
+    return STAGES.includes(up) ? up : 'INTRACELLULAR';
+  });
+  const [requires, setRequires] = useState([]);
+  // Setup functions (create population / load cells) keep the raw context dict.
+  const [typedEnvExempt, setTypedEnvExempt] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [browseError, setBrowseError] = useState(null);
@@ -42,6 +62,9 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
     // Only auto-fill once on first name entry; user can change after
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
+
+  const toggleRequire = (token) =>
+    setRequires((r) => (r.includes(token) ? r.filter((t) => t !== token) : [...r, token]));
 
   const addParam = () => setParameters([...parameters, { name: '', type: 'FLOAT', default: 0.0 }]);
   const removeParam = (i) => setParameters(parameters.filter((_, idx) => idx !== i));
@@ -121,6 +144,11 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
         name: name.trim(),
         file_path: filePath.trim(),
         parameters: coerced,
+        category,
+        // Exempt (setup) functions use the raw context dict, so capability
+        // tokens don't apply.
+        requires: typedEnvExempt ? [] : requires,
+        typed_env_exempt: typedEnvExempt,
       });
     } finally {
       setSubmitting(false);
@@ -141,6 +169,17 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
             autoFocus
             onChange={(e) => setName(e.target.value)}
           />
+        </div>
+
+        <div className="nf-row">
+          <label>Stage (when it runs)</label>
+          <select
+            className="dialog-input"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
 
         <div className="nf-row">
@@ -209,6 +248,34 @@ const NewFunctionDialog = ({ behaviorName = '', defaultPath = '', onCreate, onCa
               </button>
             </div>
           ))}
+        </div>
+
+        <div className="nf-caps">
+          <label className="nf-exempt">
+            <input
+              type="checkbox"
+              checked={typedEnvExempt}
+              onChange={(e) => setTypedEnvExempt(e.target.checked)}
+            />
+            This is a <strong>setup</strong> function (creates the population / loads cells — uses the raw context)
+          </label>
+
+          {!typedEnvExempt && (
+            <div className="nf-caps-list">
+              <div className="nf-caps-title">What does it read? (declares <code>requires</code>)</div>
+              {CAPABILITIES.map((c) => (
+                <label className="nf-cap-row" key={c.token} title={c.hint}>
+                  <input
+                    type="checkbox"
+                    checked={requires.includes(c.token)}
+                    onChange={() => toggleRequire(c.token)}
+                  />
+                  <span className="nf-cap-label">{c.label}</span>
+                  <code className="nf-cap-hint">{c.hint}</code>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {validationError && <div className="nf-validation-error">{validationError}</div>}

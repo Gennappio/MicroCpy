@@ -78,7 +78,13 @@ const ExportBehaviorButton = () => {
             return;
           }
           if (!byFile.has(f.file_path)) byFile.set(f.file_path, []);
-          byFile.get(f.file_path).push({ name: f.name, parameters: f.parameters || [] });
+          byFile.get(f.file_path).push({
+            name: f.name,
+            parameters: f.parameters || [],
+            category: f.category,
+            requires: f.requires || [],
+            typed_env_exempt: f.typed_env_exempt || false,
+          });
         }
 
         for (const [filePath, fns] of byFile.entries()) {
