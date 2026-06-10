@@ -1235,9 +1235,33 @@ from src.workflow.decorators import register_function
 
         file_path.write_text(existing_source, encoding='utf-8')
 
-        # Update adapter register.py (idempotent) so the import persists across restarts.
-        # `module_name` is set for both adapter and engine paths via _path_to_module_name.
-        if register_path and register_path.exists() and added and module_name and module_name.startswith('opencellcomms_adapters.'):
+        # Persist the import in the adapter's register.py so the function loads
+        # on a fresh backend (the engine auto-discovers any adapter that has a
+        # register.py). For a brand-new adapter we scaffold the package skeleton
+        # — __init__.py files + register.py — so the import actually resolves.
+        if added and module_name and module_name.startswith('opencellcomms_adapters.') and register_path:
+            adapter_dir = register_path.parent
+
+            # Ensure __init__.py from the adapter root down to the function's
+            # folder, so the dotted module path is importable.
+            d = file_path.parent
+            while True:
+                init_file = d / '__init__.py'
+                if not init_file.exists():
+                    init_file.write_text('', encoding='utf-8')
+                if d == adapter_dir:
+                    break
+                d = d.parent
+
+            # Create register.py with a header if the adapter is new.
+            if not register_path.exists():
+                register_path.write_text(
+                    f'"""Plugin registry for the {adapter_dir.name} adapter.\n\n'
+                    f'Importing this module registers the adapter\'s functions via\n'
+                    f'@register_function. The engine discovers and imports it\n'
+                    f'automatically from opencellcomms_adapters/.\n"""\n',
+                    encoding='utf-8')
+
             reg_source = register_path.read_text(encoding='utf-8')
             lines_to_add = []
             for fn_name in added:

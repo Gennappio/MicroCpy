@@ -149,35 +149,39 @@ def get_default_registry() -> FunctionRegistry:
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
 
-    # Shared biology / ABM primitives (gene networks, metabolism, cell
-    # lifecycle, population/gene-network setup). Imported first because the
-    # experiment adapters below may depend on it.
-    try:
-        import opencellcomms_adapters.common.register  # noqa: F401
-    except ImportError as e:
-        print(f"[Registry] Common adapter not available: {e}")
+    # Auto-discover adapters (plugins). Any folder under opencellcomms_adapters/
+    # that has a `register.py` and a Python-importable name is loaded — no need
+    # to hand-maintain a list here, so a newly created plugin works on restart.
+    import importlib
+    import keyword
 
-    # jayatilake adapter intentionally not loaded: the folder was renamed to
-    # 'jayatilake_(legacy)', which is not a valid Python module name. The
-    # legacy functions are kept on disk for reference only.
+    def _load_adapter(pkg_name):
+        try:
+            importlib.import_module(f'opencellcomms_adapters.{pkg_name}.register')
+        except ImportError as e:
+            print(f"[Registry] Adapter '{pkg_name}' not available: {e}")
 
-    try:
-        import opencellcomms_adapters.MicroC.register  # noqa: F401
-    except ImportError as e:
-        print(f"[Registry] MicroC adapter not available: {e}")
+    adapters_root = Path(repo_root) / 'opencellcomms_adapters'
+    discovered = []
+    if adapters_root.is_dir():
+        for child in sorted(adapters_root.iterdir()):
+            name = child.name
+            # Skip non-packages, the shared `common` (loaded first below), and
+            # folders whose names aren't valid module identifiers — e.g.
+            # 'jayatilake_(legacy)' / 'maboss_(legacy)', kept on disk for
+            # reference only.
+            if not child.is_dir() or name == 'common':
+                continue
+            if not name.isidentifier() or keyword.iskeyword(name):
+                continue
+            if (child / 'register.py').is_file():
+                discovered.append(name)
 
-    try:
-        import opencellcomms_adapters.Test_GUI.register  # noqa: F401
-    except ImportError as e:
-        print(f"[Registry] Test_GUI adapter not available: {e}")
-
-    # PhysiBoSS / PhysiCell adapter — codegen-only node functions
-    # (define_substrate / define_cell_type / define_hill_rule /
-    # run_physicell_simulation / select_project_template / summarize_*).
-    try:
-        import opencellcomms_adapters.PhysiBoSS.register  # noqa: F401
-    except ImportError as e:
-        print(f"[Registry] PhysiBoSS adapter not available: {e}")
+    # `common` (shared biology / ABM primitives) must load first because the
+    # experiment adapters import from it.
+    _load_adapter('common')
+    for name in discovered:
+        _load_adapter(name)
 
     # Get the decorator registry (all functions registered via @register_function)
     from src.workflow.decorators import get_decorator_registry
