@@ -173,6 +173,41 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 - **Prefer DICT parameters over many individual BOOL/FLOAT parameters** in `@register_function`. A single `"type": "DICT"` is more flexible and renders as an editable table in the GUI.
 - **Design for the GUI first.** A scientist must be able to read and modify parameters visually. If it's not readable in the canvas, it's wrong.
 
+## The ABM class layer is authored WITH nodes (never replace the canvas)
+
+The class layer (`src/abm/`, `docs/ABM_LAYER.md`, `docs/ABM_GUI.md`) does **not**
+change the rule above: **every custom function is a node = a `.py` file**, on a
+canvas, with the palette, code generation, planner parameters, and run/observability
+popups. The canvas is the product; the class layer is built *through* it, not
+instead of it. (A previous attempt that replaced canvases with forms was reverted.)
+
+What the class layer actually adds is small and additive:
+- A typed `env` API the node-functions call: `env.space`, `env.agent`,
+  `agent.neighbors()`, `agent.sense('sugar')`, `env.resource('sugar')`. The
+  classes in `src/abm/` (Space / Resource / Agent / Population / Domain) are that
+  API — they are what the nodes call, not a hidden runner. Only the Space mechanics
+  and the per-agent iteration live in library code; all behaviours are nodes.
+- An entity organization that mostly already exists: **Agents** (kinds with
+  Setup/Step canvases) and **Resources** (the same, mirrored), plus **World**
+  (the Space `setup_space` node + the init orchestration + a preview) and
+  **Scheduler** (the loop). World = init orchestration; Scheduler = loop
+  orchestration — symmetric.
+- **One file = one node = one atomic function.** A *behaviour* is a **subworkflow
+  of atomic nodes** (e.g. a forager Step = `move_to_best_sugar` → `eat_sugar` →
+  `metabolize`), shown as one call-node in an orchestration canvas.
+
+**The executor owns the loop** (the `__scheduler__` subworkflow, iterated). One new
+capability: the **per-agent "ask"** — a `subworkflow_call` with
+`for_each: {kind, order}` runs the called behaviour subworkflow **once per agent**
+of that kind, binding the current agent so each inner node sees `env.agent`. Agent
+**Setup** (placement) runs once; agent **Step** runs per-agent; resource/collective
+behaviours run once.
+
+When building for the class layer: write **atomic node-functions** that use the
+typed `env` API, place them on the entity canvases, and order them in the World
+(init) and Scheduler (loop) canvases. Do **not** build forms and do **not** collapse
+the simulation into one mega-node.
+
 ## Adding a new function
 
 Most new functions are **experiment-specific** and belong in a **plugin** (an
