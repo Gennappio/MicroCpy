@@ -3,8 +3,8 @@ Sugarscape behaviours — atomic nodes (one file = one node = one .py function).
 
 These are the nodes you wire on the entity canvases:
 
-  Resource (sugar / max_sugar):
-    Setup: seed_max_sugar, seed_sugar      Step: grow_sugar
+  Resource (sugar):
+    Setup: seed_sugar_capacity             Step: grow_sugar
   Agent (forager):
     Setup: place_foragers (collective, once)
     Step (per-agent, run via the "ask"): move_to_best_sugar -> eat_sugar -> metabolize
@@ -25,17 +25,32 @@ from src.workflow.decorators import register_function
 # ── Resource behaviours (whole field, run once) ──────────────────────────────
 
 @register_function(
-    display_name="Seed Max Sugar", description="Fill 'max_sugar' with two sugar mountains",
-    category="INITIALIZATION", inputs=["context"], outputs=[], compatible_kernels=["*"],
-    requires=[], operates_on=["max_sugar"],
+    display_name="Seed Sugar Capacity",
+    description="Create the sugar carrying-capacity landscape and fill current sugar",
+    category="INITIALIZATION",
+    inputs=["context"],
+    outputs=[],
+    compatible_kernels=["*"],
+    requires=[],
+    operates_on=["sugar"],
     parameters=[
+        {"name": "resource", "type": "STRING", "default": "sugar"},
         {"name": "peak", "type": "FLOAT", "default": 4.0},
         {"name": "radius_frac", "type": "FLOAT", "default": 0.45},
+        {"name": "fill_current", "type": "BOOL", "default": True},
     ],
 )
-def seed_max_sugar(env: BiologicalContext, peak: float = 4.0, radius_frac: float = 0.45, **kwargs):
+def seed_sugar_capacity(
+    env: BiologicalContext,
+    resource: str = "sugar",
+    peak: float = 4.0,
+    radius_frac: float = 0.45,
+    fill_current: bool = True,
+    **kwargs,
+):
     sp = env.space
-    vals = env.resource("max_sugar").values()
+    sugar = env.resource(resource)
+    capacity = np.zeros_like(sugar.values())
     nx, ny = sp.nx, sp.ny
     centers = [(0.3 * nx, 0.7 * ny), (0.7 * nx, 0.3 * ny)]
     radius = max(1.0, radius_frac * nx)
@@ -45,26 +60,30 @@ def seed_max_sugar(env: BiologicalContext, peak: float = 4.0, radius_frac: float
             for cx, cy in centers:
                 d = ((ti - cx) ** 2 + (tj - cy) ** 2) ** 0.5
                 cap = max(cap, peak * max(0.0, 1.0 - d / radius))
-            vals[tj, ti] = float(round(cap))
+            capacity[tj, ti] = float(round(cap))
+    sugar.capacity = capacity
+    if fill_current:
+        sugar.values()[:] = capacity
+    return True
 
 
 @register_function(
-    display_name="Seed Sugar (full)", description="Start 'sugar' at full capacity (= max_sugar)",
-    category="INITIALIZATION", inputs=["context"], outputs=[], compatible_kernels=["*"],
-    requires=[], operates_on=["sugar"],
-)
-def seed_sugar(env: BiologicalContext, **kwargs):
-    env.resource("sugar").values()[:] = env.resource("max_sugar").values()
-
-
-@register_function(
-    display_name="Grow Sugar", description="Regrow 'sugar' toward 'max_sugar' by a fixed rate",
+    display_name="Grow Sugar",
+    description="Regrow sugar toward its internal carrying-capacity landscape",
     category="ENVIRONMENT", inputs=["context"], outputs=[], compatible_kernels=["*"],
     requires=[], operates_on=["sugar"],
-    parameters=[{"name": "rate", "type": "FLOAT", "default": 1.0}],
+    parameters=[
+        {"name": "resource", "type": "STRING", "default": "sugar"},
+        {"name": "rate", "type": "FLOAT", "default": 1.0},
+    ],
 )
-def grow_sugar(env: BiologicalContext, rate: float = 1.0, **kwargs):
-    env.resource("sugar").grow_to(env.resource("max_sugar").values(), float(rate))
+def grow_sugar(env: BiologicalContext, resource: str = "sugar", rate: float = 1.0, **kwargs):
+    sugar = env.resource(resource)
+    if sugar.capacity is None:
+        print(f"[grow_sugar] Resource '{resource}' has no capacity; run seed_sugar_capacity first")
+        return False
+    sugar.grow_to(sugar.capacity, float(rate))
+    return True
 
 
 # ── Agent placement (collective Setup, run once) ─────────────────────────────
@@ -93,6 +112,7 @@ def place_foragers(env: BiologicalContext, kind: str = "forager", count: int = 3
         metabolism=lambda rng: float(rng.uniform(metabolism_min, metabolism_max)),
         vision=lambda rng: int(rng.integers(vision_min, vision_max + 1)),
     )
+    return True
 
 
 # ── Agent Step — atomic, per-agent (env.agent) ───────────────────────────────
@@ -105,7 +125,7 @@ def place_foragers(env: BiologicalContext, kind: str = "forager", count: int = 3
 def move_to_best_sugar(env: BiologicalContext, **kwargs):
     a = env.agent
     if a is None:
-        return
+        return True
     sp, sugar = env.space, env.resource("sugar")
     pos = a.position
     vision = int(a.get("vision", 1))
@@ -118,6 +138,7 @@ def move_to_best_sugar(env: BiologicalContext, **kwargs):
             best, best_s, best_d = cell, s, d
     if best != pos:
         a.move_to(best)
+    return True
 
 
 @register_function(
@@ -128,11 +149,12 @@ def move_to_best_sugar(env: BiologicalContext, **kwargs):
 def eat_sugar(env: BiologicalContext, **kwargs):
     a = env.agent
     if a is None:
-        return
+        return True
     r = env.resource("sugar")
     got = r.at(a.position)
     r.set_at(a.position, 0.0)
     a.set("sugar", a.get("sugar", 0.0) + got)
+    return True
 
 
 @register_function(
@@ -142,10 +164,11 @@ def eat_sugar(env: BiologicalContext, **kwargs):
 def metabolize(env: BiologicalContext, **kwargs):
     a = env.agent
     if a is None:
-        return
+        return True
     a.set("sugar", a.get("sugar", 0.0) - a.get("metabolism", 1.0))
     if a.get("sugar", 0.0) < 0:
         a.die()
+    return True
 
 
 # ── Population Step (collective, run once) ───────────────────────────────────
@@ -156,6 +179,7 @@ def metabolize(env: BiologicalContext, **kwargs):
 )
 def cull_starved(env: BiologicalContext, **kwargs):
     env.population.cull()
+    return True
 
 
 @register_function(
@@ -166,3 +190,4 @@ def census(env: BiologicalContext, **kwargs):
     pop, dom = env.population, env.domain
     parts = [f"agents={pop.count()}"] + [f"{r.name}={r.total():.0f}" for r in dom.resources()]
     print("[census] " + "  ".join(parts))
+    return True

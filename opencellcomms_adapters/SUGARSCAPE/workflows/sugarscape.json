@@ -1,77 +1,602 @@
 {
   "version": "2.0",
   "name": "Sugarscape",
-  "description": "Class-layer Sugarscape, authored as nodes. Init orders the setups; the scheduler loops with a per-agent 'ask' into the forager Step subworkflow.",
+  "description": "Sugarscape on the ABM class layer, arranged for the current Space / Resources / Agents / Scheduler GUI.",
   "kernel": "biophysics",
   "metadata": {
     "author": "OpenCellComms",
+    "created": "2026-06-13",
     "gui": {
-      "subworkflow_kinds": {
-        "main": "composer",
-        "__init_sequence__": "composer",
-        "__scheduler__": "composer",
-        "forager_step": "agent_behavior"
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "forager",
+          "init_subworkflow": "forager_init",
+          "behavior_subworkflows": [
+            "forager_step"
+          ]
+        }
+      ],
+      "resource_kinds": [
+        {
+          "name": "sugar",
+          "init_subworkflow": "sugar_init",
+          "behavior_subworkflows": [
+            "sugar_growback"
+          ]
+        }
+      ],
+      "space": {
+        "subworkflow": "__space__"
+      },
+      "environment": {
+        "init_subworkflow": null,
+        "behavior_subworkflows": []
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "final_snapshot"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-baseline",
+            "name": "baseline_30_steps",
+            "enabled": true,
+            "parameterOverrides": {}
+          },
+          {
+            "id": "tab-long",
+            "name": "long_60_steps",
+            "enabled": false,
+            "parameterOverrides": {
+              "__scheduler__": {
+                "number_of_steps": 60
+              }
+            }
+          }
+        ]
       }
     }
   },
   "subworkflows": {
     "main": {
-      "description": "Composer: init once, then loop x60",
-      "enabled": true, "deletable": false,
-      "controller": { "id": "controller-main", "type": "initNode", "label": "MAIN", "position": { "x": 80, "y": 80 }, "number_of_steps": 1 },
+      "description": "Synthesized main workflow: initialize, run scheduler, then processing.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
       "functions": [],
       "subworkflow_calls": [
-        { "id": "call_init", "type": "subworkflow_call", "subworkflow_name": "__init_sequence__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 320, "y": 60 }, "description": "Build the world", "parameter_nodes": [] },
-        { "id": "call_sched", "type": "subworkflow_call", "subworkflow_name": "__scheduler__", "iterations": 60, "parameters": {}, "enabled": true, "position": { "x": 320, "y": 220 }, "description": "Run 60 steps", "parameter_nodes": [] }
+        {
+          "id": "main-call-__init_sequence__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 30,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-final_snapshot",
+          "type": "subworkflow_call",
+          "subworkflow_name": "final_snapshot",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Processing: final snapshot",
+          "parameter_nodes": []
+        }
       ],
-      "parameters": [], "execution_order": ["call_init", "call_sched"], "input_parameters": []
+      "parameters": [],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__",
+        "main-call-final_snapshot"
+      ],
+      "input_parameters": []
     },
-    "__init_sequence__": {
-      "description": "Initialization order (Setups)",
-      "enabled": true, "deletable": false,
-      "controller": { "id": "controller-__init_sequence__", "type": "initNode", "label": "INIT SEQUENCE", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
+    "__space__": {
+      "description": "Space canvas: build the toroidal Sugarscape grid.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__space__",
+        "type": "initNode",
+        "label": "SPACE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
       "functions": [
-        { "id": "n_space", "function_name": "setup_space", "function_file": "", "parameters": { "size_x": 50, "size_y": 50, "tile_size": 1, "topology_x": "toroidal", "topology_y": "toroidal", "seed": 42 }, "enabled": true, "position": { "x": 220, "y": 80 }, "description": "Create the world", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_res_max", "function_name": "setup_resource", "function_file": "", "parameters": { "name": "max_sugar", "initial": 0 }, "enabled": true, "position": { "x": 220, "y": 180 }, "description": "Add max_sugar field", "custom_name": "setup_resource (max_sugar)", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_res_sugar", "function_name": "setup_resource", "function_file": "", "parameters": { "name": "sugar", "initial": 0 }, "enabled": true, "position": { "x": 220, "y": 260 }, "description": "Add sugar field", "custom_name": "setup_resource (sugar)", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_seed_max", "function_name": "seed_max_sugar", "function_file": "", "parameters": { "peak": 4, "radius_frac": 0.45 }, "enabled": true, "position": { "x": 220, "y": 340 }, "description": "Seed the mountains", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_seed_sugar", "function_name": "seed_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 420 }, "description": "Start sugar full", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_place", "function_name": "place_foragers", "function_file": "", "parameters": { "kind": "forager", "count": 300, "sugar_min": 5, "sugar_max": 25, "metabolism_min": 1, "metabolism_max": 4, "vision_min": 1, "vision_max": 6 }, "enabled": true, "position": { "x": 220, "y": 500 }, "description": "Place foragers", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_plot0", "function_name": "plot_world", "function_file": "", "parameters": { "resource": "sugar", "prefix": "initial" }, "enabled": true, "position": { "x": 220, "y": 580 }, "description": "Snapshot the initial conditions", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+        {
+          "id": "space-setup",
+          "function_name": "setup_space",
+          "function_file": "",
+          "parameters": {
+            "size_x": 50,
+            "size_y": 50,
+            "tile_size": 1.0,
+            "topology_x": "toroidal",
+            "topology_y": "toroidal",
+            "seed": 42
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "Create the toroidal tile-grid world.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
       ],
       "subworkflow_calls": [],
       "parameters": [],
-      "execution_order": ["n_space", "n_res_max", "n_res_sugar", "n_seed_max", "n_seed_sugar", "n_place", "n_plot0"],
+      "execution_order": [
+        "space-setup"
+      ],
+      "input_parameters": []
+    },
+    "sugar_init": {
+      "description": "Resource setup for sugar, including its internal capacity landscape.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-sugar_init",
+        "type": "initNode",
+        "label": "SUGAR INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "sugar-resource",
+          "function_name": "setup_resource",
+          "function_file": "",
+          "parameters": {
+            "name": "sugar",
+            "initial": 0.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "Add sugar to the Domain.",
+          "custom_name": "setup_resource (sugar)",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "sugar-seed",
+          "function_name": "seed_sugar_capacity",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "peak": 4.0,
+            "radius_frac": 0.45,
+            "fill_current": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Set sugar capacity to the two Sugarscape mountains and fill current sugar.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "sugar-resource",
+        "sugar-seed"
+      ],
+      "input_parameters": []
+    },
+    "forager_init": {
+      "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-forager_init",
+        "type": "initNode",
+        "label": "FORAGER INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "forager-place",
+          "function_name": "place_foragers",
+          "function_file": "",
+          "parameters": {
+            "kind": "forager",
+            "count": 120,
+            "sugar_min": 5.0,
+            "sugar_max": 25.0,
+            "metabolism_min": 1.0,
+            "metabolism_max": 4.0,
+            "vision_min": 1,
+            "vision_max": 6
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 180
+          },
+          "description": "Create the initial forager population.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "forager-place"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order: space, sugar resource, agents.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "initNode",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-space",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__space__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Build the world grid first.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-sugar",
+          "type": "subworkflow_call",
+          "subworkflow_name": "sugar_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Create sugar and seed its internal capacity.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-forager",
+          "type": "subworkflow_call",
+          "subworkflow_name": "forager_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Place foragers after resources exist.",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-space",
+        "init-call-sugar",
+        "init-call-forager"
+      ],
       "input_parameters": []
     },
     "__scheduler__": {
-      "description": "Main loop: agents (per-agent ask) -> resources -> population",
-      "enabled": true, "deletable": false,
-      "controller": { "id": "controller-__scheduler__", "type": "initNode", "label": "SCHEDULER", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
-      "functions": [
-        { "id": "n_grow", "function_name": "grow_sugar", "function_file": "", "parameters": { "rate": 1 }, "enabled": true, "position": { "x": 220, "y": 240 }, "description": "Resource step: growback", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_cull", "function_name": "cull_starved", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 360 }, "description": "Population step: cull", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "n_census", "function_name": "census", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 460 }, "description": "Observability: census", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
-      ],
+      "description": "Main loop: ask foragers, then regrow sugar and report the population.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "initNode",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 30
+      },
+      "functions": [],
       "subworkflow_calls": [
-        { "id": "ask_foragers", "type": "subworkflow_call", "subworkflow_name": "forager_step", "iterations": 1, "for_each": { "kind": "forager", "order": "random" }, "parameters": {}, "enabled": true, "position": { "x": 220, "y": 110 }, "description": "Ask each forager to run its Step", "parameter_nodes": [] }
+        {
+          "id": "sched-call-forager-step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "forager_step",
+          "iterations": 1,
+          "for_each": {
+            "kind": "forager",
+            "order": "random"
+          },
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 140
+          },
+          "description": "Ask each forager to move, eat, and metabolize.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-sugar-growback",
+          "type": "subworkflow_call",
+          "subworkflow_name": "sugar_growback",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Regrow sugar, cull dead foragers, and print census.",
+          "parameter_nodes": []
+        }
       ],
       "parameters": [],
-      "execution_order": ["ask_foragers", "n_grow", "n_cull", "n_census"],
+      "execution_order": [
+        "sched-call-forager-step",
+        "sched-call-sugar-growback"
+      ],
       "input_parameters": []
     },
     "forager_step": {
-      "description": "One forager's Step (runs per agent via the ask)",
-      "enabled": true, "deletable": true,
-      "controller": { "id": "controller-forager_step", "type": "initNode", "label": "FORAGER STEP", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
+      "description": "Forager step behavior, run per agent through the scheduler ask.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-forager_step",
+        "type": "initNode",
+        "label": "FORAGER STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
       "functions": [
-        { "id": "f_move", "function_name": "move_to_best_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 100 }, "description": "move", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "f_eat", "function_name": "eat_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 200 }, "description": "eat", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "f_metab", "function_name": "metabolize", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 300 }, "description": "metabolize", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+        {
+          "id": "forager-move",
+          "function_name": "move_to_best_sugar",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Move toward the best visible sugar tile.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "forager-eat",
+          "function_name": "eat_sugar",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Eat all sugar on the current tile.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "forager-metabolize",
+          "function_name": "metabolize",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 370
+          },
+          "description": "Burn sugar and mark the forager dead when depleted.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
       ],
       "subworkflow_calls": [],
       "parameters": [],
-      "execution_order": ["f_move", "f_eat", "f_metab"],
+      "execution_order": [
+        "forager-move",
+        "forager-eat",
+        "forager-metabolize"
+      ],
+      "input_parameters": []
+    },
+    "sugar_growback": {
+      "description": "Resource step behavior: regrow sugar and clean up the population.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-sugar_growback",
+        "type": "initNode",
+        "label": "SUGAR GROWBACK",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "sugar-grow",
+          "function_name": "grow_sugar",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "rate": 1.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Regrow sugar toward its internal capacity.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "forager-cull",
+          "function_name": "cull_starved",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Remove dead foragers from the population.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "sugar-census",
+          "function_name": "census",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 370
+          },
+          "description": "Print agent count and resource totals.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "sugar-grow",
+        "forager-cull",
+        "sugar-census"
+      ],
+      "input_parameters": []
+    },
+    "final_snapshot": {
+      "description": "Processing behavior: write a final world snapshot to Results.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-final_snapshot",
+        "type": "initNode",
+        "label": "FINAL SNAPSHOT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "plot-final-world",
+          "function_name": "plot_world",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "final_sugarscape",
+            "show_resources": true,
+            "show_agents": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 180
+          },
+          "description": "Plot final sugar field and forager positions.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "plot-final-world"
+      ],
       "input_parameters": []
     }
   }
