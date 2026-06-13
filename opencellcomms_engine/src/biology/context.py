@@ -434,6 +434,9 @@ class BiologicalContext:
         self._cells_view: Optional[PopulationView] = None
         self._env_view: Optional[EnvironmentView] = None
         self._results_view: Optional[ResultsView] = None
+        # Per-agent / per-kind state lives in the shared context dict (not on the
+        # env instance) because the executor builds a fresh env for every node;
+        # the per-agent "ask" sets these so each node's env sees the current agent.
 
     @property
     def cells(self) -> PopulationView:
@@ -484,6 +487,61 @@ class BiologicalContext:
     @property
     def verbose(self) -> bool:
         return bool(self._ctx.get('verbose', False))
+
+    # --- ABM class layer (Space / Domain / Population / Resource / Agent) -----
+    # These surface the typed ABM objects to behaviour authors. They read the
+    # raw context where the model builder stored them.
+
+    @property
+    def domain(self):
+        """The ABM Domain (owns the Space and Resources)."""
+        return self._ctx.get('domain')
+
+    @property
+    def space(self):
+        """The active Space (from the Domain, or a bare 'space' in context)."""
+        domain = self._ctx.get('domain')
+        return domain.space if domain is not None else self._ctx.get('space')
+
+    @property
+    def population(self):
+        """The ABM Population wrapper (distinct from the raw CellPopulation)."""
+        return self._ctx.get('abm_population')
+
+    def resource(self, name: str):
+        """The named Resource field on the Domain."""
+        domain = self._ctx.get('domain')
+        if domain is None:
+            raise KeyError("No 'domain' in context — build the model first")
+        return domain.resource(name)
+
+    @property
+    def agents(self):
+        """All ABM agents (empty list if no ABM population is present)."""
+        pop = self._ctx.get('abm_population')
+        return pop.agents() if pop is not None else []
+
+    @property
+    def agent(self):
+        """The agent currently being asked (set by the per-agent loop), else None."""
+        return self._ctx.get('_current_agent')
+
+    def set_agent(self, agent) -> None:
+        self._ctx['_current_agent'] = agent
+
+    @property
+    def kind(self):
+        """The agent kind currently being set up / stepped, else None."""
+        return self._ctx.get('_current_kind')
+
+    @property
+    def kind_params(self) -> Dict[str, Any]:
+        """Params (count + traits) of the current agent kind."""
+        return self._ctx.get('_current_kind_params', {})
+
+    def set_kind(self, name, params=None) -> None:
+        self._ctx['_current_kind'] = name
+        self._ctx['_current_kind_params'] = params or {}
 
     def gene_network(self, cell: Union[CellHandle, 'Cell', str]) -> Optional['BooleanNetwork']:
         """Get the BooleanNetwork for a cell (or cell id).

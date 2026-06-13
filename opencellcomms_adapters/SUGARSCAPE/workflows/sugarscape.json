@@ -1,0 +1,78 @@
+{
+  "version": "2.0",
+  "name": "Sugarscape",
+  "description": "Class-layer Sugarscape, authored as nodes. Init orders the setups; the scheduler loops with a per-agent 'ask' into the forager Step subworkflow.",
+  "kernel": "biophysics",
+  "metadata": {
+    "author": "OpenCellComms",
+    "gui": {
+      "subworkflow_kinds": {
+        "main": "composer",
+        "__init_sequence__": "composer",
+        "__scheduler__": "composer",
+        "forager_step": "agent_behavior"
+      }
+    }
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Composer: init once, then loop x60",
+      "enabled": true, "deletable": false,
+      "controller": { "id": "controller-main", "type": "initNode", "label": "MAIN", "position": { "x": 80, "y": 80 }, "number_of_steps": 1 },
+      "functions": [],
+      "subworkflow_calls": [
+        { "id": "call_init", "type": "subworkflow_call", "subworkflow_name": "__init_sequence__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 320, "y": 60 }, "description": "Build the world", "parameter_nodes": [] },
+        { "id": "call_sched", "type": "subworkflow_call", "subworkflow_name": "__scheduler__", "iterations": 60, "parameters": {}, "enabled": true, "position": { "x": 320, "y": 220 }, "description": "Run 60 steps", "parameter_nodes": [] }
+      ],
+      "parameters": [], "execution_order": ["call_init", "call_sched"], "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order (Setups)",
+      "enabled": true, "deletable": false,
+      "controller": { "id": "controller-__init_sequence__", "type": "initNode", "label": "INIT SEQUENCE", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "n_space", "function_name": "setup_space", "function_file": "", "parameters": { "size_x": 50, "size_y": 50, "tile_size": 1, "topology_x": "toroidal", "topology_y": "toroidal", "seed": 42 }, "enabled": true, "position": { "x": 220, "y": 80 }, "description": "Create the world", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_res_max", "function_name": "setup_resource", "function_file": "", "parameters": { "name": "max_sugar", "initial": 0 }, "enabled": true, "position": { "x": 220, "y": 180 }, "description": "Add max_sugar field", "custom_name": "setup_resource (max_sugar)", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_res_sugar", "function_name": "setup_resource", "function_file": "", "parameters": { "name": "sugar", "initial": 0 }, "enabled": true, "position": { "x": 220, "y": 260 }, "description": "Add sugar field", "custom_name": "setup_resource (sugar)", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_seed_max", "function_name": "seed_max_sugar", "function_file": "", "parameters": { "peak": 4, "radius_frac": 0.45 }, "enabled": true, "position": { "x": 220, "y": 340 }, "description": "Seed the mountains", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_seed_sugar", "function_name": "seed_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 420 }, "description": "Start sugar full", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_place", "function_name": "place_foragers", "function_file": "", "parameters": { "kind": "forager", "count": 300, "sugar_min": 5, "sugar_max": 25, "metabolism_min": 1, "metabolism_max": 4, "vision_min": 1, "vision_max": 6 }, "enabled": true, "position": { "x": 220, "y": 500 }, "description": "Place foragers", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_plot0", "function_name": "plot_world", "function_file": "", "parameters": { "resource": "sugar", "prefix": "initial" }, "enabled": true, "position": { "x": 220, "y": 580 }, "description": "Snapshot the initial conditions", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["n_space", "n_res_max", "n_res_sugar", "n_seed_max", "n_seed_sugar", "n_place", "n_plot0"],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Main loop: agents (per-agent ask) -> resources -> population",
+      "enabled": true, "deletable": false,
+      "controller": { "id": "controller-__scheduler__", "type": "initNode", "label": "SCHEDULER", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "n_grow", "function_name": "grow_sugar", "function_file": "", "parameters": { "rate": 1 }, "enabled": true, "position": { "x": 220, "y": 240 }, "description": "Resource step: growback", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_cull", "function_name": "cull_starved", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 360 }, "description": "Population step: cull", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "n_census", "function_name": "census", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 460 }, "description": "Observability: census", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [
+        { "id": "ask_foragers", "type": "subworkflow_call", "subworkflow_name": "forager_step", "iterations": 1, "for_each": { "kind": "forager", "order": "random" }, "parameters": {}, "enabled": true, "position": { "x": 220, "y": 110 }, "description": "Ask each forager to run its Step", "parameter_nodes": [] }
+      ],
+      "parameters": [],
+      "execution_order": ["ask_foragers", "n_grow", "n_cull", "n_census"],
+      "input_parameters": []
+    },
+    "forager_step": {
+      "description": "One forager's Step (runs per agent via the ask)",
+      "enabled": true, "deletable": true,
+      "controller": { "id": "controller-forager_step", "type": "initNode", "label": "FORAGER STEP", "position": { "x": 50, "y": 50 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "f_move", "function_name": "move_to_best_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 100 }, "description": "move", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "f_eat", "function_name": "eat_sugar", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 200 }, "description": "eat", "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "f_metab", "function_name": "metabolize", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 220, "y": 300 }, "description": "metabolize", "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["f_move", "f_eat", "f_metab"],
+      "input_parameters": []
+    }
+  }
+}

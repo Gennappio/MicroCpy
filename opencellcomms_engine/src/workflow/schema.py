@@ -291,6 +291,10 @@ class SubWorkflowCall:
     description: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
     context_mapping: Dict[str, str] = field(default_factory=dict)
+    # Per-agent "ask": when set, the called sub-workflow runs once per agent of
+    # `kind` (in activation `order`) instead of `iterations` times.
+    # Shape: {"kind": "<agent kind>", "order": "random" | "sequential"}.
+    for_each: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -305,7 +309,8 @@ class SubWorkflowCall:
             "position": self.position,
             "description": self.description,
             "parameter_nodes": self.parameter_nodes,
-            "context_mapping": self.context_mapping
+            "context_mapping": self.context_mapping,
+            "for_each": self.for_each
         }
 
     @classmethod
@@ -321,7 +326,8 @@ class SubWorkflowCall:
             position=data.get("position", {"x": 0, "y": 0}),
             description=data.get("description", ""),
             parameter_nodes=data.get("parameter_nodes", []),
-            context_mapping=data.get("context_mapping", {})
+            context_mapping=data.get("context_mapping", {}),
+            for_each=data.get("for_each")
         )
 
 

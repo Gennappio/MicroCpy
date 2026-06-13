@@ -286,6 +286,7 @@ def register_function(
     cloneable: bool = False,
     compatible_kernels: Optional[List[str]] = None,
     requires: Optional[List[str]] = None,
+    operates_on: Optional[List[str]] = None,
     typed_env_exempt: bool = False
 ) -> Callable:
     """
@@ -403,7 +404,8 @@ def register_function(
             module_path=module_path,
             source_file=source_file,
             compatible_kernels=compatible_kernels,
-            requires=requires
+            requires=requires,
+            operates_on=operates_on
         )
 
         # Detect silent function-name collisions. Re-registering the same name

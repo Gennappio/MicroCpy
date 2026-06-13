@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "SUGARSCAPE"
+version = "0.1.0"
+description = "Sugarscape — a NetLogo-style agent-based model demonstrating the tile-grid environment and resource fields (non-diffusing 'sugar' with growback)."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["*"]

@@ -13,6 +13,9 @@ from .add_substance import add_substance
 from .finalize_substances import finalize_substances
 from .setup_output import setup_output
 from .setup_environment import setup_environment
+from .setup_scene import setup_scene
+from .setup_space import setup_space
+from .setup_resource import setup_resource
 from .setup_custom_parameters import setup_custom_parameters
 from .read_checkpoint import read_checkpoint
 
@@ -24,6 +27,9 @@ __all__ = [
     'finalize_substances',
     'setup_output',
     'setup_environment',
+    'setup_scene',
+    'setup_space',
+    'setup_resource',
     'setup_custom_parameters',
     'read_checkpoint',
 ]

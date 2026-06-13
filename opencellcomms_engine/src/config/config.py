@@ -131,6 +131,28 @@ class EnvironmentConfig:
     ph: float = 7.4
 
 @dataclass
+class FieldConfig:
+    """A resource field over the tile grid (e.g. Sugarscape 'sugar')."""
+    name: str
+    initial_value: float = 0.0
+
+@dataclass
+class SceneConfig:
+    """Declarative description of the discrete tile-grid 'world'.
+
+    This is data, read once by setup_scene to build a TileGrid. Tile counts
+    derive from the physical extent divided by tile_size. It is independent of
+    the FiPy diffusion mesh. Per-step resource dynamics (growback, decay, ...)
+    live in visible workflow nodes, not here.
+    """
+    size_x: Length
+    size_y: Length
+    tile_size: Length
+    topology_x: str = "bounded"
+    topology_y: str = "bounded"
+    fields: List[FieldConfig] = field(default_factory=list)
+
+@dataclass
 class OpenCellCommsConfig(IConfig):
     """Master configuration - single source of truth for OpenCellComms simulations"""
     domain: DomainConfig
@@ -143,6 +165,7 @@ class OpenCellCommsConfig(IConfig):
     gene_network: Optional[GeneNetworkConfig] = None
     gene_network_steps: int = 3  # Default propagation steps if no full gene network config
     environment: EnvironmentConfig = field(default_factory=EnvironmentConfig)
+    scene: Optional[SceneConfig] = None  # Declarative tile-grid world (built by setup_scene)
     output: OutputConfig = field(default_factory=OutputConfig)  # Output and saving configuration
     initial_state: InitialStateConfig = field(default_factory=InitialStateConfig)  # Initial state configuration
     output_dir: Path = Path("results")

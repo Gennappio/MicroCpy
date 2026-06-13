@@ -614,6 +614,35 @@ class WorkflowExecutor:
             traceback.print_exc()
             return None
 
+    def _ask_per_agent(self, node, for_each: Dict[str, Any], context: Dict[str, Any],
+                       merged_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Run a behaviour sub-workflow once per agent of a kind (the "ask").
+
+        Binds the current agent in context['_current_agent'] so each inner node's
+        typed env exposes it as env.agent. Agents that died earlier this step are
+        skipped (cull happens in a separate phase).
+        """
+        pop = context.get('abm_population')
+        if pop is None:
+            print(f"[WORKFLOW] for_each call '{node.subworkflow_name}' but no 'abm_population' in context — skipped")
+            return context
+
+        kind = for_each.get('kind')
+        order = for_each.get('order', 'random')
+        agents = pop.agents_of_kind(kind) if kind else pop.agents()
+        if order == 'random' and hasattr(pop, '_rng'):
+            pop._rng.shuffle(agents)
+
+        for agent in agents:
+            if not agent.is_alive():
+                continue
+            context['_current_agent'] = agent
+            context = self.execute_subworkflow(
+                node.subworkflow_name, context, iterations=1, parameters=merged_params
+            )
+        context['_current_agent'] = None
+        return context
+
     def execute_subworkflow(self, subworkflow_name: str, context: Dict[str, Any],
                            iterations: int = 1, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -745,20 +774,28 @@ class WorkflowExecutor:
                                 # Merge parameters for the sub-workflow call
                                 merged_params = subworkflow.merge_parameters_for_subworkflow_call(node)
 
-                                # Get iterations (from parameters or default)
-                                call_iterations = merged_params.get('iterations', node.iterations)
-                                try:
-                                    call_iterations = int(call_iterations)
-                                except (TypeError, ValueError):
-                                    call_iterations = 1
+                                for_each = getattr(node, 'for_each', None)
+                                if for_each:
+                                    # Per-agent "ask": run the called sub-workflow once
+                                    # per agent of `kind`, in activation order, with the
+                                    # current agent bound in context (so each node's env
+                                    # sees env.agent).
+                                    context = self._ask_per_agent(node, for_each, context, merged_params)
+                                else:
+                                    # Get iterations (from parameters or default)
+                                    call_iterations = merged_params.get('iterations', node.iterations)
+                                    try:
+                                        call_iterations = int(call_iterations)
+                                    except (TypeError, ValueError):
+                                        call_iterations = 1
 
-                                # Recursively execute the called sub-workflow
-                                context = self.execute_subworkflow(
-                                    node.subworkflow_name,
-                                    context,
-                                    iterations=call_iterations,
-                                    parameters=merged_params
-                                )
+                                    # Recursively execute the called sub-workflow
+                                    context = self.execute_subworkflow(
+                                        node.subworkflow_name,
+                                        context,
+                                        iterations=call_iterations,
+                                        parameters=merged_params
+                                    )
                             except Exception as e:
                                 print(f"[WORKFLOW] Error executing sub-workflow call to '{node.subworkflow_name}': {e}")
                                 import traceback
