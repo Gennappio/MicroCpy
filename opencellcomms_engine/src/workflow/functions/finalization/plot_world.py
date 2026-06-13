@@ -26,6 +26,8 @@ _KIND_COLORS = ["#f59e0b", "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#ef4444"
     parameters=[
         {"name": "resource", "type": "STRING", "description": "Resource field to show as the heatmap (blank = first available)", "default": ""},
         {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "world"},
+        {"name": "show_resources", "type": "BOOL", "description": "Draw resource fields as a heatmap", "default": True},
+        {"name": "show_agents", "type": "BOOL", "description": "Draw agent positions", "default": True},
     ],
     inputs=["context"],
     outputs=[],
@@ -33,7 +35,14 @@ _KIND_COLORS = ["#f59e0b", "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#ef4444"
     compatible_kernels=["*"],
     requires=[],
 )
-def plot_world(env: BiologicalContext, resource: str = "", prefix: str = "world", **kwargs) -> bool:
+def plot_world(
+    env: BiologicalContext,
+    resource: str = "",
+    prefix: str = "world",
+    show_resources: bool = True,
+    show_agents: bool = True,
+    **kwargs,
+) -> bool:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -49,7 +58,7 @@ def plot_world(env: BiologicalContext, resource: str = "", prefix: str = "world"
     fig, ax = plt.subplots(figsize=(5, 5))
 
     # Resource heatmap (optional)
-    resources = domain.resources() if domain is not None else []
+    resources = domain.resources() if show_resources and domain is not None else []
     chosen = None
     if resources:
         names = [r.name for r in resources]
@@ -59,7 +68,7 @@ def plot_world(env: BiologicalContext, resource: str = "", prefix: str = "world"
                   extent=[0, space.nx, 0, space.ny], aspect="equal")
 
     # Agents as dots, colored by kind
-    if population is not None:
+    if show_agents and population is not None:
         agents = population.agents()
         kinds = sorted({(a.kind or "agent") for a in agents})
         for a in agents:
@@ -83,3 +92,55 @@ def plot_world(env: BiologicalContext, resource: str = "", prefix: str = "world"
     plt.close(fig)
     print(f"[plot_world] wrote {out_path}")
     return True
+
+
+@register_function(
+    display_name="Plot Space",
+    description="Snapshot the grid bounds without resource heatmaps or agent markers",
+    category="FINALIZATION",
+    parameters=[
+        {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "space"},
+    ],
+    inputs=["context"],
+    outputs=[],
+    cloneable=True,
+    compatible_kernels=["*"],
+    requires=[],
+)
+def plot_space(env: BiologicalContext, prefix: str = "space", **kwargs) -> bool:
+    return plot_world(env, resource="", prefix=prefix, show_resources=False, show_agents=False, **kwargs)
+
+
+@register_function(
+    display_name="Plot Agents",
+    description="Snapshot agent positions by kind without a resource heatmap",
+    category="FINALIZATION",
+    parameters=[
+        {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "agents"},
+    ],
+    inputs=["context"],
+    outputs=[],
+    cloneable=True,
+    compatible_kernels=["*"],
+    requires=[],
+)
+def plot_agents(env: BiologicalContext, prefix: str = "agents", **kwargs) -> bool:
+    return plot_world(env, resource="", prefix=prefix, show_resources=False, show_agents=True, **kwargs)
+
+
+@register_function(
+    display_name="Plot Resources",
+    description="Snapshot one resource field without agent markers",
+    category="FINALIZATION",
+    parameters=[
+        {"name": "resource", "type": "STRING", "description": "Resource field to show (blank = first available)", "default": ""},
+        {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "resources"},
+    ],
+    inputs=["context"],
+    outputs=[],
+    cloneable=True,
+    compatible_kernels=["*"],
+    requires=[],
+)
+def plot_resources(env: BiologicalContext, resource: str = "", prefix: str = "resources", **kwargs) -> bool:
+    return plot_world(env, resource=resource, prefix=prefix, show_resources=True, show_agents=False, **kwargs)

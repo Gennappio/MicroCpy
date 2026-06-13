@@ -1,10 +1,14 @@
-import { useState, useRef } from 'react';
-import { ChevronDown, ChevronRight, Database, Zap, List, Braces, Plus, FolderOpen, FileJson, X, Package } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { ChevronDown, ChevronRight, Database, List, Braces, Plus, FolderOpen, FileJson, X, Package } from 'lucide-react';
 import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
 import { BEHAVIOR_KINDS, FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
 import './FunctionPalette.css';
+
+const DEFAULT_FUNCTIONS_BY_KIND = {
+  [KINDS.SPACE]: ['setup_space', 'plot_space', 'plot_agents', 'plot_resources'],
+};
 
 /**
  * Function Palette - empty by default. Users load functions from workflow JSONs
@@ -30,6 +34,7 @@ const FunctionPalette = ({ currentStage }) => {
   const isBehaviorCanvas = BEHAVIOR_KINDS.has(currentKind);
   const canHostFunctions = FUNCTION_HOSTING_KINDS.has(currentKind);
   const isSchedulerCanvas = currentKind === KINDS.SCHEDULER;
+  const defaultFunctions = DEFAULT_FUNCTIONS_BY_KIND[currentKind] || [];
 
   const libraries = workflow.metadata?.gui?.function_libraries || [];
   const userFunctions = workflow.metadata?.gui?.user_functions || [];
@@ -41,6 +46,12 @@ const FunctionPalette = ({ currentStage }) => {
     setRegistryCache(reg || {});
     return reg || {};
   };
+
+  useEffect(() => {
+    if (defaultFunctions.length > 0) {
+      ensureRegistry();
+    }
+  }, [currentKind]);
 
   // ─── Drag handlers ──────────────────────────────────────────────────────
 
@@ -210,6 +221,8 @@ const FunctionPalette = ({ currentStage }) => {
     type: 'subworkflowCall', subworkflowName: name, label: name, iterations: 1, parameters: {},
   });
 
+  const showSubworkflowCalls = currentKind === KINDS.COMPOSER || currentKind === KINDS.SUBWORKFLOW;
+
   const toggle = (key) => setExpanded((s) => ({ ...s, [key]: !s[key] }));
   const isExpanded = (key, defaultOpen = true) => expanded[key] !== undefined ? expanded[key] : defaultOpen;
 
@@ -235,7 +248,8 @@ const FunctionPalette = ({ currentStage }) => {
       type: 'function',
       name,
       function_name: name,
-      label: meta?.display_name || name,
+      label: meta?.displayName || name,
+      displayName: meta?.displayName || name,
       description,
       category: meta?.category,
       parameters: paramList.reduce((acc, p) => { acc[p.name] = p.default; return acc; }, {}),
@@ -269,7 +283,7 @@ const FunctionPalette = ({ currentStage }) => {
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
-  const hasContent = libraries.length > 0 || userFunctions.length > 0;
+  const hasContent = defaultFunctions.length > 0 || libraries.length > 0 || userFunctions.length > 0;
 
   return (
     <div className="function-palette">
@@ -376,12 +390,27 @@ const FunctionPalette = ({ currentStage }) => {
           </div>
         </div>
 
-        {/* Sub-workflow call section (cross-references inside the project) */}
-        {!isSchedulerCanvas && Object.keys(workflow.subworkflows || {}).filter((n) => n !== currentStage).length > 0 && (
+        {/* Default nodes for this canvas kind */}
+        {defaultFunctions.length > 0 && (
+          <div className="palette-category">
+            <div className="category-header" onClick={() => toggle('defaults')}>
+              {isExpanded('defaults') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>Defaults</span>
+              <span className="category-count">{defaultFunctions.length}</span>
+            </div>
+            {isExpanded('defaults') && (
+              <div className="category-functions">
+                {defaultFunctions.map((name) => renderFunctionItem(name, 'default'))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Legacy composer-only subworkflow calls. ABM orchestration uses the dedicated Initialization and Scheduler palettes. */}
+        {showSubworkflowCalls && !isSchedulerCanvas && Object.keys(workflow.subworkflows || {}).filter((n) => n !== currentStage).length > 0 && (
           <div className="palette-category">
             <div className="category-header" onClick={() => toggle('subworkflows')}>
               {isExpanded('subworkflows') ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <Zap size={14} />
               <span>Sub-workflow Calls</span>
             </div>
             {isExpanded('subworkflows') && (

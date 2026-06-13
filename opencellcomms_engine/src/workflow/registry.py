@@ -159,6 +159,11 @@ def get_default_registry() -> FunctionRegistry:
     # Import all modules with decorated functions to trigger registration
     import src.workflow.standard_functions
 
+    # Import built-in workflow functions so the GUI palette can expose core
+    # setup/plot nodes without requiring a workflow/plugin import first.
+    import src.workflow.functions.initialization
+    import src.workflow.functions.finalization
+
     # Import kernel loading functions
     import src.workflow.functions.initialization.load_kernel
     import src.workflow.functions.initialization.store_simulation_dimensions
