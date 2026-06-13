@@ -177,6 +177,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           label: call.subworkflow_name,
           subworkflowName: call.subworkflow_name,
           iterations: call.iterations || 1,
+          forEach: call.for_each || null,
           parameters: call.parameters || {},
           enabled: call.enabled !== false,
           verbose: call.verbose || false,
@@ -630,6 +631,10 @@ export const createWorkflowIOSlice = (set, get) => ({
           parameter_nodes: parameterConnections
         };
 
+        if (node.data.forEach) {
+          exportedCall.for_each = node.data.forEach;
+        }
+
         if (node.data.results && node.data.results.trim() !== '') {
           exportedCall.results = node.data.results;
         }
@@ -896,6 +901,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         id: node.id,
         subworkflow_name: node.data.subworkflowName,
         iterations: node.data.iterations || 1,
+        ...(node.data.forEach ? { for_each: node.data.forEach } : {}),
         enabled: node.data.enabled !== false,
         verbose: node.data.verbose || false,
         description: node.data.description || '',

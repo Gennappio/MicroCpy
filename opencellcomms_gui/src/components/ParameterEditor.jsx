@@ -48,6 +48,10 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
   const [iterations, setIterations] = useState(node.data.iterations || 1);
   const [results, setResults] = useState(node.data.results || '');
+  // Per-agent "ask": run the called sub-workflow once per agent of a kind.
+  // forEachKind === '' means the normal iterations path.
+  const [forEachKind, setForEachKind] = useState(node.data.forEach?.kind || '');
+  const [forEachOrder, setForEachOrder] = useState(node.data.forEach?.order || 'random');
 
   // List parameter node state
   const [listItems, setListItems] = useState(node.data.items || []);
@@ -246,6 +250,8 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setStepCount(node.data.stepCount || 1);
     setSubworkflowName(node.data.subworkflowName || '');
     setIterations(node.data.iterations || 1);
+    setForEachKind(node.data.forEach?.kind || '');
+    setForEachOrder(node.data.forEach?.order || 'random');
     setResults(node.data.results || '');
     // List node state
     setListItems(node.data.items || []);
@@ -451,12 +457,14 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       // For dict nodes, save entries and label
       onSave({ entries: dictEntries }, customName);
     } else if (isSubWorkflowCall) {
-      // For sub-workflow calls, save all properties
+      // For sub-workflow calls, save all properties. forEachKind set → per-agent
+      // "ask" (runs once per agent of that kind); empty → normal iterations.
       onSave(parameters, customName, {
         subworkflowName,
         iterations,
         description,
-        results
+        results,
+        forEach: forEachKind ? { kind: forEachKind, order: forEachOrder } : null,
       });
     } else {
       // For standard functions, save parameters, custom name, and step_count
@@ -1023,19 +1031,58 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 
                 <div className="parameter-field">
                   <label className="param-label">
-                    Iterations
+                    Run mode
                   </label>
                   <div className="param-description">
-                    Number of times to execute this sub-workflow
+                    Run the sub-workflow a fixed number of times, or once per agent
+                    of a kind (the per-agent “ask”).
                   </div>
-                  <input
-                    type="number"
-                    value={iterations}
-                    onChange={(e) => setIterations(parseInt(e.target.value, 10) || 1)}
-                    min={1}
+                  <select
+                    value={forEachKind}
+                    onChange={(e) => setForEachKind(e.target.value)}
                     className="param-input"
-                  />
+                  >
+                    <option value="">Fixed iterations</option>
+                    {(workflow.metadata?.gui?.agent_kinds || []).map((k) => (
+                      <option key={k.name} value={k.name}>For each agent: {k.name}</option>
+                    ))}
+                  </select>
                 </div>
+
+                {forEachKind ? (
+                  <div className="parameter-field">
+                    <label className="param-label">
+                      Activation order
+                    </label>
+                    <div className="param-description">
+                      Order agents are asked in each step
+                    </div>
+                    <select
+                      value={forEachOrder}
+                      onChange={(e) => setForEachOrder(e.target.value)}
+                      className="param-input"
+                    >
+                      <option value="random">random (shuffled each step)</option>
+                      <option value="sequential">sequential</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="parameter-field">
+                    <label className="param-label">
+                      Iterations
+                    </label>
+                    <div className="param-description">
+                      Number of times to execute this sub-workflow
+                    </div>
+                    <input
+                      type="number"
+                      value={iterations}
+                      onChange={(e) => setIterations(parseInt(e.target.value, 10) || 1)}
+                      min={1}
+                      className="param-input"
+                    />
+                  </div>
+                )}
 
                 <div className="parameter-field">
                   <label className="param-label">

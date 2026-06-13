@@ -21,7 +21,7 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
   const edges = useEdges();
   const nodes = useNodes();
 
-  const { label, subworkflowName, iterations, enabled, onEdit, description, verbose } = data;
+  const { label, subworkflowName, iterations, forEach, enabled, onEdit, description, verbose } = data;
 
   // Get badge stats for this node
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
@@ -165,11 +165,15 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
         Sub-workflow: {subworkflowName}
       </div>
 
-      {iterations && iterations > 1 && (
+      {forEach?.kind ? (
+        <div className="node-iterations" title="Runs once per agent of this kind (per-agent ask)">
+          ↻ for each {forEach.kind} ({forEach.order || 'random'})
+        </div>
+      ) : (iterations && iterations > 1 && (
         <div className="node-iterations" title="Number of times this sub-workflow executes">
           Iterations: {iterations}
         </div>
-      )}
+      ))}
 
       {description && (
         <div className="node-description" title={description}>
