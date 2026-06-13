@@ -1,4 +1,4 @@
-import { Users, Globe, PlayCircle, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
+import { Users, Boxes, Globe, PlayCircle, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
 import './MainTabSelector.css';
 
 const MainTabSelector = ({ currentMainTab, onTabChange }) => {
@@ -15,17 +15,25 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
           <span>Agents</span>
         </button>
         <button
-          className={`main-tab environment-tab ${currentMainTab === 'environment' ? 'active' : ''}`}
-          onClick={() => onTabChange('environment')}
-          title="Define environment behaviors and initialization"
+          className={`main-tab resources-tab ${currentMainTab === 'resources' ? 'active' : ''}`}
+          onClick={() => onTabChange('resources')}
+          title="Define resource fields and their Setup/Step behaviours"
+        >
+          <Boxes size={18} />
+          <span>Resources</span>
+        </button>
+        <button
+          className={`main-tab space-tab ${currentMainTab === 'space' ? 'active' : ''}`}
+          onClick={() => onTabChange('space')}
+          title="Build the world grid (setup_space or a custom grid builder)"
         >
           <Globe size={18} />
-          <span>Environment</span>
+          <span>Space</span>
         </button>
         <button
           className={`main-tab initialization-tab ${currentMainTab === 'initialization' ? 'active' : ''}`}
           onClick={() => onTabChange('initialization')}
-          title="Order init subworkflows that run once at the start"
+          title="Order the init behaviours that run once at the start"
         >
           <PlayCircle size={18} />
           <span>Initialization</span>

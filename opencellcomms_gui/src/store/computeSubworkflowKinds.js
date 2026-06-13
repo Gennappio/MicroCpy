@@ -26,6 +26,7 @@ export const computeSubworkflowKinds = (workflow) => {
   const kinds = {};
 
   const agentKinds = gui.agent_kinds || [];
+  const resourceKinds = gui.resource_kinds || [];
   const env = gui.environment || {};
   const scheduler = gui.scheduler || {};
   const processing = gui.processing || {};
@@ -33,6 +34,9 @@ export const computeSubworkflowKinds = (workflow) => {
 
   if (scheduler.subworkflow) kinds[scheduler.subworkflow] = KINDS.SCHEDULER;
   if (initSeq.subworkflow) kinds[initSeq.subworkflow] = 'init_sequence';
+
+  const space = gui.space || {};
+  if (space.subworkflow) kinds[space.subworkflow] = KINDS.SPACE;
 
   if (env.init_subworkflow) kinds[env.init_subworkflow] = KINDS.ENV_INIT;
   (env.behavior_subworkflows || []).forEach((n) => {
@@ -43,6 +47,13 @@ export const computeSubworkflowKinds = (workflow) => {
     if (k.init_subworkflow) kinds[k.init_subworkflow] = KINDS.AGENT_INIT;
     (k.behavior_subworkflows || []).forEach((b) => {
       kinds[b] = KINDS.AGENT_BEHAVIOR;
+    });
+  });
+
+  resourceKinds.forEach((k) => {
+    if (k.init_subworkflow) kinds[k.init_subworkflow] = KINDS.RESOURCE_INIT;
+    (k.behavior_subworkflows || []).forEach((b) => {
+      kinds[b] = KINDS.RESOURCE_BEHAVIOR;
     });
   });
 

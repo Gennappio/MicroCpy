@@ -1,4 +1,4 @@
-import { Users, Globe, Plus, Check } from 'lucide-react';
+import { Users, Boxes, Globe, Plus, Check } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import { INIT_SEQUENCE_NAME } from '../store/subworkflowKinds';
 import './InitSequencePalette.css';
@@ -7,16 +7,33 @@ const InitSequencePalette = () => {
   const { workflow, addToInitSequence } = useWorkflowStore();
 
   const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
+  const resourceKinds = workflow.metadata?.gui?.resource_kinds || [];
   const envMeta = workflow.metadata?.gui?.environment || {};
+  const spaceSw = workflow.metadata?.gui?.space?.subworkflow;
   const calls = workflow.subworkflows?.[INIT_SEQUENCE_NAME]?.subworkflow_calls || [];
   const scheduled = new Set(calls.map((c) => c.subworkflow_name));
 
   const envInit = envMeta.init_subworkflow;
-  const hasContent = !!envInit || agentKinds.some((k) => k.init_subworkflow);
+  const hasContent = !!spaceSw || !!envInit || agentKinds.some((k) => k.init_subworkflow) || resourceKinds.some((k) => k.init_subworkflow);
 
   return (
     <div className="init-sequence-palette">
       <div className="init-sequence-palette-title">Available Inits</div>
+
+      {spaceSw && (
+        <section className="initseq-section">
+          <div className="initseq-section-header">
+            <Globe size={13} />
+            <span>Space</span>
+          </div>
+          <InitItem
+            name={spaceSw}
+            color="#10b981"
+            scheduled={scheduled.has(spaceSw)}
+            onAdd={() => addToInitSequence(spaceSw)}
+          />
+        </section>
+      )}
 
       {envInit && (
         <section className="initseq-section">
@@ -43,6 +60,23 @@ const InitSequencePalette = () => {
             <InitItem
               name={kind.init_subworkflow}
               color="#3b82f6"
+              scheduled={scheduled.has(kind.init_subworkflow)}
+              onAdd={() => addToInitSequence(kind.init_subworkflow)}
+            />
+          </section>
+        )
+      ))}
+
+      {resourceKinds.map((kind) => (
+        kind.init_subworkflow && (
+          <section key={kind.name} className="initseq-section">
+            <div className="initseq-section-header">
+              <Boxes size={13} />
+              <span>{kind.name}</span>
+            </div>
+            <InitItem
+              name={kind.init_subworkflow}
+              color="#10b981"
               scheduled={scheduled.has(kind.init_subworkflow)}
               onAdd={() => addToInitSequence(kind.init_subworkflow)}
             />

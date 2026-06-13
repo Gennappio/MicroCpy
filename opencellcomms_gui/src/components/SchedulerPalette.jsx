@@ -1,4 +1,4 @@
-import { Users, Globe, Plus, Check } from 'lucide-react';
+import { Users, Boxes, Globe, Plus, Check } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import { SCHEDULER_NAME, INIT_KINDS } from '../store/subworkflowKinds';
 import './SchedulerPalette.css';
@@ -7,6 +7,7 @@ const SchedulerPalette = () => {
   const { workflow, addToScheduler } = useWorkflowStore();
 
   const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
+  const resourceKinds = workflow.metadata?.gui?.resource_kinds || [];
   const envMeta = workflow.metadata?.gui?.environment || {};
   const kindsMap = workflow.metadata?.gui?.subworkflow_kinds || {};
   const schedulerCalls = workflow.subworkflows?.[SCHEDULER_NAME]?.subworkflow_calls || [];
@@ -63,9 +64,34 @@ const SchedulerPalette = () => {
         );
       })}
 
-      {envBehaviors.length === 0 && agentKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0) && (
+      {/* Per-resource step behaviors */}
+      {resourceKinds.map((kind) => {
+        const behaviors = (kind.behavior_subworkflows || []).filter(isNotInit);
+        if (behaviors.length === 0) return null;
+        return (
+          <section key={kind.name} className="sched-section">
+            <div className="sched-section-header">
+              <Boxes size={13} />
+              <span>{kind.name}</span>
+            </div>
+            {behaviors.map((name) => (
+              <BehaviorItem
+                key={name}
+                name={name}
+                color="#10b981"
+                scheduled={scheduled.has(name)}
+                onAdd={() => addToScheduler(name)}
+              />
+            ))}
+          </section>
+        );
+      })}
+
+      {envBehaviors.length === 0
+        && agentKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0)
+        && resourceKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0) && (
         <div className="sched-empty">
-          Define behaviors in the Agents or Environment tabs first.
+          Define behaviors in the Agents or Resources tabs first.
         </div>
       )}
     </div>

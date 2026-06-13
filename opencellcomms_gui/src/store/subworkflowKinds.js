@@ -3,6 +3,9 @@ export const KINDS = {
   SUBWORKFLOW: 'subworkflow',
   AGENT_INIT: 'agent_init',
   AGENT_BEHAVIOR: 'agent_behavior',
+  RESOURCE_INIT: 'resource_init',
+  RESOURCE_BEHAVIOR: 'resource_behavior',
+  SPACE: 'space',
   ENV_INIT: 'env_init',
   ENV_BEHAVIOR: 'env_behavior',
   PROCESSING_BEHAVIOR: 'processing_behavior',
@@ -22,9 +25,11 @@ export const MAIN_TABS = {
 
 export const SCHEDULER_NAME = '__scheduler__';
 export const INIT_SEQUENCE_NAME = '__init_sequence__';
+export const SPACE_NAME = '__space__';
 
 export const BEHAVIOR_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
+  KINDS.RESOURCE_BEHAVIOR,
   KINDS.ENV_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
 ]);
@@ -34,6 +39,8 @@ export const BEHAVIOR_KINDS = new Set([
 // (which must explicitly EXCLUDE these).
 export const INIT_KINDS = new Set([
   KINDS.AGENT_INIT,
+  KINDS.RESOURCE_INIT,
+  KINDS.SPACE,
   KINDS.ENV_INIT,
 ]);
 
@@ -42,6 +49,9 @@ export const INIT_KINDS = new Set([
 export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.AGENT_INIT,
   KINDS.AGENT_BEHAVIOR,
+  KINDS.RESOURCE_INIT,
+  KINDS.RESOURCE_BEHAVIOR,
+  KINDS.SPACE,
   KINDS.ENV_INIT,
   KINDS.ENV_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
@@ -55,6 +65,8 @@ export const FUNCTION_HOSTING_KINDS = new Set([
 export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behaviour' },
+  { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
+  { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behaviour' },
   { kind: KINDS.ENV_INIT, label: 'Environment · initialization' },
   { kind: KINDS.ENV_BEHAVIOR, label: 'Environment · behaviour' },
   { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Processing' },
@@ -65,8 +77,11 @@ export const FUNCTION_ROLE_OPTIONS = [
 // @register_function enum and is never shown to the user.
 export const KIND_TO_CATEGORY = {
   [KINDS.AGENT_INIT]: 'INITIALIZATION',
+  [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
+  [KINDS.SPACE]: 'INITIALIZATION',
   [KINDS.ENV_INIT]: 'INITIALIZATION',
   [KINDS.AGENT_BEHAVIOR]: 'INTRACELLULAR',
+  [KINDS.RESOURCE_BEHAVIOR]: 'ENVIRONMENT',
   [KINDS.ENV_BEHAVIOR]: 'DIFFUSION',
   [KINDS.PROCESSING_BEHAVIOR]: 'FINALIZATION',
 };
@@ -78,12 +93,16 @@ export const variantForKind = (kind) => {
       return 'blue';
     case KINDS.ENV_BEHAVIOR:
     case KINDS.ENV_INIT:
+    case KINDS.RESOURCE_BEHAVIOR:
+    case KINDS.RESOURCE_INIT:
       return 'green';
     case KINDS.PROCESSING_BEHAVIOR:
     case KINDS.SUBWORKFLOW:
       return 'purple';
     case KINDS.COMPOSER:
       return 'orange';
+    case KINDS.SPACE:
+      return 'green';
     case KINDS.SCHEDULER:
     case KINDS.INIT_SEQUENCE:
       return 'slate';

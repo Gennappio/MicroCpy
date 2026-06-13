@@ -1,4 +1,4 @@
-import { KINDS, SCHEDULER_NAME, INIT_SEQUENCE_NAME } from '../subworkflowKinds';
+import { KINDS, SCHEDULER_NAME, INIT_SEQUENCE_NAME, SPACE_NAME } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
 
 const makeSubworkflow = (name, description, kind) => ({
@@ -146,6 +146,144 @@ export const createAbmSlice = (set, get) => ({
         stageNodes: newNodes,
         stageEdges: newEdges,
         currentStage: state.currentStage === behaviorName ? SCHEDULER_NAME : state.currentStage,
+      };
+    });
+  },
+
+  // ── Resource kinds (full mirror of agent kinds) ──────────────────────────
+
+  addResourceKind: (name) => {
+    const initName = `${name}_init`;
+    set((state) => {
+      const kinds = state.workflow.metadata.gui.resource_kinds || [];
+      if (kinds.find((k) => k.name === name)) return state;
+      const initSw = makeSubworkflow(initName, `Setup for resource ${name}`, KINDS.RESOURCE_INIT);
+      const newWorkflow = {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            resource_kinds: [...kinds, { name, init_subworkflow: initName, behavior_subworkflows: [] }],
+          },
+        },
+        subworkflows: { ...state.workflow.subworkflows, [initName]: initSw },
+      };
+      return {
+        workflow: withDerivedKinds(newWorkflow),
+        stageNodes: { ...state.stageNodes, [initName]: [makeControllerNode(initName)] },
+        stageEdges: { ...state.stageEdges, [initName]: [] },
+      };
+    });
+  },
+
+  removeResourceKind: (name) => {
+    set((state) => {
+      const kinds = state.workflow.metadata.gui.resource_kinds || [];
+      const kind = kinds.find((k) => k.name === name);
+      if (!kind) return state;
+      const toRemove = new Set([kind.init_subworkflow, ...kind.behavior_subworkflows]);
+      const newSubworkflows = { ...state.workflow.subworkflows };
+      const newNodes = { ...state.stageNodes };
+      const newEdges = { ...state.stageEdges };
+      toRemove.forEach((n) => { delete newSubworkflows[n]; delete newNodes[n]; delete newEdges[n]; });
+      const newWorkflow = {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: { ...state.workflow.metadata.gui, resource_kinds: kinds.filter((k) => k.name !== name) },
+        },
+        subworkflows: newSubworkflows,
+      };
+      return {
+        workflow: withDerivedKinds(newWorkflow),
+        stageNodes: newNodes,
+        stageEdges: newEdges,
+        currentStage: toRemove.has(state.currentStage) ? SCHEDULER_NAME : state.currentStage,
+      };
+    });
+  },
+
+  addResourceBehavior: (kindName, behaviorName) => {
+    set((state) => {
+      if (state.workflow.subworkflows[behaviorName]) return state;
+      const kinds = state.workflow.metadata.gui.resource_kinds || [];
+      const sw = makeSubworkflow(behaviorName, `${kindName} step: ${behaviorName}`, KINDS.RESOURCE_BEHAVIOR);
+      const newWorkflow = {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            resource_kinds: kinds.map((k) =>
+              k.name === kindName
+                ? { ...k, behavior_subworkflows: [...k.behavior_subworkflows, behaviorName] }
+                : k
+            ),
+          },
+        },
+        subworkflows: { ...state.workflow.subworkflows, [behaviorName]: sw },
+      };
+      return {
+        workflow: withDerivedKinds(newWorkflow),
+        stageNodes: { ...state.stageNodes, [behaviorName]: [makeControllerNode(behaviorName)] },
+        stageEdges: { ...state.stageEdges, [behaviorName]: [] },
+      };
+    });
+  },
+
+  removeResourceBehavior: (kindName, behaviorName) => {
+    set((state) => {
+      const { [behaviorName]: _sw, ...newSubworkflows } = state.workflow.subworkflows;
+      const { [behaviorName]: _n, ...newNodes } = state.stageNodes;
+      const { [behaviorName]: _e, ...newEdges } = state.stageEdges;
+      const kinds = state.workflow.metadata.gui.resource_kinds || [];
+      const newWorkflow = {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: {
+            ...state.workflow.metadata.gui,
+            resource_kinds: kinds.map((k) =>
+              k.name === kindName
+                ? { ...k, behavior_subworkflows: k.behavior_subworkflows.filter((b) => b !== behaviorName) }
+                : k
+            ),
+          },
+        },
+        subworkflows: newSubworkflows,
+      };
+      return {
+        workflow: withDerivedKinds(newWorkflow),
+        stageNodes: newNodes,
+        stageEdges: newEdges,
+        currentStage: state.currentStage === behaviorName ? SCHEDULER_NAME : state.currentStage,
+      };
+    });
+  },
+
+  // ── Space ─────────────────────────────────────────────────────────────────
+  // The Space is its own canvas (the grid builder). It is one init behaviour,
+  // ordered in Initialization like the entity Setups. Domain/Population are built
+  // by setup_space — they have no tabs of their own.
+
+  ensureSpace: () => {
+    set((state) => {
+      const existing = state.workflow.metadata.gui.space?.subworkflow;
+      if (existing && state.workflow.subworkflows[existing]) return state;
+      const sw = makeSubworkflow(SPACE_NAME, 'Space — build the grid/world', KINDS.SPACE);
+      const newWorkflow = {
+        ...state.workflow,
+        metadata: {
+          ...state.workflow.metadata,
+          gui: { ...state.workflow.metadata.gui, space: { subworkflow: SPACE_NAME } },
+        },
+        subworkflows: { ...state.workflow.subworkflows, [SPACE_NAME]: sw },
+      };
+      return {
+        workflow: withDerivedKinds(newWorkflow),
+        stageNodes: { ...state.stageNodes, [SPACE_NAME]: [makeControllerNode(SPACE_NAME)] },
+        stageEdges: { ...state.stageEdges, [SPACE_NAME]: [] },
       };
     });
   },
