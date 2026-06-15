@@ -1,0 +1,57 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "final_snapshot",
+  "kind": "processing_behavior",
+  "description": "Processing behavior: write a final world snapshot to Results.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "Processing behavior: write a final world snapshot to Results.",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-final_snapshot",
+      "type": "initNode",
+      "label": "FINAL SNAPSHOT",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "plot-final-world",
+        "function_name": "plot_world",
+        "function_file": "",
+        "parameters": {
+          "resource": "sugar",
+          "prefix": "final_sugarscape",
+          "show_resources": true,
+          "show_agents": true
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "description": "Plot final sugar field and forager positions.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "plot-final-world"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "plot_world"
+    ]
+  }
+}

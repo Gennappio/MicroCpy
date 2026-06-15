@@ -1,0 +1,80 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "forager_init",
+  "kind": "agent_init",
+  "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-forager_init",
+      "type": "initNode",
+      "label": "FORAGER INIT",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "forager-place",
+        "function_name": "place_foragers",
+        "function_file": "",
+        "parameters": {
+          "kind": "forager",
+          "count": 120,
+          "sugar_min": 5.0,
+          "sugar_max": 25.0,
+          "metabolism_min": 1.0,
+          "metabolism_max": 4.0,
+          "vision_min": 1,
+          "vision_max": 6
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "description": "Create the initial forager population.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "forager-plot",
+        "function_name": "plot_agents",
+        "function_file": "",
+        "parameters": {
+          "prefix": "foragers"
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "description": "Plot initialized forager positions.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "forager-place",
+      "forager-plot"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "place_foragers",
+      "plot_agents"
+    ]
+  }
+}

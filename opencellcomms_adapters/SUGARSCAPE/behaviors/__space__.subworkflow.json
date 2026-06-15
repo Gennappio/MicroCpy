@@ -1,0 +1,78 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "__space__",
+  "kind": "space",
+  "description": "Space canvas: build the toroidal Sugarscape grid.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "Space canvas: build the toroidal Sugarscape grid.",
+    "enabled": true,
+    "deletable": false,
+    "controller": {
+      "id": "controller-__space__",
+      "type": "initNode",
+      "label": "SPACE CONTROLLER",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "space-setup",
+        "function_name": "setup_space",
+        "function_file": "",
+        "parameters": {
+          "size_x": 50,
+          "size_y": 50,
+          "tile_size": 1.0,
+          "topology_x": "toroidal",
+          "topology_y": "toroidal",
+          "seed": 42
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "description": "Create the toroidal tile-grid world.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "space-plot",
+        "function_name": "plot_space",
+        "function_file": "",
+        "parameters": {
+          "prefix": "space"
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "description": "Plot the computational space and allowed cells.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "space-setup",
+      "space-plot"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "plot_space",
+      "setup_space"
+    ]
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "forager_step",
+  "kind": "agent_behavior",
+  "description": "Forager step behavior, run per agent through the scheduler ask.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "Forager step behavior, run per agent through the scheduler ask.",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-forager_step",
+      "type": "initNode",
+      "label": "FORAGER STEP",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "forager-move",
+        "function_name": "move_to_best_sugar",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "description": "Move toward the best visible sugar tile.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "forager-eat",
+        "function_name": "eat_sugar",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "description": "Eat all sugar on the current tile.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "forager-metabolize",
+        "function_name": "metabolize",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "description": "Burn sugar and mark the forager dead when depleted.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "forager-move",
+      "forager-eat",
+      "forager-metabolize"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "eat_sugar",
+      "metabolize",
+      "move_to_best_sugar"
+    ]
+  }
+}
