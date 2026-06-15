@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "environment_init",
   "kind": "env_init",
+  "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
     "controller": {
@@ -144,7 +147,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_size_x",
-        "label": "Size X (μm)",
+        "label": "Size X (\u03bcm)",
         "parameters": {
           "size_x": 1500
         },
@@ -155,7 +158,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_size_y",
-        "label": "Size Y (μm)",
+        "label": "Size Y (\u03bcm)",
         "parameters": {
           "size_y": 1500
         },
@@ -188,7 +191,7 @@
       },
       {
         "id": "envinit-Setup_simulation-param_domain_cell_height",
-        "label": "Cell Height (μm)",
+        "label": "Cell Height (\u03bcm)",
         "parameters": {
           "cell_height": 20
         },
@@ -288,6 +291,16 @@
       "envinit-Setup_population-setup_pop",
       "envinit-Setup_substances-setup_all_substances",
       "envinit-Setup_associations-setup_all_associations"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "setup_associations",
+      "setup_domain",
+      "setup_population",
+      "setup_simulation",
+      "setup_substances"
     ]
   }
 }

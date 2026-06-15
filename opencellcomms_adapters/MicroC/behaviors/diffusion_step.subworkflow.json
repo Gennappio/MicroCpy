@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "diffusion_step",
   "kind": "env_behavior",
+  "description": "MicroC: diffusion_step",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: diffusion_step",
     "controller": {
@@ -97,7 +100,7 @@
       },
       {
         "id": "diffusion_step-param_relaxation_factor",
-        "label": "Relaxation Factor (α)",
+        "label": "Relaxation Factor (\u03b1)",
         "parameters": {
           "relaxation_factor": 0.7
         },
@@ -109,6 +112,12 @@
     ],
     "execution_order": [
       "diffusion_step-run_diffusion_coupled"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "run_diffusion_solver_coupled"
     ]
   }
 }

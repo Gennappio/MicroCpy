@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "division",
-  "kind": "agent_behavior",
+  "kind": "env_behavior",
+  "description": "MicroC: division",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: division",
     "controller": {
@@ -38,6 +41,13 @@
     "execution_order": [
       "division-cell_division",
       "division-remove_apoptotic"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "remove_apoptotic_cells",
+      "update_cell_division"
     ]
   }
 }

@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "iteration_plots",
   "kind": "env_behavior",
+  "description": "MicroC: iteration_plots",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: iteration_plots",
     "controller": {
@@ -32,6 +35,12 @@
     ],
     "execution_order": [
       "iteration_plots-gen_loop_plots"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "generate_iteration_plots"
     ]
   }
 }

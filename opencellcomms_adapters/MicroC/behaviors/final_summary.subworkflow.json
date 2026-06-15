@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "final_summary",
   "kind": "processing_behavior",
+  "description": "MicroC: final_summary",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: final_summary",
     "controller": {
@@ -31,6 +34,12 @@
     ],
     "execution_order": [
       "final_summary-gen_final_plots"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "generate_summary_plots"
     ]
   }
 }

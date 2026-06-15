@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "fate_update",
-  "kind": "agent_behavior",
+  "kind": "env_behavior",
+  "description": "MicroC: fate_update",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: fate_update",
     "controller": {
@@ -103,6 +106,15 @@
       "fate_update-mark_growth_arrest",
       "fate_update-mark_apoptotic",
       "fate_update-mark_proliferating"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "mark_apoptotic_cells",
+      "mark_growth_arrest_cells",
+      "mark_necrotic_cells",
+      "mark_proliferating_cells"
     ]
   }
 }

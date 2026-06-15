@@ -11,17 +11,16 @@
         {
           "name": "tumor_cell",
           "init_subworkflow": "tumor_cell_init",
-          "behavior_subworkflows": [
-            "gene_update",
-            "fate_update",
-            "division"
-          ]
+          "behavior_subworkflows": []
         }
       ],
       "environment": {
         "init_subworkflow": "environment_init",
         "behavior_subworkflows": [
           "diffusion_step",
+          "gene_update",
+          "fate_update",
+          "division",
           "iteration_plots"
         ]
       },
@@ -37,6 +36,10 @@
       "user_functions": [],
       "init_sequence": {
         "subworkflow": "__init_sequence__"
+      },
+      "resource_kinds": [],
+      "space": {
+        "subworkflow": null
       }
     }
   },
@@ -183,7 +186,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_x",
-          "label": "Size X (μm)",
+          "label": "Size X (\u03bcm)",
           "parameters": {
             "size_x": 1500
           },
@@ -194,7 +197,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_y",
-          "label": "Size Y (μm)",
+          "label": "Size Y (\u03bcm)",
           "parameters": {
             "size_y": 1500
           },
@@ -227,7 +230,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_cell_height",
-          "label": "Cell Height (μm)",
+          "label": "Cell Height (\u03bcm)",
           "parameters": {
             "cell_height": 20
           },
@@ -481,7 +484,7 @@
         },
         {
           "id": "diffusion_step-param_relaxation_factor",
-          "label": "Relaxation Factor (α)",
+          "label": "Relaxation Factor (\u03b1)",
           "parameters": {
             "relaxation_factor": 0.7
           },
@@ -547,7 +550,7 @@
             "x": 400,
             "y": 100
           },
-          "description": "Translate substance concentrations → gene input states via associations"
+          "description": "Translate substance concentrations \u2192 gene input states via associations"
         },
         {
           "id": "gene_update-propagate_genes_netlogo",
@@ -773,7 +776,11 @@
             "x": 400,
             "y": 120
           },
-          "description": "diffusion_step"
+          "description": "diffusion_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "sched-call-gene_update",
@@ -783,7 +790,11 @@
             "x": 400,
             "y": 230
           },
-          "description": "gene_update"
+          "description": "gene_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "sched-call-fate_update",
@@ -793,7 +804,11 @@
             "x": 400,
             "y": 340
           },
-          "description": "fate_update"
+          "description": "fate_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "sched-call-division",
@@ -803,7 +818,11 @@
             "x": 400,
             "y": 450
           },
-          "description": "division"
+          "description": "division",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "sched-call-iteration_plots",
@@ -813,7 +832,11 @@
             "x": 400,
             "y": 560
           },
-          "description": "iteration_plots"
+          "description": "iteration_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         }
       ],
       "parameters": [
@@ -839,7 +862,7 @@
       ]
     },
     "main": {
-      "description": "Synthesized main composer (do not edit — managed by ABM structure)",
+      "description": "Synthesized main composer (do not edit \u2014 managed by ABM structure)",
       "deletable": false,
       "controller": {
         "id": "controller-main",
@@ -860,7 +883,11 @@
             "x": 400,
             "y": 200
           },
-          "description": "Initialization sequence"
+          "description": "Initialization sequence",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "main-call-__scheduler__",
@@ -871,7 +898,10 @@
             "x": 400,
             "y": 320
           },
-          "description": "Main simulation loop"
+          "description": "Main simulation loop",
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "main-call-final_summary",
@@ -881,7 +911,11 @@
             "x": 400,
             "y": 440
           },
-          "description": "Processing: final_summary"
+          "description": "Processing: final_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         }
       ],
       "execution_order": [
@@ -891,7 +925,7 @@
       ]
     },
     "__init_sequence__": {
-      "description": "Initialization order — env init + agent inits",
+      "description": "Initialization order \u2014 env init + agent inits",
       "deletable": false,
       "controller": {
         "id": "controller-__init_sequence__",
@@ -912,7 +946,11 @@
             "x": 400,
             "y": 100
           },
-          "description": "environment_init"
+          "description": "environment_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         },
         {
           "id": "init-call-tumor_cell_init",
@@ -922,7 +960,11 @@
             "x": 400,
             "y": 220
           },
-          "description": "tumor_cell_init"
+          "description": "tumor_cell_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
         }
       ],
       "execution_order": [

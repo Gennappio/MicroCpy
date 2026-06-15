@@ -1,7 +1,10 @@
 {
   "format": "subworkflow",
+  "version": "1.0",
   "name": "tumor_cell_init",
   "kind": "agent_init",
+  "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+  "exported_from": "MicroC",
   "subworkflow": {
     "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
     "controller": {
@@ -57,6 +60,13 @@
     "execution_order": [
       "agentinit-Setup_population-read_checkpoint",
       "agentinit-Init_gene_networks-init_netlogo_gn"
+    ]
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "initialize_netlogo_gene_networks",
+      "read_checkpoint"
     ]
   }
 }
