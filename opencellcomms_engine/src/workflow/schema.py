@@ -291,9 +291,10 @@ class SubWorkflowCall:
     description: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
     context_mapping: Dict[str, str] = field(default_factory=dict)
-    # Per-agent "ask": when set, the called sub-workflow runs once per agent of
-    # `kind` (in activation `order`) instead of `iterations` times.
-    # Shape: {"kind": "<agent kind>", "order": "random" | "sequential"}.
+    # Entity iteration for ABM scheduler calls. Agent behaviours run once per
+    # agent of `kind`; resource behaviours run for the named resource kind.
+    # Old agent shape {"kind": "...", "order": "..."} is still accepted.
+    # Shape: {"type": "agent"|"resource", "kind": "...", "order": "random"|"sequential"}.
     for_each: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1160,4 +1161,3 @@ class WorkflowDefinition:
                     )
 
         return warnings
-

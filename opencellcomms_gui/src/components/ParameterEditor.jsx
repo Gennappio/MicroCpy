@@ -4,6 +4,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
+import { KINDS } from '../store/subworkflowKinds';
 import './ParameterEditor.css';
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -37,6 +38,32 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const isFunctionNode = !isParameterNode && !isListParameterNode && !isDictParameterNode && !isSubWorkflowCall;
   const functionMetadata = isFunctionNode ? getFunction(node.data.functionName) : null;
 
+  const getBehaviorForEach = (behaviorName) => {
+    const gui = workflow.metadata?.gui || {};
+    const agentKind = (gui.agent_kinds || []).find((k) =>
+      (k.behavior_subworkflows || []).includes(behaviorName)
+    );
+    if (agentKind) return { type: 'agent', kind: agentKind.name, order: 'random' };
+
+    const resourceKind = (gui.resource_kinds || []).find((k) =>
+      (k.behavior_subworkflows || []).includes(behaviorName)
+    );
+    if (resourceKind) return { type: 'resource', kind: resourceKind.name };
+
+    return null;
+  };
+
+  const describeBehaviorExecution = (behaviorName) => {
+    const forEach = getBehaviorForEach(behaviorName);
+    if (forEach?.type === 'agent') {
+      return `Runs once for each ${forEach.kind} agent.`;
+    }
+    if (forEach?.type === 'resource') {
+      return `Runs for resource ${forEach.kind}.`;
+    }
+    return 'Runs once when scheduled.';
+  };
+
   const [parameters, setParameters] = useState(node.data.parameters || {});
   const [customName, setCustomName] = useState(node.data.customName || node.data.label || '');
   const [functionName, setFunctionName] = useState(node.data.functionName || '');
@@ -48,10 +75,14 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const [subworkflowName, setSubworkflowName] = useState(node.data.subworkflowName || '');
   const [iterations, setIterations] = useState(node.data.iterations || 1);
   const [results, setResults] = useState(node.data.results || '');
-  // Per-agent "ask": run the called sub-workflow once per agent of a kind.
-  // forEachKind === '' means the normal iterations path.
-  const [forEachKind, setForEachKind] = useState(node.data.forEach?.kind || '');
-  const [forEachOrder, setForEachOrder] = useState(node.data.forEach?.order || 'random');
+  const subworkflowKinds = workflow.metadata?.gui?.subworkflow_kinds || {};
+  const targetKind = isSubWorkflowCall ? subworkflowKinds[subworkflowName] : null;
+  const isBehaviorCall = [
+    KINDS.AGENT_BEHAVIOR,
+    KINDS.RESOURCE_BEHAVIOR,
+    KINDS.ENV_BEHAVIOR,
+    KINDS.PROCESSING_BEHAVIOR,
+  ].includes(targetKind);
 
   // List parameter node state
   const [listItems, setListItems] = useState(node.data.items || []);
@@ -250,8 +281,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     setStepCount(node.data.stepCount || 1);
     setSubworkflowName(node.data.subworkflowName || '');
     setIterations(node.data.iterations || 1);
-    setForEachKind(node.data.forEach?.kind || '');
-    setForEachOrder(node.data.forEach?.order || 'random');
     setResults(node.data.results || '');
     // List node state
     setListItems(node.data.items || []);
@@ -457,14 +486,13 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       // For dict nodes, save entries and label
       onSave({ entries: dictEntries }, customName);
     } else if (isSubWorkflowCall) {
-      // For sub-workflow calls, save all properties. forEachKind set → per-agent
-      // "ask" (runs once per agent of that kind); empty → normal iterations.
+      const behaviorForEach = getBehaviorForEach(subworkflowName);
       onSave(parameters, customName, {
         subworkflowName,
         iterations,
         description,
         results,
-        forEach: forEachKind ? { kind: forEachKind, order: forEachOrder } : null,
+        forEach: isBehaviorCall ? behaviorForEach : null,
       });
     } else {
       // For standard functions, save parameters, custom name, and step_count
@@ -1029,42 +1057,14 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
                   )}
                 </div>
 
-                <div className="parameter-field">
-                  <label className="param-label">
-                    Run mode
-                  </label>
-                  <div className="param-description">
-                    Run the sub-workflow a fixed number of times, or once per agent
-                    of a kind (the per-agent “ask”).
-                  </div>
-                  <select
-                    value={forEachKind}
-                    onChange={(e) => setForEachKind(e.target.value)}
-                    className="param-input"
-                  >
-                    <option value="">Fixed iterations</option>
-                    {(workflow.metadata?.gui?.agent_kinds || []).map((k) => (
-                      <option key={k.name} value={k.name}>For each agent: {k.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {forEachKind ? (
+                {isBehaviorCall ? (
                   <div className="parameter-field">
                     <label className="param-label">
-                      Activation order
+                      Execution
                     </label>
                     <div className="param-description">
-                      Order agents are asked in each step
+                      {describeBehaviorExecution(subworkflowName)}
                     </div>
-                    <select
-                      value={forEachOrder}
-                      onChange={(e) => setForEachOrder(e.target.value)}
-                      className="param-input"
-                    >
-                      <option value="random">random (shuffled each step)</option>
-                      <option value="sequential">sequential</option>
-                    </select>
                   </div>
                 ) : (
                   <div className="parameter-field">
@@ -1346,4 +1346,3 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
 };
 
 export default ParameterEditor;
-

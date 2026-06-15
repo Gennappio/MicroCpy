@@ -28,6 +28,30 @@ const makeControllerNode = (name) => ({
   deletable: false,
 });
 
+const executionForBehavior = (gui, behaviorName) => {
+  const agentKind = (gui.agent_kinds || []).find((k) =>
+    (k.behavior_subworkflows || []).includes(behaviorName)
+  );
+  if (agentKind) {
+    return {
+      forEach: { type: 'agent', kind: agentKind.name, order: 'random' },
+      description: `Ask each ${agentKind.name}`,
+    };
+  }
+
+  const resourceKind = (gui.resource_kinds || []).find((k) =>
+    (k.behavior_subworkflows || []).includes(behaviorName)
+  );
+  if (resourceKind) {
+    return {
+      forEach: { type: 'resource', kind: resourceKind.name },
+      description: `Run for resource ${resourceKind.name}`,
+    };
+  }
+
+  return { forEach: null, description: behaviorName };
+};
+
 export const createAbmSlice = (set, get) => ({
 
   // ── Agent kinds ──────────────────────────────────────────────────────────
@@ -434,15 +458,17 @@ export const createAbmSlice = (set, get) => ({
       if (alreadyPresent) return state;
 
       const callId = `sched-call-${behaviorName}-${Date.now()}`;
+      const execution = executionForBehavior(state.workflow.metadata.gui, behaviorName);
       const newCall = {
         id: callId,
         type: 'subworkflow_call',
         subworkflow_name: behaviorName,
         iterations: 1,
+        ...(execution.forEach ? { for_each: execution.forEach } : {}),
         parameters: {},
         enabled: true,
         position: { x: 400, y: 100 + (scheduler.subworkflow_calls || []).length * 120 },
-        description: behaviorName,
+        description: execution.description,
         parameter_nodes: [],
       };
 
@@ -454,8 +480,9 @@ export const createAbmSlice = (set, get) => ({
           label: behaviorName,
           subworkflowName: behaviorName,
           iterations: 1,
+          forEach: execution.forEach,
           enabled: true,
-          description: behaviorName,
+          description: execution.description,
         },
       };
 

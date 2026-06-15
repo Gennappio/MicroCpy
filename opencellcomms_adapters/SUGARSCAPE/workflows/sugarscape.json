@@ -172,12 +172,30 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
+        },
+        {
+          "id": "space-plot",
+          "function_name": "plot_space",
+          "function_file": "",
+          "parameters": {
+            "prefix": "space"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Plot the computational space and allowed cells.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "space-setup"
+        "space-setup",
+        "space-plot"
       ],
       "input_parameters": []
     },
@@ -233,13 +251,32 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
+        },
+        {
+          "id": "sugar-plot",
+          "function_name": "plot_resources",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "sugar"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "Plot initialized sugar values.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
         "sugar-resource",
-        "sugar-seed"
+        "sugar-seed",
+        "sugar-plot"
       ],
       "input_parameters": []
     },
@@ -281,12 +318,30 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
+        },
+        {
+          "id": "forager-plot",
+          "function_name": "plot_agents",
+          "function_file": "",
+          "parameters": {
+            "prefix": "foragers"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Plot initialized forager positions.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "forager-place"
+        "forager-place",
+        "forager-plot"
       ],
       "input_parameters": []
     },
@@ -379,6 +434,7 @@
           "subworkflow_name": "forager_step",
           "iterations": 1,
           "for_each": {
+            "type": "agent",
             "kind": "forager",
             "order": "random"
           },
@@ -396,6 +452,10 @@
           "type": "subworkflow_call",
           "subworkflow_name": "sugar_growback",
           "iterations": 1,
+          "for_each": {
+            "type": "resource",
+            "kind": "sugar"
+          },
           "parameters": {},
           "enabled": true,
           "position": {

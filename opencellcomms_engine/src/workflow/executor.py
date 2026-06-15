@@ -614,14 +614,36 @@ class WorkflowExecutor:
             traceback.print_exc()
             return None
 
-    def _ask_per_agent(self, node, for_each: Dict[str, Any], context: Dict[str, Any],
-                       merged_params: Dict[str, Any]) -> Dict[str, Any]:
-        """Run a behaviour sub-workflow once per agent of a kind (the "ask").
+    def _run_for_each_entity(self, node, for_each: Dict[str, Any], context: Dict[str, Any],
+                             merged_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Run an ABM behaviour sub-workflow over its owning entity kind.
 
-        Binds the current agent in context['_current_agent'] so each inner node's
-        typed env exposes it as env.agent. Agents that died earlier this step are
-        skipped (cull happens in a separate phase).
+        Agent behaviours bind the current agent in context['_current_agent'] so
+        each inner node's typed env exposes it as env.agent. Resource behaviours
+        bind context['_current_resource'] and pass the resource name as the
+        default ``resource`` parameter for functions that accept it.
         """
+        entity_type = for_each.get('type', 'agent')
+
+        if entity_type == 'resource':
+            domain = context.get('domain')
+            if domain is None:
+                print(f"[WORKFLOW] for_each resource call '{node.subworkflow_name}' but no 'domain' in context — skipped")
+                return context
+
+            kind = for_each.get('kind')
+            resources = [domain.resource(kind)] if kind else domain.resources()
+            for resource in resources:
+                context['_current_resource'] = resource
+                context['_current_resource_kind'] = resource.name
+                params = {'resource': resource.name, **merged_params}
+                context = self.execute_subworkflow(
+                    node.subworkflow_name, context, iterations=1, parameters=params
+                )
+            context['_current_resource'] = None
+            context['_current_resource_kind'] = None
+            return context
+
         pop = context.get('abm_population')
         if pop is None:
             print(f"[WORKFLOW] for_each call '{node.subworkflow_name}' but no 'abm_population' in context — skipped")
@@ -776,11 +798,9 @@ class WorkflowExecutor:
 
                                 for_each = getattr(node, 'for_each', None)
                                 if for_each:
-                                    # Per-agent "ask": run the called sub-workflow once
-                                    # per agent of `kind`, in activation order, with the
-                                    # current agent bound in context (so each node's env
-                                    # sees env.agent).
-                                    context = self._ask_per_agent(node, for_each, context, merged_params)
+                                    # ABM entity iteration: run behaviour calls
+                                    # over their owning agents/resources.
+                                    context = self._run_for_each_entity(node, for_each, context, merged_params)
                                 else:
                                     # Get iterations (from parameters or default)
                                     call_iterations = merged_params.get('iterations', node.iterations)
@@ -1214,4 +1234,3 @@ class WorkflowContext:
     def to_dict(self) -> Dict[str, Any]:
         """Convert context to dictionary."""
         return self.data.copy()
-

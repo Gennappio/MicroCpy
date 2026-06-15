@@ -7,7 +7,9 @@ import { BEHAVIOR_KINDS, FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkf
 import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
-  [KINDS.SPACE]: ['setup_space', 'plot_space', 'plot_agents', 'plot_resources'],
+  [KINDS.SPACE]: ['setup_space', 'plot_space'],
+  [KINDS.AGENT_INIT]: ['plot_agents'],
+  [KINDS.RESOURCE_INIT]: ['plot_resources'],
 };
 
 /**

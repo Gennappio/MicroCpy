@@ -11,6 +11,20 @@ import pathUtils from '../pathUtils';
 import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
 import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
 
+const deriveForEachForBehavior = (gui, behaviorName) => {
+  const agentKind = (gui.agent_kinds || []).find((k) =>
+    (k.behavior_subworkflows || []).includes(behaviorName)
+  );
+  if (agentKind) return { type: 'agent', kind: agentKind.name, order: 'random' };
+
+  const resourceKind = (gui.resource_kinds || []).find((k) =>
+    (k.behavior_subworkflows || []).includes(behaviorName)
+  );
+  if (resourceKind) return { type: 'resource', kind: resourceKind.name };
+
+  return null;
+};
+
 /**
  * Creates the workflow I/O slice
  * @param {Function} set - Zustand set function
@@ -326,12 +340,18 @@ export const createWorkflowIOSlice = (set, get) => ({
     // these arrays/objects always exist and would otherwise crash on first edit.
     const guiMeta = (workflowJson.metadata && workflowJson.metadata.gui) || {};
     const rawEnv = (guiMeta.environment && typeof guiMeta.environment === 'object') ? guiMeta.environment : {};
+    const rawSpace = (guiMeta.space && typeof guiMeta.space === 'object') ? guiMeta.space : {};
     const rawSched = (guiMeta.scheduler && typeof guiMeta.scheduler === 'object') ? guiMeta.scheduler : {};
     const rawProc = (guiMeta.processing && typeof guiMeta.processing === 'object') ? guiMeta.processing : {};
     const agentKinds = (Array.isArray(guiMeta.agent_kinds) ? guiMeta.agent_kinds : []).map((k) => ({
       ...k,
       behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
     }));
+    const resourceKinds = (Array.isArray(guiMeta.resource_kinds) ? guiMeta.resource_kinds : []).map((k) => ({
+      ...k,
+      behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
+    }));
+    const space = { ...rawSpace, subworkflow: rawSpace.subworkflow || null };
     const environment = {
       ...rawEnv,
       init_subworkflow: rawEnv.init_subworkflow ?? null,
@@ -358,7 +378,9 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     if (initSeqIsEmpty) {
       const autoOrder = [];
+      if (space.subworkflow) autoOrder.push(space.subworkflow);
       if (environment.init_subworkflow) autoOrder.push(environment.init_subworkflow);
+      resourceKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
       agentKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
 
       const newCalls = autoOrder.map((name, i) => ({
@@ -450,7 +472,16 @@ export const createWorkflowIOSlice = (set, get) => ({
     }
 
     // Phase 14B: derive subworkflow_kinds from ABM metadata (never read from JSON).
-    const guiWithInitSeq = { ...guiMeta, init_sequence: initSeqMeta };
+    const guiWithInitSeq = {
+      ...guiMeta,
+      space,
+      init_sequence: initSeqMeta,
+      agent_kinds: agentKinds,
+      resource_kinds: resourceKinds,
+      environment,
+      scheduler,
+      processing,
+    };
     const subworkflowKinds = computeSubworkflowKinds({
       metadata: { gui: guiWithInitSeq },
       subworkflows,
@@ -480,6 +511,8 @@ export const createWorkflowIOSlice = (set, get) => ({
             ...guiMeta,
             subworkflow_kinds: subworkflowKinds,
             agent_kinds: agentKinds,
+            resource_kinds: resourceKinds,
+            space,
             environment,
             init_sequence: initSeqMeta,
             scheduler,
@@ -631,8 +664,9 @@ export const createWorkflowIOSlice = (set, get) => ({
           parameter_nodes: parameterConnections
         };
 
-        if (node.data.forEach) {
-          exportedCall.for_each = node.data.forEach;
+        const forEach = node.data.forEach || deriveForEachForBehavior(workflow.metadata?.gui || {}, node.data.subworkflowName);
+        if (forEach) {
+          exportedCall.for_each = forEach;
         }
 
         if (node.data.results && node.data.results.trim() !== '') {
@@ -724,6 +758,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     // Synthesize 'main' composer from ABM structure (if this is an ABM-style workflow)
     const guiMeta = workflow.metadata?.gui || {};
     const agentKinds = guiMeta.agent_kinds || [];
+    const resourceKinds = guiMeta.resource_kinds || [];
     const environment = guiMeta.environment || {};
     const processingMeta = guiMeta.processing || {};
     const schedulerMeta = guiMeta.scheduler || {};
@@ -731,7 +766,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     const schedulerName = schedulerMeta.subworkflow || '__scheduler__';
     const initSeqName = initSeqMeta.subworkflow || INIT_SEQUENCE_NAME;
 
-    const hasAbmContent = agentKinds.length > 0 || environment.init_subworkflow ||
+    const hasAbmContent = agentKinds.length > 0 || resourceKinds.length > 0 || environment.init_subworkflow ||
       (environment.behavior_subworkflows || []).length > 0 ||
       (processingMeta.behavior_subworkflows || []).length > 0 ||
       subworkflows[schedulerName];
@@ -897,19 +932,22 @@ export const createWorkflowIOSlice = (set, get) => ({
     // Build subworkflow_calls array from nodes
     const subworkflow_calls = nodes
       .filter(node => node.type === 'subworkflowCall')
-      .map(node => ({
-        id: node.id,
-        subworkflow_name: node.data.subworkflowName,
-        iterations: node.data.iterations || 1,
-        ...(node.data.forEach ? { for_each: node.data.forEach } : {}),
-        enabled: node.data.enabled !== false,
-        verbose: node.data.verbose || false,
-        description: node.data.description || '',
-        parameters: node.data.parameters || {},
-        context_mapping: node.data.contextMapping || {},
-        parameter_nodes: node.data.parameterNodes || [],
-        position: node.position
-      }));
+      .map((node) => {
+        const forEach = node.data.forEach || deriveForEachForBehavior(workflow.metadata?.gui || {}, node.data.subworkflowName);
+        return {
+          id: node.id,
+          subworkflow_name: node.data.subworkflowName,
+          iterations: node.data.iterations || 1,
+          ...(forEach ? { for_each: forEach } : {}),
+          enabled: node.data.enabled !== false,
+          verbose: node.data.verbose || false,
+          description: node.data.description || '',
+          parameters: node.data.parameters || {},
+          context_mapping: node.data.contextMapping || {},
+          parameter_nodes: node.data.parameterNodes || [],
+          position: node.position
+        };
+      });
 
     // Build parameters array from nodes
     const parameters = nodes

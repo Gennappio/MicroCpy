@@ -166,8 +166,11 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
       </div>
 
       {forEach?.kind ? (
-        <div className="node-iterations" title="Runs once per agent of this kind (per-agent ask)">
-          ↻ for each {forEach.kind} ({forEach.order || 'random'})
+        <div
+          className="node-iterations"
+          title={forEach.type === 'resource' ? 'Runs for this resource kind' : 'Runs once per agent of this kind'}
+        >
+          ↻ for each {forEach.kind}{forEach.type === 'agent' && forEach.order ? ` (${forEach.order})` : ''}
         </div>
       ) : (iterations && iterations > 1 && (
         <div className="node-iterations" title="Number of times this sub-workflow executes">
@@ -191,4 +194,3 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
 };
 
 export default SubWorkflowCallNode;
-

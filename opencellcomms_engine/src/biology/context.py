@@ -516,6 +516,11 @@ class BiologicalContext:
         return domain.resource(name)
 
     @property
+    def current_resource(self):
+        """The resource currently being stepped by a resource behaviour call."""
+        return self._ctx.get('_current_resource')
+
+    @property
     def agents(self):
         """All ABM agents (empty list if no ABM population is present)."""
         pop = self._ctx.get('abm_population')
