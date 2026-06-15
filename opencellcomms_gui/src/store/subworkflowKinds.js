@@ -59,9 +59,9 @@ export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.SUBWORKFLOW,
 ]);
 
-// Roles offered in the New Function dialog — the subset of function-hosting
-// kinds a biologist actually authors functions for. The chosen kind becomes the
-// function's folder (functions/<kind>/) so placement is self-describing.
+// Roles offered in the New Function dialog. These are v2 workflow roles, not
+// the old v1 execution stages. The chosen role becomes the function's folder
+// (functions/<role>/) so placement is self-describing.
 export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behaviour' },
@@ -72,10 +72,10 @@ export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Processing' },
 ];
 
-// Engine execution category derived from a role/kind. The category no longer
-// drives execution (the workflow graph does) — it only satisfies the
-// @register_function enum and is never shown to the user.
-export const KIND_TO_CATEGORY = {
+// Legacy registry category derived from a role/kind. This no longer drives
+// execution (the workflow graph does); it only satisfies the historical
+// @register_function enum while older registry consumers still expect it.
+export const ROLE_TO_COMPATIBILITY_CATEGORY = {
   [KINDS.AGENT_INIT]: 'INITIALIZATION',
   [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
   [KINDS.SPACE]: 'INITIALIZATION',
@@ -85,6 +85,10 @@ export const KIND_TO_CATEGORY = {
   [KINDS.ENV_BEHAVIOR]: 'DIFFUSION',
   [KINDS.PROCESSING_BEHAVIOR]: 'FINALIZATION',
 };
+
+// Backward-compatible export for older imports. Prefer
+// ROLE_TO_COMPATIBILITY_CATEGORY in new code.
+export const KIND_TO_CATEGORY = ROLE_TO_COMPATIBILITY_CATEGORY;
 
 export const variantForKind = (kind) => {
   switch (kind) {

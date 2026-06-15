@@ -35,7 +35,7 @@ Example:
     @register_function(
         display_name="My Function",
         description="Does something useful",
-        category="INTRACELLULAR",
+        category="INTRACELLULAR",  # legacy registry metadata; graph controls execution
         parameters=[{"name": "threshold", "type": "FLOAT", "default": 0.5}],
         inputs=["context"],
         outputs=[],
@@ -296,7 +296,7 @@ def register_function(
         @register_function(
             display_name="Advanced Metabolism",
             description="Sophisticated metabolism model with pH effects",
-            category="INTRACELLULAR",
+            category="INTRACELLULAR",  # legacy registry metadata
             parameters=[
                 {"name": "ph_sensitivity", "type": "FLOAT", "default": 0.1},
                 {"name": "temperature_effect", "type": "FLOAT", "default": 1.0}
@@ -310,7 +310,8 @@ def register_function(
     Args:
         display_name: Human-readable name for the GUI
         description: Description of what the function does
-        category: Function category (INITIALIZATION, INTRACELLULAR, DIFFUSION, INTERCELLULAR, FINALIZATION)
+        category: Legacy registry category. This is compatibility metadata for
+            older registry consumers; v2 execution is graph/subworkflow-driven.
         parameters: Optional list of parameter definitions (auto-inferred if not provided)
         inputs: Optional list of input names (auto-detected from signature if not provided)
         outputs: Optional list of output names
@@ -467,4 +468,3 @@ def merge_registries(manual_registry: FunctionRegistry, decorator_registry: Func
         merged.register(metadata)
 
     return merged
-

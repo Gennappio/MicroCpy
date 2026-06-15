@@ -10,7 +10,13 @@ from enum import Enum
 
 
 class FunctionCategory(Enum):
-    """Categories of workflow functions."""
+    """
+    Legacy registry categories for workflow functions.
+
+    These tags are compatibility metadata for the function registry. In v2
+    workflows, execution is determined by the graph/subworkflow structure, not
+    by this enum.
+    """
     INITIALIZATION = "initialization"
     INTRACELLULAR = "intracellular"
     DIFFUSION = "diffusion"

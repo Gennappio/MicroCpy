@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
-import { FUNCTION_ROLE_OPTIONS, KIND_TO_CATEGORY } from '../store/subworkflowKinds';
+import { FUNCTION_ROLE_OPTIONS, ROLE_TO_COMPATIBILITY_CATEGORY } from '../store/subworkflowKinds';
 import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
@@ -35,11 +35,11 @@ const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
  * is written later when the user clicks "Export Behavior".
  *
  * The function's home is a plugin (an opencellcomms_adapters/<name> package) and
- * its file path is *derived* from plugin + stage + name, so a scientist never
+ * its file path is *derived* from plugin + role + name, so a scientist never
  * types a raw path.
  *
  * Props:
- *   behaviorName   : current canvas (used to default the stage)
+ *   behaviorName   : current canvas (used to default the role)
  *   onCreate(def)  : invoked with { name, file_path, parameters, category,
  *                    requires, typed_env_exempt }
  *   onCancel
@@ -138,10 +138,9 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', onCreate, onCa
         name: name.trim(),
         file_path: derivedPath,
         parameters: coerced,
-        // The engine category is derived from the role and never shown — it only
-        // satisfies the @register_function enum; execution order comes from the
-        // workflow graph, not this tag.
-        category: KIND_TO_CATEGORY[role] || 'UTILITY',
+        // Compatibility category is legacy registry metadata. Execution order
+        // comes from the workflow graph, not this tag.
+        category: ROLE_TO_COMPATIBILITY_CATEGORY[role] || 'UTILITY',
         kind: role,
         // Exempt (setup) functions use the raw context dict, so capability
         // tokens don't apply.
@@ -222,7 +221,7 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', onCreate, onCa
             </select>
           )}
           <div className="nf-path-hint">
-            File: <code>{derivedPath || '…fill in name, stage, and plugin'}</code>
+            File: <code>{derivedPath || '…fill in name, role, and plugin'}</code>
             <br />
             Nothing is written until you click <em>Export Behavior</em> on the canvas.
           </div>

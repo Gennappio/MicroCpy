@@ -20,7 +20,8 @@ from src.biology.context import BiologicalContext
 @register_function(
     display_name="[Display Name for GUI]",
     description="[Description shown in GUI tooltip - be specific about what this does]",
-    category="INTRACELLULAR",  # Options: INITIALIZATION, INTRACELLULAR, DIFFUSION, INTERCELLULAR, FINALIZATION, UTILITY
+    # Legacy registry metadata only; v2 execution is controlled by the graph.
+    category="INTRACELLULAR",
     parameters=[
         {
             "name": "my_param",
@@ -130,4 +131,3 @@ def my_function_name(
 # [ ] Function is imported in src/workflow/registry.py
 # [ ] Function has been tested with a workflow JSON
 # ============================================================================
-

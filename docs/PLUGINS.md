@@ -25,19 +25,21 @@ opencellcomms_adapters/<plugin_name>/
 ├── __init__.py
 └── functions/
     ├── __init__.py
-    ├── initialization/<fn>.py       # one file = one function
-    ├── intracellular/<fn>.py
-    ├── intercellular/<fn>.py
-    ├── diffusion/<fn>.py
-    └── finalization/<fn>.py
+    ├── <model_role>/<fn>.py         # one file = one function
+    └── <model_role>/<fn>.py
 ```
 
 - **`plugin.toml`** — the manifest (see below). Gives the plugin an identity.
 - **`register.py`** — a list of imports; importing it runs each function's
   `@register_function` decorator, registering it. The engine imports this file
   automatically (see [Discovery](#discovery)).
-- **`functions/<stage>/<fn>.py`** — one function per file (so each is readable
-  and editable in the GUI). `<stage>` is the function's category.
+- **`functions/<model_role>/<fn>.py`** — one function per file (so each is
+  readable and editable in the GUI). Use folders that describe the model role,
+  such as `agent_behavior`, `resource_behavior`, `sugar`, or `forager`.
+
+Older plugins may still use folders such as `initialization`, `intracellular`,
+`intercellular`, `diffusion`, and `finalization`. Treat those as legacy registry
+categories, not as a required plugin taxonomy.
 
 The folder name must be a valid Python identifier (letters, digits, underscores;
 not starting with a digit). Names with other characters — e.g.
@@ -117,7 +119,7 @@ give the functions different names (e.g. `microc_mark_necrotic` vs
 |---|---|---|
 | **What** | Generic, reusable machinery: diffusion solvers, IO, kernel setup | A specific biological model / experiment |
 | **Examples** | `run_diffusion_solver`, `export_vtk` | hardcoded gene names, substance thresholds, model-specific fate rules |
-| **Registration** | Add to the category `__init__.py` (pulled in via `standard_functions.py`) | Add to the plugin's `register.py` (auto-discovered) |
+| **Registration** | Add to the appropriate core import path (pulled in via `standard_functions.py`) | Add to the plugin's `register.py` (auto-discovered) |
 | **Audience** | Engine developers | Biologists & biologist-developers |
 
 When in doubt, **make it a plugin**. Plugins are the path designed for sharing
@@ -131,7 +133,7 @@ and for the GUI.
 
 On a behaviour/init canvas: **Library → New Function**. In the dialog:
 
-1. Enter the function **name** and pick the **stage**.
+1. Enter the function **name** and pick the **role**.
 2. Under **Plugin**, pick an existing plugin or choose **➕ New plugin…** and
    type a name. The file path is *derived* for you — you never type a raw path.
 3. Declare what the function reads (capability checkboxes → `requires`), or tick
@@ -146,11 +148,13 @@ survives a restart.
 
 1. Create `opencellcomms_adapters/<name>/` with `__init__.py`, `register.py`, and
    a `plugin.toml`.
-2. Add function files under `functions/<stage>/`, using the typed `env` template
-   (see `opencellcomms_engine/src/workflow/functions/_TEMPLATE.py` and
+2. Add function files under a model-role folder such as
+   `functions/agent_behavior/`, `functions/resource_behavior/`, or a
+   domain-specific folder such as `functions/forager/`, using the typed `env`
+   template (see `opencellcomms_engine/src/workflow/functions/_TEMPLATE.py` and
    [docs/BIOLOGICAL_CONTEXT.md](BIOLOGICAL_CONTEXT.md)).
 3. Import each function in `register.py`:
-   `from opencellcomms_adapters.<name>.functions.<stage>.<fn> import <fn>`
+   `from opencellcomms_adapters.<name>.functions.<model_role>.<fn> import <fn>`
 4. Restart the backend — the plugin is discovered automatically.
 
 ---

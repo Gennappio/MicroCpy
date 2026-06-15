@@ -1049,7 +1049,7 @@ def scaffold_behavior_code():
 
     NEW request body (preferred):
         {
-            "file_path": "opencellcomms_adapters/jayatilake/functions/intracellular/cell_init.py",
+            "file_path": "opencellcomms_adapters/jayatilake/functions/agent_behavior/cell_init.py",
             "functions": [{"name": "evaluate_de_inputs", "parameters": [...]}, ...]
         }
 
@@ -1090,7 +1090,9 @@ def scaffold_behavior_code():
                              f'Got: {file_path}'
                 }), 400
 
-            # Derive category for the decorator (the parent folder name)
+            # Use the parent folder as the role/fallback decorator category.
+            # New plugins use role folders such as agent_behavior; older code
+            # may still pass registry-category folders such as intracellular.
             category = file_path.parent.name
             behavior_name = file_path.stem
         else:
@@ -1109,16 +1111,14 @@ def scaffold_behavior_code():
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Derive category constant name (e.g. intracellular → INTRACELLULAR).
-        # `category` comes from the parent folder name, which is only a valid
-        # FunctionCategory when the file lives under .../functions/<category>/.
-        # For flat layouts (e.g. opencellcomms_adapters/demo1/foo.py) the folder
-        # name is not a category and would make @register_function raise
-        # KeyError at import time, leaving the function unregistered. Fall back
-        # to a valid default so the scaffold always loads.
+        # Derive the legacy registry category constant. The folder name is only
+        # a valid FunctionCategory for old .../functions/<category>/ layouts.
+        # New role folders (agent_behavior, resource_behavior, etc.) rely on the
+        # per-function category sent by the GUI; otherwise fall back to a valid
+        # compatibility default so the scaffold always imports.
         VALID_CATEGORIES = {
             'INITIALIZATION', 'INTRACELLULAR', 'DIFFUSION',
-            'INTERCELLULAR', 'FINALIZATION', 'UTILITY',
+            'INTERCELLULAR', 'ENVIRONMENT', 'FINALIZATION', 'UTILITY',
         }
         category_const = category.upper()
         if category_const not in VALID_CATEGORIES:
@@ -1206,9 +1206,8 @@ from src.workflow.decorators import register_function
             # everything else uses the typed `env: BiologicalContext` API.
             exempt = bool(fn.get('typed_env_exempt'))
 
-            # Per-function category (stage) override, falling back to the
-            # folder-derived default so the decorator category matches the
-            # canvas stage the biologist picked.
+            # Per-function compatibility-category override, falling back to the
+            # folder-derived default for old category-folder layouts.
             fn_cat = (fn.get('category') or category).strip().upper()
             if fn_cat not in VALID_CATEGORIES:
                 fn_cat = category_const
@@ -2144,4 +2143,3 @@ if __name__ == '__main__':
     # and /api/logs across processes, so logs vanish). Sims still survive an
     # intentional restart; we just give up hot-reload on backend edits.
     app.run(host='0.0.0.0', port=5001, debug=True, threaded=True, use_reloader=False)
-
