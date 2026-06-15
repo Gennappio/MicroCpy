@@ -271,11 +271,9 @@ const WorkflowCanvas = ({ stage }) => {
   }, [edges, nodes, stage, setNodes]);
 
   // The scheduler must ALWAYS expose a non-deletable "Simulation Steps"
-  // parameter node wired to its controller's steps handle. The current GUI has
-  // no palette entry to create one, so if it were ever missing the user would
-  // have no way to add it back. Mirror the "ensure controller node" guarantee
-  // above: create it when absent. The effect above then derives the
-  // controller's step count from it. Deletion is blocked in onNodesChange.
+  // parameter node wired to its controller's steps handle. Treat the node and
+  // edge as separate invariants because tab remount/store sync can preserve the
+  // node while dropping only the edge.
   React.useEffect(() => {
     if (stage !== SCHEDULER_NAME) return;
     const controllerNode = nodes.find(
@@ -283,7 +281,7 @@ const WorkflowCanvas = ({ stage }) => {
     );
     if (!controllerNode) return;                      // wait until the controller exists
     const stepsId = `steps_param-${stage}`;
-    if (nodes.some((n) => n.id === stepsId)) return;  // already present → no-op
+    const existingStepsNode = nodes.find((n) => n.id === stepsId);
 
     const currentSteps =
       controllerNode.data?.connectedStepsValue ??
@@ -307,9 +305,25 @@ const WorkflowCanvas = ({ stage }) => {
       animated: false,
       style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
     };
-    setNodes((nds) => [...nds, stepsNode]);
-    setEdges((eds) => (eds.some((e) => e.id === stepsEdge.id) ? eds : [...eds, stepsEdge]));
-  }, [stage, nodes, setNodes, setEdges]);
+    const hasStepsEdge = edges.some(
+      (e) =>
+        e.source === stepsId &&
+        e.target === controllerNode.id &&
+        e.targetHandle === 'steps-param'
+    );
+
+    if (!existingStepsNode) {
+      const nextNodes = [...nodes, stepsNode];
+      setNodes(nextNodes);
+      setStageNodes(stage, nextNodes);
+    }
+
+    if (!hasStepsEdge) {
+      const nextEdges = [...edges, stepsEdge];
+      setEdges(nextEdges);
+      setStageEdges(stage, nextEdges);
+    }
+  }, [stage, nodes, edges, setNodes, setEdges, setStageNodes, setStageEdges]);
 
   const onConnect = useCallback(
     (params) => {
@@ -669,4 +683,3 @@ const WorkflowCanvas = ({ stage }) => {
 };
 
 export default WorkflowCanvas;
-
