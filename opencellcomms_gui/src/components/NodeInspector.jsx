@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Pin, PinOff, Info, Settings, Database, FileText, Image, Clock, CheckCircle, AlertCircle, AlertTriangle, Loader } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import { CONTRACT_PHASE_LABELS, formatContractList } from '../utils/contractUtils';
 import './NodeInspector.css';
 
 const API_BASE_URL = 'http://localhost:5001';
@@ -169,7 +170,15 @@ const NodeInspector = () => {
           </div>
         ) : (
           <>
-            {inspector.tab === 'overview' && <OverviewTab nodeData={nodeData} badgeStats={badgeStats} statusConfig={statusConfig} />}
+            {inspector.tab === 'overview' && (
+              <OverviewTab
+                nodeData={nodeData}
+                badgeStats={badgeStats}
+                statusConfig={statusConfig}
+                subworkflow={workflow.subworkflows?.[currentStage]}
+                subworkflowKind={subworkflowKind}
+              />
+            )}
             {inspector.tab === 'context' && <ContextTab context={context} loading={loading} />}
             {inspector.tab === 'logs' && <LogsTab events={events} loading={loading} />}
           </>
@@ -181,10 +190,12 @@ const NodeInspector = () => {
 
 // ===== Tab Components =====
 
-const OverviewTab = ({ nodeData, badgeStats, statusConfig }) => {
+const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkflowKind }) => {
   const status = badgeStats?.status || 'idle';
   const config = statusConfig[status] || statusConfig.idle;
   const StatusIcon = config.icon;
+  const nodeContract = nodeData?.contract;
+  const subworkflowContract = subworkflow?.contract;
 
   return (
     <div className="tab-overview">
@@ -209,6 +220,52 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig }) => {
           <span className="value">{nodeData?.enabled !== false ? 'Yes' : 'No'}</span>
         </div>
       </div>
+
+      {(nodeContract || subworkflowContract) && (
+        <div className="overview-section">
+          <h4>Contract</h4>
+          <div className="overview-row">
+            <span className="label">Canvas:</span>
+            <span className="value mono">{subworkflowKind || 'subworkflow'}</span>
+          </div>
+          {subworkflowContract && (
+            <>
+              <div className="overview-row">
+                <span className="label">Workflow phase:</span>
+                <span className="value">{CONTRACT_PHASE_LABELS[subworkflowContract.phase] || subworkflowContract.phase || 'Unspecified'}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Workflow reads:</span>
+                <span className="value mono">{formatContractList(subworkflowContract.reads)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Workflow writes:</span>
+                <span className="value mono">{formatContractList(subworkflowContract.writes)}</span>
+              </div>
+            </>
+          )}
+          {nodeContract && (
+            <>
+              <div className="overview-row">
+                <span className="label">Node phase:</span>
+                <span className="value">{CONTRACT_PHASE_LABELS[nodeContract.phase] || nodeContract.phase || 'Unspecified'}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Node reads:</span>
+                <span className="value mono">{formatContractList(nodeContract.reads)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Node writes:</span>
+                <span className="value mono">{formatContractList(nodeContract.writes)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Node emits:</span>
+                <span className="value mono">{formatContractList(nodeContract.emits)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {badgeStats && (
         <div className="overview-section">
@@ -441,4 +498,3 @@ const LogsTab = ({ events, loading }) => {
 };
 
 export default NodeInspector;
-

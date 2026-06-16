@@ -581,7 +581,8 @@ def get_registry():
                 'outputs': metadata.outputs,
                 'cloneable': metadata.cloneable,
                 'module_path': metadata.module_path,
-                'source_file': metadata.source_file
+                'source_file': metadata.source_file,
+                'contract': metadata.contract
             }
 
         return jsonify({

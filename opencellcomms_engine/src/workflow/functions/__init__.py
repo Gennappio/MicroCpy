@@ -20,6 +20,7 @@ from .finalization.print_simulation_summary import print_simulation_summary
 from .finalization.save_simulation_data import save_simulation_data
 from .finalization.export_final_state import export_final_state
 from .finalization.collect_statistics import collect_statistics
+from .reconciliation.apply_reconciliation import apply_reconciliation
 
 __all__ = [
     # Diffusion
@@ -31,5 +32,6 @@ __all__ = [
     'save_simulation_data',
     'export_final_state',
     'collect_statistics',
+    # Reconciliation
+    'apply_reconciliation',
 ]
-

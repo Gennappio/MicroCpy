@@ -54,6 +54,7 @@ export async function fetchRegistry() {
             cloneable: func.cloneable,
             source_file: func.source_file,
             module_path: func.module_path,
+            contract: func.contract || null,
           };
         }
 

@@ -485,6 +485,7 @@ const WorkflowCanvas = ({ stage }) => {
             enabled: true,
             description: droppedData.description,
             functionFile: defaultParams.function_file || '',
+            contract: droppedData.contract || null,
             onEdit: () => {
               setSelectedNode(newNode);
               setShowParameterEditor(true);

@@ -243,6 +243,16 @@
   box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
 }
 
+.function-item.contract-mismatch {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.function-item.contract-mismatch:hover {
+  border-color: #d97706;
+  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.16);
+}
+
 .function-item:active {
   cursor: grabbing;
 }
@@ -265,6 +275,46 @@
   font-size: 10px;
   color: #9ca3af;
   font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.contract-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.contract-badge.match {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.contract-badge.inferred,
+.contract-badge.neutral {
+  color: #075985;
+  background: #e0f2fe;
+}
+
+.contract-badge.warn,
+.contract-badge.mismatch {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.contract-badge.unknown {
+  color: #475569;
+  background: #f1f5f9;
 }
 
 .function-item-file {

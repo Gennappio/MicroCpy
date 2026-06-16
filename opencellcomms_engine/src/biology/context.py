@@ -534,6 +534,65 @@ class BiologicalContext:
     def set_agent(self, agent) -> None:
         self._ctx['_current_agent'] = agent
 
+    # --- Intent queue --------------------------------------------------------
+
+    @property
+    def intents(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Pending model-change requests for the reconciliation phase."""
+        return self._ctx.setdefault('_intents', {})
+
+    def emit_intent(self, kind: str, **payload: Any) -> None:
+        """Append a typed intent without committing shared state immediately."""
+        self.intents.setdefault(kind, []).append(payload)
+
+    def request_move(self, agent_id: Optional[str] = None, target: Optional[Position] = None, **payload: Any) -> None:
+        agent = self.agent
+        resolved_agent_id = agent_id or (agent.id if agent is not None else None)
+        if resolved_agent_id is None:
+            raise ValueError("request_move needs agent_id or a current env.agent")
+        if target is None:
+            raise ValueError("request_move needs a target position")
+        self.emit_intent('move', agent_id=resolved_agent_id, target=target, **payload)
+
+    def request_remove_agent(self, agent_id: Optional[str] = None, reason: str = "", **payload: Any) -> None:
+        agent = self.agent
+        resolved_agent_id = agent_id or (agent.id if agent is not None else None)
+        if resolved_agent_id is None:
+            raise ValueError("request_remove_agent needs agent_id or a current env.agent")
+        self.emit_intent('remove_agent', agent_id=resolved_agent_id, reason=reason, **payload)
+
+    def request_add_agent(self, kind: Optional[str] = None, position: Optional[Position] = None, state: Optional[Dict[str, Any]] = None, **payload: Any) -> None:
+        if position is None:
+            raise ValueError("request_add_agent needs a position")
+        self.emit_intent('add_agent', kind=kind, position=position, state=state or {}, **payload)
+
+    def request_resource_delta(self, resource: str, amount: float, position: Optional[Position] = None, **payload: Any) -> None:
+        agent = self.agent
+        resolved_position = position if position is not None else (agent.position if agent is not None else None)
+        if resolved_position is None:
+            raise ValueError("request_resource_delta needs position or a current env.agent")
+        self.emit_intent('resource_delta', resource=resource, amount=float(amount), position=resolved_position, **payload)
+
+    def request_consume_resource(self, resource: str, amount: Optional[float] = None, agent_id: Optional[str] = None,
+                                 position: Optional[Position] = None, store_as: Optional[str] = None, **payload: Any) -> None:
+        agent = self.agent
+        resolved_agent_id = agent_id or (agent.id if agent is not None else None)
+        resolved_position = position if position is not None else (agent.position if agent is not None else None)
+        if resolved_agent_id is None or resolved_position is None:
+            raise ValueError("request_consume_resource needs an agent and a position")
+        self.emit_intent(
+            'consume_resource',
+            resource=resource,
+            amount=amount,
+            agent_id=resolved_agent_id,
+            position=resolved_position,
+            store_as=store_as or resource,
+            **payload
+        )
+
+    def clear_intents(self) -> None:
+        self._ctx['_intents'] = {}
+
     @property
     def kind(self):
         """The agent kind currently being set up / stepped, else None."""

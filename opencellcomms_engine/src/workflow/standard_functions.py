@@ -37,6 +37,9 @@ from src.workflow.functions.finalization import (
     collect_statistics,
     export_final_state,
 )
+from src.workflow.functions.reconciliation import (
+    apply_reconciliation,
+)
 
 from src.workflow.functions.output.export_csv import (
     export_csv_checkpoint,
@@ -591,4 +594,3 @@ def save_simulation_data(
 # Import modules that contain decorated functions to trigger decorator execution
 # This ensures decorator-based registrations are added to the registry
 # Custom experiment functions can be imported here or via workflow configuration
-

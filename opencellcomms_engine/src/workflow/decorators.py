@@ -287,6 +287,7 @@ def register_function(
     compatible_kernels: Optional[List[str]] = None,
     requires: Optional[List[str]] = None,
     operates_on: Optional[List[str]] = None,
+    contract: Optional[Dict[str, Any]] = None,
     typed_env_exempt: bool = False
 ) -> Callable:
     """
@@ -328,6 +329,9 @@ def register_function(
             (e.g. "population", "simulator", "gene_networks"). Reserved ontology
             tokens use the form "substance:<name>", "gene:<name>",
             "phenotype:<name>". None/[] means the function runs under any kernel.
+        contract: Optional read/write/phase contract used by the GUI and workflow
+            validator. This is warning-mode metadata; it does not change runtime
+            permissions yet.
 
     Returns:
         Decorated function with registration metadata
@@ -406,7 +410,8 @@ def register_function(
             source_file=source_file,
             compatible_kernels=compatible_kernels,
             requires=requires,
-            operates_on=operates_on
+            operates_on=operates_on,
+            contract=contract
         )
 
         # Detect silent function-name collisions. Re-registering the same name

@@ -4,6 +4,7 @@ import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
 import { BEHAVIOR_KINDS, FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
+import { compatibilityForContract, contractForFunction } from '../utils/contractUtils';
 import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
@@ -243,6 +244,9 @@ const FunctionPalette = ({ currentStage }) => {
       ? (userFn?.parameters || [])
       : (meta?.parameters || []);
     const paramCount = paramList.length;
+    const contract = contractForFunction(meta, userFn, currentKind);
+    const compatibility = compatibilityForContract(contract, currentKind);
+    const isMismatch = compatibility.level === 'mismatch';
 
     // Draggable payload — even staged functions can be dragged onto the canvas.
     // The function_name + parameters travel with the drag.
@@ -254,19 +258,21 @@ const FunctionPalette = ({ currentStage }) => {
       displayName: meta?.displayName || name,
       description,
       category: meta?.category,
+      contract,
       parameters: paramList.reduce((acc, p) => { acc[p.name] = p.default; return acc; }, {}),
     };
 
     // Draggable as long as we have either backend metadata OR a staged spec
     const draggable = !!meta || isStaged;
-    const title = isStaged
+    const baseTitle = isStaged
       ? '✱ unsaved — drag onto canvas, then click Export Behavior to write the file'
       : (!meta ? 'Not loaded in backend registry yet — restart backend or open the originating workflow' : '');
+    const title = [baseTitle, compatibility.reason].filter(Boolean).join('\n');
 
     return (
       <div
         key={`${source || 'lib'}-${name}`}
-        className={`function-item ${!meta && !isStaged ? 'unloaded' : ''} ${isStaged ? 'unsaved' : ''}`}
+        className={`function-item ${!meta && !isStaged ? 'unloaded' : ''} ${isStaged ? 'unsaved' : ''} contract-${compatibility.level}`}
         draggable={draggable}
         title={title}
         onDragStart={draggable ? (e) => onDragStart(e, payload) : undefined}
@@ -278,6 +284,11 @@ const FunctionPalette = ({ currentStage }) => {
         <div className="function-item-description">{description}</div>
         <div className="function-item-params">
           {paramCount} parameter{paramCount !== 1 ? 's' : ''}
+          {isBehaviorCanvas && (
+            <span className={`contract-badge ${isMismatch ? 'warn' : compatibility.level}`}>
+              {compatibility.label}
+            </span>
+          )}
         </div>
       </div>
     );
