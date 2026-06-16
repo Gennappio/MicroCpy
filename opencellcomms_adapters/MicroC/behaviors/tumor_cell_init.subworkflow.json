@@ -28,7 +28,19 @@
         "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
         "parameter_nodes": [
           "agentinit-Setup_population-param_checkpoint_file"
-        ]
+        ],
+        "contract": {
+          "phase": "initialization",
+          "reads": [
+            "checkpoint",
+            "agent.collection"
+          ],
+          "writes": [
+            "agent.collection",
+            "agent.self.gene_states"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "agentinit-Init_gene_networks-init_netlogo_gn",
@@ -41,7 +53,19 @@
           "x": 400,
           "y": 300
         },
-        "description": "Initialize NetLogo-faithful gene networks for all cells"
+        "description": "Initialize NetLogo-faithful gene networks for all cells",
+        "contract": {
+          "phase": "initialization",
+          "reads": [
+            "agent.collection",
+            "gene_network.definition"
+          ],
+          "writes": [
+            "gene_networks",
+            "agent.self.gene_states"
+          ],
+          "emits": []
+        }
       }
     ],
     "parameters": [
@@ -60,7 +84,25 @@
     "execution_order": [
       "agentinit-Setup_population-read_checkpoint",
       "agentinit-Init_gene_networks-init_netlogo_gn"
-    ]
+    ],
+    "contract": {
+      "phase": "initialization",
+      "owner": {
+        "type": "agent",
+        "kind": "tumor_cell"
+      },
+      "reads": [
+        "checkpoint",
+        "simulation.config",
+        "agent.collection"
+      ],
+      "writes": [
+        "agent.collection",
+        "agent.self.gene_states",
+        "gene_networks"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],

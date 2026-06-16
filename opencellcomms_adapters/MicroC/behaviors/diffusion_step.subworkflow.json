@@ -39,7 +39,34 @@
           "diffusion_step-param_max_coupling_iterations",
           "diffusion_step-param_coupling_tolerance",
           "diffusion_step-param_relaxation_factor"
-        ]
+        ],
+        "contract": {
+          "phase": "coupling",
+          "participants": [
+            {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            {
+              "type": "resource"
+            },
+            {
+              "type": "space"
+            }
+          ],
+          "reads": [
+            "agent.collection",
+            "resource.collection",
+            "resource.fields",
+            "space.self",
+            "simulation.config"
+          ],
+          "writes": [
+            "resource.fields",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       }
     ],
     "parameters": [
@@ -112,7 +139,34 @@
     ],
     "execution_order": [
       "diffusion_step-run_diffusion_coupled"
-    ]
+    ],
+    "contract": {
+      "phase": "coupling",
+      "participants": [
+        {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        {
+          "type": "resource"
+        },
+        {
+          "type": "space"
+        }
+      ],
+      "reads": [
+        "agent.collection",
+        "resource.collection",
+        "resource.fields",
+        "space.self",
+        "simulation.config"
+      ],
+      "writes": [
+        "resource.fields",
+        "simulation.results"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],

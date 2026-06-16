@@ -26,7 +26,21 @@
           "y": 100
         },
         "description": "Handle cell division for proliferating cells",
-        "custom_name": "update_cell_division"
+        "custom_name": "update_cell_division",
+        "contract": {
+          "phase": "reconciliation",
+          "reads": [
+            "agent.collection",
+            "agent.self.phenotype",
+            "gene_networks",
+            "space.self"
+          ],
+          "writes": [
+            "agent.collection",
+            "gene_networks"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "division-remove_apoptotic",
@@ -35,13 +49,43 @@
           "x": 400,
           "y": 200
         },
-        "description": "Remove cells with Apoptosis phenotype from population"
+        "description": "Remove cells with Apoptosis phenotype from population",
+        "contract": {
+          "phase": "reconciliation",
+          "reads": [
+            "agent.collection",
+            "agent.self.phenotype",
+            "gene_networks"
+          ],
+          "writes": [
+            "agent.collection",
+            "gene_networks",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       }
     ],
     "execution_order": [
       "division-cell_division",
       "division-remove_apoptotic"
-    ]
+    ],
+    "contract": {
+      "phase": "reconciliation",
+      "reads": [
+        "agent.collection",
+        "agent.self.phenotype",
+        "gene_networks",
+        "space.self"
+      ],
+      "writes": [
+        "agent.collection",
+        "gene_networks",
+        "simulation.results"
+      ],
+      "consumes": [],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],

@@ -29,12 +29,34 @@
           "x": 400,
           "y": 100
         },
-        "description": "Generate final state visualization"
+        "description": "Generate final state visualization",
+        "contract": {
+          "phase": "reporting",
+          "reads": [
+            "agent.collection",
+            "resource.fields",
+            "space.self",
+            "simulation.results"
+          ],
+          "writes": [],
+          "emits": []
+        }
       }
     ],
     "execution_order": [
       "final_summary-gen_final_plots"
-    ]
+    ],
+    "contract": {
+      "phase": "reporting",
+      "reads": [
+        "agent.collection",
+        "resource.fields",
+        "space.self",
+        "simulation.results"
+      ],
+      "writes": [],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],

@@ -28,7 +28,28 @@
         "description": "Mark cells as necrotic based on user-defined conditions",
         "parameter_nodes": [
           "fate_update-param_necrosis_params"
-        ]
+        ],
+        "contract": {
+          "phase": "coupling",
+          "participants": [
+            {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            {
+              "type": "resource"
+            }
+          ],
+          "reads": [
+            "agent.collection",
+            "resource.fields"
+          ],
+          "writes": [
+            "agent.self.phenotype",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "fate_update-mark_growth_arrest",
@@ -40,7 +61,23 @@
         "description": "Track cells in Growth_Arrest state with time limit",
         "parameter_nodes": [
           "fate_update-param_max_growth_arrest_steps"
-        ]
+        ],
+        "contract": {
+          "phase": "agent_behavior",
+          "owner": {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          "reads": [
+            "agent.self.gene_states",
+            "gene_networks"
+          ],
+          "writes": [
+            "agent.self.phenotype",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "fate_update-mark_apoptotic",
@@ -49,7 +86,23 @@
           "x": 400,
           "y": 300
         },
-        "description": "Mark cells as apoptotic based on gene network Apoptosis output"
+        "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+        "contract": {
+          "phase": "agent_behavior",
+          "owner": {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          "reads": [
+            "agent.self.gene_states",
+            "gene_networks"
+          ],
+          "writes": [
+            "agent.self.phenotype",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "fate_update-mark_proliferating",
@@ -58,7 +111,23 @@
           "x": 400,
           "y": 400
         },
-        "description": "Mark cells as Proliferation or Quiescence based on gene network"
+        "description": "Mark cells as Proliferation or Quiescence based on gene network",
+        "contract": {
+          "phase": "agent_behavior",
+          "owner": {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          "reads": [
+            "agent.self.gene_states",
+            "gene_networks"
+          ],
+          "writes": [
+            "agent.self.phenotype",
+            "simulation.results"
+          ],
+          "emits": []
+        }
       }
     ],
     "parameters": [
@@ -106,7 +175,30 @@
       "fate_update-mark_growth_arrest",
       "fate_update-mark_apoptotic",
       "fate_update-mark_proliferating"
-    ]
+    ],
+    "contract": {
+      "phase": "coupling",
+      "participants": [
+        {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        {
+          "type": "resource"
+        }
+      ],
+      "reads": [
+        "agent.collection",
+        "agent.self.gene_states",
+        "resource.fields",
+        "gene_networks"
+      ],
+      "writes": [
+        "agent.self.phenotype",
+        "simulation.results"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],

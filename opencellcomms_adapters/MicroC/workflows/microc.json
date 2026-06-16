@@ -40,6 +40,23 @@
       "resource_kinds": [],
       "space": {
         "subworkflow": null
+      },
+      "contract_enforcement": "warn",
+      "processes": {
+        "agent_behaviors": [],
+        "resource_behaviors": [],
+        "couplings": [
+          "diffusion_step",
+          "gene_update",
+          "fate_update"
+        ],
+        "reconciliation": [
+          "division"
+        ],
+        "reporting": [
+          "iteration_plots",
+          "final_summary"
+        ]
       }
     }
   },
@@ -70,7 +87,18 @@
             "envinit-Setup_simulation-param_sim_total_steps",
             "envinit-Setup_simulation-param_sim_dt",
             "envinit-Setup_simulation-param_sim_output_dir"
-          ]
+          ],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "simulation.config",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "envinit-Setup_simulation-setup_domain_node",
@@ -88,7 +116,18 @@
             "envinit-Setup_simulation-param_domain_ny",
             "envinit-Setup_simulation-param_domain_cell_height",
             "envinit-Setup_simulation-param_1771966627094"
-          ]
+          ],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "space.self",
+              "simulation.config"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "envinit-Setup_population-setup_pop",
@@ -101,7 +140,19 @@
             "x": 400,
             "y": 250
           },
-          "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint)."
+          "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "space.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "envinit-Setup_substances-setup_all_substances",
@@ -113,7 +164,18 @@
           "description": "Configure all 8 substances for diffusion-reaction",
           "parameter_nodes": [
             "envinit-Setup_substances-param_substances_list"
-          ]
+          ],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.collection",
+              "resource.fields"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "envinit-Setup_associations-setup_all_associations",
@@ -125,7 +187,18 @@
           "description": "Configure all substance-to-gene associations",
           "parameter_nodes": [
             "envinit-Setup_associations-param_associations_dict"
-          ]
+          ],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "associations",
+              "simulation.config"
+            ],
+            "emits": []
+          }
         }
       ],
       "parameters": [
@@ -330,7 +403,24 @@
         "envinit-Setup_population-setup_pop",
         "envinit-Setup_substances-setup_all_substances",
         "envinit-Setup_associations-setup_all_associations"
-      ]
+      ],
+      "contract": {
+        "phase": "initialization",
+        "owner": {
+          "type": "environment"
+        },
+        "reads": [
+          "simulation.parameters"
+        ],
+        "writes": [
+          "simulation.config",
+          "space.self",
+          "agent.collection",
+          "resource.collection",
+          "associations"
+        ],
+        "emits": []
+      }
     },
     "tumor_cell_init": {
       "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
@@ -355,7 +445,19 @@
           "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
           "parameter_nodes": [
             "agentinit-Setup_population-param_checkpoint_file"
-          ]
+          ],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "checkpoint",
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "agentinit-Init_gene_networks-init_netlogo_gn",
@@ -368,7 +470,19 @@
             "x": 400,
             "y": 300
           },
-          "description": "Initialize NetLogo-faithful gene networks for all cells"
+          "description": "Initialize NetLogo-faithful gene networks for all cells",
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "agent.collection",
+              "gene_network.definition"
+            ],
+            "writes": [
+              "gene_networks",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
         }
       ],
       "parameters": [
@@ -387,7 +501,25 @@
       "execution_order": [
         "agentinit-Setup_population-read_checkpoint",
         "agentinit-Init_gene_networks-init_netlogo_gn"
-      ]
+      ],
+      "contract": {
+        "phase": "initialization",
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "checkpoint",
+          "simulation.config",
+          "agent.collection"
+        ],
+        "writes": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": []
+      }
     },
     "diffusion_step": {
       "description": "MicroC: diffusion_step",
@@ -423,7 +555,34 @@
             "diffusion_step-param_max_coupling_iterations",
             "diffusion_step-param_coupling_tolerance",
             "diffusion_step-param_relaxation_factor"
-          ]
+          ],
+          "contract": {
+            "phase": "coupling",
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              },
+              {
+                "type": "space"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.collection",
+              "resource.fields",
+              "space.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         }
       ],
       "parameters": [
@@ -496,7 +655,34 @@
       ],
       "execution_order": [
         "diffusion_step-run_diffusion_coupled"
-      ]
+      ],
+      "contract": {
+        "phase": "coupling",
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          },
+          {
+            "type": "space"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.collection",
+          "resource.fields",
+          "space.self",
+          "simulation.config"
+        ],
+        "writes": [
+          "resource.fields",
+          "simulation.results"
+        ],
+        "emits": []
+      }
     },
     "iteration_plots": {
       "description": "MicroC: iteration_plots",
@@ -523,12 +709,34 @@
             "y": 100
           },
           "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
-          "custom_name": "generate_iteration_plots"
+          "custom_name": "generate_iteration_plots",
+          "contract": {
+            "phase": "reporting",
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "space.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "execution_order": [
         "iteration_plots-gen_loop_plots"
-      ]
+      ],
+      "contract": {
+        "phase": "reporting",
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "space.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      }
     },
     "gene_update": {
       "description": "MicroC: gene_update",
@@ -550,7 +758,29 @@
             "x": 400,
             "y": 100
           },
-          "description": "Translate substance concentrations \u2192 gene input states via associations"
+          "description": "Translate substance concentrations \u2192 gene input states via associations",
+          "contract": {
+            "phase": "coupling",
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "associations",
+              "gene_networks"
+            ],
+            "writes": [
+              "gene_networks"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "gene_update-propagate_genes_netlogo",
@@ -571,13 +801,52 @@
             "y": 200
           },
           "description": "NetLogo-faithful graph walking gene network propagation",
-          "custom_name": "propagate_gene_networks_netlogo"
+          "custom_name": "propagate_gene_networks_netlogo",
+          "contract": {
+            "phase": "agent_behavior",
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "emits": []
+          }
         }
       ],
       "execution_order": [
         "gene_update-apply_associations",
         "gene_update-propagate_genes_netlogo"
-      ]
+      ],
+      "contract": {
+        "phase": "coupling",
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "associations",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": []
+      }
     },
     "fate_update": {
       "description": "MicroC: fate_update",
@@ -602,7 +871,28 @@
           "description": "Mark cells as necrotic based on user-defined conditions",
           "parameter_nodes": [
             "fate_update-param_necrosis_params"
-          ]
+          ],
+          "contract": {
+            "phase": "coupling",
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "fate_update-mark_growth_arrest",
@@ -614,7 +904,23 @@
           "description": "Track cells in Growth_Arrest state with time limit",
           "parameter_nodes": [
             "fate_update-param_max_growth_arrest_steps"
-          ]
+          ],
+          "contract": {
+            "phase": "agent_behavior",
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "fate_update-mark_apoptotic",
@@ -623,7 +929,23 @@
             "x": 400,
             "y": 300
           },
-          "description": "Mark cells as apoptotic based on gene network Apoptosis output"
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+          "contract": {
+            "phase": "agent_behavior",
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "fate_update-mark_proliferating",
@@ -632,7 +954,23 @@
             "x": 400,
             "y": 400
           },
-          "description": "Mark cells as Proliferation or Quiescence based on gene network"
+          "description": "Mark cells as Proliferation or Quiescence based on gene network",
+          "contract": {
+            "phase": "agent_behavior",
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         }
       ],
       "parameters": [
@@ -680,7 +1018,30 @@
         "fate_update-mark_growth_arrest",
         "fate_update-mark_apoptotic",
         "fate_update-mark_proliferating"
-      ]
+      ],
+      "contract": {
+        "phase": "coupling",
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "resource.fields",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.phenotype",
+          "simulation.results"
+        ],
+        "emits": []
+      }
     },
     "division": {
       "description": "MicroC: division",
@@ -703,7 +1064,21 @@
             "y": 100
           },
           "description": "Handle cell division for proliferating cells",
-          "custom_name": "update_cell_division"
+          "custom_name": "update_cell_division",
+          "contract": {
+            "phase": "reconciliation",
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks",
+              "space.self"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "division-remove_apoptotic",
@@ -712,13 +1087,43 @@
             "x": 400,
             "y": 200
           },
-          "description": "Remove cells with Apoptosis phenotype from population"
+          "description": "Remove cells with Apoptosis phenotype from population",
+          "contract": {
+            "phase": "reconciliation",
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         }
       ],
       "execution_order": [
         "division-cell_division",
         "division-remove_apoptotic"
-      ]
+      ],
+      "contract": {
+        "phase": "reconciliation",
+        "reads": [
+          "agent.collection",
+          "agent.self.phenotype",
+          "gene_networks",
+          "space.self"
+        ],
+        "writes": [
+          "agent.collection",
+          "gene_networks",
+          "simulation.results"
+        ],
+        "consumes": [],
+        "emits": []
+      }
     },
     "final_summary": {
       "description": "MicroC: final_summary",
@@ -744,12 +1149,34 @@
             "x": 400,
             "y": 100
           },
-          "description": "Generate final state visualization"
+          "description": "Generate final state visualization",
+          "contract": {
+            "phase": "reporting",
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "space.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "execution_order": [
         "final_summary-gen_final_plots"
-      ]
+      ],
+      "contract": {
+        "phase": "reporting",
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "space.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      }
     },
     "__scheduler__": {
       "description": "MicroC main simulation loop",

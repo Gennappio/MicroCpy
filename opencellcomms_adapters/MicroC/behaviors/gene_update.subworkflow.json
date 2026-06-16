@@ -25,7 +25,29 @@
           "x": 400,
           "y": 100
         },
-        "description": "Translate substance concentrations \u2192 gene input states via associations"
+        "description": "Translate substance concentrations \u2192 gene input states via associations",
+        "contract": {
+          "phase": "coupling",
+          "participants": [
+            {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            {
+              "type": "resource"
+            }
+          ],
+          "reads": [
+            "agent.collection",
+            "resource.fields",
+            "associations",
+            "gene_networks"
+          ],
+          "writes": [
+            "gene_networks"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "gene_update-propagate_genes_netlogo",
@@ -46,13 +68,52 @@
           "y": 200
         },
         "description": "NetLogo-faithful graph walking gene network propagation",
-        "custom_name": "propagate_gene_networks_netlogo"
+        "custom_name": "propagate_gene_networks_netlogo",
+        "contract": {
+          "phase": "agent_behavior",
+          "owner": {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          "reads": [
+            "agent.self.gene_states",
+            "gene_networks"
+          ],
+          "writes": [
+            "agent.self.gene_states",
+            "gene_networks"
+          ],
+          "emits": []
+        }
       }
     ],
     "execution_order": [
       "gene_update-apply_associations",
       "gene_update-propagate_genes_netlogo"
-    ]
+    ],
+    "contract": {
+      "phase": "coupling",
+      "participants": [
+        {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        {
+          "type": "resource"
+        }
+      ],
+      "reads": [
+        "agent.collection",
+        "resource.fields",
+        "associations",
+        "gene_networks"
+      ],
+      "writes": [
+        "agent.self.gene_states",
+        "gene_networks"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],
