@@ -36,7 +36,21 @@
         "description": "Regrow sugar toward its internal capacity.",
         "custom_name": "",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "resource_behavior",
+          "owner": {
+            "type": "resource",
+            "kind": "sugar"
+          },
+          "reads": [
+            "resource.self"
+          ],
+          "writes": [
+            "resource.self"
+          ],
+          "emits": []
+        }
       }
     ],
     "subworkflow_calls": [],
@@ -44,12 +58,40 @@
     "execution_order": [
       "sugar-grow"
     ],
-    "input_parameters": []
+    "input_parameters": [],
+    "contract": {
+      "phase": "resource_behavior",
+      "owner": {
+        "type": "resource",
+        "kind": "sugar"
+      },
+      "reads": [
+        "resource.self"
+      ],
+      "writes": [
+        "resource.self"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
       "grow_sugar"
     ]
+  },
+  "contract": {
+    "phase": "resource_behavior",
+    "owner": {
+      "type": "resource",
+      "kind": "sugar"
+    },
+    "reads": [
+      "resource.self"
+    ],
+    "writes": [
+      "resource.self"
+    ],
+    "emits": []
   }
 }

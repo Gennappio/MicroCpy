@@ -11,6 +11,34 @@ from enum import Enum
 import re
 
 
+CONTRACT_PHASES = {
+    "initialization",
+    "agent_behavior",
+    "resource_behavior",
+    "space_behavior",
+    "coupling",
+    "reconciliation",
+    "reporting",
+}
+
+PROCESS_KIND_TO_PHASE = {
+    "agent_init": "initialization",
+    "resource_init": "initialization",
+    "space": "initialization",
+    "env_init": "initialization",
+    "agent_behavior": "agent_behavior",
+    "resource_behavior": "resource_behavior",
+    "processing_behavior": "reporting",
+}
+
+CONTRACT_REQUIRED_KINDS = {
+    "agent_behavior",
+    "resource_behavior",
+    "env_behavior",
+    "processing_behavior",
+}
+
+
 class WorkflowStageType(Enum):
     """Types of workflow stages in the simulation lifecycle (legacy)."""
     INITIALIZATION = "initialization"
@@ -226,6 +254,7 @@ class WorkflowFunction:
     custom_name: str = ""
     parameter_nodes: List[str] = field(default_factory=list)
     step_count: int = 1
+    contract: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -244,6 +273,8 @@ class WorkflowFunction:
         # Only include function_file if it's set
         if self.function_file:
             result["function_file"] = self.function_file
+        if self.contract is not None:
+            result["contract"] = self.contract
         return result
 
     @classmethod
@@ -260,7 +291,8 @@ class WorkflowFunction:
             function_file=data.get("function_file"),
             custom_name=data.get("custom_name", ""),
             parameter_nodes=data.get("parameter_nodes", []),
-            step_count=data.get("step_count", 1)
+            step_count=data.get("step_count", 1),
+            contract=data.get("contract")
         )
 
 
@@ -560,6 +592,7 @@ class SubWorkflow:
     input_parameters: List[InputParameter] = field(default_factory=list)
     enabled: bool = True
     deletable: bool = True
+    contract: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         """Initialize controller if not provided."""
@@ -577,6 +610,8 @@ class SubWorkflow:
             "deletable": self.deletable,
             "execution_order": self.execution_order
         }
+        if self.contract is not None:
+            result["contract"] = self.contract
 
         if self.controller:
             result["controller"] = self.controller.to_dict()
@@ -638,7 +673,8 @@ class SubWorkflow:
             execution_order=data.get("execution_order", []),
             input_parameters=input_parameters,
             enabled=data.get("enabled", True),
-            deletable=data.get("deletable", True)
+            deletable=data.get("deletable", True),
+            contract=data.get("contract")
         )
 
     def get_function_by_id(self, function_id: str) -> Optional[WorkflowFunction]:
@@ -1110,7 +1146,168 @@ class WorkflowDefinition:
                     f"Add a description to help users understand what this sub-workflow does."
                 )
 
+        # 9. Contract validation (warnings only)
+        warnings.extend(self._validate_contracts())
+
         return errors, warnings
+
+    def _derive_subworkflow_kinds(self) -> Dict[str, str]:
+        """Derive runtime subworkflow kinds from ABM GUI metadata."""
+        gui = (self.metadata or {}).get("gui", {})
+        kinds: Dict[str, str] = {}
+
+        scheduler = gui.get("scheduler") or {}
+        if scheduler.get("subworkflow"):
+            kinds[scheduler["subworkflow"]] = "scheduler"
+
+        init_sequence = gui.get("init_sequence") or {}
+        if init_sequence.get("subworkflow"):
+            kinds[init_sequence["subworkflow"]] = "init_sequence"
+
+        space = gui.get("space") or {}
+        if space.get("subworkflow"):
+            kinds[space["subworkflow"]] = "space"
+
+        env = gui.get("environment") or {}
+        if env.get("init_subworkflow"):
+            kinds[env["init_subworkflow"]] = "env_init"
+        for name in env.get("behavior_subworkflows") or []:
+            kinds[name] = "env_behavior"
+
+        for agent_kind in gui.get("agent_kinds") or []:
+            if agent_kind.get("init_subworkflow"):
+                kinds[agent_kind["init_subworkflow"]] = "agent_init"
+            for name in agent_kind.get("behavior_subworkflows") or []:
+                kinds[name] = "agent_behavior"
+
+        for resource_kind in gui.get("resource_kinds") or []:
+            if resource_kind.get("init_subworkflow"):
+                kinds[resource_kind["init_subworkflow"]] = "resource_init"
+            for name in resource_kind.get("behavior_subworkflows") or []:
+                kinds[name] = "resource_behavior"
+
+        processing = gui.get("processing") or {}
+        for name in processing.get("behavior_subworkflows") or []:
+            kinds[name] = "processing_behavior"
+
+        if "main" in self.subworkflows:
+            kinds["main"] = "composer"
+
+        return kinds
+
+    def _validate_contracts(self) -> List[str]:
+        """Validate optional process contracts in warning mode."""
+        warnings: List[str] = []
+        kinds = self._derive_subworkflow_kinds()
+
+        for name, subworkflow in self.subworkflows.items():
+            kind = kinds.get(name)
+            contract = subworkflow.contract
+
+            if kind in CONTRACT_REQUIRED_KINDS and contract is None:
+                warnings.append(
+                    f"Contract warning: subworkflow '{name}' ({kind}) has no contract metadata yet."
+                )
+                continue
+
+            warnings.extend(self._validate_contract_shape(f"subworkflow '{name}'", contract))
+            if isinstance(contract, dict):
+                warnings.extend(self._validate_subworkflow_contract_semantics(name, kind, contract))
+
+            for func in subworkflow.functions:
+                warnings.extend(self._validate_contract_shape(
+                    f"function '{func.id}' in subworkflow '{name}'",
+                    func.contract
+                ))
+
+        return warnings
+
+    def _validate_contract_shape(self, label: str, contract: Optional[Dict[str, Any]]) -> List[str]:
+        if contract is None:
+            return []
+        warnings: List[str] = []
+        if not isinstance(contract, dict):
+            return [f"Contract warning: {label} contract must be an object."]
+
+        phase = contract.get("phase")
+        if phase is not None and phase not in CONTRACT_PHASES:
+            warnings.append(
+                f"Contract warning: {label} has unknown phase '{phase}'. "
+                f"Expected one of: {', '.join(sorted(CONTRACT_PHASES))}."
+            )
+
+        for key in ("reads", "writes", "emits", "consumes"):
+            if key in contract and not isinstance(contract[key], list):
+                warnings.append(f"Contract warning: {label} contract.{key} must be a list.")
+
+        if "owner" in contract and not isinstance(contract["owner"], dict):
+            warnings.append(f"Contract warning: {label} contract.owner must be an object.")
+
+        if "participants" in contract and not isinstance(contract["participants"], list):
+            warnings.append(f"Contract warning: {label} contract.participants must be a list.")
+
+        return warnings
+
+    def _validate_subworkflow_contract_semantics(
+        self, name: str, kind: Optional[str], contract: Dict[str, Any]
+    ) -> List[str]:
+        warnings: List[str] = []
+        phase = contract.get("phase")
+        writes = contract.get("writes") or []
+
+        expected_phase = PROCESS_KIND_TO_PHASE.get(kind or "")
+        if expected_phase and phase and phase != expected_phase:
+            warnings.append(
+                f"Contract warning: subworkflow '{name}' is registered as {kind} "
+                f"but declares phase '{phase}' instead of '{expected_phase}'."
+            )
+
+        if phase == "agent_behavior":
+            owner = contract.get("owner") or {}
+            if owner.get("type") != "agent":
+                warnings.append(
+                    f"Contract warning: agent behavior '{name}' should declare owner.type = 'agent'."
+                )
+            illegal_writes = [
+                w for w in writes
+                if not str(w).startswith("agent.self") and not str(w).startswith("intent.")
+            ]
+            if illegal_writes:
+                warnings.append(
+                    f"Contract warning: agent behavior '{name}' writes outside agent.self/intents: "
+                    f"{', '.join(map(str, illegal_writes))}."
+                )
+
+        if phase == "resource_behavior":
+            owner = contract.get("owner") or {}
+            if owner.get("type") != "resource":
+                warnings.append(
+                    f"Contract warning: resource behavior '{name}' should declare owner.type = 'resource'."
+                )
+            illegal_writes = [
+                w for w in writes
+                if not str(w).startswith("resource.self") and not str(w).startswith("intent.")
+            ]
+            if illegal_writes:
+                warnings.append(
+                    f"Contract warning: resource behavior '{name}' writes outside resource.self/intents: "
+                    f"{', '.join(map(str, illegal_writes))}."
+                )
+
+        if phase == "coupling":
+            participants = contract.get("participants") or []
+            if len(participants) < 2:
+                warnings.append(
+                    f"Contract warning: coupling '{name}' should declare at least two participants."
+                )
+
+        if phase == "reporting" and writes:
+            warnings.append(
+                f"Contract warning: reporting subworkflow '{name}' should be read-only, "
+                f"but declares writes: {', '.join(map(str, writes))}."
+            )
+
+        return warnings
 
     def _detect_circular_dependencies(self) -> List[str]:
         """

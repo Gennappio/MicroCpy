@@ -179,6 +179,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           functionFile: func.function_file || func.parameters?.function_file || '',
           customName: func.custom_name || '',
           stepCount: func.step_count || 1,
+          contract: func.contract || null,
         }
       }));
 
@@ -567,6 +568,9 @@ export const createWorkflowIOSlice = (set, get) => ({
       alert(errorMessage);
       throw new Error(errorMessage);
     }
+    if (validationResult.warnings?.length > 0) {
+      console.warn('[EXPORT] Validation warnings:', validationResult.warnings);
+    }
 
     /**
      * Find all nodes reachable from controller node via graph traversal
@@ -642,6 +646,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           custom_name: node.data.customName || '',
           step_count: node.data.stepCount || 1,
           parameter_nodes: parameterConnections,
+          ...(node.data.contract ? { contract: node.data.contract } : {}),
         };
       });
 
@@ -746,6 +751,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         description: workflow.subworkflows[subworkflowName]?.description || '',
         enabled: workflow.subworkflows[subworkflowName]?.enabled !== false,
         deletable: workflow.subworkflows[subworkflowName]?.deletable !== false,
+        ...(workflow.subworkflows[subworkflowName]?.contract ? { contract: workflow.subworkflows[subworkflowName].contract } : {}),
         controller,
         functions,
         subworkflow_calls,
@@ -926,6 +932,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         custom_name: node.data.customName || '',
         parameter_nodes: node.data.parameterNodes || [],
         step_count: node.data.stepCount || 1,
+        ...(node.data.contract ? { contract: node.data.contract } : {}),
         ...(node.data.functionFile ? { function_file: node.data.functionFile } : {})
       }));
 
@@ -1010,12 +1017,14 @@ export const createWorkflowIOSlice = (set, get) => ({
       name: subworkflowName,
       kind: kind,
       description: subworkflow.description || '',
+      ...(subworkflow.contract ? { contract: subworkflow.contract } : {}),
       exported_from: workflow.name,
       exported_at: new Date().toISOString(),
       subworkflow: {
         description: subworkflow.description || '',
         enabled: subworkflow.enabled !== false,
         deletable: subworkflow.deletable !== false,
+        ...(subworkflow.contract ? { contract: subworkflow.contract } : {}),
         controller,
         functions,
         subworkflow_calls,
@@ -1101,6 +1110,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           customName: func.custom_name || '',
           parameterNodes: func.parameter_nodes || [],
           stepCount: func.step_count || 1,
+          contract: func.contract || null,
           ...(func.function_file ? { functionFile: func.function_file } : {})
         }
       });
@@ -1205,7 +1215,8 @@ export const createWorkflowIOSlice = (set, get) => ({
             subworkflow_calls: swData.subworkflow_calls || [],
             parameters: swData.parameters || [],
             execution_order: execution_order,
-            input_parameters: swData.input_parameters || []
+            input_parameters: swData.input_parameters || [],
+            ...(swData.contract ? { contract: swData.contract } : {})
           }
         }
       },

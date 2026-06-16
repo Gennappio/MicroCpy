@@ -38,7 +38,17 @@
         "description": "Plot final sugar field and forager positions.",
         "custom_name": "",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "reporting",
+          "reads": [
+            "agents",
+            "resources",
+            "space"
+          ],
+          "writes": [],
+          "emits": []
+        }
       }
     ],
     "subworkflow_calls": [],
@@ -46,12 +56,32 @@
     "execution_order": [
       "plot-final-world"
     ],
-    "input_parameters": []
+    "input_parameters": [],
+    "contract": {
+      "phase": "reporting",
+      "reads": [
+        "agents",
+        "resources",
+        "space"
+      ],
+      "writes": [],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
       "plot_world"
     ]
+  },
+  "contract": {
+    "phase": "reporting",
+    "reads": [
+      "agents",
+      "resources",
+      "space"
+    ],
+    "writes": [],
+    "emits": []
   }
 }

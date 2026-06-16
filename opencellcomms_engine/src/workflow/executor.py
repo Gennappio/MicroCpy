@@ -231,6 +231,10 @@ class WorkflowExecutor:
                 error_msg += "\n\nWarnings:\n"
                 error_msg += "\n".join(f"  WARNING: {w}" for w in validation_result['warnings'])
             raise ValueError(error_msg)
+        if validation_result['warnings']:
+            print("[WORKFLOW] Validation warnings:")
+            for warning in validation_result['warnings']:
+                print(f"  WARNING: {warning}")
 
         # Validate that every enabled function is compatible with the kernel.
         # A function declares the capability tokens it `requires`; the kernel

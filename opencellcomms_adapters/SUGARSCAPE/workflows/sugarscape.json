@@ -67,6 +67,22 @@
             }
           }
         ]
+      },
+      "contract_enforcement": "warn",
+      "processes": {
+        "agent_behaviors": [
+          "forager_step"
+        ],
+        "resource_behaviors": [
+          "sugar_growback"
+        ],
+        "couplings": [],
+        "reconciliation": [
+          "world_step"
+        ],
+        "reporting": [
+          "final_snapshot"
+        ]
       }
     }
   },
@@ -173,7 +189,15 @@
           "description": "Create the toroidal tile-grid world.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "initialization",
+            "reads": [],
+            "writes": [
+              "space.self"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "space-plot",
@@ -199,7 +223,18 @@
         "space-setup",
         "space-plot"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "initialization",
+        "owner": {
+          "type": "space"
+        },
+        "reads": [],
+        "writes": [
+          "space.self"
+        ],
+        "emits": []
+      }
     },
     "sugar_init": {
       "description": "Resource setup for sugar, including its internal capacity landscape.",
@@ -232,7 +267,17 @@
           "description": "Add sugar to the Domain.",
           "custom_name": "setup_resource (sugar)",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "space.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "sugar-seed",
@@ -252,7 +297,17 @@
           "description": "Set sugar capacity to the two Sugarscape mountains and fill current sugar.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "space.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "sugar-plot",
@@ -280,7 +335,21 @@
         "sugar-seed",
         "sugar-plot"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "initialization",
+        "owner": {
+          "type": "resource",
+          "kind": "sugar"
+        },
+        "reads": [
+          "space.self"
+        ],
+        "writes": [
+          "resource.self"
+        ],
+        "emits": []
+      }
     },
     "forager_init": {
       "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
@@ -319,7 +388,18 @@
           "description": "Create the initial forager population.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "initialization",
+            "reads": [
+              "space.self",
+              "resource.sugar"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "forager-plot",
@@ -345,7 +425,22 @@
         "forager-place",
         "forager-plot"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "initialization",
+        "owner": {
+          "type": "agent",
+          "kind": "forager"
+        },
+        "reads": [
+          "space.self",
+          "resource.sugar"
+        ],
+        "writes": [
+          "agent.collection"
+        ],
+        "emits": []
+      }
     },
     "__init_sequence__": {
       "description": "Initialization order: space, sugar resource, agents.",
@@ -518,7 +613,32 @@
           "description": "Move toward the best visible sugar tile.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "coupling",
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "forager"
+              },
+              {
+                "type": "resource",
+                "kind": "sugar"
+              },
+              {
+                "type": "space"
+              }
+            ],
+            "reads": [
+              "agent.self",
+              "resource.sugar.local",
+              "space.neighborhood"
+            ],
+            "writes": [
+              "agent.self"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "forager-eat",
@@ -533,7 +653,29 @@
           "description": "Eat all sugar on the current tile.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "coupling",
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "forager"
+              },
+              {
+                "type": "resource",
+                "kind": "sugar"
+              }
+            ],
+            "reads": [
+              "agent.self",
+              "resource.sugar.local"
+            ],
+            "writes": [
+              "agent.self",
+              "resource.sugar.local"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "forager-metabolize",
@@ -548,7 +690,23 @@
           "description": "Burn sugar and mark the forager dead when depleted.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "agent_behavior",
+            "owner": {
+              "type": "agent",
+              "kind": "forager"
+            },
+            "reads": [
+              "agent.self"
+            ],
+            "writes": [
+              "agent.self"
+            ],
+            "emits": [
+              "intent.remove_agent"
+            ]
+          }
         }
       ],
       "subworkflow_calls": [],
@@ -558,7 +716,25 @@
         "forager-eat",
         "forager-metabolize"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "agent_behavior",
+        "owner": {
+          "type": "agent",
+          "kind": "forager"
+        },
+        "reads": [
+          "agent.self",
+          "resource.sugar.local",
+          "space.neighborhood"
+        ],
+        "writes": [
+          "agent.self"
+        ],
+        "emits": [
+          "intent.remove_agent"
+        ]
+      }
     },
     "sugar_growback": {
       "description": "Resource behavior: regrow sugar toward capacity.",
@@ -591,7 +767,21 @@
           "description": "Regrow sugar toward its internal capacity.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "resource_behavior",
+            "owner": {
+              "type": "resource",
+              "kind": "sugar"
+            },
+            "reads": [
+              "resource.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
@@ -599,7 +789,21 @@
       "execution_order": [
         "sugar-grow"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "resource_behavior",
+        "owner": {
+          "type": "resource",
+          "kind": "sugar"
+        },
+        "reads": [
+          "resource.self"
+        ],
+        "writes": [
+          "resource.self"
+        ],
+        "emits": []
+      }
     },
     "final_snapshot": {
       "description": "Processing behavior: write a final world snapshot to Results.",
@@ -634,7 +838,17 @@
           "description": "Plot final sugar field and forager positions.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "reporting",
+            "reads": [
+              "agents",
+              "resources",
+              "space"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
@@ -642,7 +856,17 @@
       "execution_order": [
         "plot-final-world"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "reporting",
+        "reads": [
+          "agents",
+          "resources",
+          "space"
+        ],
+        "writes": [],
+        "emits": []
+      }
     },
     "world_step": {
       "description": "World behavior: clean up dead foragers and report aggregate state.",
@@ -672,7 +896,20 @@
           "description": "Remove dead foragers from the population.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "reconciliation",
+            "reads": [
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "consumes": [
+              "intent.remove_agent"
+            ],
+            "emits": []
+          }
         },
         {
           "id": "world-census",
@@ -687,7 +924,16 @@
           "description": "Print agent count and resource totals.",
           "custom_name": "",
           "step_count": 1,
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "contract": {
+            "phase": "reporting",
+            "reads": [
+              "agents",
+              "resources"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
@@ -696,7 +942,21 @@
         "forager-cull",
         "world-census"
       ],
-      "input_parameters": []
+      "input_parameters": [],
+      "contract": {
+        "phase": "reconciliation",
+        "reads": [
+          "agent.collection",
+          "resource.collection"
+        ],
+        "writes": [
+          "agent.collection"
+        ],
+        "consumes": [
+          "intent.remove_agent"
+        ],
+        "emits": []
+      }
     }
   }
 }

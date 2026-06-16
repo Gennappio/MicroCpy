@@ -36,7 +36,17 @@
         "description": "Add sugar to the Domain.",
         "custom_name": "setup_resource (sugar)",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "initialization",
+          "reads": [
+            "space.self"
+          ],
+          "writes": [
+            "resource.self"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "sugar-seed",
@@ -56,7 +66,17 @@
         "description": "Set sugar capacity to the two Sugarscape mountains and fill current sugar.",
         "custom_name": "",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "initialization",
+          "reads": [
+            "space.self"
+          ],
+          "writes": [
+            "resource.self"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "sugar-plot",
@@ -84,7 +104,21 @@
       "sugar-seed",
       "sugar-plot"
     ],
-    "input_parameters": []
+    "input_parameters": [],
+    "contract": {
+      "phase": "initialization",
+      "owner": {
+        "type": "resource",
+        "kind": "sugar"
+      },
+      "reads": [
+        "space.self"
+      ],
+      "writes": [
+        "resource.self"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],
@@ -93,5 +127,19 @@
       "seed_sugar_capacity",
       "setup_resource"
     ]
+  },
+  "contract": {
+    "phase": "initialization",
+    "owner": {
+      "type": "resource",
+      "kind": "sugar"
+    },
+    "reads": [
+      "space.self"
+    ],
+    "writes": [
+      "resource.self"
+    ],
+    "emits": []
   }
 }

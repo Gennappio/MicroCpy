@@ -33,7 +33,20 @@
         "description": "Remove dead foragers from the population.",
         "custom_name": "",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "reconciliation",
+          "reads": [
+            "agent.collection"
+          ],
+          "writes": [
+            "agent.collection"
+          ],
+          "consumes": [
+            "intent.remove_agent"
+          ],
+          "emits": []
+        }
       },
       {
         "id": "world-census",
@@ -48,7 +61,16 @@
         "description": "Print agent count and resource totals.",
         "custom_name": "",
         "step_count": 1,
-        "parameter_nodes": []
+        "parameter_nodes": [],
+        "contract": {
+          "phase": "reporting",
+          "reads": [
+            "agents",
+            "resources"
+          ],
+          "writes": [],
+          "emits": []
+        }
       }
     ],
     "subworkflow_calls": [],
@@ -57,7 +79,21 @@
       "forager-cull",
       "world-census"
     ],
-    "input_parameters": []
+    "input_parameters": [],
+    "contract": {
+      "phase": "reconciliation",
+      "reads": [
+        "agent.collection",
+        "resource.collection"
+      ],
+      "writes": [
+        "agent.collection"
+      ],
+      "consumes": [
+        "intent.remove_agent"
+      ],
+      "emits": []
+    }
   },
   "dependencies": {
     "subworkflows_referenced": [],
@@ -65,5 +101,19 @@
       "census",
       "cull_starved"
     ]
+  },
+  "contract": {
+    "phase": "reconciliation",
+    "reads": [
+      "agent.collection",
+      "resource.collection"
+    ],
+    "writes": [
+      "agent.collection"
+    ],
+    "consumes": [
+      "intent.remove_agent"
+    ],
+    "emits": []
   }
 }
