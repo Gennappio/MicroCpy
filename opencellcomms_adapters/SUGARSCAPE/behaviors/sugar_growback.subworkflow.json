@@ -3,10 +3,10 @@
   "version": "1.0",
   "name": "sugar_growback",
   "kind": "resource_behavior",
-  "description": "Resource step behavior: regrow sugar and clean up the population.",
+  "description": "Resource behavior: regrow sugar toward capacity.",
   "exported_from": "Sugarscape",
   "subworkflow": {
-    "description": "Resource step behavior: regrow sugar and clean up the population.",
+    "description": "Resource behavior: regrow sugar toward capacity.",
     "enabled": true,
     "deletable": true,
     "controller": {
@@ -37,52 +37,18 @@
         "custom_name": "",
         "step_count": 1,
         "parameter_nodes": []
-      },
-      {
-        "id": "forager-cull",
-        "function_name": "cull_starved",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
-        "position": {
-          "x": 400,
-          "y": 260
-        },
-        "description": "Remove dead foragers from the population.",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
-      },
-      {
-        "id": "sugar-census",
-        "function_name": "census",
-        "function_file": "",
-        "parameters": {},
-        "enabled": true,
-        "position": {
-          "x": 400,
-          "y": 370
-        },
-        "description": "Print agent count and resource totals.",
-        "custom_name": "",
-        "step_count": 1,
-        "parameter_nodes": []
       }
     ],
     "subworkflow_calls": [],
     "parameters": [],
     "execution_order": [
-      "sugar-grow",
-      "forager-cull",
-      "sugar-census"
+      "sugar-grow"
     ],
     "input_parameters": []
   },
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
-      "census",
-      "cull_starved",
       "grow_sugar"
     ]
   }

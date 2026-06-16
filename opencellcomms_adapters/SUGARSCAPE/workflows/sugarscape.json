@@ -31,7 +31,9 @@
       },
       "environment": {
         "init_subworkflow": null,
-        "behavior_subworkflows": []
+        "behavior_subworkflows": [
+          "world_step"
+        ]
       },
       "init_sequence": {
         "subworkflow": "__init_sequence__"
@@ -413,7 +415,7 @@
       "input_parameters": []
     },
     "__scheduler__": {
-      "description": "Main loop: ask foragers, then regrow sugar and report the population.",
+      "description": "Main loop: ask foragers, regrow sugar, then run world cleanup/reporting.",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -462,14 +464,29 @@
             "x": 400,
             "y": 280
           },
-          "description": "Regrow sugar, cull dead foragers, and print census.",
+          "description": "Regrow sugar toward capacity.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-world-step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "world_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 420
+          },
+          "description": "Cull dead foragers and print world census.",
           "parameter_nodes": []
         }
       ],
       "parameters": [],
       "execution_order": [
         "sched-call-forager-step",
-        "sched-call-sugar-growback"
+        "sched-call-sugar-growback",
+        "sched-call-world-step"
       ],
       "input_parameters": []
     },
@@ -544,7 +561,7 @@
       "input_parameters": []
     },
     "sugar_growback": {
-      "description": "Resource step behavior: regrow sugar and clean up the population.",
+      "description": "Resource behavior: regrow sugar toward capacity.",
       "enabled": true,
       "deletable": true,
       "controller": {
@@ -575,44 +592,12 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
-        },
-        {
-          "id": "forager-cull",
-          "function_name": "cull_starved",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 260
-          },
-          "description": "Remove dead foragers from the population.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
-        },
-        {
-          "id": "sugar-census",
-          "function_name": "census",
-          "function_file": "",
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 370
-          },
-          "description": "Print agent count and resource totals.",
-          "custom_name": "",
-          "step_count": 1,
-          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "sugar-grow",
-        "forager-cull",
-        "sugar-census"
+        "sugar-grow"
       ],
       "input_parameters": []
     },
@@ -656,6 +641,60 @@
       "parameters": [],
       "execution_order": [
         "plot-final-world"
+      ],
+      "input_parameters": []
+    },
+    "world_step": {
+      "description": "World behavior: clean up dead foragers and report aggregate state.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-world_step",
+        "type": "initNode",
+        "label": "WORLD STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "forager-cull",
+          "function_name": "cull_starved",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Remove dead foragers from the population.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "world-census",
+          "function_name": "census",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Print agent count and resource totals.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "forager-cull",
+        "world-census"
       ],
       "input_parameters": []
     }

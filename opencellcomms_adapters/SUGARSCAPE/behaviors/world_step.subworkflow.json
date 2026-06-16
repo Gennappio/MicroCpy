@@ -1,0 +1,69 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "world_step",
+  "kind": "env_behavior",
+  "description": "World behavior: clean up dead foragers and report aggregate state.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "World behavior: clean up dead foragers and report aggregate state.",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-world_step",
+      "type": "initNode",
+      "label": "WORLD STEP",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "forager-cull",
+        "function_name": "cull_starved",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "description": "Remove dead foragers from the population.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      },
+      {
+        "id": "world-census",
+        "function_name": "census",
+        "function_file": "",
+        "parameters": {},
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "description": "Print agent count and resource totals.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": []
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [],
+    "execution_order": [
+      "forager-cull",
+      "world-census"
+    ],
+    "input_parameters": []
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "census",
+      "cull_starved"
+    ]
+  }
+}
