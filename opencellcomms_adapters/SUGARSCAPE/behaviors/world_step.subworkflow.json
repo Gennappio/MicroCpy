@@ -3,10 +3,10 @@
   "version": "1.0",
   "name": "world_step",
   "kind": "env_behavior",
-  "description": "World behavior: clean up dead foragers and report aggregate state.",
+  "description": "Reconciliation behavior: commit pending intents and report aggregate state.",
   "exported_from": "Sugarscape",
   "subworkflow": {
-    "description": "World behavior: clean up dead foragers and report aggregate state.",
+    "description": "Reconciliation behavior: commit pending intents and report aggregate state.",
     "enabled": true,
     "deletable": true,
     "controller": {
@@ -21,8 +21,8 @@
     },
     "functions": [
       {
-        "id": "forager-cull",
-        "function_name": "cull_starved",
+        "id": "world-reconciliation",
+        "function_name": "apply_reconciliation",
         "function_file": "",
         "parameters": {},
         "enabled": true,
@@ -30,20 +30,25 @@
           "x": 400,
           "y": 150
         },
-        "description": "Remove dead foragers from the population.",
+        "description": "Commit pending movement, resource, birth, and removal intents.",
         "custom_name": "",
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
           "phase": "reconciliation",
           "reads": [
-            "agent.collection"
+            "intent.*",
+            "agent.collection",
+            "resource.collection",
+            "space.self"
           ],
           "writes": [
-            "agent.collection"
+            "agent.collection",
+            "resource.self",
+            "space.self"
           ],
           "consumes": [
-            "intent.remove_agent"
+            "intent.*"
           ],
           "emits": []
         }
@@ -76,21 +81,25 @@
     "subworkflow_calls": [],
     "parameters": [],
     "execution_order": [
-      "forager-cull",
+      "world-reconciliation",
       "world-census"
     ],
     "input_parameters": [],
     "contract": {
       "phase": "reconciliation",
       "reads": [
+        "intent.*",
         "agent.collection",
-        "resource.collection"
+        "resource.collection",
+        "space.self"
       ],
       "writes": [
-        "agent.collection"
+        "agent.collection",
+        "resource.self",
+        "space.self"
       ],
       "consumes": [
-        "intent.remove_agent"
+        "intent.*"
       ],
       "emits": []
     }
@@ -98,21 +107,25 @@
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
-      "census",
-      "cull_starved"
+      "apply_reconciliation",
+      "census"
     ]
   },
   "contract": {
     "phase": "reconciliation",
     "reads": [
+      "intent.*",
       "agent.collection",
-      "resource.collection"
+      "resource.collection",
+      "space.self"
     ],
     "writes": [
-      "agent.collection"
+      "agent.collection",
+      "resource.self",
+      "space.self"
     ],
     "consumes": [
-      "intent.remove_agent"
+      "intent.*"
     ],
     "emits": []
   }

@@ -44,6 +44,11 @@ def apply_reconciliation(env: BiologicalContext, cull_dead: bool = True, **kwarg
         for resource in domain.resources():
             resource.apply_sources()
 
+    for intent in intents.get("move", []):
+        agent = pop.agent_by_id(intent["agent_id"])
+        if agent is not None:
+            pop.relocate(agent, pop.space.normalize(intent["target"]))
+
     # Consume intents transfer a resource amount to an agent state variable.
     if domain is not None:
         for intent in intents.get("consume_resource", []):
@@ -62,11 +67,6 @@ def apply_reconciliation(env: BiologicalContext, cull_dead: bool = True, **kwarg
                 resource.apply_sources()
             store_as = intent.get("store_as") or intent["resource"]
             agent.set(store_as, agent.get(store_as, 0.0) + taken)
-
-    for intent in intents.get("move", []):
-        agent = pop.agent_by_id(intent["agent_id"])
-        if agent is not None:
-            pop.relocate(agent, pop.space.normalize(intent["target"]))
 
     for intent in intents.get("add_agent", []):
         state = intent.get("state") or {}

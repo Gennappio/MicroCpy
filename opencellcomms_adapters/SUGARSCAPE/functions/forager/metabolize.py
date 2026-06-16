@@ -20,5 +20,5 @@ def metabolize(env: BiologicalContext, **kwargs):
 
     agent.set("sugar", agent.get("sugar", 0.0) - agent.get("metabolism", 1.0))
     if agent.get("sugar", 0.0) < 0:
-        agent.die()
+        env.request_remove_agent(reason="starved")
     return True

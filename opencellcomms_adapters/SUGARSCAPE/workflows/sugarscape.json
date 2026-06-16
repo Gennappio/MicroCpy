@@ -510,7 +510,7 @@
       "input_parameters": []
     },
     "__scheduler__": {
-      "description": "Main loop: ask foragers, regrow sugar, then run world cleanup/reporting.",
+      "description": "Main loop: ask foragers, regrow sugar, then reconcile intents and report.",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -573,7 +573,7 @@
             "x": 400,
             "y": 420
           },
-          "description": "Cull dead foragers and print world census.",
+          "description": "Commit pending intents and print world census.",
           "parameter_nodes": []
         }
       ],
@@ -637,7 +637,9 @@
             "writes": [
               "agent.self"
             ],
-            "emits": []
+            "emits": [
+              "intent.move"
+            ]
           }
         },
         {
@@ -670,11 +672,10 @@
               "agent.self",
               "resource.sugar.local"
             ],
-            "writes": [
-              "agent.self",
-              "resource.sugar.local"
-            ],
-            "emits": []
+            "writes": [],
+            "emits": [
+              "intent.consume_resource"
+            ]
           }
         },
         {
@@ -869,7 +870,7 @@
       }
     },
     "world_step": {
-      "description": "World behavior: clean up dead foragers and report aggregate state.",
+      "description": "Reconciliation behavior: commit pending intents and report aggregate state.",
       "enabled": true,
       "deletable": true,
       "controller": {
@@ -884,8 +885,8 @@
       },
       "functions": [
         {
-          "id": "forager-cull",
-          "function_name": "cull_starved",
+          "id": "world-reconciliation",
+          "function_name": "apply_reconciliation",
           "function_file": "",
           "parameters": {},
           "enabled": true,
@@ -893,20 +894,25 @@
             "x": 400,
             "y": 150
           },
-          "description": "Remove dead foragers from the population.",
+          "description": "Commit pending movement, resource, birth, and removal intents.",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
             "phase": "reconciliation",
             "reads": [
-              "agent.collection"
+              "intent.*",
+              "agent.collection",
+              "resource.collection",
+              "space.self"
             ],
             "writes": [
-              "agent.collection"
+              "agent.collection",
+              "resource.self",
+              "space.self"
             ],
             "consumes": [
-              "intent.remove_agent"
+              "intent.*"
             ],
             "emits": []
           }
@@ -939,21 +945,25 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "forager-cull",
+        "world-reconciliation",
         "world-census"
       ],
       "input_parameters": [],
       "contract": {
         "phase": "reconciliation",
         "reads": [
+          "intent.*",
           "agent.collection",
-          "resource.collection"
+          "resource.collection",
+          "space.self"
         ],
         "writes": [
-          "agent.collection"
+          "agent.collection",
+          "resource.self",
+          "space.self"
         ],
         "consumes": [
-          "intent.remove_agent"
+          "intent.*"
         ],
         "emits": []
       }

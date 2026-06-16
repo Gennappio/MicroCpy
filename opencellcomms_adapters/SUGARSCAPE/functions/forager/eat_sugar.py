@@ -19,8 +19,6 @@ def eat_sugar(env: BiologicalContext, **kwargs):
     if agent is None:
         return True
 
-    sugar = env.resource("sugar")
-    got = sugar.at(agent.position)
-    sugar.set_at(agent.position, 0.0)
-    agent.set("sugar", agent.get("sugar", 0.0) + got)
+    target = agent.get("_pending_position", agent.position)
+    env.request_consume_resource("sugar", position=target, store_as="sugar")
     return True

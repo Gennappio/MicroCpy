@@ -57,7 +57,9 @@
           "writes": [
             "agent.self"
           ],
-          "emits": []
+          "emits": [
+            "intent.move"
+          ]
         }
       },
       {
@@ -90,11 +92,10 @@
             "agent.self",
             "resource.sugar.local"
           ],
-          "writes": [
-            "agent.self",
-            "resource.sugar.local"
-          ],
-          "emits": []
+          "writes": [],
+          "emits": [
+            "intent.consume_resource"
+          ]
         }
       },
       {

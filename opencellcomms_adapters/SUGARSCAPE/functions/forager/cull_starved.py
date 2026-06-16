@@ -14,5 +14,7 @@ from src.workflow.decorators import register_function
     requires=[],
 )
 def cull_starved(env: BiologicalContext, **kwargs):
-    env.population.cull()
+    from src.workflow.functions.reconciliation.apply_reconciliation import apply_reconciliation
+
+    apply_reconciliation(env)
     return True

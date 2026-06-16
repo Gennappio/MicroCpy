@@ -35,6 +35,7 @@ def move_to_best_sugar(env: BiologicalContext, **kwargs):
         ):
             best, best_sugar, best_distance = cell, visible_sugar, distance
 
+    agent.set("_pending_position", best)
     if best != pos:
-        agent.move_to(best)
+        env.request_move(target=best)
     return True
