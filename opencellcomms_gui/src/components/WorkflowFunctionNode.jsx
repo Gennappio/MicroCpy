@@ -3,6 +3,11 @@ import { Settings, Play, Pause, FileCode, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
 import { getFunction } from '../data/functionRegistry';
+import {
+  CONTRACT_PHASE_LABELS,
+  compatibilityForContract,
+  processRoleForSubworkflow,
+} from '../utils/contractUtils';
 import './WorkflowFunctionNode.css';
 
 /**
@@ -49,6 +54,12 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
   const scopeKey = `${subworkflowKind}:${currentStage}`;
   const badgeStats = nodeBadgeStatsByScope[scopeKey]?.[id] || null;
+  const subworkflowRole = processRoleForSubworkflow(workflow.subworkflows?.[currentStage], subworkflowKind);
+  const nodeContract = data.contract || null;
+  const contractCompatibility = compatibilityForContract(nodeContract, subworkflowKind, subworkflowRole.contract);
+  const contractPhaseLabel = nodeContract?.phase
+    ? (CONTRACT_PHASE_LABELS[nodeContract.phase] || nodeContract.phase)
+    : null;
 
   // Handle badge click - open inspector to appropriate tab
   const handleBadgeClick = (badgeType) => {
@@ -115,7 +126,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
+      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} contract-${contractCompatibility.level}`}
       style={{ width: '350px', padding: '8px', fontSize: '13px' }}
     >
       {/* Function flow handles (top and bottom) */}
@@ -143,6 +154,11 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-title">
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
+          {contractPhaseLabel && (
+            <span className={`node-contract-pill ${contractCompatibility.level}`}>
+              {contractPhaseLabel}
+            </span>
+          )}
         </div>
         <button
           className="node-edit-btn"
@@ -233,4 +249,3 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 };
 
 export default WorkflowFunctionNode;
-

@@ -11,6 +11,7 @@ import EnvironmentView from './components/EnvironmentView';
 import InitSequenceView from './components/InitSequenceView';
 import SchedulerView from './components/SchedulerView';
 import ProcessingView from './components/ProcessingView';
+import OverviewView from './components/OverviewView';
 import useWorkflowStore from './store/workflowStore';
 import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
@@ -299,6 +300,8 @@ function App() {
       />
 
       {/* === ABM Tab Views === */}
+      {currentMainTab === 'overview' && <OverviewView />}
+
       {currentMainTab === 'agents' && (
         <AgentsView
           paletteWidth={paletteWidth}

@@ -3,8 +3,14 @@ import { ChevronDown, ChevronRight, Database, List, Braces, Plus, FolderOpen, Fi
 import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
-import { BEHAVIOR_KINDS, FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
-import { compatibilityForContract, contractForFunction } from '../utils/contractUtils';
+import { FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
+import {
+  CONTRACT_PHASE_LABELS,
+  compatibilityForContract,
+  contractForFunction,
+  processRoleForSubworkflow,
+  formatContractList,
+} from '../utils/contractUtils';
 import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
@@ -31,10 +37,13 @@ const FunctionPalette = ({ currentStage }) => {
   const [plugins, setPlugins] = useState([]);
   const [pluginMenuOpen, setPluginMenuOpen] = useState(false);
   const [loadingPlugins, setLoadingPlugins] = useState(false);
+  const [filterMode, setFilterMode] = useState('match');
   const workflowFileRef = useRef(null);
 
   const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage];
-  const isBehaviorCanvas = BEHAVIOR_KINDS.has(currentKind);
+  const currentSubworkflow = workflow.subworkflows?.[currentStage];
+  const currentRole = processRoleForSubworkflow(currentSubworkflow, currentKind);
+  const currentContract = currentRole.contract;
   const canHostFunctions = FUNCTION_HOSTING_KINDS.has(currentKind);
   const isSchedulerCanvas = currentKind === KINDS.SCHEDULER;
   const defaultFunctions = DEFAULT_FUNCTIONS_BY_KIND[currentKind] || [];
@@ -211,8 +220,10 @@ const FunctionPalette = ({ currentStage }) => {
       behavior: currentStage,
       parameters: def.parameters,
       category: def.category,
+      kind: def.kind,
       requires: def.requires,
       typed_env_exempt: def.typed_env_exempt,
+      contract: def.contract,
       exported: false,
     });
     setShowNewFunc(false);
@@ -244,9 +255,13 @@ const FunctionPalette = ({ currentStage }) => {
       ? (userFn?.parameters || [])
       : (meta?.parameters || []);
     const paramCount = paramList.length;
-    const contract = contractForFunction(meta, userFn, currentKind);
-    const compatibility = compatibilityForContract(contract, currentKind);
+    const contract = contractForFunction(meta, userFn, currentKind, currentContract);
+    const compatibility = compatibilityForContract(contract, currentKind, currentContract);
     const isMismatch = compatibility.level === 'mismatch';
+    const isWarning = compatibility.level === 'mismatch' || compatibility.level === 'soft-mismatch';
+
+    if (filterMode === 'match' && isMismatch) return null;
+    if (filterMode === 'warnings' && !isWarning) return null;
 
     // Draggable payload — even staged functions can be dragged onto the canvas.
     // The function_name + parameters travel with the drag.
@@ -284,7 +299,7 @@ const FunctionPalette = ({ currentStage }) => {
         <div className="function-item-description">{description}</div>
         <div className="function-item-params">
           {paramCount} parameter{paramCount !== 1 ? 's' : ''}
-          {isBehaviorCanvas && (
+          {canHostFunctions && (
             <span className={`contract-badge ${isMismatch ? 'warn' : compatibility.level}`}>
               {compatibility.label}
             </span>
@@ -360,6 +375,38 @@ const FunctionPalette = ({ currentStage }) => {
           onChange={handleWorkflowFileSelected}
         />
       </div>
+
+      {canHostFunctions && (
+        <div className={`process-role-card phase-${currentRole.phase || 'unknown'}`}>
+          <div className="process-role-main">
+            <span className="process-role-kicker">Canvas role</span>
+            <strong>{currentRole.label}</strong>
+            {currentRole.inferred && <span className="process-role-inferred">inferred</span>}
+          </div>
+          <div className="process-role-meta">
+            <span>{currentKind || 'subworkflow'}</span>
+            <span>{formatContractList(currentContract?.writes)}</span>
+          </div>
+          <div className="palette-filter-tabs" role="group" aria-label="Function phase filter">
+            {[
+              ['match', 'Match'],
+              ['warnings', 'Warnings'],
+              ['all', 'All'],
+            ].map(([mode, label]) => (
+              <button
+                key={mode}
+                className={filterMode === mode ? 'active' : ''}
+                onClick={() => setFilterMode(mode)}
+                title={mode === 'match'
+                  ? `Hide explicit mismatches for ${CONTRACT_PHASE_LABELS[currentRole.phase] || currentRole.phase || 'this canvas'}`
+                  : undefined}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="palette-content">
 
@@ -460,20 +507,24 @@ const FunctionPalette = ({ currentStage }) => {
             </div>
             {isExpanded('project') && (
               <div className="category-functions">
-                {userFunctions.map((uf) => (
-                  <div key={`u-${uf.name}`} className="function-item-row">
-                    <div className="function-item-wrap">
-                      {renderFunctionItem(uf.name, 'user')}
+                {userFunctions.map((uf) => {
+                  const item = renderFunctionItem(uf.name, 'user');
+                  if (!item) return null;
+                  return (
+                    <div key={`u-${uf.name}`} className="function-item-row">
+                      <div className="function-item-wrap">
+                        {item}
+                      </div>
+                      <button
+                        className="function-item-remove"
+                        title="Remove from project (does not delete file)"
+                        onClick={() => removeUserFunction(uf.name)}
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
-                    <button
-                      className="function-item-remove"
-                      title="Remove from project (does not delete file)"
-                      onClick={() => removeUserFunction(uf.name)}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -521,6 +572,7 @@ const FunctionPalette = ({ currentStage }) => {
         <NewFunctionDialog
           behaviorName={currentStage}
           currentKind={currentKind}
+          currentContract={currentContract}
           onCreate={handleCreateFunction}
           onCancel={() => setShowNewFunc(false)}
         />

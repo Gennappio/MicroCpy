@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Pin, PinOff, Info, Settings, Database, FileText, Image, Clock, CheckCircle, AlertCircle, AlertTriangle, Loader } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
-import { CONTRACT_PHASE_LABELS, formatContractList } from '../utils/contractUtils';
+import {
+  CONTRACT_PHASE_LABELS,
+  formatContractList,
+  processRoleForSubworkflow,
+} from '../utils/contractUtils';
 import './NodeInspector.css';
 
 const API_BASE_URL = 'http://localhost:5001';
@@ -196,6 +200,18 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkf
   const StatusIcon = config.icon;
   const nodeContract = nodeData?.contract;
   const subworkflowContract = subworkflow?.contract;
+  const subworkflowRole = processRoleForSubworkflow(subworkflow, subworkflowKind);
+  const formatPartyList = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return 'None';
+    return items.map((item) => {
+      if (!item || typeof item !== 'object') return String(item);
+      return item.kind ? `${item.type}:${item.kind}` : item.type;
+    }).join(', ');
+  };
+  const formatOwner = (owner) => {
+    if (!owner || typeof owner !== 'object') return 'None';
+    return owner.kind ? `${owner.type}:${owner.kind}` : owner.type || 'None';
+  };
 
   return (
     <div className="tab-overview">
@@ -228,11 +244,25 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkf
             <span className="label">Canvas:</span>
             <span className="value mono">{subworkflowKind || 'subworkflow'}</span>
           </div>
+          <div className="overview-row">
+            <span className="label">Canvas role:</span>
+            <span className="value">
+              {subworkflowRole.label}{subworkflowRole.inferred ? ' (inferred)' : ''}
+            </span>
+          </div>
           {subworkflowContract && (
             <>
               <div className="overview-row">
                 <span className="label">Workflow phase:</span>
                 <span className="value">{CONTRACT_PHASE_LABELS[subworkflowContract.phase] || subworkflowContract.phase || 'Unspecified'}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Workflow owner:</span>
+                <span className="value mono">{formatOwner(subworkflowContract.owner)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Participants:</span>
+                <span className="value mono">{formatPartyList(subworkflowContract.participants)}</span>
               </div>
               <div className="overview-row">
                 <span className="label">Workflow reads:</span>
@@ -242,6 +272,10 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkf
                 <span className="label">Workflow writes:</span>
                 <span className="value mono">{formatContractList(subworkflowContract.writes)}</span>
               </div>
+              <div className="overview-row">
+                <span className="label">Workflow consumes:</span>
+                <span className="value mono">{formatContractList(subworkflowContract.consumes)}</span>
+              </div>
             </>
           )}
           {nodeContract && (
@@ -249,6 +283,14 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkf
               <div className="overview-row">
                 <span className="label">Node phase:</span>
                 <span className="value">{CONTRACT_PHASE_LABELS[nodeContract.phase] || nodeContract.phase || 'Unspecified'}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Node owner:</span>
+                <span className="value mono">{formatOwner(nodeContract.owner)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Participants:</span>
+                <span className="value mono">{formatPartyList(nodeContract.participants)}</span>
               </div>
               <div className="overview-row">
                 <span className="label">Node reads:</span>
@@ -261,6 +303,10 @@ const OverviewTab = ({ nodeData, badgeStats, statusConfig, subworkflow, subworkf
               <div className="overview-row">
                 <span className="label">Node emits:</span>
                 <span className="value mono">{formatContractList(nodeContract.emits)}</span>
+              </div>
+              <div className="overview-row">
+                <span className="label">Node consumes:</span>
+                <span className="value mono">{formatContractList(nodeContract.consumes)}</span>
               </div>
             </>
           )}

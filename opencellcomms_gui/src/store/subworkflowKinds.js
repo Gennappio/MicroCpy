@@ -14,6 +14,7 @@ export const KINDS = {
 };
 
 export const MAIN_TABS = {
+  OVERVIEW: 'overview',
   AGENTS: 'agents',
   ENVIRONMENT: 'environment',
   INITIALIZATION: 'initialization',
@@ -64,13 +65,135 @@ export const FUNCTION_HOSTING_KINDS = new Set([
 // (functions/<role>/) so placement is self-describing.
 export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
-  { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behaviour' },
+  { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
-  { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behaviour' },
+  { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behavior' },
   { kind: KINDS.ENV_INIT, label: 'Environment · initialization' },
-  { kind: KINDS.ENV_BEHAVIOR, label: 'Environment · behaviour' },
-  { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Processing' },
+  { kind: KINDS.ENV_BEHAVIOR, label: 'Coupling / reconciliation' },
+  { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Reporting' },
 ];
+
+export const PROCESS_PHASES = {
+  INITIALIZATION: 'initialization',
+  AGENT_BEHAVIOR: 'agent_behavior',
+  RESOURCE_BEHAVIOR: 'resource_behavior',
+  SPACE_BEHAVIOR: 'space_behavior',
+  COUPLING: 'coupling',
+  RECONCILIATION: 'reconciliation',
+  REPORTING: 'reporting',
+};
+
+export const PROCESS_PHASE_OPTIONS = [
+  { phase: PROCESS_PHASES.COUPLING, label: 'Coupling' },
+  { phase: PROCESS_PHASES.RECONCILIATION, label: 'Reconciliation' },
+  { phase: PROCESS_PHASES.REPORTING, label: 'Reporting' },
+];
+
+export const PROCESS_PHASE_LABELS = {
+  [PROCESS_PHASES.INITIALIZATION]: 'Initialization',
+  [PROCESS_PHASES.AGENT_BEHAVIOR]: 'Agent behavior',
+  [PROCESS_PHASES.RESOURCE_BEHAVIOR]: 'Resource behavior',
+  [PROCESS_PHASES.SPACE_BEHAVIOR]: 'Space behavior',
+  [PROCESS_PHASES.COUPLING]: 'Coupling',
+  [PROCESS_PHASES.RECONCILIATION]: 'Reconciliation',
+  [PROCESS_PHASES.REPORTING]: 'Reporting',
+};
+
+export const defaultContractForKind = (kind, options = {}) => {
+  const ownerKind = options.kindName;
+
+  switch (kind) {
+    case KINDS.AGENT_INIT:
+      return {
+        phase: PROCESS_PHASES.INITIALIZATION,
+        owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
+        reads: ['space.self', 'resource.collection'],
+        writes: ['agent.collection'],
+        emits: [],
+      };
+    case KINDS.AGENT_BEHAVIOR:
+      return {
+        phase: PROCESS_PHASES.AGENT_BEHAVIOR,
+        owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
+        reads: ['agent.self'],
+        writes: ['agent.self'],
+        emits: [],
+      };
+    case KINDS.RESOURCE_INIT:
+      return {
+        phase: PROCESS_PHASES.INITIALIZATION,
+        owner: { type: 'resource', ...(ownerKind ? { kind: ownerKind } : {}) },
+        reads: ['space.self'],
+        writes: ['resource.self'],
+        emits: [],
+      };
+    case KINDS.RESOURCE_BEHAVIOR:
+      return {
+        phase: PROCESS_PHASES.RESOURCE_BEHAVIOR,
+        owner: { type: 'resource', ...(ownerKind ? { kind: ownerKind } : {}) },
+        reads: ['resource.self'],
+        writes: ['resource.self'],
+        emits: [],
+      };
+    case KINDS.SPACE:
+      return {
+        phase: PROCESS_PHASES.INITIALIZATION,
+        owner: { type: 'space' },
+        reads: [],
+        writes: ['space.self'],
+        emits: [],
+      };
+    case KINDS.ENV_INIT:
+      return {
+        phase: PROCESS_PHASES.INITIALIZATION,
+        owner: { type: 'environment' },
+        reads: ['simulation.parameters'],
+        writes: ['simulation.config', 'space.self', 'agent.collection', 'resource.collection'],
+        emits: [],
+      };
+    case KINDS.ENV_BEHAVIOR:
+      return defaultContractForProcessPhase(options.phase || PROCESS_PHASES.COUPLING);
+    case KINDS.PROCESSING_BEHAVIOR:
+      return {
+        phase: PROCESS_PHASES.REPORTING,
+        reads: ['agents', 'resources', 'space', 'simulation.results'],
+        writes: [],
+        emits: [],
+      };
+    default:
+      return null;
+  }
+};
+
+export const defaultContractForProcessPhase = (phase) => {
+  switch (phase) {
+    case PROCESS_PHASES.COUPLING:
+      return {
+        phase: PROCESS_PHASES.COUPLING,
+        participants: [{ type: 'agent' }, { type: 'resource' }],
+        reads: ['agent.collection', 'resource.collection', 'space.self'],
+        writes: [],
+        emits: [],
+      };
+    case PROCESS_PHASES.RECONCILIATION:
+      return {
+        phase: PROCESS_PHASES.RECONCILIATION,
+        reads: ['intent.*', 'agent.collection', 'resource.collection', 'space.self'],
+        writes: ['agent.collection', 'resource.self', 'space.self'],
+        consumes: ['intent.*'],
+        emits: [],
+      };
+    case PROCESS_PHASES.REPORTING:
+      return {
+        phase: PROCESS_PHASES.REPORTING,
+        reads: ['agents', 'resources', 'space', 'simulation.results'],
+        writes: [],
+        emits: [],
+      };
+    default:
+      return defaultContractForKind(KINDS.ENV_BEHAVIOR, { phase: PROCESS_PHASES.COUPLING });
+  }
+};
 
 // Legacy registry category derived from a role/kind. This no longer drives
 // execution (the workflow graph does); it only satisfies the historical

@@ -1,9 +1,21 @@
-import { Users, Boxes, Globe, PlayCircle, Layers, ListChecks, Sparkles, BarChart3 } from 'lucide-react';
+import { Users, Boxes, Globe, PlayCircle, Layers, ListChecks, Sparkles, BarChart3, Network } from 'lucide-react';
 import './MainTabSelector.css';
 
 const MainTabSelector = ({ currentMainTab, onTabChange }) => {
   return (
     <div className="main-tab-selector">
+      {/* Overview — read-only assembled view of the whole simulation */}
+      <div className="main-tab-group">
+        <button
+          className={`main-tab overview-tab ${currentMainTab === 'overview' ? 'active' : ''}`}
+          onClick={() => onTabChange('overview')}
+          title="Read-only assembled view of the whole simulation (init → loop → processing)"
+        >
+          <Network size={18} />
+          <span>Overview</span>
+        </button>
+      </div>
+
       {/* ABM design tabs */}
       <div className="main-tab-group">
         <button

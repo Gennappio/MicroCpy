@@ -1,11 +1,19 @@
-import { KINDS, SCHEDULER_NAME, INIT_SEQUENCE_NAME, SPACE_NAME } from '../subworkflowKinds';
+import {
+  KINDS,
+  SCHEDULER_NAME,
+  INIT_SEQUENCE_NAME,
+  SPACE_NAME,
+  defaultContractForKind,
+  defaultContractForProcessPhase,
+} from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
 
-const makeSubworkflow = (name, description, kind) => ({
+const makeSubworkflow = (name, description, kind, contract = null) => ({
   description,
   enabled: true,
   deletable: true,
   kind,
+  ...(contract ? { contract } : {}),
   controller: {
     id: `controller-${name}`,
     type: 'initNode',
@@ -60,7 +68,12 @@ export const createAbmSlice = (set, get) => ({
     const initName = `${name}_init`;
     set((state) => {
       if (state.workflow.metadata.gui.agent_kinds.find((k) => k.name === name)) return state;
-      const initSw = makeSubworkflow(initName, `Initialization for ${name}`, KINDS.AGENT_INIT);
+      const initSw = makeSubworkflow(
+        initName,
+        `Initialization for ${name}`,
+        KINDS.AGENT_INIT,
+        defaultContractForKind(KINDS.AGENT_INIT, { kindName: name }),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -121,7 +134,12 @@ export const createAbmSlice = (set, get) => ({
   addAgentBehavior: (kindName, behaviorName) => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
-      const sw = makeSubworkflow(behaviorName, `${kindName} behavior: ${behaviorName}`, KINDS.AGENT_BEHAVIOR);
+      const sw = makeSubworkflow(
+        behaviorName,
+        `${kindName} behavior: ${behaviorName}`,
+        KINDS.AGENT_BEHAVIOR,
+        defaultContractForKind(KINDS.AGENT_BEHAVIOR, { kindName }),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -181,7 +199,12 @@ export const createAbmSlice = (set, get) => ({
     set((state) => {
       const kinds = state.workflow.metadata.gui.resource_kinds || [];
       if (kinds.find((k) => k.name === name)) return state;
-      const initSw = makeSubworkflow(initName, `Setup for resource ${name}`, KINDS.RESOURCE_INIT);
+      const initSw = makeSubworkflow(
+        initName,
+        `Setup for resource ${name}`,
+        KINDS.RESOURCE_INIT,
+        defaultContractForKind(KINDS.RESOURCE_INIT, { kindName: name }),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -232,7 +255,12 @@ export const createAbmSlice = (set, get) => ({
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
       const kinds = state.workflow.metadata.gui.resource_kinds || [];
-      const sw = makeSubworkflow(behaviorName, `${kindName} step: ${behaviorName}`, KINDS.RESOURCE_BEHAVIOR);
+      const sw = makeSubworkflow(
+        behaviorName,
+        `${kindName} step: ${behaviorName}`,
+        KINDS.RESOURCE_BEHAVIOR,
+        defaultContractForKind(KINDS.RESOURCE_BEHAVIOR, { kindName }),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -295,7 +323,12 @@ export const createAbmSlice = (set, get) => ({
     set((state) => {
       const existing = state.workflow.metadata.gui.space?.subworkflow;
       if (existing && state.workflow.subworkflows[existing]) return state;
-      const sw = makeSubworkflow(SPACE_NAME, 'Space — build the grid/world', KINDS.SPACE);
+      const sw = makeSubworkflow(
+        SPACE_NAME,
+        'Space — build the grid/world',
+        KINDS.SPACE,
+        defaultContractForKind(KINDS.SPACE),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -319,7 +352,12 @@ export const createAbmSlice = (set, get) => ({
       const existing = state.workflow.metadata.gui.environment.init_subworkflow;
       if (existing) return state;
       const name = 'environment_init';
-      const sw = makeSubworkflow(name, 'Environment initialization', KINDS.ENV_INIT);
+      const sw = makeSubworkflow(
+        name,
+        'Environment initialization',
+        KINDS.ENV_INIT,
+        defaultContractForKind(KINDS.ENV_INIT),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -339,10 +377,15 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  addEnvironmentBehavior: (behaviorName) => {
+  addEnvironmentBehavior: (behaviorName, phase = 'coupling') => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
-      const sw = makeSubworkflow(behaviorName, `Environment behavior: ${behaviorName}`, KINDS.ENV_BEHAVIOR);
+      const sw = makeSubworkflow(
+        behaviorName,
+        `Environment behavior: ${behaviorName}`,
+        KINDS.ENV_BEHAVIOR,
+        defaultContractForProcessPhase(phase),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
@@ -398,7 +441,12 @@ export const createAbmSlice = (set, get) => ({
   addProcessingBehavior: (behaviorName) => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
-      const sw = makeSubworkflow(behaviorName, `Processing: ${behaviorName}`, KINDS.PROCESSING_BEHAVIOR);
+      const sw = makeSubworkflow(
+        behaviorName,
+        `Processing: ${behaviorName}`,
+        KINDS.PROCESSING_BEHAVIOR,
+        defaultContractForKind(KINDS.PROCESSING_BEHAVIOR),
+      );
       const newWorkflow = {
         ...state.workflow,
         metadata: {

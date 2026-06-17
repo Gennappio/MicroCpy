@@ -52,6 +52,14 @@
   background: rgba(59, 130, 246, 0.12);
 }
 
+/* Overview tab — indigo */
+.main-tab.overview-tab.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+  background: rgba(79, 70, 229, 0.08);
+}
+.main-tab.overview-tab.active:hover { background: rgba(79, 70, 229, 0.12); }
+
 /* Agents tab — blue */
 .main-tab.agents-tab.active {
   color: #3b82f6;

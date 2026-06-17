@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
-import { FUNCTION_ROLE_OPTIONS, ROLE_TO_COMPATIBILITY_CATEGORY } from '../store/subworkflowKinds';
+import {
+  FUNCTION_ROLE_OPTIONS,
+  ROLE_TO_COMPATIBILITY_CATEGORY,
+  defaultContractForKind,
+} from '../store/subworkflowKinds';
 import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
@@ -44,7 +48,7 @@ const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
  *                    requires, typed_env_exempt }
  *   onCancel
  */
-const NewFunctionDialog = ({ behaviorName = '', currentKind = '', onCreate, onCancel }) => {
+const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContract = null, onCreate, onCancel }) => {
   const [name, setName] = useState('');
   const [parameters, setParameters] = useState([]);
   // The function's "role" is the v2 canvas kind (Agent / Environment /
@@ -142,6 +146,9 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', onCreate, onCa
         // comes from the workflow graph, not this tag.
         category: ROLE_TO_COMPATIBILITY_CATEGORY[role] || 'UTILITY',
         kind: role,
+        contract: role === currentKind && currentContract
+          ? { ...currentContract }
+          : defaultContractForKind(role),
         // Exempt (setup) functions use the raw context dict, so capability
         // tokens don't apply.
         requires: typedEnvExempt ? [] : requires,

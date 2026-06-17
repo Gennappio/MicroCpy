@@ -10,20 +10,10 @@ import { validateWorkflow } from '../../utils/workflowValidation';
 import pathUtils from '../pathUtils';
 import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
 import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
-
-const deriveForEachForBehavior = (gui, behaviorName) => {
-  const agentKind = (gui.agent_kinds || []).find((k) =>
-    (k.behavior_subworkflows || []).includes(behaviorName)
-  );
-  if (agentKind) return { type: 'agent', kind: agentKind.name, order: 'random' };
-
-  const resourceKind = (gui.resource_kinds || []).find((k) =>
-    (k.behavior_subworkflows || []).includes(behaviorName)
-  );
-  if (resourceKind) return { type: 'resource', kind: resourceKind.name };
-
-  return null;
-};
+import {
+  assembleSubworkflowsFromStages,
+  deriveForEachForBehavior,
+} from '../../utils/assembleWorkflow';
 
 /**
  * Creates the workflow I/O slice
@@ -572,196 +562,12 @@ export const createWorkflowIOSlice = (set, get) => ({
       console.warn('[EXPORT] Validation warnings:', validationResult.warnings);
     }
 
-    /**
-     * Find all nodes reachable from controller node via graph traversal
-     */
-    const findReachableNodes = (nodes, edges, subworkflowName) => {
-      const controllerNode = nodes.find(n => n.type === 'initNode') ||
-                             nodes.find(n => n.id === `controller-${subworkflowName}`);
-      if (!controllerNode) return [];
-      const controllerNodeId = controllerNode.id;
+    // Rebuild subworkflows (and synthesize `main`) from the LIVE canvas graph.
+    // This is the single shared assembly path — the read-only Overview canvas
+    // uses the same function, so what you see assembled is exactly what exports.
+    const subworkflows = assembleSubworkflowsFromStages(workflow, stageNodes, stageEdges);
 
-      const adjacency = {};
-      edges.forEach(edge => {
-        if (edge.sourceHandle === 'func-out' || edge.sourceHandle === 'init-out') {
-          if (!adjacency[edge.source]) adjacency[edge.source] = [];
-          adjacency[edge.source].push(edge.target);
-        }
-      });
-
-      const visited = new Set();
-      const executionOrder = [];
-      const queue = [controllerNodeId];
-      visited.add(controllerNodeId);
-
-      while (queue.length > 0) {
-        const current = queue.shift();
-        const neighbors = adjacency[current] || [];
-
-        for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            const node = nodes.find(n => n.id === neighbor);
-            if (node && (node.type === 'workflowFunction' || node.type === 'subworkflowCall')) {
-              executionOrder.push(neighbor);
-            }
-            queue.push(neighbor);
-          }
-        }
-      }
-
-      return executionOrder;
-    };
-
-    // Convert React Flow nodes back to subworkflows
-    const subworkflows = {};
-    Object.keys(workflow.subworkflows).forEach((subworkflowName) => {
-      const nodes = stageNodes[subworkflowName] || [];
-      const edges = stageEdges[subworkflowName] || [];
-      const execution_order = findReachableNodes(nodes, edges, subworkflowName);
-
-      const functionNodes = nodes.filter(n => n.type === 'workflowFunction');
-      const subworkflowCallNodes = nodes.filter(n => n.type === 'subworkflowCall');
-      const parameterNodes = nodes.filter(n => n.type === 'parameterNode');
-      const listParameterNodes = nodes.filter(n => n.type === 'listParameterNode');
-      const dictParameterNodes = nodes.filter(n => n.type === 'dictParameterNode');
-      const controllerNode = nodes.find(n => n.type === 'initNode') ||
-                             nodes.find(n => n.id === `controller-${subworkflowName}`);
-
-      // Export ALL function nodes
-      const functions = functionNodes.map((node) => {
-        const parameterConnections = edges
-          .filter(e => e.target === node.id &&
-                       (e.targetHandle?.startsWith('params') || e.targetHandle?.startsWith('param-')))
-          .map(e => e.source);
-
-        return {
-          id: node.id,
-          function_name: node.data.functionName,
-          function_file: node.data.functionFile || '',
-          parameters: node.data.parameters || {},
-          enabled: node.data.enabled !== false,
-          position: node.position,
-          description: node.data.description || '',
-          custom_name: node.data.customName || '',
-          step_count: node.data.stepCount || 1,
-          parameter_nodes: parameterConnections,
-          ...(node.data.contract ? { contract: node.data.contract } : {}),
-        };
-      });
-
-      // Export ALL subworkflow call nodes
-      const subworkflow_calls = subworkflowCallNodes.map((node) => {
-        const parameterConnections = edges
-          .filter(e => e.target === node.id &&
-                       (e.targetHandle?.startsWith('params') || e.targetHandle?.startsWith('param-')))
-          .map(e => e.source);
-
-        const exportedCall = {
-          id: node.id,
-          type: 'subworkflow_call',
-          subworkflow_name: node.data.subworkflowName,
-          iterations: node.data.iterations || 1,
-          parameters: node.data.parameters || {},
-          enabled: node.data.enabled !== false,
-          position: node.position,
-          description: node.data.description || '',
-          parameter_nodes: parameterConnections
-        };
-
-        const forEach = node.data.forEach || deriveForEachForBehavior(workflow.metadata?.gui || {}, node.data.subworkflowName);
-        if (forEach) {
-          exportedCall.for_each = forEach;
-        }
-
-        if (node.data.results && node.data.results.trim() !== '') {
-          exportedCall.results = node.data.results;
-        }
-
-        return exportedCall;
-      });
-
-      // Export ALL parameter nodes
-      const parameters = [
-        ...parameterNodes.map((node) => ({
-          id: node.id,
-          label: node.data.label || 'Parameters',
-          parameters: node.data.parameters || {},
-          position: node.position,
-        })),
-        ...listParameterNodes.map((node) => ({
-          id: node.id,
-          type: 'listParameterNode',
-          label: node.data.label || 'List',
-          listType: node.data.listType || 'string',
-          items: node.data.items || [],
-          target_param: node.data.targetParam || 'items',
-          position: node.position,
-        })),
-        ...dictParameterNodes.map((node) => ({
-          id: node.id,
-          type: 'dictParameterNode',
-          label: node.data.label || 'Dictionary',
-          entries: node.data.entries || [],
-          target_param: node.data.targetParam,
-          position: node.position,
-        })),
-      ];
-
-      // Export controller. If a parameter node is wired to the controller's
-      // steps handle, resolve number_of_steps from it (authoritative regardless
-      // of canvas mount state, so Planner overrides on the steps node take
-      // effect) and persist the connection via parameter_nodes.
-      const stepsParamNodeIds = controllerNode
-        ? edges
-            .filter((e) => e.target === controllerNode.id && e.targetHandle === 'steps-param')
-            .map((e) => e.source)
-        : [];
-      let resolvedSteps = controllerNode?.data?.numberOfSteps || 1;
-      if (stepsParamNodeIds.length > 0) {
-        const pNode = nodes.find((n) => n.id === stepsParamNodeIds[0]);
-        const v = pNode?.data?.parameters?.steps
-          ?? pNode?.data?.parameters?.step_count
-          ?? pNode?.data?.parameters?.numberOfSteps;
-        if (v !== undefined && v !== '' && Number.isFinite(Number(v))) {
-          resolvedSteps = Number(v);
-        }
-      }
-      // Fall back to the persisted controller definition when the canvas for
-      // this subworkflow was never mounted (so no controller node exists in
-      // stageNodes). Without this the controller exports as null and downstream
-      // defaults take over (e.g. the scheduler loop count).
-      const persistedController = workflow.subworkflows[subworkflowName]?.controller;
-      const controller = controllerNode ? {
-        id: controllerNode.id,
-        type: 'controller',
-        label: controllerNode.data.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
-        position: controllerNode.position,
-        number_of_steps: resolvedSteps,
-        ...(stepsParamNodeIds.length > 0 ? { parameter_nodes: stepsParamNodeIds } : {}),
-      } : (persistedController ? {
-        id: persistedController.id || `controller-${subworkflowName}`,
-        type: 'controller',
-        label: persistedController.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
-        position: persistedController.position || { x: 100, y: 100 },
-        number_of_steps: persistedController.number_of_steps || 1,
-      } : null);
-
-      subworkflows[subworkflowName] = {
-        description: workflow.subworkflows[subworkflowName]?.description || '',
-        enabled: workflow.subworkflows[subworkflowName]?.enabled !== false,
-        deletable: workflow.subworkflows[subworkflowName]?.deletable !== false,
-        ...(workflow.subworkflows[subworkflowName]?.contract ? { contract: workflow.subworkflows[subworkflowName].contract } : {}),
-        controller,
-        functions,
-        subworkflow_calls,
-        parameters,
-        execution_order,
-        input_parameters: workflow.subworkflows[subworkflowName]?.input_parameters || []
-      };
-    });
-
-    // Synthesize 'main' composer from ABM structure (if this is an ABM-style workflow)
+    // ABM-derived locals for the exported metadata block below.
     const guiMeta = workflow.metadata?.gui || {};
     const agentKinds = guiMeta.agent_kinds || [];
     const resourceKinds = guiMeta.resource_kinds || [];
@@ -769,67 +575,10 @@ export const createWorkflowIOSlice = (set, get) => ({
     const processingMeta = guiMeta.processing || {};
     const schedulerMeta = guiMeta.scheduler || {};
     const initSeqMeta = guiMeta.init_sequence || { subworkflow: INIT_SEQUENCE_NAME };
-    const schedulerName = schedulerMeta.subworkflow || '__scheduler__';
-    const initSeqName = initSeqMeta.subworkflow || INIT_SEQUENCE_NAME;
-
     const hasAbmContent = agentKinds.length > 0 || resourceKinds.length > 0 || environment.init_subworkflow ||
       (environment.behavior_subworkflows || []).length > 0 ||
       (processingMeta.behavior_subworkflows || []).length > 0 ||
-      subworkflows[schedulerName];
-
-    if (hasAbmContent) {
-      const mainCalls = [];
-      let callY = 200;
-      const makeMainCall = (name, desc, iterations = 1) => {
-        const call = {
-          id: `main-call-${name}`,
-          type: 'subworkflow_call',
-          subworkflow_name: name,
-          iterations,
-          parameters: {},
-          enabled: true,
-          position: { x: 400, y: callY },
-          description: desc,
-          parameter_nodes: [],
-        };
-        callY += 120;
-        return call;
-      };
-
-      // Phase 14C: main is now `init_sequence → scheduler × N → processing`.
-      // 1. Initialization sequence (once)
-      if (subworkflows[initSeqName]) {
-        mainCalls.push(makeMainCall(initSeqName, 'Initialization sequence'));
-      }
-      // 2. Scheduler (main loop)
-      if (subworkflows[schedulerName]) {
-        const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 1;
-        mainCalls.push(makeMainCall(schedulerName, 'Main simulation loop', loopSteps));
-      }
-      // 3. Processing behaviors
-      (processingMeta.behavior_subworkflows || []).forEach((b) => {
-        mainCalls.push(makeMainCall(b, `Processing: ${b}`));
-      });
-
-      const mainExecutionOrder = mainCalls.map((c) => c.id);
-      subworkflows['main'] = {
-        description: 'Synthesized main workflow (do not edit — managed by ABM structure)',
-        enabled: true,
-        deletable: false,
-        controller: {
-          id: 'controller-main',
-          type: 'controller',
-          label: 'MAIN CONTROLLER',
-          position: { x: 100, y: 100 },
-          number_of_steps: 1,
-        },
-        functions: [],
-        subworkflow_calls: mainCalls,
-        parameters: [],
-        execution_order: mainExecutionOrder,
-        input_parameters: [],
-      };
-    }
+      subworkflows[schedulerMeta.subworkflow || '__scheduler__'];
 
     // Make library paths relative to workflow file
     const exportedMetadata = { ...workflow.metadata };

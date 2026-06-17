@@ -6,6 +6,7 @@ import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
 import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
+import { processRoleForSubworkflow } from '../utils/contractUtils';
 import './ProcessingView.css';
 
 const ProcessingView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
@@ -50,7 +51,11 @@ const ProcessingView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMo
     }
   };
 
-  const tabs = behaviors.map((b) => ({ name: b, label: b, deletable: true }));
+  const tabs = behaviors.map((b) => {
+    const swKind = workflow.metadata?.gui?.subworkflow_kinds?.[b];
+    const role = processRoleForSubworkflow(workflow.subworkflows?.[b], swKind);
+    return { name: b, label: b, deletable: true, phase: role.phase, phaseLabel: role.label };
+  });
   const inspectorOpen = inspector.isOpen;
   const gridStyle = inspectorOpen
     ? { gridTemplateColumns: `${paletteWidth}px 1fr ${inspectorWidth}px` }
