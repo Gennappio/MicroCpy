@@ -1,107 +1,134 @@
 # /occ_add-to-workflow — Add an existing function to an OpenCellComms workflow JSON
 
-You are helping a biologist enable a simulation function inside a workflow JSON file. They may not know the JSON format. Your job is to find the right place in the JSON and insert the function node correctly.
+You are helping a biologist place an already-registered function onto a behavior
+canvas inside a workflow JSON. They may not know the JSON format. Your job is to
+find the right canvas and insert the function node correctly, keeping the graph
+valid.
 
 ## Step 1 — Identify the function and target workflow
 
 Ask the user:
-1. **Which function do you want to add?** (e.g., "mark_hypoxic_cells", or describe it in plain English and you will look it up)
-2. **Which workflow JSON file?** (e.g., `opencellcomms_adapters/jayatilake/workflows/v7_microc_workflow.json`)
+1. **Which function do you want to add?** (e.g. `eat_sugar`, or describe it and
+   you will look it up).
+2. **Which workflow JSON file?** (e.g.
+   `opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json` or
+   `opencellcomms_adapters/MicroC/workflows/microc.json`).
 
-If the user describes a function by name that you are not sure exists, list the registered functions (registry.py auto-discovers plugins, so reading its imports won't help). From `opencellcomms_engine/`, run:
-`python -c "from src.workflow.registry import get_default_registry; print(sorted(f.name for f in get_default_registry().list_all()))"`
+If you are unsure a function exists, list the registry (it auto-discovers plugins,
+so reading imports won't help). From `opencellcomms_engine/`:
+```bash
+python -c "from src.workflow.registry import get_default_registry; print(sorted(f.name for f in get_default_registry().list_all()))"
+```
 (or `GET http://localhost:5001/api/registry` if the backend is running).
 
-## Step 2 — Read the workflow and present subworkflows
+## Step 2 — Read the workflow and present the behavior canvases
 
-Read the target workflow JSON. For each subworkflow, list its name and the functions it currently contains:
+Read the workflow. Its `subworkflows` are the canvases. Show the user the
+**behavior canvases** (skip the synthesized ones `main`, `__space__`,
+`__init_sequence__`, `__scheduler__` — those are orchestration, not where you add
+behaviors), with each canvas's **contract phase** and current nodes:
 
 ```
-This workflow has these subworkflows:
-- Setup_simulation: [setup_domain, setup_time, ...]
-- microenvironment: [run_diffusion_solver_coupled]
-- intracellular: [apply_associations_to_inputs, propagate_gene_networks_netlogo]
-- intercellular: [mark_necrotic, mark_proliferating, cell_division, ...]
-- ...
+This workflow has these behavior canvases (phase in parentheses):
+- forager_init    (initialization):    [place_foragers, plot_agents]
+- forager_step    (agent_behavior):    [move_to_best_sugar, eat_sugar, metabolize]
+- sugar_growback  (resource_behavior):  [grow_sugar]
+- world_step      (reconciliation):    [apply_reconciliation, census]
+- final_snapshot  (reporting):         [plot_world]
 ```
 
-Then ask: **"Which subworkflow should this function run in?"**
+Ask: **"Which canvas should this function run on?"** Also report registered
+functions not yet used anywhere in this workflow (compare the registry list above
+against every canvas's `functions[]`), grouped by category — this helps discovery.
 
-Also report any registered functions not yet in this workflow (list them via the `get_default_registry()` one-liner or `GET /api/registry`, compare against the workflow's nodes). Group by category. This helps the user discover what is available.
+**Check the contract phase matches.** Read the function's `contract.phase` (from
+its `@register_function`, or infer from its category). If it disagrees with the
+target canvas's phase (e.g. a `reporting` function on an `agent_behavior` canvas),
+warn the user — this is exactly what the GUI flags in warn mode. Proceed only if
+they confirm.
 
-## Step 3 — Understand the JSON node structure
+## Step 3 — The real node structure
 
-A function node in a subworkflow looks like this:
+A function node lives in `subworkflows.<canvas>.functions[]` and ordering is
+controlled by `subworkflows.<canvas>.execution_order` (a list of node ids).
+**There is no `edges` array and no `workflowFunctionNode`/`data` wrapper** — that
+is the old React-Flow shape, not the saved workflow format. A node looks like:
 
 ```json
 {
-  "id": "node_<function_name>",
-  "type": "workflowFunctionNode",
-  "data": {
-    "function": "<function_name>",
-    "label": "<Display Name>",
-    "enabled": true,
-    "parameters": {}
-  },
-  "position": { "x": 0, "y": 0 }
+  "id": "<canvas>-<short_name>",
+  "function_name": "<function_name>",
+  "function_file": "",
+  "parameters": {},
+  "enabled": true,
+  "position": { "x": 400, "y": 0 },
+  "description": "<one line>",
+  "custom_name": "",
+  "step_count": 1,
+  "parameter_nodes": [],
+  "contract": { "phase": "<canvas phase>", "reads": [], "writes": [], "emits": [] }
 }
 ```
 
 **Rules:**
-- `"id"` must be unique in the workflow — use `"node_<function_name>"` unless there is already a node with that id (then append `_2`)
-- `"enabled": true` makes the function active; use `false` to add it disabled
-- `"parameters": {}` means use the decorator defaults; fill in specific values only if the user wants to override them
-- `"position"` values do not affect execution — set to `{"x": 0, "y": 0}` and the user can drag it in the GUI
-- The node must also appear in the subworkflow's `"edges"` array to be connected in the graph (see below)
+- `"id"` must be unique within the workflow. Use `"<canvas>-<short_name>"` (e.g.
+  `forager-eat`); append `_2` if taken.
+- Append the new id to that canvas's `"execution_order"` at the position it should
+  run (usually the end). **Order = `execution_order`, not edges.**
+- `"enabled": true` activates it; `false` adds it disabled.
+- `"position"` is GUI-only; stack ~110px below the last node (`y += 110`) so it is
+  visible, or `{ "x": 0, "y": 0 }` and let the user drag it.
+- Give the node a `"contract"` whose `phase` matches the canvas. Copy the
+  function's declared contract if it has one; otherwise set at least the phase.
 
-**Edge structure (connecting nodes in sequence):**
-```json
-{
-  "id": "edge_<source_id>_<target_id>",
-  "source": "<source_node_id>",
-  "target": "<target_node_id>"
-}
-```
+## Step 4 — Parameters
 
-To append a function at the end of a subworkflow's chain:
-1. Find the last node in that subworkflow's `"nodes"` array
-2. Find the edge from that last node to the subworkflow's output handle (if any)
-3. Insert the new node and add an edge from the previous last node to the new node
+- **Defaults:** leave `"parameters": {}` (uses the decorator defaults).
+- **Simple scalar overrides:** put values inline, e.g.
+  `"parameters": { "vision": 6, "rate": 1.0 }` (the Sugarscape style).
+- **DICT / many related params:** do **not** inline a dict — it renders as an
+  unreadable flat string in the GUI. Instead add a `dictParameterNode` to the
+  canvas's `"parameters"` array with `target_param` set to the function parameter
+  name, and reference its id from the node's `"parameter_nodes"` (same for
+  `listParameterNode`). See CLAUDE.md "Workflow JSON & GUI Readability".
 
-If there is no existing edge chain (flat list of nodes), simply add the node to the `"nodes"` array and add an edge from the previous last function node to the new one. Do not break existing edges.
-
-## Step 4 — Parameters in workflow JSON
-
-If the function has DICT-type parameters, they should be expressed as a `dictParameterNode` in the subworkflow rather than inlined. Ask the user: "Do you want to use the default parameters, or customize any values?"
-
-If they want to customize:
-- For simple scalar params: put values directly in `"parameters": { "param_name": value }`
-- For DICT params: create a `dictParameterNode` as a sibling node in the subworkflow's `"parameters"` array with the correct `target_param` field
-
-If they want defaults, leave `"parameters": {}`.
+Ask the user: "Use the default parameters, or customize any values?"
 
 ## Step 5 — Edit the workflow JSON
 
-After confirming with the user, make the edit:
-1. Read the full workflow JSON
-2. Find the correct subworkflow by its key name
-3. Insert the new node into `"nodes"`
-4. Insert the connecting edge into `"edges"`
-5. Write the updated JSON back
+1. Read the full workflow JSON.
+2. Find the target canvas under `subworkflows`.
+3. Append the node to its `"functions"` array.
+4. Append the node id to its `"execution_order"`.
+5. Write it back and **validate the JSON parses** (`python -c "import json; json.load(open('<path>'))"`).
 
-**Important:** Validate that the JSON remains valid after editing. Do not break existing node connections.
+**If a standalone behavior file exists** for this canvas
+(`opencellcomms_adapters/<plugin>/behaviors/<canvas>.subworkflow.json`), update it
+too so the workflow and the exported behavior stay in sync (the manual's Export
+Rules). In that file the canvas lives under the top-level `"subworkflow"` key, and
+it carries its own `dependencies.functions_required` list — add the function name
+there.
 
 ## Step 6 — Confirm success
 
 Tell the user:
-- Which subworkflow was updated
-- The function's `"id"` in the JSON
-- How to verify: `./run.sh` → open the GUI → navigate to the updated subworkflow → the new node should appear in the canvas
-- How to run the workflow: `python run_workflow.py --workflow <path_to_workflow.json>` from `opencellcomms_engine/`
+- Which canvas was updated and the node `"id"`.
+- Whether a standalone `behaviors/*.subworkflow.json` was also updated.
+- Verify in the GUI: `./run.sh` → open the workflow → the canvas → the new node
+  appears at the end of the chain.
+- Run it: from `opencellcomms_engine/`,
+  `python run_workflow.py --workflow <path_to_workflow.json>`.
 
 ## Common mistakes to avoid
 
-- Do NOT set `"enabled": true` for functions that conflict with each other (e.g., do not enable both `update_gene_networks` and `propagate_gene_networks_netlogo` — they do the same job with different algorithms)
-- Do NOT inline dict values in `"parameters"` — use `dictParameterNode` siblings
-- Do NOT reuse node `"id"` values — check for uniqueness
-- If the function requires a substance or gene network that is not set up by the workflow's initialization subworkflows, warn the user and suggest the relevant initialization function
+- Do **not** emit `"type": "workflowFunctionNode"`, a `"data"` block, or an
+  `"edges"` array — wrong format. Use `functions[]` + `execution_order`.
+- Do **not** put a behavior on a canvas whose contract phase conflicts (e.g. a
+  resource-mutating behavior on an `agent_behavior` canvas) without warning.
+- Do **not** inline dict/list values in `"parameters"` — use
+  `dictParameterNode`/`listParameterNode` siblings.
+- Do **not** reuse a node `"id"`, and do **not** forget to add it to
+  `execution_order` (a node absent from `execution_order` never runs).
+- If the function needs a resource, substance, space, or gene network that the
+  init canvases don't set up, warn the user and point them at the relevant init
+  function (or `/occ_new-function`).

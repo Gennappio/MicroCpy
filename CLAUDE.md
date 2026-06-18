@@ -242,7 +242,7 @@ go in the engine:
 
 ## Biologist's Guide: Writing Simulation Code
 
-This section is for biologists and non-engineers. You do not need to understand Python architecture to add a new biological rule to a simulation. Use the `/new-function` slash command in Claude Code and answer three plain-English questions — Claude will generate and place the code for you.
+This section is for biologists and non-engineers. You do not need to understand Python architecture to add a new biological rule to a simulation. Use the `/occ_new-function` slash command in Claude Code and answer a few plain-English questions — Claude will generate and place the code for you.
 
 ### The `context` dictionary — what's available inside any function
 
