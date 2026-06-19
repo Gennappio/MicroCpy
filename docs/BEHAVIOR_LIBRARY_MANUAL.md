@@ -27,9 +27,26 @@ But a behavior belongs to one process role:
 - Reconciliation
 - Reporting
 
-The GUI still has familiar places such as Agents, Resources, Environment, and
-Processing, but each canvas now declares a contract phase. The phase is the
-source of truth for what belongs on that canvas.
+The GUI exposes these navigable tabs: Overview, Agents, Resources, Space,
+Initialization, Scheduler, Planner, Processing, Results. Each behavior canvas
+declares a contract phase; the phase is the source of truth for *what* belongs on
+the canvas.
+
+**Every behavior must belong to a navigable category (no orphans).** A behavior
+that is not owned by a tab is callable from the scheduler but editable nowhere —
+invisible to the scientist. The homing rule:
+
+- **In-loop behaviors** (run by the scheduler each step) are owned by an **object**:
+  an agent kind (`agent_kinds[k].behavior_subworkflows`) or a resource kind
+  (`resource_kinds[k].behavior_subworkflows`), assigned by primary actor.
+  `agent_behavior` → that agent kind; `resource_behavior` → that resource kind;
+  `coupling` / `reconciliation` / in-loop `reporting` → the agent or resource kind
+  that primarily drives it.
+- **Post-loop behaviors** (run once after the loop) go to **Processing**.
+- There is **no Environment tab**. `environment.behavior_subworkflows` must stay
+  empty; a behavior placed there is an orphan. (`environment.init_subworkflow` /
+  `space.subworkflow` for world *setup* are separate — they surface via the
+  Initialization / Space tabs.)
 
 ## Process Roles
 
@@ -179,14 +196,17 @@ Function nodes display their phase. The inspector shows:
 - Reads, writes, emits, consumes
 - Owner and participants
 
-When creating an Environment behavior, choose the process role:
+A cross-object behavior (coupling, reconciliation, in-loop reporting) still has a
+process role, but it is **owned by an object tab**, not a generic Environment area.
+Place it under the agent or resource kind that primarily drives it — the cell kind
+whose genes a `gene_update` coupling reads, or the principal agent kind whose intents
+a reconciliation commits. There is no free "global rules" Environment tab; if a
+behavior truly fits no object and is post-loop, it goes to Processing.
 
-- Coupling
-- Reconciliation
-- Reporting
-
-This is intentional. Environment is not a free "global rules" area. It is a
-host for explicit cross-object process roles.
+> Superseded note: earlier versions of this manual described Environment as "a host
+> for explicit cross-object process roles." That category maps to no GUI tab and
+> orphans behaviors, so it is no longer a valid destination. See CLAUDE.md,
+> "Every behavior must belong to a navigable category."
 
 ## Export Rules
 

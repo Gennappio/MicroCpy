@@ -173,6 +173,45 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 - **Prefer DICT parameters over many individual BOOL/FLOAT parameters** in `@register_function`. A single `"type": "DICT"` is more flexible and renders as an editable table in the GUI.
 - **Design for the GUI first.** A scientist must be able to read and modify parameters visually. If it's not readable in the canvas, it's wrong.
 
+## Every behavior must belong to a navigable category (NO orphans)
+
+This is non-negotiable, and it is the #1 thing that breaks when a workflow JSON is
+written or edited by hand instead of through the GUI.
+
+Every behavior subworkflow named anywhere in `metadata.gui` (and every behavior the
+`__scheduler__` calls) **must** be listed under a category that maps to a real,
+clickable tab in the GUI. The navigable tabs are exactly:
+**Overview · Agents · Resources · Space · Initialization · Scheduler · Planner ·
+Processing · Results** (`opencellcomms_gui/src/components/MainTabSelector.jsx`).
+
+The homing rule, by where the behavior runs:
+
+- **In-loop behaviors** (called inside `__scheduler__`, run every step) → an
+  **owning object**: `agent_kinds[k].behavior_subworkflows` or
+  `resource_kinds[k].behavior_subworkflows`. Assign by *primary actor*:
+  `agent_behavior` → that agent kind; `resource_behavior` → that resource kind;
+  `coupling` / `reconciliation` / in-loop `reporting` → the agent or resource kind
+  that primarily drives it. (A coupling like `gene_update` is what the *cell* does
+  each step → it is a `tumor_cell` behavior, not a free-floating one.)
+- **Post-loop behaviors** (run once after `__scheduler__`, in `main`) →
+  `processing.behavior_subworkflows`.
+
+- **NEVER** put a behavior in **`environment.behavior_subworkflows`**. There is **no
+  Environment tab** in the current GUI — that category routes to a dead view
+  (`App.jsx` still has the `'environment'` case, but `MainTabSelector.jsx` has no
+  button to reach it). A behavior placed there is an **orphan**: you can click it
+  from the scheduler call-node and see the canvas, but it belongs to no tab, has no
+  owner, and a scientist cannot find or edit it. This is exactly the failure mode
+  that produced `gene_network_update_test.json`.
+
+If a behavior genuinely cannot be attributed to any object, the **Processing** tab
+is the only legitimate catch-all — never Environment, and never a bare
+`__scheduler__` call with no category. `environment.init_subworkflow` /
+`space.subworkflow` for world *setup* are a separate matter (they surface via the
+Initialization / Space tabs); the prohibition here is specifically on **behavior**
+subworkflows. The legacy `BEHAVIOR_LIBRARY_MANUAL.md` text that calls Environment
+"a host for cross-object process roles" is superseded by this rule.
+
 ## The ABM class layer is authored WITH nodes (never replace the canvas)
 
 The class layer (`src/abm/`, `docs/ABM_LAYER.md`, `docs/ABM_GUI.md`) does **not**

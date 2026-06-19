@@ -41,6 +41,14 @@ Ask: **"Which canvas should this function run on?"** Also report registered
 functions not yet used anywhere in this workflow (compare the registry list above
 against every canvas's `functions[]`), grouped by category — this helps discovery.
 
+**Sanity-check the canvas has a home tab.** Every behavior canvas must be owned by a
+category in `metadata.gui` that maps to a navigable tab — an `agent_kinds[k]` /
+`resource_kinds[k]` behavior (in-loop) or `processing` (post-loop). If the target
+canvas is only listed under `environment.behavior_subworkflows`, it is an **orphan**
+(no Environment tab exists; see CLAUDE.md "Every behavior must belong to a navigable
+category"). Don't add to an orphan: tell the user it needs re-homing to its owning
+agent/resource kind (or Processing) first, and offer to fix the `metadata.gui` lists.
+
 **Check the contract phase matches.** Read the function's `contract.phase` (from
 its `@register_function`, or infer from its category). If it disagrees with the
 target canvas's phase (e.g. a `reporting` function on an `agent_behavior` canvas),

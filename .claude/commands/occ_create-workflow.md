@@ -41,9 +41,11 @@ Present the inventory and the proposed mapping for confirmation.
    NetLogo/Sugarscape world) or a continuous diffusion domain / none (`space:
    {subworkflow: null}`, the MicroC shape where the domain is built in an
    environment init).
-4. **Environment / processing behaviors** — once-per-step `coupling`,
-   `reconciliation`, and `reporting` canvases (e.g. `world_step`,
-   `final_snapshot`).
+4. **Cross-object & processing behaviors** — once-per-step `coupling`,
+   `reconciliation`, and in-loop `reporting` canvases (e.g. `world_step`,
+   `gene_update`), plus post-loop `reporting` (e.g. `final_snapshot`). **Every one
+   of these must be owned by a category** — see the homing rule in Step 4. There is
+   **no Environment tab**; never park a behavior in `environment.behavior_subworkflows`.
 5. **Number of steps** for the scheduler loop (default 30).
 6. **Workflow name** and a one-line description.
 
@@ -84,17 +86,32 @@ canvases) a `contract`.
 
 ## Step 4 — Build `metadata.gui`
 
-This is how the GUI reconstructs the entity view. Populate (mirror Sugarscape):
+This is how the GUI reconstructs the entity view. **Every behavior subworkflow MUST
+be owned by a category that maps to a navigable GUI tab** (Agents / Resources /
+Processing) — otherwise it is an orphan: callable from the scheduler but editable in
+no tab, invisible to the scientist. This is the rule in CLAUDE.md
+("Every behavior must belong to a navigable category"). The homing rule:
+
+- **In-loop behaviors** (called by `__scheduler__`, run every step) → the **owning
+  object**: `agent_kinds[k].behavior_subworkflows` or
+  `resource_kinds[k].behavior_subworkflows`, assigned by primary actor.
+  `agent_behavior` → that agent kind; `resource_behavior` → that resource kind;
+  `coupling` / `reconciliation` / in-loop `reporting` → the agent or resource kind
+  that primarily drives it (e.g. `world_step` → the principal agent kind whose
+  intents it commits; `gene_update` → the cell kind whose genes it updates).
+- **Post-loop behaviors** (run once after the loop) → `processing.behavior_subworkflows`.
+- **`environment.behavior_subworkflows` MUST be `[]`** — there is no Environment tab
+  in the GUI; anything placed there is orphaned.
 
 ```json
 "gui": {
   "function_libraries": [],
   "agent_kinds": [ { "name": "<kind>", "init_subworkflow": "<kind>_init",
-                     "behavior_subworkflows": ["<kind>_step"] } ],
+                     "behavior_subworkflows": ["<kind>_step", "world_step"] } ],
   "resource_kinds": [ { "name": "<res>", "init_subworkflow": "<res>_init",
                         "behavior_subworkflows": ["<res>_growback"] } ],
   "space": { "subworkflow": "__space__" },          // or { "subworkflow": null }
-  "environment": { "init_subworkflow": null, "behavior_subworkflows": ["world_step"] },
+  "environment": { "init_subworkflow": null, "behavior_subworkflows": [] },
   "init_sequence": { "subworkflow": "__init_sequence__" },
   "scheduler": { "subworkflow": "__scheduler__" },
   "processing": { "behavior_subworkflows": ["final_snapshot"] },
@@ -110,8 +127,14 @@ This is how the GUI reconstructs the entity view. Populate (mirror Sugarscape):
 }
 ```
 
-`processes` classifies every behavior canvas by phase; keep it consistent with the
-scheduler order and the contracts. Set the top-level workflow `"version": "2.0"`,
+`processes` classifies every behavior canvas by **phase** (a coupling is still a
+coupling); this is orthogonal to the **tab ownership** above (which object's tab it
+appears under), and both must be filled. Keep `processes` consistent with the
+scheduler order and the contracts. **Note:** the reference workflows
+`sugarscape.json` / `microc.json` still use the old `environment.behavior_subworkflows`
+pattern and are being migrated — mirror their *structure*, but apply the homing rule
+above for category placement, not their `environment` lists. Set the top-level
+workflow `"version": "2.0"`,
 `"name"`, `"description"`, `"kernel"` (e.g. `"biophysics"`), and
 `metadata.author` / `metadata.created`.
 
@@ -143,5 +166,9 @@ scheduler order and the contracts. Set the top-level workflow `"version": "2.0"`
   moves/eats/births/deaths are queued but never committed.
 - Keep `metadata.gui.processes`, the scheduler order, and the canvas contracts in
   agreement.
+- **Never leave a behavior in `environment.behavior_subworkflows`** (no Environment
+  tab → orphan). Own every in-loop behavior under an agent/resource kind; send
+  post-loop behaviors to `processing`. Every name in `__scheduler__` must trace to
+  one of those categories.
 - Mark `main`, `__space__`, `__init_sequence__`, `__scheduler__` as
   `"deletable": false`.

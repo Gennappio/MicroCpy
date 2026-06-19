@@ -43,6 +43,12 @@ Then ask **which canvas this function belongs on**. The canvas's **contract phas
 (see Step 3) is the source of truth for what belongs there. If unsure, suggest the
 canvas whose phase matches the biological event.
 
+The canvas you target must be **owned by a navigable category** in `metadata.gui` —
+an agent/resource kind (in-loop) or Processing (post-loop), never
+`environment.behavior_subworkflows` (no Environment tab → orphan; see CLAUDE.md). A
+coupling/reconciliation/in-loop-reporting canvas belongs to the agent or resource
+kind that primarily drives it. If the only fitting canvas is an orphan, flag it.
+
 ## Step 3 — Classify the function: process role (contract phase)
 
 Every behavior belongs to **one process role**. This is the most important choice
