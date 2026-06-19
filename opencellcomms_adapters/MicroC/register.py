@@ -22,3 +22,4 @@ import opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells  # 
 # Reporting plots
 import opencellcomms_adapters.MicroC.functions.reporting.generate_iteration_plots  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.generate_summary_plots  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.reporting.record_gene_fate_counts  # noqa: F401
