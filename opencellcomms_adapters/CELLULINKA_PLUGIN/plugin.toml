@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the schema.
+[plugin]
+name = "CELLULINKA_PLUGIN"
+version = "0.1.0"
+description = ""
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["biophysics"]
