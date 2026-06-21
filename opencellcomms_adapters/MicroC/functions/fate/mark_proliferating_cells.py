@@ -30,12 +30,17 @@ _PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value}
     cloneable=False
 )
 def mark_proliferating_cells(env: BiologicalContext, **kwargs) -> None:
+    # Per-cell when the executor's per-cell ask bound a cell (env.cell); else
+    # fall back to the whole-population loop. The aggregate summary/record_change
+    # only make sense for the whole-population call.
+    targets = [env.cell] if env.cell is not None else list(env.cells)
+
     proliferating = 0
     overwritten = 0
     unchanged = 0
     quiescent = 0
 
-    for cell in env.cells:
+    for cell in targets:
         old_phenotype = cell.phenotype
         if cell.gene_states.get(Phenotype.PROLIFERATION.value, False):
             if not cell.is_proliferating:
@@ -51,13 +56,13 @@ def mark_proliferating_cells(env: BiologicalContext, **kwargs) -> None:
             else:
                 unchanged += 1
 
-    if proliferating > 0:
-        print(f"[PROLIFERATION] Proliferating: {proliferating}, "
-              f"Quiescent: {quiescent}, Overwritten: {overwritten}")
-
-    env.results.record_change('proliferation', {
-        'proliferating': proliferating,
-        'quiescent': quiescent,
-        'unchanged': unchanged,
-        'overwritten': overwritten,
-    })
+    if env.cell is None:
+        if proliferating > 0:
+            print(f"[PROLIFERATION] Proliferating: {proliferating}, "
+                  f"Quiescent: {quiescent}, Overwritten: {overwritten}")
+        env.results.record_change('proliferation', {
+            'proliferating': proliferating,
+            'quiescent': quiescent,
+            'unchanged': unchanged,
+            'overwritten': overwritten,
+        })

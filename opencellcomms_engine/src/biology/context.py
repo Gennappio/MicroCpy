@@ -531,6 +531,20 @@ class BiologicalContext:
         """The agent currently being asked (set by the per-agent loop), else None."""
         return self._ctx.get('_current_agent')
 
+    @property
+    def cell(self):
+        """The single cell currently being asked in a LEGACY per-cell loop, as a
+        CellHandle, else None.
+
+        For models that run on the legacy CellPopulation (e.g. MicroC, FiPy
+        diffusion) there is no abm_population to bind as env.agent; the executor's
+        per-cell ask binds context['_current_cell'] instead. A function is then
+        per-cell when env.cell is set, and falls back to looping env.cells when it
+        is None — so the same function works under both calling conventions.
+        """
+        c = self._ctx.get('_current_cell')
+        return CellHandle(c, self) if c is not None else None
+
     def set_agent(self, agent) -> None:
         self._ctx['_current_agent'] = agent
 

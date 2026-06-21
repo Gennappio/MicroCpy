@@ -61,7 +61,12 @@ def apply_associations_to_inputs(
             print("[WARNING] No associations defined")
             return True
 
-        # Get spatial concentrations from simulator (if available)
+        # Get spatial concentrations from simulator (if available).
+        # NOTE: under the per-cell ask this runs once per cell, so the whole-grid
+        # fetch happens per cell. Left un-cached deliberately: a per-tick cache
+        # would need a reliable per-tick invalidation signal, and a wrong one
+        # serves stale concentrations (wrong science). Optimize later only with a
+        # verified step/diffusion signal — the FiPy solve dominates runtime anyway.
         substance_concentrations = {}
         if simulator and hasattr(simulator, 'get_substance_concentrations'):
             substance_concentrations = simulator.get_substance_concentrations()
@@ -79,11 +84,20 @@ def apply_associations_to_inputs(
 
         # --- Spatial model: per-cell local concentrations from simulator ---
         if population and substance_concentrations:
-            print(f"[ASSOCIATIONS] Applying {len(associations)} associations (spatial, per-cell)")
+            # Per-cell when the executor's per-cell ask bound a cell (env.cell);
+            # else process the whole population. Diagnostic logging is suppressed
+            # in per-cell mode (it would print once per cell).
+            per_cell = env.cell is not None
+            if per_cell:
+                _bound = env.cell.raw
+                cells_iter = [(_bound.state.id, _bound)]
+            else:
+                cells_iter = list(population.state.cells.items())
+                print(f"[ASSOCIATIONS] Applying {len(associations)} associations (spatial, per-cell)")
             cells_on_count = {gene_input: 0 for gene_input in associations.values()}
-            first_cell_logged = False
+            first_cell_logged = per_cell  # suppress the per-cell SAMPLE log when per-cell
 
-            for cell_id, cell in population.state.cells.items():
+            for cell_id, cell in cells_iter:
                 # Get cell grid position
                 pos = cell.state.position
                 if len(pos) == 2:
@@ -135,10 +149,11 @@ def apply_associations_to_inputs(
                         if node_name in cell.state.gene_network.nodes:
                             cell.state.gene_network.nodes[node_name].current_state = state
 
-            total_cells = len(population.state.cells)
-            print(f"   [SUMMARY] {total_cells} cells processed. Inputs ON counts:")
-            for gene_input, count in cells_on_count.items():
-                print(f"     {gene_input}: {count}/{total_cells} ON")
+            if not per_cell:
+                total_cells = len(population.state.cells)
+                print(f"   [SUMMARY] {total_cells} cells processed. Inputs ON counts:")
+                for gene_input, count in cells_on_count.items():
+                    print(f"     {gene_input}: {count}/{total_cells} ON")
 
         # --- Fallback: no simulator (standalone gene network / initialization) ---
         elif population:

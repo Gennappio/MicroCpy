@@ -138,10 +138,18 @@ def propagate_gene_networks_netlogo(
     # Build once before the step loop (matches simulator: fixed population list
     # per propagation call). Daughter cells added during this call are NOT
     # included — they will be picked up in the next loop iteration.
+    #
+    # Per-cell when the executor's per-cell ask bound a cell (env.cell); else the
+    # whole population. Each cell's graph walk is independent (no cross-cell
+    # reads), so per-cell and whole-population produce equivalent biology — only
+    # the RNG interleaving differs, and random per-cell order is the canonical
+    # ABM form anyway.
+    cell_source = [env.cell] if env.cell is not None else env.cells
+
     active_cells: List[Tuple] = []
     cells_without_gn = 0
 
-    for cell in env.cells:
+    for cell in cell_source:
         cell_gn = env.gene_network(cell)
         if cell_gn is None:
             cells_without_gn += 1

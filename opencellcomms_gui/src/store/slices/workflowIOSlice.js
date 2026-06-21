@@ -642,6 +642,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       // workflows, which carry no kernel field.
       ...(workflow.kernel ? { kernel: workflow.kernel } : {}),
       ...(workflow.kernel_config ? { kernel_config: workflow.kernel_config } : {}),
+      // Run-level RNG seed for reproducible random iteration order. `!= null`
+      // keeps an explicit 0 (which means "fresh entropy"); omitted when unset
+      // so the engine applies its default (42).
+      ...(workflow.seed != null ? { seed: workflow.seed } : {}),
       metadata: exportedMetadata,
       subworkflows,
     };

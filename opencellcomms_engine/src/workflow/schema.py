@@ -836,6 +836,10 @@ class WorkflowDefinition:
     stages: Dict[str, WorkflowStage] = field(default_factory=dict)
     subworkflows: Dict[str, SubWorkflow] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Run-level RNG seed for reproducible random iteration order (agents +
+    # resources). None (absent in JSON) → engine default 42 (reproducible).
+    # 0 → fresh entropy each run. Resolved in WorkflowExecutor.execute_main.
+    seed: Optional[int] = None
 
     def __post_init__(self):
         """Initialize default structure based on version."""
@@ -887,6 +891,8 @@ class WorkflowDefinition:
             "kernel_version": kernel_version,
             "metadata": self.metadata
         }
+        if self.seed is not None:
+            result["seed"] = self.seed
         if self.kernel_config:
             result["kernel_config"] = self.kernel_config
             # Legacy mirror: kernel_config["physicell"] is also exposed at the
@@ -934,7 +940,8 @@ class WorkflowDefinition:
                 kernel_id=data.get("kernel_id"),
                 kernel_version=data.get("kernel_version"),
                 subworkflows=subworkflows,
-                metadata=data.get("metadata", {})
+                metadata=data.get("metadata", {}),
+                seed=data.get("seed"),
             )
         else:
             # Legacy stage format
@@ -951,7 +958,8 @@ class WorkflowDefinition:
                 kernel_id=data.get("kernel_id"),
                 kernel_version=data.get("kernel_version"),
                 stages=stages,
-                metadata=data.get("metadata", {})
+                metadata=data.get("metadata", {}),
+                seed=data.get("seed"),
             )
 
     def get_stage(self, stage_name: str) -> Optional[WorkflowStage]:

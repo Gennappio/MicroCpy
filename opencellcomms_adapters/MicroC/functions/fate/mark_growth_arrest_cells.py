@@ -39,12 +39,18 @@ def mark_growth_arrest_cells(
 ) -> None:
     counters = env.raw_context.setdefault('growth_arrest_counters', {})
 
+    # Per-cell when bound (env.cell); else the whole-population loop. The
+    # per-cell `counters[cell.id]` is genuine per-cell state and stays in the
+    # loop; the per-tick iteration_counter / aggregates run only for the
+    # whole-population call (they would mis-fire once per cell otherwise).
+    targets = [env.cell] if env.cell is not None else list(env.cells)
+
     cells_in_arrest = 0
     cells_expired = 0
     cells_exited = 0
     cells_newly_marked = 0
 
-    for cell in env.cells:
+    for cell in targets:
         if cell.gene_states.get(Phenotype.GROWTH_ARREST.value, False):
             if not cell.is_growth_arrested:
                 cell.mark_growth_arrested()
@@ -61,20 +67,21 @@ def mark_growth_arrest_cells(
                 del counters[cell.id]
                 cells_exited += 1
 
-    iteration_counter = env.raw_context.get('iteration_counter', 0) + 1
-    env.raw_context['iteration_counter'] = iteration_counter
+    if env.cell is None:
+        iteration_counter = env.raw_context.get('iteration_counter', 0) + 1
+        env.raw_context['iteration_counter'] = iteration_counter
 
-    if iteration_counter % 100 == 0:
-        print(f"[PROGRESS] Iteration {iteration_counter}: "
-              f"{len(env.cells)} cells, {cells_in_arrest} in arrest")
-    if cells_exited > 0:
-        print(f"[GROWTH_ARREST] Exited: {cells_exited}, In arrest: {cells_in_arrest}")
+        if iteration_counter % 100 == 0:
+            print(f"[PROGRESS] Iteration {iteration_counter}: "
+                  f"{len(env.cells)} cells, {cells_in_arrest} in arrest")
+        if cells_exited > 0:
+            print(f"[GROWTH_ARREST] Exited: {cells_exited}, In arrest: {cells_in_arrest}")
 
-    env.results.record_change('growth_arrest', {
-        'cells_in_arrest': cells_in_arrest,
-        'newly_marked': cells_newly_marked,
-        'cells_expired': cells_expired,
-        'cells_exited': cells_exited,
-        'max_steps': max_growth_arrest_steps,
-        'total_tracked': len(counters),
-    })
+        env.results.record_change('growth_arrest', {
+            'cells_in_arrest': cells_in_arrest,
+            'newly_marked': cells_newly_marked,
+            'cells_expired': cells_expired,
+            'cells_exited': cells_exited,
+            'max_steps': max_growth_arrest_steps,
+            'total_tracked': len(counters),
+        })

@@ -22,7 +22,7 @@ from src.workflow.logging import log_always
         {"name": "tile_size", "type": "FLOAT", "description": "Physical tile size", "default": 1.0},
         {"name": "topology_x", "type": "STRING", "description": "X topology", "default": "toroidal", "options": ["bounded", "toroidal"]},
         {"name": "topology_y", "type": "STRING", "description": "Y topology", "default": "toroidal", "options": ["bounded", "toroidal"]},
-        {"name": "seed", "type": "INT", "description": "RNG seed (0 = nondeterministic)", "default": 0},
+        {"name": "seed", "type": "INT", "description": "RNG seed override (0 = use the workflow top-level 'seed')", "default": 0},
     ],
     inputs=["context"],
     outputs=["domain", "abm_population"],
@@ -36,7 +36,11 @@ def setup_space(env: BiologicalContext, size_x: int = 50, size_y: int = 50, tile
 
     space = LatticeSpace(int(size_x), int(size_y), float(tile_size), topology_x, topology_y)
     domain = Domain(space)
-    population = Population(space, config=env.raw_context.get("config"), context=env.raw_context, seed=int(seed))
+    # The run-level seed (workflow top-level "seed", resolved in execute_main and
+    # stored in context['seed']) is authoritative. The node's own `seed` param is
+    # an override used only when explicitly set non-zero.
+    effective_seed = int(seed) if int(seed) else int(env.raw_context.get("seed", 0) or 0)
+    population = Population(space, config=env.raw_context.get("config"), context=env.raw_context, seed=effective_seed)
     population.domain = domain
 
     env.raw_context["domain"] = domain
