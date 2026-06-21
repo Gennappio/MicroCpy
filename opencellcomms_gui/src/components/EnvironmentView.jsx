@@ -6,8 +6,6 @@ import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
 import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
-import { PROCESS_PHASE_OPTIONS } from '../store/subworkflowKinds';
-import { processRoleForSubworkflow } from '../utils/contractUtils';
 import './EnvironmentView.css';
 
 const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
@@ -28,7 +26,6 @@ const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onM
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');
-  const [newBehaviorPhase, setNewBehaviorPhase] = useState('coupling');
 
   // Sync currentStage when entering this view: jump to init (or first behavior)
   // if currentStage isn't one of this view's tabs.
@@ -43,10 +40,9 @@ const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onM
   const handleCreateBehavior = () => {
     const name = newBehaviorName.trim();
     if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
-    addEnvironmentBehavior(name, newBehaviorPhase);
+    addEnvironmentBehavior(name);
     setCurrentStage(name);
     setNewBehaviorName('');
-    setNewBehaviorPhase('coupling');
     setShowAddBehavior(false);
   };
 
@@ -66,14 +62,9 @@ const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onM
   };
 
   const buildTabs = () => {
-    const withRole = (name, tab) => {
-      const swKind = workflow.metadata?.gui?.subworkflow_kinds?.[name];
-      const role = processRoleForSubworkflow(workflow.subworkflows?.[name], swKind);
-      return { ...tab, phase: role.phase, phaseLabel: role.label };
-    };
     const tabs = [];
-    if (initSw) tabs.push(withRole(initSw, { name: initSw, label: 'Init', deletable: false }));
-    behaviors.forEach((b) => tabs.push(withRole(b, { name: b, label: b, deletable: true })));
+    if (initSw) tabs.push({ name: initSw, label: 'Init', deletable: false });
+    behaviors.forEach((b) => tabs.push({ name: b, label: b, deletable: true }));
     return tabs;
   };
 
@@ -142,15 +133,6 @@ const EnvironmentView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onM
               onChange={(e) => setNewBehaviorName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreateBehavior(); else if (e.key === 'Escape') setShowAddBehavior(false); }}
             />
-            <select
-              className="dialog-input"
-              value={newBehaviorPhase}
-              onChange={(e) => setNewBehaviorPhase(e.target.value)}
-            >
-              {PROCESS_PHASE_OPTIONS.map((option) => (
-                <option key={option.phase} value={option.phase}>{option.label}</option>
-              ))}
-            </select>
             <div className="dialog-actions">
               <button className="btn btn-secondary" onClick={() => setShowAddBehavior(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleCreateBehavior}>Create</button>

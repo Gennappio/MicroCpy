@@ -35,7 +35,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "reconciliation",
           "reads": [
             "intent.*",
             "agent.collection",
@@ -68,7 +67,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "reporting",
           "reads": [
             "agents",
             "resources"
@@ -86,7 +84,6 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "reconciliation",
       "reads": [
         "intent.*",
         "agent.collection",
@@ -112,7 +109,6 @@
     ]
   },
   "contract": {
-    "phase": "reconciliation",
     "reads": [
       "intent.*",
       "agent.collection",

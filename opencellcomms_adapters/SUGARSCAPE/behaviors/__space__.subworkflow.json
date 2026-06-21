@@ -42,7 +42,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "initialization",
           "reads": [],
           "writes": [
             "space.self"
@@ -76,7 +75,6 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "initialization",
       "owner": {
         "type": "space"
       },
@@ -95,7 +93,6 @@
     ]
   },
   "contract": {
-    "phase": "initialization",
     "owner": {
       "type": "space"
     },

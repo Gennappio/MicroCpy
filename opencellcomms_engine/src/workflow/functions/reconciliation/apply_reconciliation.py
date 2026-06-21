@@ -13,7 +13,6 @@ from src.workflow.decorators import register_function
     compatible_kernels=["*"],
     requires=[],
     contract={
-        "phase": "reconciliation",
         "reads": ["intent.*", "agent.collection", "resource.collection", "space.self"],
         "writes": ["agent.collection", "resource.self", "space.self"],
         "consumes": ["intent.*"],

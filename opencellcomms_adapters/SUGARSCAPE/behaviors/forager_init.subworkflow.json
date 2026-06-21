@@ -44,7 +44,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "space.self",
             "resource.sugar"
@@ -81,7 +80,6 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "initialization",
       "owner": {
         "type": "agent",
         "kind": "forager"
@@ -104,7 +102,6 @@
     ]
   },
   "contract": {
-    "phase": "initialization",
     "owner": {
       "type": "agent",
       "kind": "forager"

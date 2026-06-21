@@ -100,40 +100,6 @@
   font-style: italic;
 }
 
-.node-contract-pill {
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #475569;
-  background: #e2e8f0;
-  padding: 2px 6px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-}
-
-.node-contract-pill.match {
-  color: #166534;
-  background: #dcfce7;
-  border-color: #86efac;
-}
-
-.node-contract-pill.inferred,
-.node-contract-pill.neutral,
-.node-contract-pill.soft-mismatch {
-  color: #075985;
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-}
-
-.node-contract-pill.mismatch {
-  color: #92400e;
-  background: #fef3c7;
-  border-color: #fcd34d;
-}
 
 .node-edit-btn {
   background: none;

@@ -16,7 +16,6 @@
  */
 
 import { computeSubworkflowKinds } from '../store/computeSubworkflowKinds';
-import { processRoleForSubworkflow } from './contractUtils';
 import { variantForKind } from '../store/subworkflowKinds';
 import {
   RECONCILIATION_STEPS,
@@ -118,7 +117,6 @@ export const buildOverviewModel = (workflow) => {
     const name = call.subworkflow_name;
     const sw = subs[name];
     const kind = kinds[name];
-    const role = processRoleForSubworkflow(sw, kind);
     const id = `${idPrefix}:${call.id}`;
     nodes.push({
       id,
@@ -126,9 +124,6 @@ export const buildOverviewModel = (workflow) => {
       position: { x: COL_X, y },
       data: {
         title: name,
-        phaseLabel: role.label,
-        phase: role.phase,
-        inferred: role.inferred,
         variant: variantForKind(kind),
         forEach: forEachLabel(call.for_each),
         iterations: call.iterations > 1 ? call.iterations : null,
@@ -170,8 +165,6 @@ export const buildOverviewModel = (workflow) => {
         position: { x: STEP_X, y },
         data: {
           title: step.label,
-          phaseLabel: 'Reconciliation',
-          phase: 'reconciliation',
           variant: 'slate',
           system: true,
           intent: step.intent,

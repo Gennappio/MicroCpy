@@ -38,7 +38,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "resource_behavior",
           "owner": {
             "type": "resource",
             "kind": "sugar"
@@ -60,7 +59,6 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "resource_behavior",
       "owner": {
         "type": "resource",
         "kind": "sugar"
@@ -81,7 +79,6 @@
     ]
   },
   "contract": {
-    "phase": "resource_behavior",
     "owner": {
       "type": "resource",
       "kind": "sugar"

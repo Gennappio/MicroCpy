@@ -51,12 +51,16 @@ const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
 const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContract = null, onCreate, onCancel }) => {
   const [name, setName] = useState('');
   const [parameters, setParameters] = useState([]);
-  // The function's "role" is the v2 canvas kind (Agent / Environment /
-  // Processing). Default to the current canvas's kind when it's a valid
-  // authoring role, so a function lands where the biologist is working.
-  const [role, setRole] = useState(() =>
-    FUNCTION_ROLE_OPTIONS.some((o) => o.kind === currentKind) ? currentKind : DEFAULT_ROLE
-  );
+  // The function's "role" is the v2 canvas kind (Agent / Resource / Processing),
+  // and it is DERIVED from the canvas you're on — not a free choice. The old
+  // dropdown let you pick any of the seven roles from any canvas (so on the
+  // Agents canvas you could wrongly pick "Resource"), which confused more than it
+  // helped: the role is fully determined by which entity canvas you're editing.
+  // It falls back to a sensible default only when opened off a role canvas.
+  const role = FUNCTION_ROLE_OPTIONS.some((o) => o.kind === currentKind)
+    ? currentKind
+    : DEFAULT_ROLE;
+  const roleLabel = FUNCTION_ROLE_OPTIONS.find((o) => o.kind === role)?.label || role;
   const [requires, setRequires] = useState([]);
   // Setup functions (create population / load cells) keep the raw context dict.
   const [typedEnvExempt, setTypedEnvExempt] = useState(false);
@@ -176,14 +180,13 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContrac
         </div>
 
         <div className="nf-row">
-          <label>Role (what it belongs to)</label>
-          <select
+          <label>Role (set by this canvas)</label>
+          <input
             className="dialog-input"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            {FUNCTION_ROLE_OPTIONS.map((o) => <option key={o.kind} value={o.kind}>{o.label}</option>)}
-          </select>
+            value={roleLabel}
+            disabled
+            title="The role follows the canvas you're on. To create a function with a different role, open that entity's canvas and create it there."
+          />
         </div>
 
         <div className="nf-row">

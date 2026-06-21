@@ -33,7 +33,6 @@
           "envinit-Setup_simulation-param_sim_output_dir"
         ],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "simulation.parameters"
           ],
@@ -62,7 +61,6 @@
           "envinit-Setup_simulation-param_1771966627094"
         ],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "simulation.parameters"
           ],
@@ -86,7 +84,6 @@
         },
         "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
         "contract": {
-          "phase": "initialization",
           "reads": [
             "space.self",
             "simulation.config"
@@ -110,7 +107,6 @@
           "envinit-Setup_substances-param_substances_list"
         ],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "simulation.config"
           ],
@@ -133,7 +129,6 @@
           "envinit-Setup_associations-param_associations_dict"
         ],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "simulation.parameters"
           ],
@@ -349,7 +344,6 @@
       "envinit-Setup_associations-setup_all_associations"
     ],
     "contract": {
-      "phase": "initialization",
       "owner": {
         "type": "environment"
       },

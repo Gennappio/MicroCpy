@@ -27,7 +27,7 @@ const BehaviorTabsBar = ({
 
   return (
     <div className="behavior-tabs-bar">
-      {tabs.map(({ name, label, deletable = true, phase, phaseLabel }) => (
+      {tabs.map(({ name, label, deletable = true }) => (
         <button
           key={name}
           className={`behavior-tab ${activeTab === name ? 'active' : ''}`}
@@ -48,12 +48,6 @@ const BehaviorTabsBar = ({
             />
           ) : (
             <span className="behavior-tab-label">{label || name}</span>
-          )}
-
-          {phaseLabel && (
-            <span className={`behavior-tab-phase phase-${phase || 'unknown'}`}>
-              {phaseLabel}
-            </span>
           )}
 
           {deletable && (

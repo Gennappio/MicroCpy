@@ -32,7 +32,6 @@
         "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
         "custom_name": "generate_iteration_plots",
         "contract": {
-          "phase": "reporting",
           "reads": [
             "agent.collection",
             "resource.fields",
@@ -48,7 +47,6 @@
       "iteration_plots-gen_loop_plots"
     ],
     "contract": {
-      "phase": "reporting",
       "reads": [
         "agent.collection",
         "resource.fields",

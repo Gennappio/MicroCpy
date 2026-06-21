@@ -68,22 +68,7 @@
           }
         ]
       },
-      "contract_enforcement": "warn",
-      "processes": {
-        "agent_behaviors": [
-          "forager_step"
-        ],
-        "resource_behaviors": [
-          "sugar_growback"
-        ],
-        "couplings": [],
-        "reconciliation": [
-          "world_step"
-        ],
-        "reporting": [
-          "final_snapshot"
-        ]
-      }
+      "contract_enforcement": "warn"
     }
   },
   "subworkflows": {
@@ -191,7 +176,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "initialization",
             "reads": [],
             "writes": [
               "space.self"
@@ -225,7 +209,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "initialization",
         "owner": {
           "type": "space"
         },
@@ -269,7 +252,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "initialization",
             "reads": [
               "space.self"
             ],
@@ -299,7 +281,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "initialization",
             "reads": [
               "space.self"
             ],
@@ -337,7 +318,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "initialization",
         "owner": {
           "type": "resource",
           "kind": "sugar"
@@ -390,7 +370,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "initialization",
             "reads": [
               "space.self",
               "resource.sugar"
@@ -427,7 +406,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "initialization",
         "owner": {
           "type": "agent",
           "kind": "forager"
@@ -615,7 +593,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "coupling",
             "participants": [
               {
                 "type": "agent",
@@ -657,7 +634,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "coupling",
             "participants": [
               {
                 "type": "agent",
@@ -693,7 +669,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "agent_behavior",
             "owner": {
               "type": "agent",
               "kind": "forager"
@@ -719,7 +694,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "agent_behavior",
         "owner": {
           "type": "agent",
           "kind": "forager"
@@ -770,7 +744,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "resource_behavior",
             "owner": {
               "type": "resource",
               "kind": "sugar"
@@ -792,7 +765,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "resource_behavior",
         "owner": {
           "type": "resource",
           "kind": "sugar"
@@ -841,7 +813,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "reporting",
             "reads": [
               "agents",
               "resources",
@@ -859,7 +830,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "reporting",
         "reads": [
           "agents",
           "resources",
@@ -899,7 +869,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "reconciliation",
             "reads": [
               "intent.*",
               "agent.collection",
@@ -932,7 +901,6 @@
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
-            "phase": "reporting",
             "reads": [
               "agents",
               "resources"
@@ -950,7 +918,6 @@
       ],
       "input_parameters": [],
       "contract": {
-        "phase": "reconciliation",
         "reads": [
           "intent.*",
           "agent.collection",

@@ -4,7 +4,6 @@ import {
   INIT_SEQUENCE_NAME,
   SPACE_NAME,
   defaultContractForKind,
-  defaultContractForProcessPhase,
 } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
 
@@ -377,14 +376,14 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  addEnvironmentBehavior: (behaviorName, phase = 'coupling') => {
+  addEnvironmentBehavior: (behaviorName) => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
       const sw = makeSubworkflow(
         behaviorName,
         `Environment behavior: ${behaviorName}`,
         KINDS.ENV_BEHAVIOR,
-        defaultContractForProcessPhase(phase),
+        defaultContractForKind(KINDS.ENV_BEHAVIOR),
       );
       const newWorkflow = {
         ...state.workflow,

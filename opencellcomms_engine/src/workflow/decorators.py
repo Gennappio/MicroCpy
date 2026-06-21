@@ -329,7 +329,7 @@ def register_function(
             (e.g. "population", "simulator", "gene_networks"). Reserved ontology
             tokens use the form "substance:<name>", "gene:<name>",
             "phenotype:<name>". None/[] means the function runs under any kernel.
-        contract: Optional read/write/phase contract used by the GUI and workflow
+        contract: Optional read/write contract used by the GUI and workflow
             validator. This is warning-mode metadata; it does not change runtime
             permissions yet.
 

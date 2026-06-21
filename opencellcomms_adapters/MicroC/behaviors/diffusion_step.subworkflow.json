@@ -41,7 +41,6 @@
           "diffusion_step-param_relaxation_factor"
         ],
         "contract": {
-          "phase": "coupling",
           "participants": [
             {
               "type": "agent",
@@ -141,7 +140,6 @@
       "diffusion_step-run_diffusion_coupled"
     ],
     "contract": {
-      "phase": "coupling",
       "participants": [
         {
           "type": "agent",

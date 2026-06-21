@@ -11,25 +11,6 @@ from enum import Enum
 import re
 
 
-CONTRACT_PHASES = {
-    "initialization",
-    "agent_behavior",
-    "resource_behavior",
-    "space_behavior",
-    "coupling",
-    "reconciliation",
-    "reporting",
-}
-
-PROCESS_KIND_TO_PHASE = {
-    "agent_init": "initialization",
-    "resource_init": "initialization",
-    "space": "initialization",
-    "env_init": "initialization",
-    "agent_behavior": "agent_behavior",
-    "resource_behavior": "resource_behavior",
-    "processing_behavior": "reporting",
-}
 
 CONTRACT_REQUIRED_KINDS = {
     "agent_behavior",
@@ -1237,13 +1218,6 @@ class WorkflowDefinition:
         if not isinstance(contract, dict):
             return [f"Contract warning: {label} contract must be an object."]
 
-        phase = contract.get("phase")
-        if phase is not None and phase not in CONTRACT_PHASES:
-            warnings.append(
-                f"Contract warning: {label} has unknown phase '{phase}'. "
-                f"Expected one of: {', '.join(sorted(CONTRACT_PHASES))}."
-            )
-
         for key in ("reads", "writes", "emits", "consumes"):
             if key in contract and not isinstance(contract[key], list):
                 warnings.append(f"Contract warning: {label} contract.{key} must be a list.")
@@ -1260,17 +1234,11 @@ class WorkflowDefinition:
         self, name: str, kind: Optional[str], contract: Dict[str, Any]
     ) -> List[str]:
         warnings: List[str] = []
-        phase = contract.get("phase")
         writes = contract.get("writes") or []
 
-        expected_phase = PROCESS_KIND_TO_PHASE.get(kind or "")
-        if expected_phase and phase and phase != expected_phase:
-            warnings.append(
-                f"Contract warning: subworkflow '{name}' is registered as {kind} "
-                f"but declares phase '{phase}' instead of '{expected_phase}'."
-            )
-
-        if phase == "agent_behavior":
+        # Ownership-based checks (no phase): an agent/resource behaviour should own
+        # and write only its own self-state (or queue intents).
+        if kind == "agent_behavior":
             owner = contract.get("owner") or {}
             if owner.get("type") != "agent":
                 warnings.append(
@@ -1286,7 +1254,7 @@ class WorkflowDefinition:
                     f"{', '.join(map(str, illegal_writes))}."
                 )
 
-        if phase == "resource_behavior":
+        if kind == "resource_behavior":
             owner = contract.get("owner") or {}
             if owner.get("type") != "resource":
                 warnings.append(
@@ -1301,19 +1269,6 @@ class WorkflowDefinition:
                     f"Contract warning: resource behavior '{name}' writes outside resource.self/intents: "
                     f"{', '.join(map(str, illegal_writes))}."
                 )
-
-        if phase == "coupling":
-            participants = contract.get("participants") or []
-            if len(participants) < 2:
-                warnings.append(
-                    f"Contract warning: coupling '{name}' should declare at least two participants."
-                )
-
-        if phase == "reporting" and writes:
-            warnings.append(
-                f"Contract warning: reporting subworkflow '{name}' should be read-only, "
-                f"but declares writes: {', '.join(map(str, writes))}."
-            )
 
         return warnings
 

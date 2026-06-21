@@ -86,24 +86,6 @@
 }
 .ov-node.system .ov-node-title { color: #475569; font-weight: 500; }
 
-.ov-pill {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
-  white-space: nowrap;
-}
-.ov-pill.phase-initialization   { background: #dbeafe; color: #1d4ed8; }
-.ov-pill.phase-agent_behavior   { background: #e0e7ff; color: #4338ca; }
-.ov-pill.phase-resource_behavior{ background: #d1fae5; color: #047857; }
-.ov-pill.phase-coupling         { background: #fef3c7; color: #b45309; }
-.ov-pill.phase-reconciliation   { background: #e2e8f0; color: #334155; }
-.ov-pill.phase-reporting        { background: #f3e8ff; color: #7e22ce; }
-
 .ov-node-meta {
   display: flex;
   flex-wrap: wrap;
