@@ -731,7 +731,7 @@
           "subworkflow_name": "division",
           "position": {
             "x": 400,
-            "y": 285
+            "y": 340
           },
           "description": "division (proliferation births + apoptotic removal) — toggle via this node's enabled flag",
           "iterations": 1,
@@ -745,7 +745,7 @@
           "subworkflow_name": "fate_summary",
           "position": {
             "x": 400,
-            "y": 340
+            "y": 285
           },
           "description": "fate_summary",
           "iterations": 1,
@@ -785,8 +785,8 @@
       "execution_order": [
         "sched-call-gene_update",
         "sched-call-fate_update",
-        "sched-call-division",
         "sched-call-fate_summary",
+        "sched-call-division",
         "sched-call-iteration_plots"
       ]
     },
