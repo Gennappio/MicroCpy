@@ -11,7 +11,28 @@
 
 import { INIT_SEQUENCE_NAME } from '../store/subworkflowKinds';
 
-export const deriveForEachForBehavior = (gui, behaviorName) => {
+// Phases whose behaviors iterate over the whole population internally and run
+// ONCE per step — they must not be wrapped in a per-entity `for_each` ask, even
+// when owned by an agent/resource tab.
+const NON_ITERATING_PHASES = new Set(['coupling', 'reconciliation', 'reporting']);
+
+export const deriveForEachForBehavior = (gui, behaviorName, phase = null) => {
+  // Iteration style follows the behavior's CONTRACT PHASE, not just which tab
+  // owns it. Only genuine per-entity behaviors (agent_behavior / resource_behavior)
+  // fan out once per agent/resource via `for_each`. Coupling / reconciliation /
+  // reporting behaviors loop over the whole population internally and run once per
+  // step — even when owned by an agent/resource tab (e.g. MicroC's `gene_update`,
+  // a coupling on the tumor_cell tab). Without this guard the executor wraps them
+  // in a per-agent ask and SKIPS them on models that aren't a per-agent ABM
+  // ("no 'abm_population' in context — skipped").
+  const proc = gui.processes || {};
+  const nonIterating =
+    (phase && NON_ITERATING_PHASES.has(phase)) ||
+    (proc.couplings || []).includes(behaviorName) ||
+    (proc.reconciliation || []).includes(behaviorName) ||
+    (proc.reporting || []).includes(behaviorName);
+  if (nonIterating) return null;
+
   const agentKind = (gui.agent_kinds || []).find((k) =>
     (k.behavior_subworkflows || []).includes(behaviorName),
   );
@@ -104,9 +125,15 @@ const rebuildSubworkflow = (workflow, name, nodes, edges) => {
         description: node.data.description || '',
         parameter_nodes: parameterConnections(edges, node.id),
       };
+      const calledPhase =
+        workflow.subworkflows?.[node.data.subworkflowName]?.contract?.phase || null;
       const forEach =
         node.data.forEach ||
-        deriveForEachForBehavior(workflow.metadata?.gui || {}, node.data.subworkflowName);
+        deriveForEachForBehavior(
+          workflow.metadata?.gui || {},
+          node.data.subworkflowName,
+          calledPhase,
+        );
       if (forEach) call.for_each = forEach;
       if (node.data.results && node.data.results.trim() !== '') call.results = node.data.results;
       return call;
