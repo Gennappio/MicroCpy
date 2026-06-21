@@ -15,6 +15,7 @@
           "behavior_subworkflows": [
             "gene_update",
             "fate_update",
+            "division",
             "fate_summary",
             "iteration_plots"
           ]
@@ -49,7 +50,9 @@
           "gene_update",
           "fate_update"
         ],
-        "reconciliation": [],
+        "reconciliation": [
+          "division"
+        ],
         "reporting": [
           "fate_summary",
           "iteration_plots",
@@ -723,6 +726,20 @@
           "parameter_nodes": []
         },
         {
+          "id": "sched-call-division",
+          "type": "subworkflow_call",
+          "subworkflow_name": "division",
+          "position": {
+            "x": 400,
+            "y": 285
+          },
+          "description": "division (proliferation births + apoptotic removal) — toggle via this node's enabled flag",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
           "id": "sched-call-fate_summary",
           "type": "subworkflow_call",
           "subworkflow_name": "fate_summary",
@@ -768,6 +785,7 @@
       "execution_order": [
         "sched-call-gene_update",
         "sched-call-fate_update",
+        "sched-call-division",
         "sched-call-fate_summary",
         "sched-call-iteration_plots"
       ]
@@ -834,6 +852,92 @@
         "main-call-__scheduler__",
         "main-call-final_summary"
       ]
+    },
+    "division": {
+      "description": "MicroC: division (proliferating cells create daughters; apoptotic cells are removed). Reconciliation step — runs once per scheduler iteration over the whole population. Toggle on/off via the scheduler call's enabled flag.",
+      "controller": {
+        "id": "controller-division",
+        "type": "controller",
+        "label": "DIVISION CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "division-cell_division",
+          "function_name": "update_cell_division",
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Handle cell division for proliferating cells",
+          "custom_name": "update_cell_division",
+          "contract": {
+            "phase": "reconciliation",
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks",
+              "space.self"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "division-remove_apoptotic",
+          "function_name": "remove_apoptotic_cells",
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Remove cells with Apoptosis phenotype from population",
+          "contract": {
+            "phase": "reconciliation",
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "execution_order": [
+        "division-cell_division",
+        "division-remove_apoptotic"
+      ],
+      "contract": {
+        "phase": "reconciliation",
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.collection",
+          "agent.self.phenotype",
+          "gene_networks",
+          "space.self"
+        ],
+        "writes": [
+          "agent.collection",
+          "gene_networks",
+          "simulation.results"
+        ],
+        "consumes": [],
+        "emits": []
+      }
     },
     "fate_update": {
       "description": "MicroC: fate_update",
