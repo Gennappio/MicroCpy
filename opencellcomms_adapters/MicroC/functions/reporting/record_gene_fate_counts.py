@@ -47,7 +47,12 @@ COLORS = {
     "Necrosis": "#4d4d4d",
     "Quiescent": "#7f7f7f",
     "Other": "#c7c7c7",
+    "total_cells": "#1f77b4",
+    "glycoATP": "#e377c2",
+    "mitoATP": "#17becf",
 }
+
+DEFAULT_METABOLIC_GENES = "glycoATP,mitoATP"
 
 
 @register_function(
@@ -68,6 +73,12 @@ COLORS = {
             "description": "Filename for the fate-statistics CSV history",
             "default": "gene_fate_counts_over_time.csv",
         },
+        {
+            "name": "metabolic_genes",
+            "type": "STRING",
+            "description": "Comma-separated gene names to track ON-cell counts over time (plotted with total cells)",
+            "default": DEFAULT_METABOLIC_GENES,
+        },
     ],
     inputs=["context"],
     outputs=[],
@@ -77,6 +88,7 @@ def record_gene_fate_counts(
     env: BiologicalContext,
     plot_filename: str = "gene_fate_counts_over_time.png",
     csv_filename: str = "gene_fate_counts_over_time.csv",
+    metabolic_genes: str = DEFAULT_METABOLIC_GENES,
     **kwargs,
 ) -> bool:
     ctx = env.raw_context
@@ -97,7 +109,10 @@ def record_gene_fate_counts(
         "total_cells": total_cells,
     }
 
+    met_genes = [g.strip() for g in metabolic_genes.split(",") if g.strip()]
+
     gene_counts = {name: 0 for name in FATE_GENES}
+    met_counts = {name: 0 for name in met_genes}
     phenotype_counts = {name: 0 for name in PHENOTYPES}
     # Cumulative fire/revert counters summed across the live population.
     fires_cum = {name: 0 for name in FATE_GENES}
@@ -108,6 +123,9 @@ def record_gene_fate_counts(
         for name in FATE_GENES:
             if bool(states.get(name, False)):
                 gene_counts[name] += 1
+        for name in met_genes:
+            if bool(states.get(name, False)):
+                met_counts[name] += 1
 
         phenotype = cell.phenotype or "Other"
         if phenotype not in phenotype_counts:
@@ -128,6 +146,9 @@ def record_gene_fate_counts(
     for name in FATE_GENES:
         row[f"gene_{name}"] = gene_counts[name]
         row[f"gene_{name}_pct"] = round(100.0 * gene_counts[name] / denom, 2)
+    for name in met_genes:
+        row[f"gene_{name}"] = met_counts[name]
+        row[f"gene_{name}_pct"] = round(100.0 * met_counts[name] / denom, 2)
     for name in PHENOTYPES:
         row[f"phenotype_{name}"] = phenotype_counts[name]
         row[f"phenotype_{name}_pct"] = round(100.0 * phenotype_counts[name] / denom, 2)
@@ -160,13 +181,17 @@ def record_gene_fate_counts(
         f"Necro={phenotype_counts[Phenotype.NECROSIS.value]}, "
         f"Quiesc={phenotype_counts[Phenotype.QUIESCENT.value]} | "
         f"fires={fires_total}, reverts={reverts_total}"
+        + (
+            " | " + ", ".join(f"{n}={met_counts[n]}" for n in met_genes)
+            if met_genes else ""
+        )
     )
 
     output_dir = Path(ctx.get("plots_dir") or "results/plots") / "timeseries"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     _write_csv(output_dir / csv_filename, history)
-    _write_plot(output_dir / plot_filename, history)
+    _write_plot(output_dir / plot_filename, history, met_genes)
     return True
 
 
@@ -180,17 +205,18 @@ def _write_csv(path: Path, history) -> None:
         writer.writerows(history)
 
 
-def _write_plot(path: Path, history) -> None:
+def _write_plot(path: Path, history, met_genes=None) -> None:
     try:
         import matplotlib.pyplot as plt
     except ImportError:
         print("[FATE_SUMMARY] matplotlib unavailable; wrote CSV only")
         return
 
+    met_genes = met_genes or []
     iterations = [row["iteration"] for row in history]
 
-    fig, (ax_gene, ax_pheno, ax_events) = plt.subplots(
-        3, 1, figsize=(9, 10), sharex=True
+    fig, (ax_gene, ax_pheno, ax_events, ax_pop) = plt.subplots(
+        4, 1, figsize=(9, 13), sharex=True
     )
 
     for name in FATE_GENES:
@@ -227,11 +253,30 @@ def _write_plot(path: Path, history) -> None:
         marker="x", linewidth=1.5, linestyle="--", color="#9467bd",
         label="reverts (all fates)",
     )
-    ax_events.set_xlabel("Scheduler Iteration")
     ax_events.set_ylabel("Events / iteration")
     ax_events.set_title("Fate Fires & Reverts per Iteration")
     ax_events.grid(True, alpha=0.3)
     ax_events.legend(loc="upper right", fontsize=8)
+
+    # Panel 4: total population and metabolic-gene ON-cell counts on ONE shared
+    # axis — all are cell counts, so magnitudes compare honestly (a single axis
+    # avoids the dual-axis illusion of metabolic genes sitting above total cells).
+    ax_pop.plot(
+        iterations, [row["total_cells"] for row in history],
+        marker="o", linewidth=2, label="total cells", color=COLORS["total_cells"],
+    )
+    for i, name in enumerate(met_genes):
+        color = COLORS.get(name, f"C{i + 3}")
+        ax_pop.plot(
+            iterations, [row.get(f"gene_{name}", 0) for row in history],
+            marker="s", linewidth=2, label=f"{name} (ON)", color=color,
+        )
+    ax_pop.set_xlabel("Scheduler Iteration")
+    ax_pop.set_ylabel("Cells")
+    ax_pop.set_ylim(bottom=0)
+    ax_pop.set_title("Population & Metabolic Genes (ON cells)")
+    ax_pop.grid(True, alpha=0.3)
+    ax_pop.legend(loc="upper left", fontsize=8)
 
     fig.tight_layout()
     fig.savefig(path, dpi=150)
