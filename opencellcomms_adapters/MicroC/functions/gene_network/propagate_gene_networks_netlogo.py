@@ -260,6 +260,13 @@ def _ensure_netlogo_attrs(cell_gn) -> None:
         cell_gn._cell_ran1 = random.random()
     if not hasattr(cell_gn, '_cell_ran2'):
         cell_gn._cell_ran2 = random.random()
+    # Cumulative per-cell fate-event counters over the run (NetLogo "fate fires"
+    # / "fate reverts"). Not cleared by reset_fate — they track activity across
+    # the whole simulation so the reporter can derive per-iteration deltas.
+    if not hasattr(cell_gn, '_fate_fires'):
+        cell_gn._fate_fires = Counter()
+    if not hasattr(cell_gn, '_fate_reverts'):
+        cell_gn._fate_reverts = Counter()
     if not hasattr(cell_gn, '_output_links_built') or not cell_gn._output_links_built:
         _build_output_links(cell_gn)
         cell_gn._output_links_built = True
@@ -457,6 +464,7 @@ def _netlogo_influence_link_end(gene_network, source_name: str, target_name: str
         if target_node.current_state:
             fate_assigned = target_name
             gene_network._fate = target_name
+            gene_network._fate_fires[target_name] += 1
             if debug:
                 print(f"      FATE FIRE: {target_name}")
 
@@ -464,6 +472,7 @@ def _netlogo_influence_link_end(gene_network, source_name: str, target_name: str
         if (not target_node.current_state) and (target_name == current_fate_before):
             gene_network._fate = None  # NetLogo: set my-fate nobody
             fate_reverted = True
+            gene_network._fate_reverts[target_name] += 1
             if debug:
                 print(f"      FATE REVERTED: {target_name} turned OFF → nobody")
 
