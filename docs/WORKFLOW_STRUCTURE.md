@@ -274,7 +274,7 @@ The `position` object controls where nodes appear on the GUI canvas:
 ```
 
 **Tips:**
-- Space nodes ~100-150 pixels apart vertically
+- World nodes ~100-150 pixels apart vertically
 - Keep initialization functions at `x: 100`
 - Use consistent alignment for readability
 

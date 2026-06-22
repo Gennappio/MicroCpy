@@ -276,7 +276,7 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config, 
 
     # Log summary
     print(f"[FORCE_PROLIFERATION] Division: {successful_divisions} ok, "
-          f"{failed_divisions} failed (no space), "
+          f"{failed_divisions} failed (no world), "
           f"cells {initial_count} → {final_count}")
 
 

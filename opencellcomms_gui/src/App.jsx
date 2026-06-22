@@ -6,7 +6,7 @@ import ResultsExplorer from './components/ResultsExplorer';
 import PlannerView from './components/PlannerView';
 import AgentsView from './components/AgentsView';
 import ResourcesView from './components/ResourcesView';
-import SpaceView from './components/SpaceView';
+import WorldView from './components/WorldView';
 import EnvironmentView from './components/EnvironmentView';
 import InitSequenceView from './components/InitSequenceView';
 import SchedulerView from './components/SchedulerView';
@@ -320,8 +320,8 @@ function App() {
         />
       )}
 
-      {currentMainTab === 'space' && (
-        <SpaceView
+      {currentMainTab === 'world' && (
+        <WorldView
           paletteWidth={paletteWidth}
           inspectorWidth={inspectorWidth}
           onMouseDownPalette={handleMouseDown('palette')}

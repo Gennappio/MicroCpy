@@ -19,17 +19,17 @@ def move_to_best_sugar(env: BiologicalContext, **kwargs):
     if agent is None:
         return True
 
-    space = env.space
+    world = env.world
     sugar = env.resource("sugar")
     pos = agent.position
     vision = int(agent.get("vision", 1))
     best, best_sugar, best_distance = pos, sugar.at(pos), 0.0
 
-    for cell in space.neighbors(pos, vision, "axial"):
-        if not space.is_free(cell):
+    for cell in world.neighbors(pos, vision, "axial"):
+        if not world.is_free(cell):
             continue
         visible_sugar = sugar.at(cell)
-        distance = space.distance(pos, cell)
+        distance = world.distance(pos, cell)
         if visible_sugar > best_sugar or (
             visible_sugar == best_sugar and distance < best_distance
         ):

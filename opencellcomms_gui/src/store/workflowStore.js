@@ -35,7 +35,7 @@ const _defaultGuiMeta = {
   function_libraries: [],
   agent_kinds: [],
   resource_kinds: [],
-  space: { subworkflow: null },
+  world: { subworkflow: null },
   environment: { init_subworkflow: null, behavior_subworkflows: [] },
   init_sequence: { subworkflow: INIT_SEQUENCE_NAME },
   scheduler: { subworkflow: SCHEDULER_NAME },

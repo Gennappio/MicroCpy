@@ -65,7 +65,7 @@
             "simulation.parameters"
           ],
           "writes": [
-            "space.self",
+            "world.self",
             "simulation.config"
           ],
           "emits": []
@@ -85,7 +85,7 @@
         "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
         "contract": {
           "reads": [
-            "space.self",
+            "world.self",
             "simulation.config"
           ],
           "writes": [
@@ -352,7 +352,7 @@
       ],
       "writes": [
         "simulation.config",
-        "space.self",
+        "world.self",
         "agent.collection",
         "resource.collection",
         "associations"

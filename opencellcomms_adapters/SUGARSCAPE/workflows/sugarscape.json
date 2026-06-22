@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "name": "Sugarscape",
-  "description": "Sugarscape on the ABM class layer, arranged for the current Space / Resources / Agents / Scheduler GUI.",
+  "description": "Sugarscape on the ABM class layer, arranged for the current World / Resources / Agents / Scheduler GUI.",
   "kernel": "biophysics",
   "metadata": {
     "author": "OpenCellComms",
@@ -26,8 +26,8 @@
           ]
         }
       ],
-      "space": {
-        "subworkflow": "__space__"
+      "world": {
+        "subworkflow": "__world__"
       },
       "environment": {
         "init_subworkflow": null,
@@ -139,14 +139,14 @@
       ],
       "input_parameters": []
     },
-    "__space__": {
-      "description": "Space canvas: build the toroidal Sugarscape grid.",
+    "__world__": {
+      "description": "World canvas: build the toroidal Sugarscape grid.",
       "enabled": true,
       "deletable": false,
       "controller": {
-        "id": "controller-__space__",
+        "id": "controller-__world__",
         "type": "initNode",
-        "label": "SPACE CONTROLLER",
+        "label": "WORLD CONTROLLER",
         "position": {
           "x": 100,
           "y": 100
@@ -155,8 +155,8 @@
       },
       "functions": [
         {
-          "id": "space-setup",
-          "function_name": "setup_space",
+          "id": "world-setup",
+          "function_name": "setup_world",
           "function_file": "",
           "parameters": {
             "size_x": 50,
@@ -178,24 +178,24 @@
           "contract": {
             "reads": [],
             "writes": [
-              "space.self"
+              "world.self"
             ],
             "emits": []
           }
         },
         {
-          "id": "space-plot",
-          "function_name": "plot_space",
+          "id": "world-plot",
+          "function_name": "plot_world",
           "function_file": "",
           "parameters": {
-            "prefix": "space"
+            "prefix": "world"
           },
           "enabled": true,
           "position": {
             "x": 400,
             "y": 280
           },
-          "description": "Plot the computational space and allowed cells.",
+          "description": "Plot the computational world and allowed cells.",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": []
@@ -204,17 +204,17 @@
       "subworkflow_calls": [],
       "parameters": [],
       "execution_order": [
-        "space-setup",
-        "space-plot"
+        "world-setup",
+        "world-plot"
       ],
       "input_parameters": [],
       "contract": {
         "owner": {
-          "type": "space"
+          "type": "world"
         },
         "reads": [],
         "writes": [
-          "space.self"
+          "world.self"
         ],
         "emits": []
       }
@@ -253,7 +253,7 @@
           "parameter_nodes": [],
           "contract": {
             "reads": [
-              "space.self"
+              "world.self"
             ],
             "writes": [
               "resource.self"
@@ -282,7 +282,7 @@
           "parameter_nodes": [],
           "contract": {
             "reads": [
-              "space.self"
+              "world.self"
             ],
             "writes": [
               "resource.self"
@@ -323,7 +323,7 @@
           "kind": "sugar"
         },
         "reads": [
-          "space.self"
+          "world.self"
         ],
         "writes": [
           "resource.self"
@@ -371,7 +371,7 @@
           "parameter_nodes": [],
           "contract": {
             "reads": [
-              "space.self",
+              "world.self",
               "resource.sugar"
             ],
             "writes": [
@@ -411,7 +411,7 @@
           "kind": "forager"
         },
         "reads": [
-          "space.self",
+          "world.self",
           "resource.sugar"
         ],
         "writes": [
@@ -421,7 +421,7 @@
       }
     },
     "__init_sequence__": {
-      "description": "Initialization order: space, sugar resource, agents.",
+      "description": "Initialization order: world, sugar resource, agents.",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -437,9 +437,9 @@
       "functions": [],
       "subworkflow_calls": [
         {
-          "id": "init-call-space",
+          "id": "init-call-world",
           "type": "subworkflow_call",
-          "subworkflow_name": "__space__",
+          "subworkflow_name": "__world__",
           "iterations": 1,
           "parameters": {},
           "enabled": true,
@@ -481,7 +481,7 @@
       ],
       "parameters": [],
       "execution_order": [
-        "init-call-space",
+        "init-call-world",
         "init-call-sugar",
         "init-call-forager"
       ],
@@ -603,13 +603,13 @@
                 "kind": "sugar"
               },
               {
-                "type": "space"
+                "type": "world"
               }
             ],
             "reads": [
               "agent.self",
               "resource.sugar.local",
-              "space.neighborhood"
+              "world.neighborhood"
             ],
             "writes": [
               "agent.self"
@@ -701,7 +701,7 @@
         "reads": [
           "agent.self",
           "resource.sugar.local",
-          "space.neighborhood"
+          "world.neighborhood"
         ],
         "writes": [
           "agent.self"
@@ -816,7 +816,7 @@
             "reads": [
               "agents",
               "resources",
-              "space"
+              "world"
             ],
             "writes": [],
             "emits": []
@@ -833,7 +833,7 @@
         "reads": [
           "agents",
           "resources",
-          "space"
+          "world"
         ],
         "writes": [],
         "emits": []
@@ -873,12 +873,12 @@
               "intent.*",
               "agent.collection",
               "resource.collection",
-              "space.self"
+              "world.self"
             ],
             "writes": [
               "agent.collection",
               "resource.self",
-              "space.self"
+              "world.self"
             ],
             "consumes": [
               "intent.*"
@@ -922,12 +922,12 @@
           "intent.*",
           "agent.collection",
           "resource.collection",
-          "space.self"
+          "world.self"
         ],
         "writes": [
           "agent.collection",
           "resource.self",
-          "space.self"
+          "world.self"
         ],
         "consumes": [
           "intent.*"

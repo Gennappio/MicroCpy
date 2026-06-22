@@ -1,7 +1,7 @@
 """
 Generate ATP Source Plots
 
-Visualizes cell positions in 2D/3D space colored by ATP production sources.
+Visualizes cell positions in 2D/3D world colored by ATP production sources.
 Creates scatter plots showing spatial distribution of cells, colored by their
 ATP production strategy (mitoATP, glycoATP, both, or none).
 
@@ -77,7 +77,7 @@ def generate_atp_plots(
     """
     Generate spatial visualization of cells colored by ATP production sources.
     
-    Creates scatter plots showing cell positions in 2D or 3D space,
+    Creates scatter plots showing cell positions in 2D or 3D world,
     colored by their ATP production strategy:
     - Both: mitoATP ON and glycoATP ON (green)
     - mitoATP only: mitoATP ON, glycoATP OFF (blue)

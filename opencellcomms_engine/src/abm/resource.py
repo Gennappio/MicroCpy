@@ -1,5 +1,5 @@
 """
-Resource — a scalar field over a Space, with Unity-style Setup/Step behaviours.
+Resource — a scalar field over a World, with Unity-style Setup/Step behaviours.
 
 A Resource is non-agent state that lives on the world: sugar, oxygen, a
 pheromone. Slice 1 ships ``FieldResource`` (a plain, non-diffusing field).
@@ -17,15 +17,15 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from src.abm.space import Position, Space
+from src.abm.world import Position, World
 
 
 class Resource:
-    """Base resource: a named field bound to a Space + Setup/Step hooks."""
+    """Base resource: a named field bound to a World + Setup/Step hooks."""
 
-    def __init__(self, name: str, space: Space):
+    def __init__(self, name: str, world: World):
         self.name = name
-        self.space = space
+        self.world = world
         self.params: dict = {}
         self._setup_fn: Optional[Callable] = None
         self._step_fn: Optional[Callable] = None
@@ -61,17 +61,17 @@ class Resource:
 
 
 class FieldResource(Resource):
-    """A scalar field stored as a numpy array over a (lattice) Space."""
+    """A scalar field stored as a numpy array over a (lattice) World."""
 
-    def __init__(self, name: str, space: Space, initial: float = 0.0, capacity: Optional[float] = None):
-        super().__init__(name, space)
-        self._values = np.full(space.shape, float(initial), dtype=float)
-        self._sources = np.zeros(space.shape, dtype=float)
-        self.capacity = None if capacity is None else np.full(space.shape, float(capacity), dtype=float)
+    def __init__(self, name: str, world: World, initial: float = 0.0, capacity: Optional[float] = None):
+        super().__init__(name, world)
+        self._values = np.full(world.shape, float(initial), dtype=float)
+        self._sources = np.zeros(world.shape, dtype=float)
+        self.capacity = None if capacity is None else np.full(world.shape, float(capacity), dtype=float)
 
     # read --------------------------------------------------------------------
     def at(self, pos: Position) -> float:
-        return self.space.interpolate(self._values, pos)
+        return self.world.interpolate(self._values, pos)
 
     def values(self) -> np.ndarray:
         return self._values
@@ -87,12 +87,12 @@ class FieldResource(Resource):
 
     # write: self / deferred --------------------------------------------------
     def set_at(self, pos: Position, value: float) -> None:
-        ti, tj = self.space.normalize(pos)
+        ti, tj = self.world.normalize(pos)
         self._values[tj, ti] = float(value)
 
     def deposit(self, pos: Position, amount: float) -> None:
         """Accumulate a source(+)/sink(-) term to be applied this step."""
-        ti, tj = self.space.normalize(pos)
+        ti, tj = self.world.normalize(pos)
         self._sources[tj, ti] += float(amount)
 
     def apply_sources(self) -> None:

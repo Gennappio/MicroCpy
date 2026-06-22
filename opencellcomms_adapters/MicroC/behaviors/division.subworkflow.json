@@ -32,7 +32,7 @@
             "agent.collection",
             "agent.self.phenotype",
             "gene_networks",
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "agent.collection",
@@ -73,7 +73,7 @@
         "agent.collection",
         "agent.self.phenotype",
         "gene_networks",
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "agent.collection",

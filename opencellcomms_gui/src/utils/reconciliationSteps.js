@@ -32,7 +32,7 @@ export const RECONCILIATION_STEPS = [
     label: 'Move agents',
     intent: 'move',
     description:
-      "Relocate each agent to its requested tile (normalized to the space topology).",
+      "Relocate each agent to its requested tile (normalized to the world topology).",
   },
   {
     id: 'consume_resource',

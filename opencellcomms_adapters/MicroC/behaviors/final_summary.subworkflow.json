@@ -34,7 +34,7 @@
           "reads": [
             "agent.collection",
             "resource.fields",
-            "space.self",
+            "world.self",
             "simulation.results"
           ],
           "writes": [],
@@ -49,7 +49,7 @@
       "reads": [
         "agent.collection",
         "resource.fields",
-        "space.self",
+        "world.self",
         "simulation.results"
       ],
       "writes": [],

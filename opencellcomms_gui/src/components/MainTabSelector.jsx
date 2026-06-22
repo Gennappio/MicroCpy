@@ -35,12 +35,12 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
           <span>Resources</span>
         </button>
         <button
-          className={`main-tab space-tab ${currentMainTab === 'space' ? 'active' : ''}`}
-          onClick={() => onTabChange('space')}
-          title="Build the world grid (setup_space or a custom grid builder)"
+          className={`main-tab world-tab ${currentMainTab === 'world' ? 'active' : ''}`}
+          onClick={() => onTabChange('world')}
+          title="Build the world grid (setup_world or a custom grid builder)"
         >
           <Globe size={18} />
-          <span>Space</span>
+          <span>World</span>
         </button>
         <button
           className={`main-tab initialization-tab ${currentMainTab === 'initialization' ? 'active' : ''}`}

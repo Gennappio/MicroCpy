@@ -30,7 +30,7 @@ def seed_sugar_capacity(
     fill_current: bool = True,
     **kwargs,
 ):
-    sp = env.space
+    sp = env.world
     sugar = env.resource(resource)
     capacity = np.zeros_like(sugar.values())
     nx, ny = sp.nx, sp.ny

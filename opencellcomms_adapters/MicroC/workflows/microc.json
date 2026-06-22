@@ -39,7 +39,7 @@
         "subworkflow": "__init_sequence__"
       },
       "resource_kinds": [],
-      "space": {
+      "world": {
         "subworkflow": null
       },
       "contract_enforcement": "warn"
@@ -106,7 +106,7 @@
               "simulation.parameters"
             ],
             "writes": [
-              "space.self",
+              "world.self",
               "simulation.config"
             ],
             "emits": []
@@ -126,7 +126,7 @@
           "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
           "contract": {
             "reads": [
-              "space.self",
+              "world.self",
               "simulation.config"
             ],
             "writes": [
@@ -393,7 +393,7 @@
         ],
         "writes": [
           "simulation.config",
-          "space.self",
+          "world.self",
           "agent.collection",
           "resource.collection",
           "associations"
@@ -542,14 +542,14 @@
                 "type": "resource"
               },
               {
-                "type": "space"
+                "type": "world"
               }
             ],
             "reads": [
               "agent.collection",
               "resource.collection",
               "resource.fields",
-              "space.self",
+              "world.self",
               "simulation.config"
             ],
             "writes": [
@@ -641,14 +641,14 @@
             "type": "resource"
           },
           {
-            "type": "space"
+            "type": "world"
           }
         ],
         "reads": [
           "agent.collection",
           "resource.collection",
           "resource.fields",
-          "space.self",
+          "world.self",
           "simulation.config"
         ],
         "writes": [
@@ -688,7 +688,7 @@
             "reads": [
               "agent.collection",
               "resource.fields",
-              "space.self",
+              "world.self",
               "simulation.results"
             ],
             "writes": [],
@@ -703,7 +703,7 @@
         "reads": [
           "agent.collection",
           "resource.fields",
-          "space.self",
+          "world.self",
           "simulation.results"
         ],
         "writes": [],
@@ -1042,7 +1042,7 @@
               "agent.collection",
               "agent.self.phenotype",
               "gene_networks",
-              "space.self"
+              "world.self"
             ],
             "writes": [
               "agent.collection",
@@ -1083,7 +1083,7 @@
           "agent.collection",
           "agent.self.phenotype",
           "gene_networks",
-          "space.self"
+          "world.self"
         ],
         "writes": [
           "agent.collection",
@@ -1123,7 +1123,7 @@
             "reads": [
               "agent.collection",
               "resource.fields",
-              "space.self",
+              "world.self",
               "simulation.results"
             ],
             "writes": [],
@@ -1138,7 +1138,7 @@
         "reads": [
           "agent.collection",
           "resource.fields",
-          "space.self",
+          "world.self",
           "simulation.results"
         ],
         "writes": [],

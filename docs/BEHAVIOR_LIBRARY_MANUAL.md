@@ -15,7 +15,7 @@ Objects still exist:
 
 - Agents
 - Resources
-- Space
+- World
 - World or environment state
 
 But a behavior belongs to one process role:
@@ -27,7 +27,7 @@ But a behavior belongs to one process role:
 - Reconciliation
 - Reporting
 
-The GUI exposes these navigable tabs: Overview, Agents, Resources, Space,
+The GUI exposes these navigable tabs: Overview, Agents, Resources, World,
 Initialization, Scheduler, Planner, Processing, Results. Each behavior canvas
 declares a contract phase; the phase is the source of truth for *what* belongs on
 the canvas.
@@ -45,18 +45,18 @@ invisible to the scientist. The homing rule:
 - **Post-loop behaviors** (run once after the loop) go to **Processing**.
 - There is **no Environment tab**. `environment.behavior_subworkflows` must stay
   empty; a behavior placed there is an orphan. (`environment.init_subworkflow` /
-  `space.subworkflow` for world *setup* are separate — they surface via the
-  Initialization / Space tabs.)
+  `world.subworkflow` for world *setup* are separate — they surface via the
+  Initialization / World tabs.)
 
 ## Process Roles
 
 | Role | Use for | Should write | Should not do |
 | --- | --- | --- | --- |
-| Initialization | Create space, resources, agents, model config | Initial collections and config | Runtime decisions |
+| Initialization | Create world, resources, agents, model config | Initial collections and config | Runtime decisions |
 | Agent behavior | Agent-local decisions and internal state | `agent.self`, intents | Directly mutate resources or cull other agents |
 | Resource behavior | Resource-local dynamics | `resource.self`, intents | Inspect or control agents directly |
 | Coupling | Cross-object interaction | Coupled state or intents | Hide structural commits |
-| Reconciliation | Mechanical commits | Agent/resource/space collections | Domain decisions |
+| Reconciliation | Mechanical commits | Agent/resource/world collections | Domain decisions |
 | Reporting | Plots, exports, census | Nothing in model state | Mutate simulation state |
 
 Coupling is the home for interactions such as:
@@ -107,8 +107,8 @@ Common access tokens:
 - `resource.collection`
 - `resource.fields`
 - `resource.<kind>.local`
-- `space.self`
-- `space.neighborhood`
+- `world.self`
+- `world.neighborhood`
 - `simulation.config`
 - `simulation.results`
 - `gene_networks`
@@ -234,7 +234,7 @@ Sugarscape:
 
 MicroC:
 
-- `diffusion_step`: coupling between cells, fields, and space
+- `diffusion_step`: coupling between cells, fields, and world
 - `gene_update`: coupling between fields and gene networks
 - `fate_update`: coupling or agent behavior depending on node
 - `division`: reconciliation because it changes population membership

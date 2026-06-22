@@ -7,7 +7,7 @@ NETLOGO-FAITHFUL GENE NETWORK POPULATION SIMULATOR (no spatial constraints)
 Standalone simulator that replicates **exactly** the gene-network + cell-action
 logic of the NetLogo model ``microC_Metabolic_Symbiosis.nlogo3d`` with **no**
 spatial grid, diffusion-reaction PDE, collision detection, or domain bounds.
-Every division attempt succeeds (unlimited space).
+Every division attempt succeeds (unlimited world).
 
 PURPOSE
 -------
@@ -445,7 +445,7 @@ class WorkflowSimulator:
     BATCH-ON:  propagate N steps → mark → divide → remove  (workflow mode)
     BATCH-OFF: tick-by-tick, faithful to NetLogo non-batch mode
 
-    No spatial grid: every division succeeds (unlimited space).
+    No spatial grid: every division succeeds (unlimited world).
     """
 
     def __init__(self, template: GeneNetworkTemplate,

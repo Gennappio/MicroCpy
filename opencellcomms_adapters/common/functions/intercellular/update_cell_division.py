@@ -164,7 +164,7 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
         )
 
         # =====================================================================
-        # NO SPACE → NetLogo's -TURN-QUIESCENCE-3
+        # NO WORLD → NetLogo's -TURN-QUIESCENCE-3
         # Parent switches to Growth_Arrest with cycle = 3
         # =====================================================================
         if daughter_position is None:
@@ -187,7 +187,7 @@ def _perform_divisions(population, cells_to_divide, cell_radius: float, config,
             continue
 
         # =====================================================================
-        # SPACE FOUND → Division succeeds
+        # WORLD FOUND → Division succeeds
         # =====================================================================
 
         # --- RESET PARENT (NetLogo's -RESET-FATE-145) ---

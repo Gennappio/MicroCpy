@@ -39,7 +39,7 @@
         "parameter_nodes": [],
         "contract": {
           "reads": [
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "resource.self"
@@ -68,7 +68,7 @@
         "parameter_nodes": [],
         "contract": {
           "reads": [
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "resource.self"
@@ -109,7 +109,7 @@
         "kind": "sugar"
       },
       "reads": [
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "resource.self"
@@ -131,7 +131,7 @@
       "kind": "sugar"
     },
     "reads": [
-      "space.self"
+      "world.self"
     ],
     "writes": [
       "resource.self"

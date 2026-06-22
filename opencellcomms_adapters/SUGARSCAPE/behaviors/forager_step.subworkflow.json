@@ -45,13 +45,13 @@
               "kind": "sugar"
             },
             {
-              "type": "space"
+              "type": "world"
             }
           ],
           "reads": [
             "agent.self",
             "resource.sugar.local",
-            "space.neighborhood"
+            "world.neighborhood"
           ],
           "writes": [
             "agent.self"
@@ -143,7 +143,7 @@
       "reads": [
         "agent.self",
         "resource.sugar.local",
-        "space.neighborhood"
+        "world.neighborhood"
       ],
       "writes": [
         "agent.self"
@@ -169,7 +169,7 @@
     "reads": [
       "agent.self",
       "resource.sugar.local",
-      "space.neighborhood"
+      "world.neighborhood"
     ],
     "writes": [
       "agent.self"

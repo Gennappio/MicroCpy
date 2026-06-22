@@ -482,10 +482,10 @@ class SimulationPlotter:
         ax2.set_title('Cell Population')
         ax2.set_aspect('equal')
 
-        # Add mini legend for cell colors (simplified for space)
+        # Add mini legend for cell colors (simplified for world)
         if cell_colors_used:
             from matplotlib.patches import Patch
-            # Only show border colors (phenotypes) in mini legend to save space
+            # Only show border colors (phenotypes) in mini legend to save world
             border_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Border:')}
             if border_items:
                 mini_legend = [Patch(facecolor='white', edgecolor=color, linewidth=1.5,

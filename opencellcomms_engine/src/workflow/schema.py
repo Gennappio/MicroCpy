@@ -1153,9 +1153,9 @@ class WorkflowDefinition:
         if init_sequence.get("subworkflow"):
             kinds[init_sequence["subworkflow"]] = "init_sequence"
 
-        space = gui.get("space") or {}
-        if space.get("subworkflow"):
-            kinds[space["subworkflow"]] = "space"
+        world = gui.get("world") or {}
+        if world.get("subworkflow"):
+            kinds[world["subworkflow"]] = "world"
 
         env = gui.get("environment") or {}
         if env.get("init_subworkflow"):

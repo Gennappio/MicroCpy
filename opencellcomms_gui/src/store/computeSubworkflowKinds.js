@@ -35,8 +35,8 @@ export const computeSubworkflowKinds = (workflow) => {
   if (scheduler.subworkflow) kinds[scheduler.subworkflow] = KINDS.SCHEDULER;
   if (initSeq.subworkflow) kinds[initSeq.subworkflow] = 'init_sequence';
 
-  const space = gui.space || {};
-  if (space.subworkflow) kinds[space.subworkflow] = KINDS.SPACE;
+  const world = gui.world || {};
+  if (world.subworkflow) kinds[world.subworkflow] = KINDS.WORLD;
 
   if (env.init_subworkflow) kinds[env.init_subworkflow] = KINDS.ENV_INIT;
   (env.behavior_subworkflows || []).forEach((n) => {

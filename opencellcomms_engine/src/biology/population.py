@@ -509,7 +509,7 @@ class CellPopulation(ICellPopulation):
             )
         
         if target_position is None:
-            return False  # No space available
+            return False  # No world available
         
         # Check division success rate
         if np.random.random() > self.default_params['division_success_rate']:
@@ -1186,7 +1186,7 @@ class CellPopulation(ICellPopulation):
         # Attempt cell migration
         migrations = self.attempt_migration()
 
-        # Cell division attempts (intercellular because it requires space)
+        # Cell division attempts (intercellular because it requires world)
         divisions = self.attempt_divisions()
 
         # Cell-cell signaling (if implemented)
@@ -1244,7 +1244,7 @@ class CellPopulation(ICellPopulation):
                 )
 
             if target_position is None:
-                continue  # No space available
+                continue  # No world available
 
             # Check division success rate
             if np.random.random() > self.default_params['division_success_rate']:

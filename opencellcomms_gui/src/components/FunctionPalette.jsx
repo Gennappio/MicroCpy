@@ -11,7 +11,7 @@ import {
 import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
-  [KINDS.SPACE]: ['setup_space', 'plot_space'],
+  [KINDS.WORLD]: ['setup_world', 'plot_world'],
   [KINDS.AGENT_INIT]: ['plot_agents'],
   [KINDS.RESOURCE_INIT]: ['plot_resources'],
 };

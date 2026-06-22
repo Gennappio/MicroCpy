@@ -488,20 +488,20 @@ class BiologicalContext:
     def verbose(self) -> bool:
         return bool(self._ctx.get('verbose', False))
 
-    # --- ABM class layer (Space / Domain / Population / Resource / Agent) -----
+    # --- ABM class layer (World / Domain / Population / Resource / Agent) -----
     # These surface the typed ABM objects to behaviour authors. They read the
     # raw context where the model builder stored them.
 
     @property
     def domain(self):
-        """The ABM Domain (owns the Space and Resources)."""
+        """The ABM Domain (owns the World and Resources)."""
         return self._ctx.get('domain')
 
     @property
-    def space(self):
-        """The active Space (from the Domain, or a bare 'space' in context)."""
+    def world(self):
+        """The active World (from the Domain, or a bare 'world' in context)."""
         domain = self._ctx.get('domain')
-        return domain.space if domain is not None else self._ctx.get('space')
+        return domain.world if domain is not None else self._ctx.get('world')
 
     @property
     def population(self):

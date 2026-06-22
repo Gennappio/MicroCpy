@@ -1,12 +1,12 @@
 """
-Space — the polymorphic spatial seam for the ABM class layer.
+World — the polymorphic spatial seam for the ABM class layer.
 
-A Space owns everything spatial: geometry, topology (bounded/toroidal),
+A World owns everything spatial: geometry, topology (bounded/toroidal),
 neighborhoods, distance, occupancy (who is where), and field sampling. Agents
 and resources delegate every spatial question to it, so a hex grid, a 3D
 lattice, a continuous plane, or a network differ in exactly one place — here.
 
-Slice 1 ships ``LatticeSpace`` (a discrete grid). It works in integer tile
+Slice 1 ships ``LatticeWorld`` (a discrete grid). It works in integer tile
 coordinates ``(ti, tj)``, which for Sugarscape coincide with cell positions, so
 no physical-unit conversion is needed yet. Occupancy is read from a shared dict
 (the wrapped ``CellPopulation.spatial_grid``) so there is a single source of
@@ -26,14 +26,14 @@ from src.core.tile_grid import TileGrid, TOROIDAL
 Position = Tuple[int, ...]
 
 
-class Space(ABC):
+class World(ABC):
     """Abstract spatial topology. Implementations vary; the interface is fixed."""
 
     dimension: int
 
     @abstractmethod
     def bounds(self) -> Tuple[Position, Position]:
-        """Inclusive-min / exclusive-max corners of the space."""
+        """Inclusive-min / exclusive-max corners of the world."""
 
     @abstractmethod
     def contains(self, pos: Position) -> bool:
@@ -53,7 +53,7 @@ class Space(ABC):
 
     @abstractmethod
     def interpolate(self, values: np.ndarray, pos: Position) -> float:
-        """Sample a field defined over this space at a position."""
+        """Sample a field defined over this world at a position."""
 
     # -- occupancy (read side; Population owns writes via the shared dict) ----
 
@@ -76,7 +76,7 @@ class Space(ABC):
         return out
 
 
-class LatticeSpace(Space):
+class LatticeWorld(World):
     """A discrete 2D (or 3D-ready) grid in integer tile coordinates."""
 
     def __init__(
@@ -100,7 +100,7 @@ class LatticeSpace(Space):
 
     @property
     def shape(self) -> Tuple[int, int]:
-        """Numpy field shape (ny, nx) for resources defined over this space."""
+        """Numpy field shape (ny, nx) for resources defined over this world."""
         return (self.ny, self.nx)
 
     def bounds(self) -> Tuple[Position, Position]:

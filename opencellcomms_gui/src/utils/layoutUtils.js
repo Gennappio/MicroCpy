@@ -95,9 +95,9 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
   const LEFT_X = 50;
   const RIGHT_X = 1400; // Offset for alternating groups
   const INIT_NODE_HEIGHT = 100; // Height reserved for Init node
-  const INIT_SPACING = 60; // Space between Init and first group
+  const INIT_SPACING = 60; // World between Init and first group
   const START_Y = initNode ? 50 + INIT_NODE_HEIGHT + INIT_SPACING : 50;
-  const GROUP_PADDING = 80; // Padding inside group around nodes (increased for more space)
+  const GROUP_PADDING = 80; // Padding inside group around nodes (increased for more world)
   const GROUP_MARGIN = 60; // Margin between nodes inside group (increased)
   const PARAM_NODE_WIDTH = 260; // Actual parameter node width
   const PARAM_NODE_HEIGHT = 80; // Actual parameter node height (with content)

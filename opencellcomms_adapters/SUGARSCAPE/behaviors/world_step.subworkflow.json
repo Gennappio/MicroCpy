@@ -39,12 +39,12 @@
             "intent.*",
             "agent.collection",
             "resource.collection",
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "agent.collection",
             "resource.self",
-            "space.self"
+            "world.self"
           ],
           "consumes": [
             "intent.*"
@@ -88,12 +88,12 @@
         "intent.*",
         "agent.collection",
         "resource.collection",
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "agent.collection",
         "resource.self",
-        "space.self"
+        "world.self"
       ],
       "consumes": [
         "intent.*"
@@ -113,12 +113,12 @@
       "intent.*",
       "agent.collection",
       "resource.collection",
-      "space.self"
+      "world.self"
     ],
     "writes": [
       "agent.collection",
       "resource.self",
-      "space.self"
+      "world.self"
     ],
     "consumes": [
       "intent.*"

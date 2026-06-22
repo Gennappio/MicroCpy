@@ -1,5 +1,5 @@
 """
-Domain — the collective over resources; owns the Space.
+Domain — the collective over resources; owns the World.
 
 Domain orchestrates its resources' Setup/Step (and, later, world-level dynamics
 like boundary changes or cross-resource reactions). ``run_step`` is the
@@ -12,14 +12,14 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Optional
 
 from src.abm.resource import Resource
-from src.abm.space import Position, Space
+from src.abm.world import Position, World
 
 
 class Domain:
-    """Owns the Space and its Resources; orchestrates resource updates."""
+    """Owns the World and its Resources; orchestrates resource updates."""
 
-    def __init__(self, space: Space):
-        self.space = space
+    def __init__(self, world: World):
+        self.world = world
         self.params: Dict = {}
         self._resources: "Dict[str, Resource]" = {}
         self._setup_fn: Optional[Callable] = None

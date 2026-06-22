@@ -30,7 +30,7 @@ const KIND_TO_TAB = {
   agent_behavior: 'agents',
   resource_init: 'resources',
   resource_behavior: 'resources',
-  space: 'space',
+  world: 'world',
   env_init: 'environment',
   env_behavior: 'environment',
   processing_behavior: 'processing',

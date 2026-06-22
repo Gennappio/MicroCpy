@@ -7,12 +7,12 @@ warnings.simplefilter("ignore")
 from src.abm.domain import Domain
 from src.abm.population import Population
 from src.abm.resource import FieldResource
-from src.abm.space import LatticeSpace
+from src.abm.world import LatticeWorld
 from src.biology.context import BiologicalContext
 
 
 def world():
-    sp = LatticeSpace(8, 8, 1, "toroidal", "toroidal")
+    sp = LatticeWorld(8, 8, 1, "toroidal", "toroidal")
     pop = Population(sp, seed=1)
     dom = Domain(sp)
     dom.add_resource(FieldResource("sugar", sp, initial=1.0))

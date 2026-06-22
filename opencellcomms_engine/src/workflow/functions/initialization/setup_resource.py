@@ -29,8 +29,8 @@ def setup_resource(env: BiologicalContext, name: str = "field", initial: float =
 
     domain = env.domain
     if domain is None:
-        log_always("[ERROR] [setup_resource] No 'domain' in context — run setup_space first")
+        log_always("[ERROR] [setup_resource] No 'domain' in context — run setup_world first")
         return False
-    domain.add_resource(FieldResource(name, domain.space, initial=float(initial)))
+    domain.add_resource(FieldResource(name, domain.world, initial=float(initial)))
     print(f"[setup_resource] '{name}' (initial={initial})")
     return True

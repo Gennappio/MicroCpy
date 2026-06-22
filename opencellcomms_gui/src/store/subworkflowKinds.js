@@ -5,7 +5,7 @@ export const KINDS = {
   AGENT_BEHAVIOR: 'agent_behavior',
   RESOURCE_INIT: 'resource_init',
   RESOURCE_BEHAVIOR: 'resource_behavior',
-  SPACE: 'space',
+  WORLD: 'world',
   ENV_INIT: 'env_init',
   ENV_BEHAVIOR: 'env_behavior',
   PROCESSING_BEHAVIOR: 'processing_behavior',
@@ -26,7 +26,7 @@ export const MAIN_TABS = {
 
 export const SCHEDULER_NAME = '__scheduler__';
 export const INIT_SEQUENCE_NAME = '__init_sequence__';
-export const SPACE_NAME = '__space__';
+export const WORLD_NAME = '__world__';
 
 export const BEHAVIOR_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
@@ -41,7 +41,7 @@ export const BEHAVIOR_KINDS = new Set([
 export const INIT_KINDS = new Set([
   KINDS.AGENT_INIT,
   KINDS.RESOURCE_INIT,
-  KINDS.SPACE,
+  KINDS.WORLD,
   KINDS.ENV_INIT,
 ]);
 
@@ -52,7 +52,7 @@ export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
   KINDS.RESOURCE_INIT,
   KINDS.RESOURCE_BEHAVIOR,
-  KINDS.SPACE,
+  KINDS.WORLD,
   KINDS.ENV_INIT,
   KINDS.ENV_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
@@ -82,7 +82,7 @@ export const defaultContractForKind = (kind, options = {}) => {
     case KINDS.AGENT_INIT:
       return {
         owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
-        reads: ['space.self', 'resource.collection'],
+        reads: ['world.self', 'resource.collection'],
         writes: ['agent.collection'],
         emits: [],
       };
@@ -96,7 +96,7 @@ export const defaultContractForKind = (kind, options = {}) => {
     case KINDS.RESOURCE_INIT:
       return {
         owner: { type: 'resource', ...(ownerKind ? { kind: ownerKind } : {}) },
-        reads: ['space.self'],
+        reads: ['world.self'],
         writes: ['resource.self'],
         emits: [],
       };
@@ -107,29 +107,29 @@ export const defaultContractForKind = (kind, options = {}) => {
         writes: ['resource.self'],
         emits: [],
       };
-    case KINDS.SPACE:
+    case KINDS.WORLD:
       return {
-        owner: { type: 'space' },
+        owner: { type: 'world' },
         reads: [],
-        writes: ['space.self'],
+        writes: ['world.self'],
         emits: [],
       };
     case KINDS.ENV_INIT:
       return {
         owner: { type: 'environment' },
         reads: ['simulation.parameters'],
-        writes: ['simulation.config', 'space.self', 'agent.collection', 'resource.collection'],
+        writes: ['simulation.config', 'world.self', 'agent.collection', 'resource.collection'],
         emits: [],
       };
     case KINDS.ENV_BEHAVIOR:
       return {
-        reads: ['agent.collection', 'resource.collection', 'space.self'],
+        reads: ['agent.collection', 'resource.collection', 'world.self'],
         writes: [],
         emits: [],
       };
     case KINDS.PROCESSING_BEHAVIOR:
       return {
-        reads: ['agents', 'resources', 'space', 'simulation.results'],
+        reads: ['agents', 'resources', 'world', 'simulation.results'],
         writes: [],
         emits: [],
       };
@@ -144,7 +144,7 @@ export const defaultContractForKind = (kind, options = {}) => {
 export const ROLE_TO_COMPATIBILITY_CATEGORY = {
   [KINDS.AGENT_INIT]: 'INITIALIZATION',
   [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
-  [KINDS.SPACE]: 'INITIALIZATION',
+  [KINDS.WORLD]: 'INITIALIZATION',
   [KINDS.ENV_INIT]: 'INITIALIZATION',
   [KINDS.AGENT_BEHAVIOR]: 'INTRACELLULAR',
   [KINDS.RESOURCE_BEHAVIOR]: 'ENVIRONMENT',
@@ -171,7 +171,7 @@ export const variantForKind = (kind) => {
       return 'purple';
     case KINDS.COMPOSER:
       return 'orange';
-    case KINDS.SPACE:
+    case KINDS.WORLD:
       return 'green';
     case KINDS.SCHEDULER:
     case KINDS.INIT_SEQUENCE:

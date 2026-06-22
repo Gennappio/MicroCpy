@@ -43,7 +43,7 @@
           "reads": [
             "agents",
             "resources",
-            "space"
+            "world"
           ],
           "writes": [],
           "emits": []
@@ -60,7 +60,7 @@
       "reads": [
         "agents",
         "resources",
-        "space"
+        "world"
       ],
       "writes": [],
       "emits": []
@@ -76,7 +76,7 @@
     "reads": [
       "agents",
       "resources",
-      "space"
+      "world"
     ],
     "writes": [],
     "emits": []

@@ -45,7 +45,7 @@
         "parameter_nodes": [],
         "contract": {
           "reads": [
-            "space.self",
+            "world.self",
             "resource.sugar"
           ],
           "writes": [
@@ -85,7 +85,7 @@
         "kind": "forager"
       },
       "reads": [
-        "space.self",
+        "world.self",
         "resource.sugar"
       ],
       "writes": [
@@ -107,7 +107,7 @@
       "kind": "forager"
     },
     "reads": [
-      "space.self",
+      "world.self",
       "resource.sugar"
     ],
     "writes": [
