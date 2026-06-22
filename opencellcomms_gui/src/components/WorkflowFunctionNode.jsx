@@ -43,7 +43,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
     default: p.default,
   }));
 
-  const parameterDefs = funcMeta?.parameters || stagedParameterDefs;
+  const registryParameterDefs = funcMeta?.parameters || stagedParameterDefs;
 
   // Get badge stats for this node
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
@@ -75,6 +75,20 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
       .filter(edge => edge.target === id && edge.targetHandle?.startsWith('param-'))
       .map(edge => edge.targetHandle.replace('param-', ''))
   );
+
+  // Self-describing fallback. If neither the backend registry nor a staged spec
+  // knows this function's parameters (backend not loaded, registry not refreshed,
+  // or the workflow opened standalone), the node STILL knows which parameters it
+  // has — from the values it carries and the parameter edges wired into it. Render
+  // sockets for those so the node isn't a socketless "(template)" and parameter
+  // edges land on a real handle instead of floating to the node body.
+  const parameterDefs = registryParameterDefs.length
+    ? registryParameterDefs
+    : [...new Set([...Object.keys(parameters || {}), ...connectedParams])].map((name) => ({
+        name,
+        type: 'string',
+        default: parameters?.[name],
+      }));
 
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
