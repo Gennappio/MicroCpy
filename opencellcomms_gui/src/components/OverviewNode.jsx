@@ -52,12 +52,6 @@ export const OverviewNode = ({ data, selected }) => {
       <div className="ov-node-head">
         {isSystem && <Lock size={12} className="ov-lock" />}
         <span className="ov-node-title">{data.title}</span>
-        {data.phaseLabel && (
-          <span className={`ov-pill phase-${data.phase || 'none'}`}>
-            {data.phaseLabel}
-            {data.inferred ? ' ?' : ''}
-          </span>
-        )}
       </div>
 
       {(data.forEach || data.iterations || data.intent || data.knob) && (

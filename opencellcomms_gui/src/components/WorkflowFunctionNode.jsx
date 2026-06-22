@@ -3,11 +3,6 @@ import { Settings, Play, Pause, FileCode, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
 import { getFunction } from '../data/functionRegistry';
-import {
-  CONTRACT_PHASE_LABELS,
-  compatibilityForContract,
-  processRoleForSubworkflow,
-} from '../utils/contractUtils';
 import './WorkflowFunctionNode.css';
 
 /**
@@ -48,18 +43,12 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
     default: p.default,
   }));
 
-  const parameterDefs = funcMeta?.parameters || stagedParameterDefs;
+  const registryParameterDefs = funcMeta?.parameters || stagedParameterDefs;
 
   // Get badge stats for this node
   const subworkflowKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage] || 'subworkflow';
   const scopeKey = `${subworkflowKind}:${currentStage}`;
   const badgeStats = nodeBadgeStatsByScope[scopeKey]?.[id] || null;
-  const subworkflowRole = processRoleForSubworkflow(workflow.subworkflows?.[currentStage], subworkflowKind);
-  const nodeContract = data.contract || null;
-  const contractCompatibility = compatibilityForContract(nodeContract, subworkflowKind, subworkflowRole.contract);
-  const contractPhaseLabel = nodeContract?.phase
-    ? (CONTRACT_PHASE_LABELS[nodeContract.phase] || nodeContract.phase)
-    : null;
 
   // Handle badge click - open inspector to appropriate tab
   const handleBadgeClick = (badgeType) => {
@@ -86,6 +75,20 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
       .filter(edge => edge.target === id && edge.targetHandle?.startsWith('param-'))
       .map(edge => edge.targetHandle.replace('param-', ''))
   );
+
+  // Self-describing fallback. If neither the backend registry nor a staged spec
+  // knows this function's parameters (backend not loaded, registry not refreshed,
+  // or the workflow opened standalone), the node STILL knows which parameters it
+  // has — from the values it carries and the parameter edges wired into it. Render
+  // sockets for those so the node isn't a socketless "(template)" and parameter
+  // edges land on a real handle instead of floating to the node body.
+  const parameterDefs = registryParameterDefs.length
+    ? registryParameterDefs
+    : [...new Set([...Object.keys(parameters || {}), ...connectedParams])].map((name) => ({
+        name,
+        type: 'string',
+        default: parameters?.[name],
+      }));
 
   const handleToggleEnabled = (e) => {
     e.stopPropagation();
@@ -126,7 +129,7 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''} contract-${contractCompatibility.level}`}
+      className={`workflow-function-node ${!enabled ? 'disabled' : ''} ${selected ? 'selected' : ''}`}
       style={{ width: '350px', padding: '8px', fontSize: '13px' }}
     >
       {/* Function flow handles (top and bottom) */}
@@ -154,9 +157,12 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-title">
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
-          {contractPhaseLabel && (
-            <span className={`node-contract-pill ${contractCompatibility.level}`}>
-              {contractPhaseLabel}
+          {funcMeta?.validation_errors?.length > 0 && (
+            <span
+              className="node-validation-error"
+              title={`This function is mis-declared:\n${funcMeta.validation_errors.join('\n')}`}
+            >
+              ⚠ fix
             </span>
           )}
         </div>

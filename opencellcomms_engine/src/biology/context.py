@@ -488,20 +488,20 @@ class BiologicalContext:
     def verbose(self) -> bool:
         return bool(self._ctx.get('verbose', False))
 
-    # --- ABM class layer (Space / Domain / Population / Resource / Agent) -----
+    # --- ABM class layer (World / Domain / Population / Resource / Agent) -----
     # These surface the typed ABM objects to behaviour authors. They read the
     # raw context where the model builder stored them.
 
     @property
     def domain(self):
-        """The ABM Domain (owns the Space and Resources)."""
+        """The ABM Domain (owns the World and Resources)."""
         return self._ctx.get('domain')
 
     @property
-    def space(self):
-        """The active Space (from the Domain, or a bare 'space' in context)."""
+    def world(self):
+        """The active World (from the Domain, or a bare 'world' in context)."""
         domain = self._ctx.get('domain')
-        return domain.space if domain is not None else self._ctx.get('space')
+        return domain.world if domain is not None else self._ctx.get('world')
 
     @property
     def population(self):
@@ -530,6 +530,20 @@ class BiologicalContext:
     def agent(self):
         """The agent currently being asked (set by the per-agent loop), else None."""
         return self._ctx.get('_current_agent')
+
+    @property
+    def cell(self):
+        """The single cell currently being asked in a LEGACY per-cell loop, as a
+        CellHandle, else None.
+
+        For models that run on the legacy CellPopulation (e.g. MicroC, FiPy
+        diffusion) there is no abm_population to bind as env.agent; the executor's
+        per-cell ask binds context['_current_cell'] instead. A function is then
+        per-cell when env.cell is set, and falls back to looping env.cells when it
+        is None — so the same function works under both calling conventions.
+        """
+        c = self._ctx.get('_current_cell')
+        return CellHandle(c, self) if c is not None else None
 
     def set_agent(self, agent) -> None:
         self._ctx['_current_agent'] = agent

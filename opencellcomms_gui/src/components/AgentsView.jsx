@@ -6,7 +6,6 @@ import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
 import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
-import { processRoleForSubworkflow } from '../utils/contractUtils';
 import './AgentsView.css';
 
 const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
@@ -74,16 +73,11 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
 
   const buildTabs = (kind) => {
     if (!kind) return [];
-    const withRole = (name, tab) => {
-      const swKind = workflow.metadata?.gui?.subworkflow_kinds?.[name];
-      const role = processRoleForSubworkflow(workflow.subworkflows?.[name], swKind);
-      return { ...tab, phase: role.phase, phaseLabel: role.label };
-    };
     const tabs = [
-      withRole(kind.init_subworkflow, { name: kind.init_subworkflow, label: 'Init', deletable: false }),
+      { name: kind.init_subworkflow, label: 'Init', deletable: false },
     ];
     (kind.behavior_subworkflows || []).forEach((b) => {
-      tabs.push(withRole(b, { name: b, label: b, deletable: true }));
+      tabs.push({ name: b, label: b, deletable: true });
     });
     return tabs;
   };

@@ -7,12 +7,12 @@ warnings.simplefilter("ignore")
 from src.abm.domain import Domain
 from src.abm.population import Population
 from src.abm.resource import FieldResource
-from src.abm.space import LatticeSpace
+from src.abm.world import LatticeWorld
 from src.biology.context import BiologicalContext
 
 
 def world():
-    sp = LatticeSpace(8, 8, 1, "toroidal", "toroidal")
+    sp = LatticeWorld(8, 8, 1, "toroidal", "toroidal")
     pop = Population(sp, seed=1)
     dom = Domain(sp)
     dom.add_resource(FieldResource("sugar", sp, initial=1.0))
@@ -71,13 +71,12 @@ def test_ask_visits_every_agent_once():
         pop.spawn((i, 0))
     env = BiologicalContext({"domain": dom, "abm_population": pop})
     seen = []
-    pop.on_agent_step(lambda e: seen.append(e.agent.id))
-    pop.run_agent_step(env, order="sequential")
+    pop.ask(env, lambda e: seen.append(e.agent.id), order="sequential")
     assert len(seen) == 5 and len(set(seen)) == 5
 
 
 def test_populate_constant_trait():
     sp, pop, _ = world()
-    placed = pop.populate(10, sugar=3.0)
+    placed = pop.populate("forager", 10, sugar=3.0)
     assert placed == 10 and pop.count() == 10
     assert all(a.get("sugar") == 3.0 for a in pop.agents())

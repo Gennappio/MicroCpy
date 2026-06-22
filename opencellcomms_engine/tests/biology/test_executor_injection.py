@@ -72,7 +72,7 @@ def test_migrated_mark_necrotic_signature_opts_in():
     adapters_root = os.path.abspath(os.path.join(_ENGINE_ROOT, '..'))
     if adapters_root not in sys.path:
         sys.path.insert(0, adapters_root)
-    from opencellcomms_adapters.MicroC.functions.intercellular.mark_necrotic_cells import (
+    from opencellcomms_adapters.MicroC.functions.fate.mark_necrotic_cells import (
         mark_necrotic_cells,
     )
     assert _wants_typed_env(mark_necrotic_cells) is True

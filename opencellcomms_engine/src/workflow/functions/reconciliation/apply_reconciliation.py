@@ -13,9 +13,8 @@ from src.workflow.decorators import register_function
     compatible_kernels=["*"],
     requires=[],
     contract={
-        "phase": "reconciliation",
-        "reads": ["intent.*", "agent.collection", "resource.collection", "space.self"],
-        "writes": ["agent.collection", "resource.self", "space.self"],
+        "reads": ["intent.*", "agent.collection", "resource.collection", "world.self"],
+        "writes": ["agent.collection", "resource.self", "world.self"],
         "consumes": ["intent.*"],
         "emits": [],
     },
@@ -47,7 +46,7 @@ def apply_reconciliation(env: BiologicalContext, cull_dead: bool = True, **kwarg
     for intent in intents.get("move", []):
         agent = pop.agent_by_id(intent["agent_id"])
         if agent is not None:
-            pop.relocate(agent, pop.space.normalize(intent["target"]))
+            pop.relocate(agent, pop.world.normalize(intent["target"]))
 
     # Consume intents transfer a resource amount to an agent state variable.
     if domain is not None:

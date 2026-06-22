@@ -1,7 +1,7 @@
 """
 Generate Cell Position Plots
 
-Visualizes cell positions in 2D/3D space with population count overlays.
+Visualizes cell positions in 2D/3D world with population count overlays.
 Creates scatter plots showing spatial distribution of cells, colored by phenotype,
 with population size displayed in the title.
 
@@ -84,7 +84,7 @@ def generate_cell_plots(
     """
     Generate spatial visualization of cell positions with population count.
     
-    Creates scatter plots showing cell positions in 2D or 3D space,
+    Creates scatter plots showing cell positions in 2D or 3D world,
     colored by phenotype (if enabled), with total population count
     displayed in the plot title.
     

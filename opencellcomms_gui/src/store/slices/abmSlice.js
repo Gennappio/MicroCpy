@@ -2,9 +2,8 @@ import {
   KINDS,
   SCHEDULER_NAME,
   INIT_SEQUENCE_NAME,
-  SPACE_NAME,
+  WORLD_NAME,
   defaultContractForKind,
-  defaultContractForProcessPhase,
 } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
 
@@ -314,33 +313,33 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  // ── Space ─────────────────────────────────────────────────────────────────
-  // The Space is its own canvas (the grid builder). It is one init behaviour,
+  // ── World ─────────────────────────────────────────────────────────────────
+  // The World is its own canvas (the grid builder). It is one init behaviour,
   // ordered in Initialization like the entity Setups. Domain/Population are built
-  // by setup_space — they have no tabs of their own.
+  // by setup_world — they have no tabs of their own.
 
-  ensureSpace: () => {
+  ensureWorld: () => {
     set((state) => {
-      const existing = state.workflow.metadata.gui.space?.subworkflow;
+      const existing = state.workflow.metadata.gui.world?.subworkflow;
       if (existing && state.workflow.subworkflows[existing]) return state;
       const sw = makeSubworkflow(
-        SPACE_NAME,
-        'Space — build the grid/world',
-        KINDS.SPACE,
-        defaultContractForKind(KINDS.SPACE),
+        WORLD_NAME,
+        'World — build the grid/world',
+        KINDS.WORLD,
+        defaultContractForKind(KINDS.WORLD),
       );
       const newWorkflow = {
         ...state.workflow,
         metadata: {
           ...state.workflow.metadata,
-          gui: { ...state.workflow.metadata.gui, space: { subworkflow: SPACE_NAME } },
+          gui: { ...state.workflow.metadata.gui, world: { subworkflow: WORLD_NAME } },
         },
-        subworkflows: { ...state.workflow.subworkflows, [SPACE_NAME]: sw },
+        subworkflows: { ...state.workflow.subworkflows, [WORLD_NAME]: sw },
       };
       return {
         workflow: withDerivedKinds(newWorkflow),
-        stageNodes: { ...state.stageNodes, [SPACE_NAME]: [makeControllerNode(SPACE_NAME)] },
-        stageEdges: { ...state.stageEdges, [SPACE_NAME]: [] },
+        stageNodes: { ...state.stageNodes, [WORLD_NAME]: [makeControllerNode(WORLD_NAME)] },
+        stageEdges: { ...state.stageEdges, [WORLD_NAME]: [] },
       };
     });
   },
@@ -377,14 +376,14 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  addEnvironmentBehavior: (behaviorName, phase = 'coupling') => {
+  addEnvironmentBehavior: (behaviorName) => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
       const sw = makeSubworkflow(
         behaviorName,
         `Environment behavior: ${behaviorName}`,
         KINDS.ENV_BEHAVIOR,
-        defaultContractForProcessPhase(phase),
+        defaultContractForKind(KINDS.ENV_BEHAVIOR),
       );
       const newWorkflow = {
         ...state.workflow,

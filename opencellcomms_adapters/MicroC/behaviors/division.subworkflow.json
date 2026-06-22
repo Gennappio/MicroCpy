@@ -28,12 +28,11 @@
         "description": "Handle cell division for proliferating cells",
         "custom_name": "update_cell_division",
         "contract": {
-          "phase": "reconciliation",
           "reads": [
             "agent.collection",
             "agent.self.phenotype",
             "gene_networks",
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "agent.collection",
@@ -51,7 +50,6 @@
         },
         "description": "Remove cells with Apoptosis phenotype from population",
         "contract": {
-          "phase": "reconciliation",
           "reads": [
             "agent.collection",
             "agent.self.phenotype",
@@ -71,12 +69,11 @@
       "division-remove_apoptotic"
     ],
     "contract": {
-      "phase": "reconciliation",
       "reads": [
         "agent.collection",
         "agent.self.phenotype",
         "gene_networks",
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "agent.collection",

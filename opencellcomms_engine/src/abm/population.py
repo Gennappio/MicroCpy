@@ -2,7 +2,7 @@
 Population — the collective over agents, wrapping ``CellPopulation``.
 
 Owns the agents (as Cells in a wrapped CellPopulation) and bridges them to the
-Space's occupancy index. It is where activation order lives (``ask``) and where
+World's occupancy index. It is where activation order lives (``ask``) and where
 structural change is committed (``cull``) — individual agents only *request*
 death; the Population enacts it. Per the read/write discipline, this is the only
 place agents appear or disappear, and the collective never decides *for* an
@@ -20,31 +20,31 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 import numpy as np
 
 from src.abm.agent import Agent
-from src.abm.space import Position, Space
+from src.abm.world import Position, World
 
 if TYPE_CHECKING:
     from src.abm.domain import Domain
 
 
 class Population:
-    """Collective over agents. Wraps CellPopulation; binds occupancy to the Space."""
+    """Collective over agents. Wraps CellPopulation; binds occupancy to the World."""
 
-    def __init__(self, space: Space, config=None, context: Optional[dict] = None, seed: int = 0):
+    def __init__(self, world: World, config=None, context: Optional[dict] = None, seed: int = 0):
         from src.biology.population import CellPopulation
 
-        self.space = space
+        self.world = world
         self.domain: Optional["Domain"] = None  # set by the model builder
         self.params: dict = {}
         self._rng = np.random.default_rng(seed if seed else None)
         self.cellpop = CellPopulation(
-            grid_size=(space.nx, space.ny),
+            grid_size=(world.nx, world.ny),
             gene_network=None,
             custom_functions_module=None,
             config=config,
             context=context if context is not None else {},
         )
-        # The live occupancy dict the Space reads; Population owns the writes.
-        self.space.bind_occupancy(self.cellpop.state.spatial_grid)
+        # The live occupancy dict the World reads; Population owns the writes.
+        self.world.bind_occupancy(self.cellpop.state.spatial_grid)
 
         # Agent kinds: name -> {"setup", "step", "params"}.
         self.kinds: Dict[str, Dict] = {}
@@ -63,7 +63,7 @@ class Population:
 
     # creation ----------------------------------------------------------------
     def spawn(self, pos: Position, kind: Optional[str] = None, **state) -> Optional[Agent]:
-        pos = self.space.normalize(pos)
+        pos = self.world.normalize(pos)
         if not self.cellpop.add_cell(pos, phenotype="normal"):
             return None
         self._rebind()
@@ -77,8 +77,8 @@ class Population:
         """Place up to n agents of ``kind`` on random empty tiles. Trait values
         may be callables ``f(rng) -> value`` or constants."""
         placed = 0
-        for _ in range(min(int(n), self.space.nx * self.space.ny)):
-            pos = self.space.random_position(self._rng, empty=True)
+        for _ in range(min(int(n), self.world.nx * self.world.ny)):
+            pos = self.world.random_position(self._rng, empty=True)
             if pos is None:
                 break
             state = {k: (v(self._rng) if callable(v) else v) for k, v in state_fn_or_const.items()}
@@ -88,8 +88,8 @@ class Population:
 
     def _rebind(self) -> None:
         """CellPopulation.add_cell swaps its state dicts (immutable pattern);
-        re-point the Space at the current live occupancy dict."""
-        self.space.bind_occupancy(self.cellpop.state.spatial_grid)
+        re-point the World at the current live occupancy dict."""
+        self.world.bind_occupancy(self.cellpop.state.spatial_grid)
 
     # access ------------------------------------------------------------------
     def agents(self) -> List[Agent]:

@@ -2,7 +2,7 @@
 Agent — an individual, wrapping an engine ``Cell``.
 
 An Agent is a thin handle: it holds per-instance state (traits) and delegates
-every spatial question to its Space (via the Population). It follows the
+every spatial question to its World (via the Population). It follows the
 read/write discipline: it reads the neighborhood, writes only itself
 (position/traits), and *requests* structural change (``die``) that the
 Population commits later.
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional
 
-from src.abm.space import Position
+from src.abm.world import Position
 
 if TYPE_CHECKING:
     from src.abm.population import Population
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class Agent:
-    """Typed wrapper over a Cell, bound to its Population (and thus its Space)."""
+    """Typed wrapper over a Cell, bound to its Population (and thus its World)."""
 
     def __init__(self, cell: "Cell", population: "Population"):
         self._cell = cell
@@ -48,34 +48,34 @@ class Agent:
     def is_alive(self) -> bool:
         return not self._cell.state.metabolic_state.get("_dead", False)
 
-    # spatial reads (delegate to Space) ---------------------------------------
+    # spatial reads (delegate to World) ---------------------------------------
     @property
-    def space(self):
-        return self._pop.space
+    def world(self):
+        return self._pop.world
 
     def neighbors(self, radius: int = 1, pattern: str = "moore") -> List["Agent"]:
-        ids = self.space.within(self.position, radius, pattern)
+        ids = self.world.within(self.position, radius, pattern)
         return [a for a in (self._pop.agent_by_id(i) for i in ids) if a is not None]
 
     def empty_cells(self, radius: int = 1, pattern: str = "moore") -> List[Position]:
-        return [p for p in self.space.neighbors(self.position, radius, pattern) if self.space.is_free(p)]
+        return [p for p in self.world.neighbors(self.position, radius, pattern) if self.world.is_free(p)]
 
     def is_free(self, pos: Position) -> bool:
-        return self.space.is_free(pos)
+        return self.world.is_free(pos)
 
     def sense(self, resource: str) -> float:
         return self._pop.domain.resource(resource).at(self.position)
 
     def distance_to(self, other: "Agent") -> float:
-        return self.space.distance(self.position, other.position)
+        return self.world.distance(self.position, other.position)
 
     # writes: self ------------------------------------------------------------
     def move_to(self, pos: Position) -> None:
-        self._pop.relocate(self, self.space.normalize(pos))
+        self._pop.relocate(self, self.world.normalize(pos))
 
     def move_toward(self, target: Position) -> None:
         options = self.empty_cells() + [self.position]
-        best = min(options, key=lambda p: self.space.distance(p, target))
+        best = min(options, key=lambda p: self.world.distance(p, target))
         if best != self.position:
             self.move_to(best)
 

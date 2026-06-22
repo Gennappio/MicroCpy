@@ -11,7 +11,7 @@ function; a behaviour is a subworkflow of atomic nodes.)
 |-----|--------------------------------|
 | **Agents** | Agent kinds. Each kind has a **Setup** canvas (placement) and **Step** canvas(es) — atomic nodes wired into a behaviour subworkflow. |
 | **Resources** | Resource fields (mirror of Agents): a **Setup** canvas (seed) and **Step** canvas(es) (growback/decay). |
-| **World** | The `setup_space` node, the **init orchestration** (order the Setups), the thin Domain/Population behaviours, and an initial-conditions **preview**. |
+| **World** | The `setup_world` node, the **init orchestration** (order the Setups), the thin Domain/Population behaviours, and an initial-conditions **preview**. |
 | **Scheduler** | The **loop orchestration** — order the per-step phases (agents → resources → population), iterated by the executor. |
 
 World = init orchestration; Scheduler = loop orchestration. Both call the wrapped
@@ -24,7 +24,7 @@ Atomic node-functions take `env: BiologicalContext` and use the class layer:
 ```python
 def move_to_best_sugar(env):            # an agent Step node (operates on env.agent)
     a = env.agent
-    sp, sugar = env.space, env.resource("sugar")
+    sp, sugar = env.world, env.resource("sugar")
     best = a.position
     best_s = sugar.at(best)
     for cell in sp.neighbors(a.position, int(a.get("vision", 1)), "axial"):
@@ -37,7 +37,7 @@ def grow_sugar(env):                    # a resource Step node (whole field, onc
     env.resource("sugar").grow_to(env.resource("max_sugar").values(), 1.0)
 ```
 
-`env.space`, `env.agent`, `env.resource(name)`, `env.population`, `env.domain`,
+`env.world`, `env.agent`, `env.resource(name)`, `env.population`, `env.domain`,
 `agent.neighbors/sense/move_to/consume/die` — the `src/abm` classes are this API.
 
 ## Per-agent "ask" (the one new execution capability)

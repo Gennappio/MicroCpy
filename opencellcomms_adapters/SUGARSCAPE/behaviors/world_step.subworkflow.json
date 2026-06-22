@@ -35,17 +35,16 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "reconciliation",
           "reads": [
             "intent.*",
             "agent.collection",
             "resource.collection",
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "agent.collection",
             "resource.self",
-            "space.self"
+            "world.self"
           ],
           "consumes": [
             "intent.*"
@@ -68,7 +67,6 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "reporting",
           "reads": [
             "agents",
             "resources"
@@ -86,17 +84,16 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "reconciliation",
       "reads": [
         "intent.*",
         "agent.collection",
         "resource.collection",
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "agent.collection",
         "resource.self",
-        "space.self"
+        "world.self"
       ],
       "consumes": [
         "intent.*"
@@ -112,17 +109,16 @@
     ]
   },
   "contract": {
-    "phase": "reconciliation",
     "reads": [
       "intent.*",
       "agent.collection",
       "resource.collection",
-      "space.self"
+      "world.self"
     ],
     "writes": [
       "agent.collection",
       "resource.self",
-      "space.self"
+      "world.self"
     ],
     "consumes": [
       "intent.*"

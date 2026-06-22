@@ -51,10 +51,13 @@ def mark_necrotic_cells(
     glucose_threshold = params.get('glucose_threshold', 0.23)
     require_both = params.get('require_both', True)
 
+    # Per-cell when bound (env.cell); else the whole-population loop.
+    targets = [env.cell] if env.cell is not None else list(env.cells)
+
     newly_necrotic = 0
     already_necrotic = 0
 
-    for cell in env.cells:
+    for cell in targets:
         if cell.is_necrotic:
             already_necrotic += 1
             continue
@@ -67,15 +70,15 @@ def mark_necrotic_cells(
             cell.mark_necrotic()
             newly_necrotic += 1
 
-    condition_str = "AND" if require_both else "OR"
-    total = len(env.cells)
-    print(f"[NECROSIS] Cell count: {total} (marked {newly_necrotic}, already {already_necrotic})")
-    if newly_necrotic > 0:
-        print(f"[NECROSIS] Marked {newly_necrotic} cells as necrotic "
-              f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold})")
-
-    env.results.record_change('necrosis', {
-        'newly_marked': newly_necrotic,
-        'already_necrotic': already_necrotic,
-        'params': params,
-    })
+    if env.cell is None:
+        condition_str = "AND" if require_both else "OR"
+        total = len(env.cells)
+        print(f"[NECROSIS] Cell count: {total} (marked {newly_necrotic}, already {already_necrotic})")
+        if newly_necrotic > 0:
+            print(f"[NECROSIS] Marked {newly_necrotic} cells as necrotic "
+                  f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold})")
+        env.results.record_change('necrosis', {
+            'newly_marked': newly_necrotic,
+            'already_necrotic': already_necrotic,
+            'params': params,
+        })

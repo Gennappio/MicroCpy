@@ -331,7 +331,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     // these arrays/objects always exist and would otherwise crash on first edit.
     const guiMeta = (workflowJson.metadata && workflowJson.metadata.gui) || {};
     const rawEnv = (guiMeta.environment && typeof guiMeta.environment === 'object') ? guiMeta.environment : {};
-    const rawSpace = (guiMeta.space && typeof guiMeta.space === 'object') ? guiMeta.space : {};
+    const rawWorld = (guiMeta.world && typeof guiMeta.world === 'object') ? guiMeta.world : {};
     const rawSched = (guiMeta.scheduler && typeof guiMeta.scheduler === 'object') ? guiMeta.scheduler : {};
     const rawProc = (guiMeta.processing && typeof guiMeta.processing === 'object') ? guiMeta.processing : {};
     const agentKinds = (Array.isArray(guiMeta.agent_kinds) ? guiMeta.agent_kinds : []).map((k) => ({
@@ -342,7 +342,7 @@ export const createWorkflowIOSlice = (set, get) => ({
       ...k,
       behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
     }));
-    const space = { ...rawSpace, subworkflow: rawSpace.subworkflow || null };
+    const world = { ...rawWorld, subworkflow: rawWorld.subworkflow || null };
     const environment = {
       ...rawEnv,
       init_subworkflow: rawEnv.init_subworkflow ?? null,
@@ -369,7 +369,7 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     if (initSeqIsEmpty) {
       const autoOrder = [];
-      if (space.subworkflow) autoOrder.push(space.subworkflow);
+      if (world.subworkflow) autoOrder.push(world.subworkflow);
       if (environment.init_subworkflow) autoOrder.push(environment.init_subworkflow);
       resourceKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
       agentKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
@@ -465,7 +465,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     // Phase 14B: derive subworkflow_kinds from ABM metadata (never read from JSON).
     const guiWithInitSeq = {
       ...guiMeta,
-      space,
+      world,
       init_sequence: initSeqMeta,
       agent_kinds: agentKinds,
       resource_kinds: resourceKinds,
@@ -503,7 +503,7 @@ export const createWorkflowIOSlice = (set, get) => ({
             subworkflow_kinds: subworkflowKinds,
             agent_kinds: agentKinds,
             resource_kinds: resourceKinds,
-            space,
+            world,
             environment,
             init_sequence: initSeqMeta,
             scheduler,
@@ -642,6 +642,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       // workflows, which carry no kernel field.
       ...(workflow.kernel ? { kernel: workflow.kernel } : {}),
       ...(workflow.kernel_config ? { kernel_config: workflow.kernel_config } : {}),
+      // Run-level RNG seed for reproducible random iteration order. `!= null`
+      // keeps an explicit 0 (which means "fresh entropy"); omitted when unset
+      // so the engine applies its default (42).
+      ...(workflow.seed != null ? { seed: workflow.seed } : {}),
       metadata: exportedMetadata,
       subworkflows,
     };

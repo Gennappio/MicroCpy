@@ -27,7 +27,6 @@
         },
         "description": "Translate substance concentrations \u2192 gene input states via associations",
         "contract": {
-          "phase": "coupling",
           "participants": [
             {
               "type": "agent",
@@ -70,7 +69,6 @@
         "description": "NetLogo-faithful graph walking gene network propagation",
         "custom_name": "propagate_gene_networks_netlogo",
         "contract": {
-          "phase": "agent_behavior",
           "owner": {
             "type": "agent",
             "kind": "tumor_cell"
@@ -92,7 +90,6 @@
       "gene_update-propagate_genes_netlogo"
     ],
     "contract": {
-      "phase": "coupling",
       "participants": [
         {
           "type": "agent",

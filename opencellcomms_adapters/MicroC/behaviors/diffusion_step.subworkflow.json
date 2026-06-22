@@ -41,7 +41,6 @@
           "diffusion_step-param_relaxation_factor"
         ],
         "contract": {
-          "phase": "coupling",
           "participants": [
             {
               "type": "agent",
@@ -51,14 +50,14 @@
               "type": "resource"
             },
             {
-              "type": "space"
+              "type": "world"
             }
           ],
           "reads": [
             "agent.collection",
             "resource.collection",
             "resource.fields",
-            "space.self",
+            "world.self",
             "simulation.config"
           ],
           "writes": [
@@ -141,7 +140,6 @@
       "diffusion_step-run_diffusion_coupled"
     ],
     "contract": {
-      "phase": "coupling",
       "participants": [
         {
           "type": "agent",
@@ -151,14 +149,14 @@
           "type": "resource"
         },
         {
-          "type": "space"
+          "type": "world"
         }
       ],
       "reads": [
         "agent.collection",
         "resource.collection",
         "resource.fields",
-        "space.self",
+        "world.self",
         "simulation.config"
       ],
       "writes": [

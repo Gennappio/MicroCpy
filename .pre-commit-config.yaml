@@ -1,0 +1,23 @@
+# Pre-commit hooks for OpenCellComms.
+#
+# Activate once per clone:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Runs the FAST engine test suite (~2s; excludes @pytest.mark.slow integration
+# builds) whenever a commit touches engine or adapter Python, so API/fixture
+# drift fails loudly at commit time instead of rotting unnoticed. Run the full
+# suite — including the slow tests — with `make test` in opencellcomms_engine.
+#
+# `language: system` runs in your active environment, so the engine deps must be
+# installed (`make install-dev`). The hook only fires when matching files are
+# staged, so GUI-only or docs-only commits don't pay the cost or need the deps.
+repos:
+  - repo: local
+    hooks:
+      - id: engine-tests-fast
+        name: engine tests (fast, -m "not slow")
+        entry: bash -c 'cd opencellcomms_engine && pytest tests/ -m "not slow" -q'
+        language: system
+        pass_filenames: false
+        files: '^(opencellcomms_engine|opencellcomms_adapters)/.*\.py$'

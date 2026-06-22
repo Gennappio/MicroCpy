@@ -618,14 +618,34 @@ class WorkflowExecutor:
             traceback.print_exc()
             return None
 
+    def _run_rng(self, context: Dict[str, Any]):
+        """The single run RNG that randomizes agent/resource iteration order.
+
+        Physical-ABM rule: the engine ALWAYS iterates entities in random order
+        (NetLogo `ask`); there is no per-call opt-out — to force an order, author
+        the behaviour in the World tab (run-once). Set once in execute_main from
+        the workflow seed. If a non-standard entry skipped that, fall back to a
+        fixed seed LOUDLY rather than silently iterate in fixed order.
+        """
+        rng = context.get('_rng')
+        if rng is None:
+            import numpy as np
+            print("[WORKFLOW] WARNING: no run RNG in context['_rng'] — iteration order "
+                  "was not seeded by execute_main. Falling back to seed=42 so order is "
+                  "still random and reproducible.")
+            rng = np.random.default_rng(42)
+            context['_rng'] = rng
+        return rng
+
     def _run_for_each_entity(self, node, for_each: Dict[str, Any], context: Dict[str, Any],
                              merged_params: Dict[str, Any]) -> Dict[str, Any]:
         """Run an ABM behaviour sub-workflow over its owning entity kind.
 
-        Agent behaviours bind the current agent in context['_current_agent'] so
-        each inner node's typed env exposes it as env.agent. Resource behaviours
-        bind context['_current_resource'] and pass the resource name as the
-        default ``resource`` parameter for functions that accept it.
+        Entities are ALWAYS visited in random order (see _run_rng). Agent
+        behaviours bind the current agent in context['_current_agent'] so each
+        inner node's typed env exposes it as env.agent. Resource behaviours bind
+        context['_current_resource'] and pass the resource name as the default
+        ``resource`` parameter for functions that accept it.
         """
         entity_type = for_each.get('type', 'agent')
 
@@ -637,6 +657,7 @@ class WorkflowExecutor:
 
             kind = for_each.get('kind')
             resources = [domain.resource(kind)] if kind else domain.resources()
+            self._run_rng(context).shuffle(resources)
             for resource in resources:
                 context['_current_resource'] = resource
                 context['_current_resource_kind'] = resource.name
@@ -650,14 +671,14 @@ class WorkflowExecutor:
 
         pop = context.get('abm_population')
         if pop is None:
-            print(f"[WORKFLOW] for_each call '{node.subworkflow_name}' but no 'abm_population' in context — skipped")
-            return context
+            # No ABM population: models like MicroC run on the legacy
+            # CellPopulation (+ FiPy diffusion) and never build an abm_population.
+            # Fall back to a per-cell ask over context['population'].
+            return self._run_for_each_legacy_cell(node, context, merged_params)
 
         kind = for_each.get('kind')
-        order = for_each.get('order', 'random')
         agents = pop.agents_of_kind(kind) if kind else pop.agents()
-        if order == 'random' and hasattr(pop, '_rng'):
-            pop._rng.shuffle(agents)
+        self._run_rng(context).shuffle(agents)
 
         for agent in agents:
             if not agent.is_alive():
@@ -667,6 +688,33 @@ class WorkflowExecutor:
                 node.subworkflow_name, context, iterations=1, parameters=merged_params
             )
         context['_current_agent'] = None
+        return context
+
+    def _run_for_each_legacy_cell(self, node, context: Dict[str, Any],
+                                  merged_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Per-cell ask over the legacy CellPopulation (models without an ABM
+        population, e.g. MicroC). Runs the whole behaviour subworkflow once per
+        cell, binding context['_current_cell'] so functions act on env.cell.
+
+        Cells are visited in random order (the run RNG — see _run_rng), and the
+        population is snapshotted up front so structural changes (division/removal,
+        deferred to the reconciliation step) do not perturb this loop. The
+        for_each `kind` is not filtered here: legacy models are single-kind.
+        """
+        legacy = context.get('population')
+        if legacy is None:
+            print(f"[WORKFLOW] for_each call '{node.subworkflow_name}' but no "
+                  f"'abm_population' or 'population' in context — skipped")
+            return context
+
+        cells = list(legacy.state.cells.values())
+        self._run_rng(context).shuffle(cells)
+        for cell in cells:
+            context['_current_cell'] = cell
+            context = self.execute_subworkflow(
+                node.subworkflow_name, context, iterations=1, parameters=merged_params
+            )
+        context['_current_cell'] = None
         return context
 
     def execute_subworkflow(self, subworkflow_name: str, context: Dict[str, Any],
@@ -1063,6 +1111,16 @@ class WorkflowExecutor:
         """
         # Initialize observability at the start
         self.initialize_observability()
+
+        # Resolve the run-level RNG seed (workflow JSON top-level "seed").
+        # Absent → 42 (reproducible default); 0 → fresh entropy each run. This is
+        # the single source for the random iteration order of agents/resources
+        # (see _run_for_each_entity), so it must be set before any subworkflow runs.
+        import numpy as np
+        resolved_seed = 42 if getattr(self.workflow, "seed", None) is None else int(self.workflow.seed)
+        context["seed"] = resolved_seed
+        context["_rng"] = np.random.default_rng(resolved_seed if resolved_seed else None)
+        print(f"[WORKFLOW] Run seed = {resolved_seed if resolved_seed else 'entropy (0)'}")
 
         status = "completed"
         try:

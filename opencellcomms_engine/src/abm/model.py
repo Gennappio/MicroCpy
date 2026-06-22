@@ -9,7 +9,7 @@ GUI node layout: the GUI authors the description; the engine builds the model.
 Description schema (slice 1)::
 
     {
-      "space": {"type": "lattice", "size_x": 500, "size_y": 500,
+      "world": {"type": "lattice", "size_x": 500, "size_y": 500,
                 "tile_size": 10, "topology_x": "toroidal", "topology_y": "toroidal"},
       "resources": [
         {"name": "max_sugar", "setup": "seed_max_sugar"},
@@ -30,7 +30,7 @@ from typing import Callable, Dict, Optional, Tuple
 from src.abm.domain import Domain
 from src.abm.population import Population
 from src.abm.resource import FieldResource
-from src.abm.space import LatticeSpace
+from src.abm.world import LatticeWorld
 
 
 def _resolve(name: Optional[str], behaviours: Optional[Dict[str, Callable]], registry) -> Optional[Callable]:
@@ -47,11 +47,11 @@ def _resolve(name: Optional[str], behaviours: Optional[Dict[str, Callable]], reg
     raise KeyError(f"Behaviour '{name}' not found in behaviours map or registry")
 
 
-def build_space(spec: Dict) -> LatticeSpace:
+def build_world(spec: Dict) -> LatticeWorld:
     kind = spec.get("type", "lattice")
     if kind != "lattice":
-        raise NotImplementedError(f"Space type '{kind}' not in slice 1 (only 'lattice')")
-    return LatticeSpace(
+        raise NotImplementedError(f"World type '{kind}' not in slice 1 (only 'lattice')")
+    return LatticeWorld(
         size_x=spec["size_x"],
         size_y=spec["size_y"],
         tile_size=spec["tile_size"],
@@ -67,12 +67,12 @@ def build_model(
     config=None,
     seed: int = 0,
 ) -> Tuple[Domain, Population]:
-    space = build_space(description["space"])
-    population = Population(space, config=config, seed=seed)
-    domain = Domain(space)
+    world = build_world(description["world"])
+    population = Population(world, config=config, seed=seed)
+    domain = Domain(world)
 
     for rd in description.get("resources", []):
-        r = FieldResource(rd["name"], space, initial=rd.get("initial", 0.0), capacity=rd.get("capacity"))
+        r = FieldResource(rd["name"], world, initial=rd.get("initial", 0.0), capacity=rd.get("capacity"))
         r.params = rd
         r.on_setup(_resolve(rd.get("setup"), behaviours, registry))
         r.on_step(_resolve(rd.get("step"), behaviours, registry))

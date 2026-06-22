@@ -30,7 +30,6 @@
           "agentinit-Setup_population-param_checkpoint_file"
         ],
         "contract": {
-          "phase": "initialization",
           "reads": [
             "checkpoint",
             "agent.collection"
@@ -55,7 +54,6 @@
         },
         "description": "Initialize NetLogo-faithful gene networks for all cells",
         "contract": {
-          "phase": "initialization",
           "reads": [
             "agent.collection",
             "gene_network.definition"
@@ -86,7 +84,6 @@
       "agentinit-Init_gene_networks-init_netlogo_gn"
     ],
     "contract": {
-      "phase": "initialization",
       "owner": {
         "type": "agent",
         "kind": "tumor_cell"

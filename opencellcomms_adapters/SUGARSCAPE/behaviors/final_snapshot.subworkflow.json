@@ -40,11 +40,10 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "reporting",
           "reads": [
             "agents",
             "resources",
-            "space"
+            "world"
           ],
           "writes": [],
           "emits": []
@@ -58,11 +57,10 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "reporting",
       "reads": [
         "agents",
         "resources",
-        "space"
+        "world"
       ],
       "writes": [],
       "emits": []
@@ -75,11 +73,10 @@
     ]
   },
   "contract": {
-    "phase": "reporting",
     "reads": [
       "agents",
       "resources",
-      "space"
+      "world"
     ],
     "writes": [],
     "emits": []

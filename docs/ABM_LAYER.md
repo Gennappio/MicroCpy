@@ -19,24 +19,24 @@ A spatial agent-based model has four kinds of thing, in a 2×2:
 | **agents side**  | `Agent`                  | `Population`             |
 | **resources side** | `Resource`             | `Domain`                |
 
-Plus one thing they all share: the **`Space`** (the grid/world they live on).
-The `Space` is the only "smart" class — it knows geometry, neighbours,
-distance, occupancy, and how to sample a field. Everybody else asks the `Space`.
+Plus one thing they all share: the **`World`** (the grid/world they live on).
+The `World` is the only "smart" class — it knows geometry, neighbours,
+distance, occupancy, and how to sample a field. Everybody else asks the `World`.
 
 ```
         Domain  ── owns ──>  Resource(s)        Population ── owns ──> Agent(s)
           │                     │                   │                    │
-          └────── both sit on ──┴─── the Space ─────┴────────────────────┘
+          └────── both sit on ──┴─── the World ─────┴────────────────────┘
 ```
 
 Files, one line each:
 
 | file | class | what it is |
 |------|-------|------------|
-| `src/abm/space.py` | `Space`, `LatticeSpace` | the world: geometry, neighbours, occupancy, sampling |
+| `src/abm/world.py` | `World`, `LatticeWorld` | the world: geometry, neighbours, occupancy, sampling |
 | `src/abm/resource.py` | `Resource`, `FieldResource` | a field on the world (e.g. sugar) + its Setup/Step |
-| `src/abm/domain.py` | `Domain` | owns the Space + all Resources; runs their Steps |
-| `src/abm/agent.py` | `Agent` | one individual; asks the Space, writes itself |
+| `src/abm/domain.py` | `Domain` | owns the World + all Resources; runs their Steps |
+| `src/abm/agent.py` | `Agent` | one individual; asks the World, writes itself |
 | `src/abm/population.py` | `Population` | owns all Agents; activation (`ask`) + births/deaths |
 | `src/abm/model.py` | *(no class)* | the **builder**: JSON description → wired Domain+Population |
 
@@ -53,7 +53,7 @@ turns it into a running model. Without it you'd hand-construct every object.
 from src.abm import build_model
 
 description = {
-    "space": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
+    "world": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
               "topology_x": "toroidal", "topology_y": "toroidal"},
     "resources": [{"name": "food", "initial": 1.0, "step": "regrow_food"}],
     "agents":     {"step": "eat_step"},
@@ -112,7 +112,7 @@ they live in different packages, but the name is confusing:
 | file | class | meaning |
 |------|-------|---------|
 | `src/core/domain.py` | `MeshManager` | the **FiPy diffusion mesh** — the continuous grid the PDE solver uses for substances (oxygen, glucose). Old, unrelated to the ABM layer. |
-| `src/abm/domain.py` | `Domain` | the **ABM collective over resources** — owns the Space and the resource fields. New. |
+| `src/abm/domain.py` | `Domain` | the **ABM collective over resources** — owns the World and the resource fields. New. |
 
 Mental model: `core/domain.py` = "the physics mesh"; `abm/domain.py` = "the
 world that owns the resources". Different layers. (Worth a rename someday —
@@ -140,7 +140,7 @@ ABM            wraps          biology
 ----           -----          -------
 Agent          ─────────────> Cell
 Population      ─────────────> CellPopulation   (reuses spatial_grid for occupancy)
-env.space etc. ─ added to ───> BiologicalContext
+env.world etc. ─ added to ───> BiologicalContext
 ```
 
 So an `Agent` is a thin handle over a `Cell`; a `Population` is a thin manager
@@ -164,18 +164,18 @@ def scatter(env):                                   # Population Setup
 
 def eat_step(env):                                  # Agent Step (per agent)
     a = env.agent
-    got = a.sense("food")           # read the field at my tile (via the Space)
+    got = a.sense("food")           # read the field at my tile (via the World)
     a.consume("food", got)          # deposit a sink; applied in the resource Step
     a.set("energy", a.get("energy") + got - 1.0)    # eat, pay upkeep
     if a.get("energy") < 0:
         a.die()                     # request removal; Population commits it
 
 def regrow_food(env):                               # Resource Step (per field)
-    env.resource("food").grow_to(np.full(env.space.shape, 1.0), 0.1)
+    env.resource("food").grow_to(np.full(env.world.shape, 1.0), 0.1)
 
 # --- build + run -------------------------------------------------------------
 description = {
-    "space": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
+    "world": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
               "topology_x": "toroidal", "topology_y": "toroidal"},
     "resources": [{"name": "food", "initial": 1.0, "step": "regrow_food"}],
     "agents":     {"step": "eat_step"},
@@ -237,7 +237,7 @@ order, nothing hidden.
 hand-written `for` above is only for illustration. In the real system every
 behaviour is a **node** on a canvas, and the **executor** iterates the
 `__scheduler__` subworkflow exactly as for any workflow. The classes here are the
-typed API those node-functions call (`env.space`, `env.agent`, `agent.sense(...)`)
+typed API those node-functions call (`env.world`, `env.agent`, `agent.sense(...)`)
 — not a runner. One execution capability is new: a `subworkflow_call` with
 `for_each: {kind, order}` runs a behaviour subworkflow **once per agent** (the
 "ask"), binding `env.agent`. See `docs/ABM_GUI.md` and

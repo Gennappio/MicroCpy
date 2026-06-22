@@ -181,7 +181,7 @@ written or edited by hand instead of through the GUI.
 Every behavior subworkflow named anywhere in `metadata.gui` (and every behavior the
 `__scheduler__` calls) **must** be listed under a category that maps to a real,
 clickable tab in the GUI. The navigable tabs are exactly:
-**Overview · Agents · Resources · Space · Initialization · Scheduler · Planner ·
+**Overview · Agents · Resources · World · Initialization · Scheduler · Planner ·
 Processing · Results** (`opencellcomms_gui/src/components/MainTabSelector.jsx`).
 
 The homing rule, by where the behavior runs:
@@ -207,8 +207,8 @@ The homing rule, by where the behavior runs:
 If a behavior genuinely cannot be attributed to any object, the **Processing** tab
 is the only legitimate catch-all — never Environment, and never a bare
 `__scheduler__` call with no category. `environment.init_subworkflow` /
-`space.subworkflow` for world *setup* are a separate matter (they surface via the
-Initialization / Space tabs); the prohibition here is specifically on **behavior**
+`world.subworkflow` for world *setup* are a separate matter (they surface via the
+Initialization / World tabs); the prohibition here is specifically on **behavior**
 subworkflows. The legacy `BEHAVIOR_LIBRARY_MANUAL.md` text that calls Environment
 "a host for cross-object process roles" is superseded by this rule.
 
@@ -221,14 +221,14 @@ popups. The canvas is the product; the class layer is built *through* it, not
 instead of it. (A previous attempt that replaced canvases with forms was reverted.)
 
 What the class layer actually adds is small and additive:
-- A typed `env` API the node-functions call: `env.space`, `env.agent`,
+- A typed `env` API the node-functions call: `env.world`, `env.agent`,
   `agent.neighbors()`, `agent.sense('sugar')`, `env.resource('sugar')`. The
-  classes in `src/abm/` (Space / Resource / Agent / Population / Domain) are that
-  API — they are what the nodes call, not a hidden runner. Only the Space mechanics
+  classes in `src/abm/` (World / Resource / Agent / Population / Domain) are that
+  API — they are what the nodes call, not a hidden runner. Only the World mechanics
   and the per-agent iteration live in library code; all behaviours are nodes.
 - An entity organization that mostly already exists: **Agents** (kinds with
   Setup/Step canvases) and **Resources** (the same, mirrored), plus **World**
-  (the Space `setup_space` node + the init orchestration + a preview) and
+  (the World `setup_world` node + the init orchestration + a preview) and
   **Scheduler** (the loop). World = init orchestration; Scheduler = loop
   orchestration — symmetric.
 - **One file = one node = one atomic function.** A *behaviour* is a **subworkflow

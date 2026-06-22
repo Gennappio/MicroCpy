@@ -30,7 +30,6 @@
           "fate_update-param_necrosis_params"
         ],
         "contract": {
-          "phase": "coupling",
           "participants": [
             {
               "type": "agent",
@@ -63,7 +62,6 @@
           "fate_update-param_max_growth_arrest_steps"
         ],
         "contract": {
-          "phase": "agent_behavior",
           "owner": {
             "type": "agent",
             "kind": "tumor_cell"
@@ -88,7 +86,6 @@
         },
         "description": "Mark cells as apoptotic based on gene network Apoptosis output",
         "contract": {
-          "phase": "agent_behavior",
           "owner": {
             "type": "agent",
             "kind": "tumor_cell"
@@ -113,7 +110,6 @@
         },
         "description": "Mark cells as Proliferation or Quiescence based on gene network",
         "contract": {
-          "phase": "agent_behavior",
           "owner": {
             "type": "agent",
             "kind": "tumor_cell"
@@ -177,7 +173,6 @@
       "fate_update-mark_proliferating"
     ],
     "contract": {
-      "phase": "coupling",
       "participants": [
         {
           "type": "agent",

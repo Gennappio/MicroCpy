@@ -147,7 +147,7 @@ class HtmlParser(NetworkParser):
                 # Convert "and" to "&", "or" to "|", "not" to "!"
                 logic_rule = logic_rule.replace(' and ', ' & ').replace(' or ', ' | ').replace('not ', '!')
 
-                # Handle cases where there's no space after "not"
+                # Handle cases where there's no world after "not"
                 logic_rule = logic_rule.replace('not(', '!(')
 
             # Create the node

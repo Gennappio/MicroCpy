@@ -31,11 +31,10 @@
         },
         "description": "Generate final state visualization",
         "contract": {
-          "phase": "reporting",
           "reads": [
             "agent.collection",
             "resource.fields",
-            "space.self",
+            "world.self",
             "simulation.results"
           ],
           "writes": [],
@@ -47,11 +46,10 @@
       "final_summary-gen_final_plots"
     ],
     "contract": {
-      "phase": "reporting",
       "reads": [
         "agent.collection",
         "resource.fields",
-        "space.self",
+        "world.self",
         "simulation.results"
       ],
       "writes": [],

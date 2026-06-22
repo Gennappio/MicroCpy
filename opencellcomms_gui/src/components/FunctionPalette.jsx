@@ -5,16 +5,13 @@ import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
 import { FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
 import {
-  CONTRACT_PHASE_LABELS,
-  compatibilityForContract,
   contractForFunction,
-  processRoleForSubworkflow,
-  formatContractList,
+  contractForSubworkflow,
 } from '../utils/contractUtils';
 import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
-  [KINDS.SPACE]: ['setup_space', 'plot_space'],
+  [KINDS.WORLD]: ['setup_world', 'plot_world'],
   [KINDS.AGENT_INIT]: ['plot_agents'],
   [KINDS.RESOURCE_INIT]: ['plot_resources'],
 };
@@ -37,13 +34,11 @@ const FunctionPalette = ({ currentStage }) => {
   const [plugins, setPlugins] = useState([]);
   const [pluginMenuOpen, setPluginMenuOpen] = useState(false);
   const [loadingPlugins, setLoadingPlugins] = useState(false);
-  const [filterMode, setFilterMode] = useState('match');
   const workflowFileRef = useRef(null);
 
   const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage];
   const currentSubworkflow = workflow.subworkflows?.[currentStage];
-  const currentRole = processRoleForSubworkflow(currentSubworkflow, currentKind);
-  const currentContract = currentRole.contract;
+  const currentContract = contractForSubworkflow(currentSubworkflow, currentKind);
   const canHostFunctions = FUNCTION_HOSTING_KINDS.has(currentKind);
   const isSchedulerCanvas = currentKind === KINDS.SCHEDULER;
   const defaultFunctions = DEFAULT_FUNCTIONS_BY_KIND[currentKind] || [];
@@ -256,12 +251,6 @@ const FunctionPalette = ({ currentStage }) => {
       : (meta?.parameters || []);
     const paramCount = paramList.length;
     const contract = contractForFunction(meta, userFn, currentKind, currentContract);
-    const compatibility = compatibilityForContract(contract, currentKind, currentContract);
-    const isMismatch = compatibility.level === 'mismatch';
-    const isWarning = compatibility.level === 'mismatch' || compatibility.level === 'soft-mismatch';
-
-    if (filterMode === 'match' && isMismatch) return null;
-    if (filterMode === 'warnings' && !isWarning) return null;
 
     // Draggable payload — even staged functions can be dragged onto the canvas.
     // The function_name + parameters travel with the drag.
@@ -279,15 +268,14 @@ const FunctionPalette = ({ currentStage }) => {
 
     // Draggable as long as we have either backend metadata OR a staged spec
     const draggable = !!meta || isStaged;
-    const baseTitle = isStaged
+    const title = isStaged
       ? '✱ unsaved — drag onto canvas, then click Export Behavior to write the file'
       : (!meta ? 'Not loaded in backend registry yet — restart backend or open the originating workflow' : '');
-    const title = [baseTitle, compatibility.reason].filter(Boolean).join('\n');
 
     return (
       <div
         key={`${source || 'lib'}-${name}`}
-        className={`function-item ${!meta && !isStaged ? 'unloaded' : ''} ${isStaged ? 'unsaved' : ''} contract-${compatibility.level}`}
+        className={`function-item ${!meta && !isStaged ? 'unloaded' : ''} ${isStaged ? 'unsaved' : ''}`}
         draggable={draggable}
         title={title}
         onDragStart={draggable ? (e) => onDragStart(e, payload) : undefined}
@@ -299,11 +287,6 @@ const FunctionPalette = ({ currentStage }) => {
         <div className="function-item-description">{description}</div>
         <div className="function-item-params">
           {paramCount} parameter{paramCount !== 1 ? 's' : ''}
-          {canHostFunctions && (
-            <span className={`contract-badge ${isMismatch ? 'warn' : compatibility.level}`}>
-              {compatibility.label}
-            </span>
-          )}
         </div>
       </div>
     );
@@ -375,38 +358,6 @@ const FunctionPalette = ({ currentStage }) => {
           onChange={handleWorkflowFileSelected}
         />
       </div>
-
-      {canHostFunctions && (
-        <div className={`process-role-card phase-${currentRole.phase || 'unknown'}`}>
-          <div className="process-role-main">
-            <span className="process-role-kicker">Canvas role</span>
-            <strong>{currentRole.label}</strong>
-            {currentRole.inferred && <span className="process-role-inferred">inferred</span>}
-          </div>
-          <div className="process-role-meta">
-            <span>{currentKind || 'subworkflow'}</span>
-            <span>{formatContractList(currentContract?.writes)}</span>
-          </div>
-          <div className="palette-filter-tabs" role="group" aria-label="Function phase filter">
-            {[
-              ['match', 'Match'],
-              ['warnings', 'Warnings'],
-              ['all', 'All'],
-            ].map(([mode, label]) => (
-              <button
-                key={mode}
-                className={filterMode === mode ? 'active' : ''}
-                onClick={() => setFilterMode(mode)}
-                title={mode === 'match'
-                  ? `Hide explicit mismatches for ${CONTRACT_PHASE_LABELS[currentRole.phase] || currentRole.phase || 'this canvas'}`
-                  : undefined}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="palette-content">
 

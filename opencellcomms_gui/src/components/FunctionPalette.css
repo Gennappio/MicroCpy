@@ -454,64 +454,6 @@
   color: #0f172a;
 }
 
-.process-role-card.phase-initialization { border-left-color: #0284c7; }
-.process-role-card.phase-agent_behavior { border-left-color: #2563eb; }
-.process-role-card.phase-resource_behavior { border-left-color: #059669; }
-.process-role-card.phase-space_behavior { border-left-color: #0d9488; }
-.process-role-card.phase-coupling { border-left-color: #7c3aed; }
-.process-role-card.phase-reconciliation { border-left-color: #ea580c; }
-.process-role-card.phase-reporting { border-left-color: #475569; }
-
-.process-role-main {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.process-role-main strong {
-  font-size: 13px;
-  line-height: 1.2;
-  color: #111827;
-}
-
-.process-role-kicker,
-.process-role-inferred {
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
-}
-
-.process-role-inferred {
-  padding: 1px 5px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-}
-
-.process-role-meta {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 6px;
-}
-
-.process-role-meta span {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 10px;
-  color: #475569;
-  background: #e2e8f0;
-  border-radius: 4px;
-  padding: 2px 5px;
-}
-
 .palette-filter-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

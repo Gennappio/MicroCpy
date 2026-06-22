@@ -38,9 +38,8 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "initialization",
           "reads": [
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "resource.self"
@@ -68,9 +67,8 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "initialization",
           "reads": [
-            "space.self"
+            "world.self"
           ],
           "writes": [
             "resource.self"
@@ -106,13 +104,12 @@
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "initialization",
       "owner": {
         "type": "resource",
         "kind": "sugar"
       },
       "reads": [
-        "space.self"
+        "world.self"
       ],
       "writes": [
         "resource.self"
@@ -129,13 +126,12 @@
     ]
   },
   "contract": {
-    "phase": "initialization",
     "owner": {
       "type": "resource",
       "kind": "sugar"
     },
     "reads": [
-      "space.self"
+      "world.self"
     ],
     "writes": [
       "resource.self"

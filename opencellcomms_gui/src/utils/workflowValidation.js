@@ -12,30 +12,12 @@
 // convention (e.g. '__scheduler__', '__init_sequence__') and are exempt.
 const SUBWORKFLOW_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 const SYSTEM_SUBWORKFLOW_NAME_PATTERN = /^__[a-zA-Z][a-zA-Z0-9_]*__$/;
-const CONTRACT_PHASES = new Set([
-  'initialization',
-  'agent_behavior',
-  'resource_behavior',
-  'space_behavior',
-  'coupling',
-  'reconciliation',
-  'reporting',
-]);
 const CONTRACT_REQUIRED_KINDS = new Set([
   'agent_behavior',
   'resource_behavior',
   'env_behavior',
   'processing_behavior',
 ]);
-const KIND_TO_EXPECTED_PHASE = {
-  agent_init: 'initialization',
-  resource_init: 'initialization',
-  space: 'initialization',
-  env_init: 'initialization',
-  agent_behavior: 'agent_behavior',
-  resource_behavior: 'resource_behavior',
-  processing_behavior: 'reporting',
-};
 
 /**
  * Get the kind of a subworkflow (composer or subworkflow)
@@ -169,13 +151,6 @@ function validateContractShape(label, contract) {
     return [`Contract warning: ${label} contract must be an object.`];
   }
 
-  if (contract.phase && !CONTRACT_PHASES.has(contract.phase)) {
-    warnings.push(
-      `Contract warning: ${label} has unknown phase '${contract.phase}'. ` +
-      `Expected one of: ${Array.from(CONTRACT_PHASES).sort().join(', ')}.`
-    );
-  }
-
   ['reads', 'writes', 'emits', 'consumes'].forEach((key) => {
     if (contract[key] !== undefined && !Array.isArray(contract[key])) {
       warnings.push(`Contract warning: ${label} contract.${key} must be a list.`);
@@ -197,18 +172,11 @@ function validateSubworkflowContractSemantics(name, kind, contract) {
   const warnings = [];
   if (!contract || typeof contract !== 'object' || Array.isArray(contract)) return warnings;
 
-  const phase = contract.phase;
   const writes = Array.isArray(contract.writes) ? contract.writes : [];
-  const expectedPhase = KIND_TO_EXPECTED_PHASE[kind];
 
-  if (expectedPhase && phase && phase !== expectedPhase) {
-    warnings.push(
-      `Contract warning: subworkflow '${name}' is registered as ${kind} ` +
-      `but declares phase '${phase}' instead of '${expectedPhase}'.`
-    );
-  }
-
-  if (phase === 'agent_behavior') {
+  // Ownership-based checks (no phase): an agent/resource behaviour should own and
+  // write only its own self-state (or queue intents).
+  if (kind === 'agent_behavior') {
     if (contract.owner?.type !== 'agent') {
       warnings.push(`Contract warning: agent behavior '${name}' should declare owner.type = 'agent'.`);
     }
@@ -220,7 +188,7 @@ function validateSubworkflowContractSemantics(name, kind, contract) {
     }
   }
 
-  if (phase === 'resource_behavior') {
+  if (kind === 'resource_behavior') {
     if (contract.owner?.type !== 'resource') {
       warnings.push(`Contract warning: resource behavior '${name}' should declare owner.type = 'resource'.`);
     }
@@ -230,16 +198,6 @@ function validateSubworkflowContractSemantics(name, kind, contract) {
         `Contract warning: resource behavior '${name}' writes outside resource.self/intents: ${illegalWrites.join(', ')}.`
       );
     }
-  }
-
-  if (phase === 'coupling' && (!Array.isArray(contract.participants) || contract.participants.length < 2)) {
-    warnings.push(`Contract warning: coupling '${name}' should declare at least two participants.`);
-  }
-
-  if (phase === 'reporting' && writes.length > 0) {
-    warnings.push(
-      `Contract warning: reporting subworkflow '${name}' should be read-only, but declares writes: ${writes.join(', ')}.`
-    );
   }
 
   return warnings;

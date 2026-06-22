@@ -1,18 +1,18 @@
 {
   "format": "subworkflow",
   "version": "1.0",
-  "name": "__space__",
-  "kind": "space",
-  "description": "Space canvas: build the toroidal Sugarscape grid.",
+  "name": "__world__",
+  "kind": "world",
+  "description": "World canvas: build the toroidal Sugarscape grid.",
   "exported_from": "Sugarscape",
   "subworkflow": {
-    "description": "Space canvas: build the toroidal Sugarscape grid.",
+    "description": "World canvas: build the toroidal Sugarscape grid.",
     "enabled": true,
     "deletable": false,
     "controller": {
-      "id": "controller-__space__",
+      "id": "controller-__world__",
       "type": "initNode",
-      "label": "SPACE CONTROLLER",
+      "label": "WORLD CONTROLLER",
       "position": {
         "x": 100,
         "y": 100
@@ -21,8 +21,8 @@
     },
     "functions": [
       {
-        "id": "space-setup",
-        "function_name": "setup_space",
+        "id": "world-setup",
+        "function_name": "setup_world",
         "function_file": "",
         "parameters": {
           "size_x": 50,
@@ -42,27 +42,26 @@
         "step_count": 1,
         "parameter_nodes": [],
         "contract": {
-          "phase": "initialization",
           "reads": [],
           "writes": [
-            "space.self"
+            "world.self"
           ],
           "emits": []
         }
       },
       {
-        "id": "space-plot",
-        "function_name": "plot_space",
+        "id": "world-plot",
+        "function_name": "plot_world",
         "function_file": "",
         "parameters": {
-          "prefix": "space"
+          "prefix": "world"
         },
         "enabled": true,
         "position": {
           "x": 400,
           "y": 280
         },
-        "description": "Plot the computational space and allowed cells.",
+        "description": "Plot the computational world and allowed cells.",
         "custom_name": "",
         "step_count": 1,
         "parameter_nodes": []
@@ -71,18 +70,17 @@
     "subworkflow_calls": [],
     "parameters": [],
     "execution_order": [
-      "space-setup",
-      "space-plot"
+      "world-setup",
+      "world-plot"
     ],
     "input_parameters": [],
     "contract": {
-      "phase": "initialization",
       "owner": {
-        "type": "space"
+        "type": "world"
       },
       "reads": [],
       "writes": [
-        "space.self"
+        "world.self"
       ],
       "emits": []
     }
@@ -90,18 +88,17 @@
   "dependencies": {
     "subworkflows_referenced": [],
     "functions_required": [
-      "plot_space",
-      "setup_space"
+      "plot_world",
+      "setup_world"
     ]
   },
   "contract": {
-    "phase": "initialization",
     "owner": {
-      "type": "space"
+      "type": "world"
     },
     "reads": [],
     "writes": [
-      "space.self"
+      "world.self"
     ],
     "emits": []
   }
