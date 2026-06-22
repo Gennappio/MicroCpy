@@ -317,3 +317,18 @@
   border: 2px solid white !important;
   right: -6px !important;
 }
+
+/* A registered function whose @register_function is mis-declared (e.g. an
+   undeclared parameter). Surfaces the backend validation_errors so the node
+   reads as "fix me" instead of silently losing a socket. */
+.node-validation-error {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 1px 6px;
+  cursor: help;
+}

@@ -83,6 +83,16 @@ ENFORCE_TYPED_ENV = False
 # (that path raises regardless).
 WARN_LEGACY_CONTEXT = os.environ.get("OCC_WARN_LEGACY_CONTEXT", "0").lower() not in ("0", "", "false", "no")
 
+# Whether an undeclared parameter is a HARD error. A typed-env function arg that
+# is neither declared in parameters=[...] nor given a default is silently dropped
+# by extraction, leaving a node the GUI can neither show nor wire (a socketless
+# "bad node"). Default OFF: warn and flag the function (validation_errors) so one
+# bad node never aborts a whole plugin import, and the GUI can render it as a
+# "fix me" node. Opt in with OCC_ENFORCE_PARAM_DECLARATIONS=1 in CI to block bad
+# code at merge. The typed-env codebase is clean today, so flipping this on in CI
+# breaks nothing while preventing any future regression.
+ENFORCE_PARAM_DECLARATIONS = os.environ.get("OCC_ENFORCE_PARAM_DECLARATIONS", "0").lower() not in ("0", "", "false", "no")
+
 
 # Global registry instance for decorator-based registrations
 _decorator_registry = FunctionRegistry()
@@ -180,6 +190,41 @@ def _extract_parameters_from_signature(func: Callable, param_definitions: Option
             ))
     
     return parameters
+
+
+def _validate_parameter_declarations(func, param_definitions, func_name, source_file) -> List[str]:
+    """Catch the 'badly written node' that silently loses its GUI socket.
+
+    For a typed-env function (first arg ``env``) the context is reached via
+    ``env.x``, so every OTHER signature argument is a user parameter and must end
+    up as an editable socket. ``_extract_parameters_from_signature`` already turns
+    a declared param OR a defaulted arg into a socket, but it SILENTLY DROPS an
+    undeclared argument that has no default — leaving the node with a parameter the
+    GUI can neither display nor wire. Flag exactly that case.
+
+    Legacy ``context``-dict functions are grandfathered: they inject context
+    objects (population, simulator, ...) as named args, which are not user
+    parameters, so the same rule would false-positive.
+    """
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+    if not params or params[0].name != 'env':
+        return []
+    socketed = {p.name for p in param_definitions}
+    errors = []
+    for p in params[1:]:
+        if p.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
+            continue
+        if p.name in ('context', 'self'):
+            continue
+        if p.name not in socketed:
+            errors.append(
+                f"'{func_name}' ({source_file}): parameter '{p.name}' is in the "
+                f"signature but is neither declared in @register_function(parameters=[...]) "
+                f"nor given a default, so it has no editable socket in the GUI. "
+                f"Add it to parameters=[...] (or give it a default)."
+            )
+    return errors
 
 
 def _extract_inputs_from_signature(func: Callable) -> List[str]:
@@ -396,6 +441,19 @@ def register_function(
             if WARN_LEGACY_CONTEXT:
                 warnings.warn(message, stacklevel=2)
 
+        # Catch undeclared parameters that would silently lose their GUI socket.
+        # Warn + flag by default; raise only under OCC_ENFORCE_PARAM_DECLARATIONS.
+        param_validation_errors = _validate_parameter_declarations(
+            func, param_definitions, func_name, source_file
+        )
+        if param_validation_errors:
+            message = "\n".join(param_validation_errors)
+            if ENFORCE_PARAM_DECLARATIONS:
+                raise ValueError(
+                    f"\n{'='*80}\n❌ UNDECLARED PARAMETER(S)\n{'='*80}\n{message}\n{'='*80}\n"
+                )
+            warnings.warn(message, stacklevel=2)
+
         # Create metadata
         metadata = FunctionMetadata(
             name=func_name,
@@ -411,7 +469,8 @@ def register_function(
             compatible_kernels=compatible_kernels,
             requires=requires,
             operates_on=operates_on,
-            contract=contract
+            contract=contract,
+            validation_errors=param_validation_errors
         )
 
         # Detect silent function-name collisions. Re-registering the same name

@@ -157,6 +157,14 @@ const WorkflowFunctionNode = ({ id, data, selected }) => {
         <div className="node-title">
           {displayName}
           {isTemplate && <span className="template-badge">(template)</span>}
+          {funcMeta?.validation_errors?.length > 0 && (
+            <span
+              className="node-validation-error"
+              title={`This function is mis-declared:\n${funcMeta.validation_errors.join('\n')}`}
+            >
+              ⚠ fix
+            </span>
+          )}
         </div>
         <button
           className="node-edit-btn"
