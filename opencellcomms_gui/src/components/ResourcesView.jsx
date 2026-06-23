@@ -75,7 +75,7 @@ const ResourcesView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMou
   const buildTabs = (kind) => {
     if (!kind) return [];
     const tabs = [
-      { name: kind.init_subworkflow, label: 'Setup', deletable: false },
+      { name: kind.init_subworkflow, label: 'Init', deletable: false },
     ];
     (kind.behavior_subworkflows || []).forEach((b) => {
       tabs.push({ name: b, label: b, deletable: true });

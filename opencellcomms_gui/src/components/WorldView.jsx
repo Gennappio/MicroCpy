@@ -70,7 +70,7 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   };
 
   const tabs = [
-    ...(worldSub ? [{ name: worldSub, label: 'Setup', deletable: false }] : []),
+    ...(worldSub ? [{ name: worldSub, label: 'Init', deletable: false }] : []),
     ...behaviors.map((b) => ({ name: b, label: b, deletable: true })),
   ];
 
@@ -84,7 +84,7 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
       <div className="agents-main">
         <div style={{ padding: '8px 14px', fontSize: '0.82rem', color: '#6b7280' }}>
           <Globe size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />
-          <strong>World.</strong> Build the world grid in <em>Setup</em> (drop <code>setup_world</code>),
+          <strong>World.</strong> Build the world grid in <em>Init</em> (drop <code>setup_world</code>),
           and add per-step collective behaviours (e.g. diffusion) that run once each step.
         </div>
 
