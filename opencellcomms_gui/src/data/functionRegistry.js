@@ -235,55 +235,6 @@ function getFallbackRegistry() {
     source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
   },
 
-  // DEBUG MICROENVIRONMENT FUNCTIONS
-  debug_microenvironment_1: {
-    name: 'debug_microenvironment_1',
-    displayName: 'Debug Microenvironment 1',
-    description: 'Debug function for microenvironment stage (prints its name and stage)',
-    category: FunctionCategory.DIFFUSION,
-    parameters: [
-      {
-        name: 'message',
-        type: 'string',
-        description: 'Debug message to print (typically from a connected parameter node)',
-        default: '[DEBUG] microenvironment: debug_microenvironment_1',
-      },
-    ],
-    source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
-  },
-
-  debug_microenvironment_2: {
-    name: 'debug_microenvironment_2',
-    displayName: 'Debug Microenvironment 2',
-    description: 'Debug function for microenvironment stage (prints its name and stage)',
-    category: FunctionCategory.DIFFUSION,
-    parameters: [
-      {
-        name: 'message',
-        type: 'string',
-        description: 'Debug message to print (typically from a connected parameter node)',
-        default: '[DEBUG] microenvironment: debug_microenvironment_2',
-      },
-    ],
-    source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
-  },
-
-  debug_microenvironment_3: {
-    name: 'debug_microenvironment_3',
-    displayName: 'Debug Microenvironment 3',
-    description: 'Debug function for microenvironment stage (prints its name and stage)',
-    category: FunctionCategory.DIFFUSION,
-    parameters: [
-      {
-        name: 'message',
-        type: 'string',
-        description: 'Debug message to print (typically from a connected parameter node)',
-        default: '[DEBUG] microenvironment: debug_microenvironment_3',
-      },
-    ],
-    source_file: 'src/workflow/functions/debug/debug_dummy_functions.py',
-  },
-
   // DEBUG INTERCELLULAR FUNCTIONS
   debug_intercellular_1: {
     name: 'debug_intercellular_1',
@@ -468,9 +419,7 @@ export async function getFunctionsByCategoryAsync(category) {
 
   // Map GUI stage names to backend category names
   let backendCategory = category;
-  if (category === 'microenvironment') {
-    backendCategory = 'diffusion';
-  } else if (category === 'macrostep') {
+  if (category === 'macrostep') {
     // Macrostep should show utility functions (orchestrators)
     backendCategory = 'utility';
   }
@@ -486,9 +435,7 @@ export const getFunctionsByCategory = (category) => {
 
   // Map GUI stage names to backend category names
   let backendCategory = category;
-  if (category === 'microenvironment') {
-    backendCategory = 'diffusion';
-  } else if (category === 'macrostep') {
+  if (category === 'macrostep') {
     // Macrostep should show utility functions (orchestrators)
     backendCategory = 'utility';
   }
