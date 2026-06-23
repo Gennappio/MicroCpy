@@ -2,7 +2,7 @@
   "format": "subworkflow",
   "version": "1.0",
   "name": "environment_init",
-  "kind": "env_init",
+  "kind": "world",
   "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
   "exported_from": "MicroC",
   "subworkflow": {
@@ -345,7 +345,7 @@
     ],
     "contract": {
       "owner": {
-        "type": "environment"
+        "type": "world"
       },
       "reads": [
         "simulation.parameters"

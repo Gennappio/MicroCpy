@@ -1,7 +1,7 @@
 {
   "format": "subworkflow",
   "name": "env_replenish",
-  "kind": "env_behavior",
+  "kind": "world_behavior",
   "subworkflow": {
     "description": "Environment behavior: env_replenish",
     "controller": {

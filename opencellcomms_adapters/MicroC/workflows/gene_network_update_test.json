@@ -12,20 +12,9 @@
         {
           "name": "tumor_cell",
           "init_subworkflow": "tumor_cell_init",
-          "behavior_subworkflows": [
-            "gene_update",
-            "fate_update"
-          ]
+          "behavior_subworkflows": []
         }
       ],
-      "environment": {
-        "init_subworkflow": "environment_init",
-        "behavior_subworkflows": [
-          "division",
-          "fate_summary",
-          "iteration_plots"
-        ]
-      },
       "scheduler": {
         "subworkflow": "__scheduler__"
       },
@@ -41,7 +30,14 @@
       },
       "resource_kinds": [],
       "world": {
-        "subworkflow": null
+        "subworkflow": "environment_init",
+        "behavior_subworkflows": [
+          "gene_update",
+          "fate_update",
+          "division",
+          "fate_summary",
+          "iteration_plots"
+        ]
       },
       "contract_enforcement": "warn"
     }
@@ -387,7 +383,7 @@
       ],
       "contract": {
         "owner": {
-          "type": "environment"
+          "type": "world"
         },
         "reads": [
           "simulation.parameters"
@@ -678,10 +674,6 @@
           "id": "sched-call-gene_update",
           "type": "subworkflow_call",
           "subworkflow_name": "gene_update",
-          "for_each": {
-            "type": "agent",
-            "kind": "tumor_cell"
-          },
           "position": {
             "x": 400,
             "y": 120
@@ -696,10 +688,6 @@
           "id": "sched-call-fate_update",
           "type": "subworkflow_call",
           "subworkflow_name": "fate_update",
-          "for_each": {
-            "type": "agent",
-            "kind": "tumor_cell"
-          },
           "position": {
             "x": 400,
             "y": 230
@@ -746,10 +734,10 @@
             "x": 400,
             "y": 450
           },
-          "description": "iteration_plots",
+          "description": "iteration_plots (disabled \u2014 substance fields are static in this test, so per-iteration heatmaps are redundant; toggle enabled to re-enable)",
           "iterations": 1,
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "parameter_nodes": []
         }
       ],

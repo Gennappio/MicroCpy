@@ -7,7 +7,6 @@ import PlannerView from './components/PlannerView';
 import AgentsView from './components/AgentsView';
 import ResourcesView from './components/ResourcesView';
 import WorldView from './components/WorldView';
-import EnvironmentView from './components/EnvironmentView';
 import InitSequenceView from './components/InitSequenceView';
 import SchedulerView from './components/SchedulerView';
 import ProcessingView from './components/ProcessingView';
@@ -329,15 +328,6 @@ function App() {
         />
       )}
 
-      {currentMainTab === 'environment' && (
-        <EnvironmentView
-          paletteWidth={paletteWidth}
-          inspectorWidth={inspectorWidth}
-          onMouseDownPalette={handleMouseDown('palette')}
-          onMouseDownInspector={handleMouseDown('inspector')}
-        />
-      )}
-
       {currentMainTab === 'initialization' && (
         <InitSequenceView
           paletteWidth={paletteWidth}
@@ -383,7 +373,7 @@ function App() {
           <span>Version: {workflow.version}</span>
         </div>
         <div className="footer-hint">
-          Agents → Environment → Scheduler → Planner → Processing → Results
+          Agents → World → Scheduler → Planner → Processing → Results
         </div>
       </footer>
     </div>

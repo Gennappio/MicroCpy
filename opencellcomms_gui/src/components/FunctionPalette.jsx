@@ -111,7 +111,7 @@ const FunctionPalette = ({ currentStage }) => {
         const swKind = data.kind;
 
         // Warn (non-blocking) if the behavior's role doesn't match the canvas
-        // the user is currently on — e.g. loading an env_behavior while viewing
+        // the user is currently on — e.g. loading a world_behavior while viewing
         // an agent canvas.
         if (currentKind && swKind && swKind !== currentKind) {
           const ok = window.confirm(

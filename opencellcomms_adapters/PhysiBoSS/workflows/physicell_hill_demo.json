@@ -10,21 +10,23 @@
     "gui": {
       "function_libraries": [],
       "agent_kinds": [],
-      "environment": {
-        "init_subworkflow": null,
-        "behavior_subworkflows": []
-      },
       "scheduler": {
         "subworkflow": "__scheduler__"
       },
       "processing": {
-        "behavior_subworkflows": ["physicell_setup"]
+        "behavior_subworkflows": [
+          "physicell_setup"
+        ]
       },
       "init_sequence": {
         "subworkflow": "__init_sequence__"
       },
       "main_is_synthesized": false,
-      "user_functions": []
+      "user_functions": [],
+      "world": {
+        "subworkflow": null,
+        "behavior_subworkflows": []
+      }
     }
   },
   "subworkflows": {
@@ -32,12 +34,19 @@
       "description": "Orchestrator: init sequence -> scheduler -> PhysiCell run (processing).",
       "enabled": true,
       "deletable": false,
-      "execution_order": ["main-call-__init_sequence__", "main-call-__scheduler__", "main-call-physicell_setup"],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__",
+        "main-call-physicell_setup"
+      ],
       "controller": {
         "id": "controller-main",
         "type": "controller",
         "label": "MAIN CONTROLLER",
-        "position": {"x": 100.0, "y": 100.0},
+        "position": {
+          "x": 100.0,
+          "y": 100.0
+        },
         "number_of_steps": 1
       },
       "functions": [],
@@ -48,8 +57,11 @@
           "subworkflow_name": "__init_sequence__",
           "iterations": 1,
           "enabled": true,
-          "position": {"x": 400.0, "y": 100.0},
-          "description": "Initialization sequence (empty — PhysiCell sets itself up)."
+          "position": {
+            "x": 400.0,
+            "y": 100.0
+          },
+          "description": "Initialization sequence (empty \u2014 PhysiCell sets itself up)."
         },
         {
           "id": "main-call-__scheduler__",
@@ -57,8 +69,11 @@
           "subworkflow_name": "__scheduler__",
           "iterations": 1,
           "enabled": true,
-          "position": {"x": 400.0, "y": 220.0},
-          "description": "Main loop (empty — PhysiCell does its own internal stepping)."
+          "position": {
+            "x": 400.0,
+            "y": 220.0
+          },
+          "description": "Main loop (empty \u2014 PhysiCell does its own internal stepping)."
         },
         {
           "id": "main-call-physicell_setup",
@@ -66,14 +81,17 @@
           "subworkflow_name": "physicell_setup",
           "iterations": 1,
           "enabled": true,
-          "position": {"x": 400.0, "y": 340.0},
+          "position": {
+            "x": 400.0,
+            "y": 340.0
+          },
           "description": "Processing: PhysiCell setup + explicit Run + summary."
         }
       ],
       "parameters": []
     },
     "__init_sequence__": {
-      "description": "Initialization order — empty for the PhysiCell facade.",
+      "description": "Initialization order \u2014 empty for the PhysiCell facade.",
       "enabled": true,
       "deletable": false,
       "execution_order": [],
@@ -81,7 +99,10 @@
         "id": "controller-__init_sequence__",
         "type": "controller",
         "label": "INIT SEQUENCE",
-        "position": {"x": 100.0, "y": 100.0},
+        "position": {
+          "x": 100.0,
+          "y": 100.0
+        },
         "number_of_steps": 1
       },
       "functions": [],
@@ -89,7 +110,7 @@
       "parameters": []
     },
     "__scheduler__": {
-      "description": "Main simulation loop — empty. PhysiCell advances its own time internally inside the Run node.",
+      "description": "Main simulation loop \u2014 empty. PhysiCell advances its own time internally inside the Run node.",
       "enabled": true,
       "deletable": false,
       "execution_order": [],
@@ -97,7 +118,10 @@
         "id": "controller-__scheduler__",
         "type": "controller",
         "label": "SCHEDULER",
-        "position": {"x": 100.0, "y": 100.0},
+        "position": {
+          "x": 100.0,
+          "y": 100.0
+        },
         "number_of_steps": 1
       },
       "functions": [],
@@ -109,12 +133,22 @@
       "enabled": true,
       "deletable": true,
       "kind": "processing_behavior",
-      "execution_order": ["cfg_physicell", "sub_o2", "ct_tumor", "rule_o2_necrosis", "run_sim", "summarize"],
+      "execution_order": [
+        "cfg_physicell",
+        "sub_o2",
+        "ct_tumor",
+        "rule_o2_necrosis",
+        "run_sim",
+        "summarize"
+      ],
       "controller": {
         "id": "controller-physicell_setup",
         "type": "controller",
         "label": "PHYSICELL RUN",
-        "position": {"x": 100.0, "y": -160.0},
+        "position": {
+          "x": 100.0,
+          "y": -160.0
+        },
         "number_of_steps": 1
       },
       "functions": [
@@ -123,47 +157,75 @@
           "function_name": "set_physicell_config",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 100.0, "y": 100.0},
+          "position": {
+            "x": 100.0,
+            "y": 100.0
+          },
           "description": "Whole PhysiCell run configuration in one node: domain, timing, save cadence, options, parallelism, user parameters. Each group is an editable table driven by a dictParameterNode.",
           "step_count": 1,
-          "parameter_nodes": ["pn_cfg_domain", "pn_cfg_overall", "pn_cfg_save", "pn_cfg_options", "pn_cfg_parallel", "pn_cfg_user_parameters"]
+          "parameter_nodes": [
+            "pn_cfg_domain",
+            "pn_cfg_overall",
+            "pn_cfg_save",
+            "pn_cfg_options",
+            "pn_cfg_parallel",
+            "pn_cfg_user_parameters"
+          ]
         },
         {
           "id": "sub_o2",
           "function_name": "define_substrate",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 400.0, "y": 100.0},
+          "position": {
+            "x": 400.0,
+            "y": 100.0
+          },
           "description": "Oxygen substrate; high initial value + decay produces a falling signal over the run.",
           "step_count": 1,
-          "parameter_nodes": ["pn_oxygen"]
+          "parameter_nodes": [
+            "pn_oxygen"
+          ]
         },
         {
           "id": "ct_tumor",
           "function_name": "define_cell_type",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 700.0, "y": 100.0},
+          "position": {
+            "x": 700.0,
+            "y": 100.0
+          },
           "description": "Single tumor cell type; default phenotype values.",
           "step_count": 1,
-          "parameter_nodes": ["pn_tumor"]
+          "parameter_nodes": [
+            "pn_tumor"
+          ]
         },
         {
           "id": "rule_o2_necrosis",
           "function_name": "define_hill_rule",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 1000.0, "y": 100.0},
+          "position": {
+            "x": 1000.0,
+            "y": 100.0
+          },
           "description": "As oxygen increases, necrosis rate moves from 0 toward max_response=0.5.",
           "step_count": 1,
-          "parameter_nodes": ["pn_rule_o2_necrosis"]
+          "parameter_nodes": [
+            "pn_rule_o2_necrosis"
+          ]
         },
         {
           "id": "run_sim",
           "function_name": "run_physicell_simulation",
           "parameters": {},
           "enabled": true,
-          "position": {"x": 1300.0, "y": 100.0},
+          "position": {
+            "x": 1300.0,
+            "y": 100.0
+          },
           "description": "Explicit Run node: codegen -> make -> spawn -> tail occ_events.jsonl. Reads config + biology from context['physicell_spec']; needs no parameters of its own.",
           "step_count": 1,
           "parameter_nodes": []
@@ -171,9 +233,14 @@
         {
           "id": "summarize",
           "function_name": "summarize_physicell_events",
-          "parameters": {"max_lines_to_show": 5},
+          "parameters": {
+            "max_lines_to_show": 5
+          },
           "enabled": true,
-          "position": {"x": 1600.0, "y": 100.0},
+          "position": {
+            "x": 1600.0,
+            "y": 100.0
+          },
           "description": "Tally rule_engine_changed events.",
           "step_count": 1,
           "parameter_nodes": []
@@ -186,18 +253,61 @@
           "type": "dictParameterNode",
           "label": "domain",
           "target_param": "domain",
-          "position": {"x": 100.0, "y": 280.0},
+          "position": {
+            "x": 100.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "x_min", "value": -150.0, "valueType": "float"},
-            {"key": "x_max", "value": 150.0, "valueType": "float"},
-            {"key": "y_min", "value": -150.0, "valueType": "float"},
-            {"key": "y_max", "value": 150.0, "valueType": "float"},
-            {"key": "z_min", "value": -10.0, "valueType": "float"},
-            {"key": "z_max", "value": 10.0, "valueType": "float"},
-            {"key": "dx", "value": 20.0, "valueType": "float"},
-            {"key": "dy", "value": 20.0, "valueType": "float"},
-            {"key": "dz", "value": 20.0, "valueType": "float"},
-            {"key": "use_2D", "value": true, "valueType": "bool"}
+            {
+              "key": "x_min",
+              "value": -150.0,
+              "valueType": "float"
+            },
+            {
+              "key": "x_max",
+              "value": 150.0,
+              "valueType": "float"
+            },
+            {
+              "key": "y_min",
+              "value": -150.0,
+              "valueType": "float"
+            },
+            {
+              "key": "y_max",
+              "value": 150.0,
+              "valueType": "float"
+            },
+            {
+              "key": "z_min",
+              "value": -10.0,
+              "valueType": "float"
+            },
+            {
+              "key": "z_max",
+              "value": 10.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dx",
+              "value": 20.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dy",
+              "value": 20.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dz",
+              "value": 20.0,
+              "valueType": "float"
+            },
+            {
+              "key": "use_2D",
+              "value": true,
+              "valueType": "bool"
+            }
           ]
         },
         {
@@ -205,12 +315,31 @@
           "type": "dictParameterNode",
           "label": "overall (timing)",
           "target_param": "overall",
-          "position": {"x": 100.0, "y": 460.0},
+          "position": {
+            "x": 100.0,
+            "y": 460.0
+          },
           "entries": [
-            {"key": "max_time", "value": 5.0, "valueType": "float"},
-            {"key": "dt_diffusion", "value": 0.01, "valueType": "float"},
-            {"key": "dt_mechanics", "value": 0.1, "valueType": "float"},
-            {"key": "dt_phenotype", "value": 0.1, "valueType": "float"}
+            {
+              "key": "max_time",
+              "value": 5.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dt_diffusion",
+              "value": 0.01,
+              "valueType": "float"
+            },
+            {
+              "key": "dt_mechanics",
+              "value": 0.1,
+              "valueType": "float"
+            },
+            {
+              "key": "dt_phenotype",
+              "value": 0.1,
+              "valueType": "float"
+            }
           ]
         },
         {
@@ -218,12 +347,31 @@
           "type": "dictParameterNode",
           "label": "save",
           "target_param": "save",
-          "position": {"x": 100.0, "y": 640.0},
+          "position": {
+            "x": 100.0,
+            "y": 640.0
+          },
           "entries": [
-            {"key": "folder", "value": "output", "valueType": "string"},
-            {"key": "full_data_interval", "value": 1.0, "valueType": "float"},
-            {"key": "svg_interval", "value": 1.0, "valueType": "float"},
-            {"key": "svg_enabled", "value": false, "valueType": "bool"}
+            {
+              "key": "folder",
+              "value": "output",
+              "valueType": "string"
+            },
+            {
+              "key": "full_data_interval",
+              "value": 1.0,
+              "valueType": "float"
+            },
+            {
+              "key": "svg_interval",
+              "value": 1.0,
+              "valueType": "float"
+            },
+            {
+              "key": "svg_enabled",
+              "value": false,
+              "valueType": "bool"
+            }
           ]
         },
         {
@@ -231,10 +379,21 @@
           "type": "dictParameterNode",
           "label": "options",
           "target_param": "options",
-          "position": {"x": 100.0, "y": 820.0},
+          "position": {
+            "x": 100.0,
+            "y": 820.0
+          },
           "entries": [
-            {"key": "random_seed", "value": 7, "valueType": "int"},
-            {"key": "virtual_wall_at_domain_edge", "value": true, "valueType": "bool"}
+            {
+              "key": "random_seed",
+              "value": 7,
+              "valueType": "int"
+            },
+            {
+              "key": "virtual_wall_at_domain_edge",
+              "value": true,
+              "valueType": "bool"
+            }
           ]
         },
         {
@@ -242,9 +401,16 @@
           "type": "dictParameterNode",
           "label": "parallel",
           "target_param": "parallel",
-          "position": {"x": 100.0, "y": 1000.0},
+          "position": {
+            "x": 100.0,
+            "y": 1000.0
+          },
           "entries": [
-            {"key": "omp_num_threads", "value": 2, "valueType": "int"}
+            {
+              "key": "omp_num_threads",
+              "value": 2,
+              "valueType": "int"
+            }
           ]
         },
         {
@@ -252,9 +418,16 @@
           "type": "dictParameterNode",
           "label": "user_parameters",
           "target_param": "user_parameters",
-          "position": {"x": 100.0, "y": 1180.0},
+          "position": {
+            "x": 100.0,
+            "y": 1180.0
+          },
           "entries": [
-            {"key": "number_of_cells", "value": 3, "valueType": "int"}
+            {
+              "key": "number_of_cells",
+              "value": 3,
+              "valueType": "int"
+            }
           ]
         },
         {
@@ -262,15 +435,46 @@
           "type": "dictParameterNode",
           "label": "Oxygen (substrate)",
           "target_param": "substrate",
-          "position": {"x": 400.0, "y": 280.0},
+          "position": {
+            "x": 400.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "name", "value": "oxygen", "valueType": "string"},
-            {"key": "units", "value": "mmHg", "valueType": "string"},
-            {"key": "diffusion_coefficient", "value": 100000.0, "valueType": "float"},
-            {"key": "decay_rate", "value": 1.0, "valueType": "float"},
-            {"key": "initial_condition", "value": 38.0, "valueType": "float"},
-            {"key": "dirichlet_enabled", "value": false, "valueType": "bool"},
-            {"key": "dirichlet_value", "value": 0.0, "valueType": "float"}
+            {
+              "key": "name",
+              "value": "oxygen",
+              "valueType": "string"
+            },
+            {
+              "key": "units",
+              "value": "mmHg",
+              "valueType": "string"
+            },
+            {
+              "key": "diffusion_coefficient",
+              "value": 100000.0,
+              "valueType": "float"
+            },
+            {
+              "key": "decay_rate",
+              "value": 1.0,
+              "valueType": "float"
+            },
+            {
+              "key": "initial_condition",
+              "value": 38.0,
+              "valueType": "float"
+            },
+            {
+              "key": "dirichlet_enabled",
+              "value": false,
+              "valueType": "bool"
+            },
+            {
+              "key": "dirichlet_value",
+              "value": 0.0,
+              "valueType": "float"
+            }
           ]
         },
         {
@@ -278,10 +482,21 @@
           "type": "dictParameterNode",
           "label": "Tumor (cell type)",
           "target_param": "cell_type",
-          "position": {"x": 700.0, "y": 280.0},
+          "position": {
+            "x": 700.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "name", "value": "tumor", "valueType": "string"},
-            {"key": "id", "value": 0, "valueType": "int"}
+            {
+              "key": "name",
+              "value": "tumor",
+              "valueType": "string"
+            },
+            {
+              "key": "id",
+              "value": 0,
+              "valueType": "int"
+            }
           ]
         },
         {
@@ -289,16 +504,51 @@
           "type": "dictParameterNode",
           "label": "Hill: O2 -> necrosis",
           "target_param": "rule",
-          "position": {"x": 1000.0, "y": 280.0},
+          "position": {
+            "x": 1000.0,
+            "y": 280.0
+          },
           "entries": [
-            {"key": "cell_type", "value": "tumor", "valueType": "string"},
-            {"key": "signal", "value": "oxygen", "valueType": "string"},
-            {"key": "direction", "value": "increases", "valueType": "string"},
-            {"key": "behavior", "value": "necrosis", "valueType": "string"},
-            {"key": "max_response", "value": 0.5, "valueType": "float"},
-            {"key": "half_max", "value": 5.0, "valueType": "float"},
-            {"key": "hill_power", "value": 8.0, "valueType": "float"},
-            {"key": "use_on_dead", "value": 0, "valueType": "int"}
+            {
+              "key": "cell_type",
+              "value": "tumor",
+              "valueType": "string"
+            },
+            {
+              "key": "signal",
+              "value": "oxygen",
+              "valueType": "string"
+            },
+            {
+              "key": "direction",
+              "value": "increases",
+              "valueType": "string"
+            },
+            {
+              "key": "behavior",
+              "value": "necrosis",
+              "valueType": "string"
+            },
+            {
+              "key": "max_response",
+              "value": 0.5,
+              "valueType": "float"
+            },
+            {
+              "key": "half_max",
+              "value": 5.0,
+              "valueType": "float"
+            },
+            {
+              "key": "hill_power",
+              "value": 8.0,
+              "valueType": "float"
+            },
+            {
+              "key": "use_on_dead",
+              "value": 0,
+              "valueType": "int"
+            }
           ]
         }
       ]

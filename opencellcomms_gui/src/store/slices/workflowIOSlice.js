@@ -55,6 +55,22 @@ export const createWorkflowIOSlice = (set, get) => ({
       throw new Error(errorMsg);
     }
 
+    // The `environment` category was removed (it homed behaviours to a tab that
+    // no longer exists, producing orphan subworkflows reachable from no tab).
+    // We do not migrate legacy formats — refuse to load instead. World setup now
+    // lives in `world.subworkflow`; per-step collective behaviours in
+    // `world.behavior_subworkflows`; agent/resource behaviours on their kind.
+    const legacyEnv = workflowJson.metadata?.gui?.environment;
+    if (legacyEnv && (legacyEnv.init_subworkflow || (legacyEnv.behavior_subworkflows || []).length > 0)) {
+      const errorMsg =
+        "This workflow uses the removed 'environment' category, which is no longer supported. " +
+        'Move environment.init_subworkflow → world.subworkflow, collective per-step behaviours → ' +
+        'world.behavior_subworkflows, and agent/resource behaviours onto their kind.';
+      console.error(`[STORE] ${errorMsg}`);
+      alert(errorMsg);
+      throw new Error(errorMsg);
+    }
+
     // Phase 6: Resolve library paths relative to workflow file
     if (filePath && workflowJson.metadata?.gui?.function_libraries) {
       const workflowDir = pathUtils.dirname(filePath);
@@ -330,7 +346,6 @@ export const createWorkflowIOSlice = (set, get) => ({
     // workflows both load AND can be edited — the ABM mutators (abmSlice) assume
     // these arrays/objects always exist and would otherwise crash on first edit.
     const guiMeta = (workflowJson.metadata && workflowJson.metadata.gui) || {};
-    const rawEnv = (guiMeta.environment && typeof guiMeta.environment === 'object') ? guiMeta.environment : {};
     const rawWorld = (guiMeta.world && typeof guiMeta.world === 'object') ? guiMeta.world : {};
     const rawSched = (guiMeta.scheduler && typeof guiMeta.scheduler === 'object') ? guiMeta.scheduler : {};
     const rawProc = (guiMeta.processing && typeof guiMeta.processing === 'object') ? guiMeta.processing : {};
@@ -342,11 +357,10 @@ export const createWorkflowIOSlice = (set, get) => ({
       ...k,
       behavior_subworkflows: Array.isArray(k?.behavior_subworkflows) ? k.behavior_subworkflows : [],
     }));
-    const world = { ...rawWorld, subworkflow: rawWorld.subworkflow || null };
-    const environment = {
-      ...rawEnv,
-      init_subworkflow: rawEnv.init_subworkflow ?? null,
-      behavior_subworkflows: Array.isArray(rawEnv.behavior_subworkflows) ? rawEnv.behavior_subworkflows : [],
+    const world = {
+      ...rawWorld,
+      subworkflow: rawWorld.subworkflow || null,
+      behavior_subworkflows: Array.isArray(rawWorld.behavior_subworkflows) ? rawWorld.behavior_subworkflows : [],
     };
     const scheduler = { ...rawSched, subworkflow: rawSched.subworkflow || '__scheduler__' };
     const processing = {
@@ -358,7 +372,7 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     // Phase 14C: Initialization sequence. If the workflow lacks an
     // `__init_sequence__` subworkflow (or it's empty), auto-populate it from
-    // environment.init_subworkflow + each agent_kinds[i].init_subworkflow in
+    // world.subworkflow + each agent_kinds[i].init_subworkflow in
     // array order. This is a one-shot bootstrap that keeps Phase-13-era
     // workflows running without manual edits — user-reordering after this
     // never re-fires the auto-populate because the seq won't be empty.
@@ -370,7 +384,6 @@ export const createWorkflowIOSlice = (set, get) => ({
     if (initSeqIsEmpty) {
       const autoOrder = [];
       if (world.subworkflow) autoOrder.push(world.subworkflow);
-      if (environment.init_subworkflow) autoOrder.push(environment.init_subworkflow);
       resourceKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
       agentKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
 
@@ -469,7 +482,6 @@ export const createWorkflowIOSlice = (set, get) => ({
       init_sequence: initSeqMeta,
       agent_kinds: agentKinds,
       resource_kinds: resourceKinds,
-      environment,
       scheduler,
       processing,
     };
@@ -504,7 +516,6 @@ export const createWorkflowIOSlice = (set, get) => ({
             agent_kinds: agentKinds,
             resource_kinds: resourceKinds,
             world,
-            environment,
             init_sequence: initSeqMeta,
             scheduler,
             processing,
@@ -571,12 +582,12 @@ export const createWorkflowIOSlice = (set, get) => ({
     const guiMeta = workflow.metadata?.gui || {};
     const agentKinds = guiMeta.agent_kinds || [];
     const resourceKinds = guiMeta.resource_kinds || [];
-    const environment = guiMeta.environment || {};
+    const worldMeta = guiMeta.world || {};
     const processingMeta = guiMeta.processing || {};
     const schedulerMeta = guiMeta.scheduler || {};
     const initSeqMeta = guiMeta.init_sequence || { subworkflow: INIT_SEQUENCE_NAME };
-    const hasAbmContent = agentKinds.length > 0 || resourceKinds.length > 0 || environment.init_subworkflow ||
-      (environment.behavior_subworkflows || []).length > 0 ||
+    const hasAbmContent = agentKinds.length > 0 || resourceKinds.length > 0 || worldMeta.subworkflow ||
+      (worldMeta.behavior_subworkflows || []).length > 0 ||
       (processingMeta.behavior_subworkflows || []).length > 0 ||
       subworkflows[schedulerMeta.subworkflow || '__scheduler__'];
 
@@ -601,7 +612,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     exportedMetadata.gui = {
       ...guiWithoutKinds,
       agent_kinds: agentKinds,
-      environment,
+      world: worldMeta,
       init_sequence: initSeqMeta,
       scheduler: schedulerMeta,
       processing: processingMeta,
@@ -1179,10 +1190,11 @@ export const createWorkflowIOSlice = (set, get) => ({
       const gui = state.workflow.metadata?.gui;
       if (!gui) return state;
 
-      // Env behavior
-      if (kind === 'env_behavior') {
-        const env = gui.environment || { init_subworkflow: null, behavior_subworkflows: [] };
-        if (env.behavior_subworkflows.includes(name)) return state;
+      // World behavior (per-step collective)
+      if (kind === 'world_behavior') {
+        const world = gui.world || { subworkflow: null, behavior_subworkflows: [] };
+        const behaviors = world.behavior_subworkflows || [];
+        if (behaviors.includes(name)) return state;
         return {
           workflow: {
             ...state.workflow,
@@ -1190,9 +1202,9 @@ export const createWorkflowIOSlice = (set, get) => ({
               ...state.workflow.metadata,
               gui: {
                 ...gui,
-                environment: {
-                  ...env,
-                  behavior_subworkflows: [...env.behavior_subworkflows, name],
+                world: {
+                  ...world,
+                  behavior_subworkflows: [...behaviors, name],
                 },
               },
             },
@@ -1200,9 +1212,9 @@ export const createWorkflowIOSlice = (set, get) => ({
         };
       }
 
-      // Env init
-      if (kind === 'env_init') {
-        const env = gui.environment || { init_subworkflow: null, behavior_subworkflows: [] };
+      // World init (the one world-setup subworkflow)
+      if (kind === 'world') {
+        const world = gui.world || { subworkflow: null, behavior_subworkflows: [] };
         return {
           workflow: {
             ...state.workflow,
@@ -1210,7 +1222,7 @@ export const createWorkflowIOSlice = (set, get) => ({
               ...state.workflow.metadata,
               gui: {
                 ...gui,
-                environment: { ...env, init_subworkflow: name },
+                world: { ...world, subworkflow: name },
               },
             },
           },

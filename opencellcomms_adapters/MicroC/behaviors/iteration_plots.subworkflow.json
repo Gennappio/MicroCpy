@@ -2,7 +2,7 @@
   "format": "subworkflow",
   "version": "1.0",
   "name": "iteration_plots",
-  "kind": "env_behavior",
+  "kind": "world_behavior",
   "description": "MicroC: iteration_plots",
   "exported_from": "MicroC",
   "subworkflow": {

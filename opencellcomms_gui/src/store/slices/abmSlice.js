@@ -332,7 +332,7 @@ export const createAbmSlice = (set, get) => ({
         ...state.workflow,
         metadata: {
           ...state.workflow.metadata,
-          gui: { ...state.workflow.metadata.gui, world: { subworkflow: WORLD_NAME } },
+          gui: { ...state.workflow.metadata.gui, world: { ...state.workflow.metadata.gui.world, subworkflow: WORLD_NAME } },
         },
         subworkflows: { ...state.workflow.subworkflows, [WORLD_NAME]: sw },
       };
@@ -344,56 +344,31 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  // ── Environment ───────────────────────────────────────────────────────────
+  // ── World behaviors ─────────────────────────────────────────────────────────
+  // Collective per-step behaviours that run once each step inside __scheduler__
+  // (e.g. diffusion, world stepping). They are NOT homed to an agent/resource
+  // kind (which would force per-entity iteration) and are NOT processing (which
+  // would make them post-loop). They live under the World tab.
 
-  ensureEnvironmentInit: () => {
-    set((state) => {
-      const existing = state.workflow.metadata.gui.environment.init_subworkflow;
-      if (existing) return state;
-      const name = 'environment_init';
-      const sw = makeSubworkflow(
-        name,
-        'Environment initialization',
-        KINDS.ENV_INIT,
-        defaultContractForKind(KINDS.ENV_INIT),
-      );
-      const newWorkflow = {
-        ...state.workflow,
-        metadata: {
-          ...state.workflow.metadata,
-          gui: {
-            ...state.workflow.metadata.gui,
-            environment: { ...state.workflow.metadata.gui.environment, init_subworkflow: name },
-          },
-        },
-        subworkflows: { ...state.workflow.subworkflows, [name]: sw },
-      };
-      return {
-        workflow: withDerivedKinds(newWorkflow),
-        stageNodes: { ...state.stageNodes, [name]: [makeControllerNode(name)] },
-        stageEdges: { ...state.stageEdges, [name]: [] },
-      };
-    });
-  },
-
-  addEnvironmentBehavior: (behaviorName) => {
+  addWorldBehavior: (behaviorName) => {
     set((state) => {
       if (state.workflow.subworkflows[behaviorName]) return state;
       const sw = makeSubworkflow(
         behaviorName,
-        `Environment behavior: ${behaviorName}`,
-        KINDS.ENV_BEHAVIOR,
-        defaultContractForKind(KINDS.ENV_BEHAVIOR),
+        `World behavior: ${behaviorName}`,
+        KINDS.WORLD_BEHAVIOR,
+        defaultContractForKind(KINDS.WORLD_BEHAVIOR),
       );
+      const world = state.workflow.metadata.gui.world || { subworkflow: null, behavior_subworkflows: [] };
       const newWorkflow = {
         ...state.workflow,
         metadata: {
           ...state.workflow.metadata,
           gui: {
             ...state.workflow.metadata.gui,
-            environment: {
-              ...state.workflow.metadata.gui.environment,
-              behavior_subworkflows: [...state.workflow.metadata.gui.environment.behavior_subworkflows, behaviorName],
+            world: {
+              ...world,
+              behavior_subworkflows: [...(world.behavior_subworkflows || []), behaviorName],
             },
           },
         },
@@ -407,20 +382,21 @@ export const createAbmSlice = (set, get) => ({
     });
   },
 
-  removeEnvironmentBehavior: (behaviorName) => {
+  removeWorldBehavior: (behaviorName) => {
     set((state) => {
       const { [behaviorName]: _sw, ...newSubworkflows } = state.workflow.subworkflows;
       const { [behaviorName]: _n, ...newNodes } = state.stageNodes;
       const { [behaviorName]: _e, ...newEdges } = state.stageEdges;
+      const world = state.workflow.metadata.gui.world || { subworkflow: null, behavior_subworkflows: [] };
       const newWorkflow = {
         ...state.workflow,
         metadata: {
           ...state.workflow.metadata,
           gui: {
             ...state.workflow.metadata.gui,
-            environment: {
-              ...state.workflow.metadata.gui.environment,
-              behavior_subworkflows: state.workflow.metadata.gui.environment.behavior_subworkflows.filter((b) => b !== behaviorName),
+            world: {
+              ...world,
+              behavior_subworkflows: (world.behavior_subworkflows || []).filter((b) => b !== behaviorName),
             },
           },
         },

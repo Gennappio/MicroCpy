@@ -2,7 +2,7 @@
   "format": "subworkflow",
   "version": "1.0",
   "name": "division",
-  "kind": "env_behavior",
+  "kind": "world_behavior",
   "description": "MicroC: division",
   "exported_from": "MicroC",
   "subworkflow": {

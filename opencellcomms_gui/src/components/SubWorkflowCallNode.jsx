@@ -107,9 +107,11 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
             // Navigate to the owning tab based on target kind
             const tabMap = {
               agent_init: 'agents', agent_behavior: 'agents',
-              env_init: 'environment', env_behavior: 'environment',
+              resource_init: 'resources', resource_behavior: 'resources',
+              world: 'world', world_behavior: 'world',
               processing_behavior: 'processing',
               scheduler: 'scheduler',
+              init_sequence: 'initialization',
               composer: 'agents',
               subworkflow: 'agents',
             };

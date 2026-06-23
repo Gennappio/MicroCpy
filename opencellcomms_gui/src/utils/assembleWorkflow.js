@@ -206,7 +206,7 @@ const synthesizeMain = (workflow, subworkflows) => {
   const gui = workflow.metadata?.gui || {};
   const agentKinds = gui.agent_kinds || [];
   const resourceKinds = gui.resource_kinds || [];
-  const environment = gui.environment || {};
+  const worldMeta = gui.world || {};
   const processingMeta = gui.processing || {};
   const schedulerName = gui.scheduler?.subworkflow || '__scheduler__';
   const initSeqName = gui.init_sequence?.subworkflow || INIT_SEQUENCE_NAME;
@@ -214,8 +214,8 @@ const synthesizeMain = (workflow, subworkflows) => {
   const hasAbmContent =
     agentKinds.length > 0 ||
     resourceKinds.length > 0 ||
-    environment.init_subworkflow ||
-    (environment.behavior_subworkflows || []).length > 0 ||
+    worldMeta.subworkflow ||
+    (worldMeta.behavior_subworkflows || []).length > 0 ||
     (processingMeta.behavior_subworkflows || []).length > 0 ||
     !!subworkflows[schedulerName];
   if (!hasAbmContent) return;

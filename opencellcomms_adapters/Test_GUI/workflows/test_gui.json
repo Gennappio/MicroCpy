@@ -36,14 +36,6 @@
           ]
         }
       ],
-      "environment": {
-        "init_subworkflow": "env_init",
-        "behavior_subworkflows": [
-          "env_diffuse",
-          "env_replenish",
-          "env_log"
-        ]
-      },
       "init_sequence": {
         "subworkflow": "__init_sequence__"
       },
@@ -103,6 +95,14 @@
             "enabled": false,
             "parameterOverrides": {}
           }
+        ]
+      },
+      "world": {
+        "subworkflow": "env_init",
+        "behavior_subworkflows": [
+          "env_diffuse",
+          "env_replenish",
+          "env_log"
         ]
       }
     }
@@ -1340,7 +1340,7 @@
       ]
     },
     "__init_sequence__": {
-      "description": "Initialization order — env init + agent inits",
+      "description": "Initialization order \u2014 env init + agent inits",
       "deletable": false,
       "controller": {
         "id": "controller-__init_sequence__",
@@ -1402,7 +1402,7 @@
       ]
     },
     "main": {
-      "description": "Synthesized main (do not edit — managed by ABM structure)",
+      "description": "Synthesized main (do not edit \u2014 managed by ABM structure)",
       "deletable": false,
       "controller": {
         "id": "controller-main",

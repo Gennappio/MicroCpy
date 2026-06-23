@@ -1,7 +1,7 @@
 {
   "format": "subworkflow",
   "name": "env_init",
-  "kind": "env_init",
+  "kind": "world",
   "subworkflow": {
     "description": "Environment initialization",
     "controller": {

@@ -15,7 +15,7 @@ import re
 CONTRACT_REQUIRED_KINDS = {
     "agent_behavior",
     "resource_behavior",
-    "env_behavior",
+    "world_behavior",
     "processing_behavior",
 }
 
@@ -1156,12 +1156,8 @@ class WorkflowDefinition:
         world = gui.get("world") or {}
         if world.get("subworkflow"):
             kinds[world["subworkflow"]] = "world"
-
-        env = gui.get("environment") or {}
-        if env.get("init_subworkflow"):
-            kinds[env["init_subworkflow"]] = "env_init"
-        for name in env.get("behavior_subworkflows") or []:
-            kinds[name] = "env_behavior"
+        for name in world.get("behavior_subworkflows") or []:
+            kinds[name] = "world_behavior"
 
         for agent_kind in gui.get("agent_kinds") or []:
             if agent_kind.get("init_subworkflow"):

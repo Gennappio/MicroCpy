@@ -80,7 +80,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   const isBehaviorCall = [
     KINDS.AGENT_BEHAVIOR,
     KINDS.RESOURCE_BEHAVIOR,
-    KINDS.ENV_BEHAVIOR,
+    KINDS.WORLD_BEHAVIOR,
     KINDS.PROCESSING_BEHAVIOR,
   ].includes(targetKind);
 

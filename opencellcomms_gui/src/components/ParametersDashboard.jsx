@@ -24,8 +24,8 @@ const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictPar
 const KIND_META = {
   agent_init: { label: 'Agent Init', accent: '#3b82f6', tab: 'agents', icon: <Users size={16} /> },
   agent_behavior: { label: 'Agent Behaviors', accent: '#3b82f6', tab: 'agents', icon: <Users size={16} /> },
-  env_init: { label: 'Environment Init', accent: '#10b981', tab: 'environment', icon: <Globe size={16} /> },
-  env_behavior: { label: 'Environment Behaviors', accent: '#10b981', tab: 'environment', icon: <Globe size={16} /> },
+  world: { label: 'World Setup', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
+  world_behavior: { label: 'World Behaviors', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
   init_sequence: { label: 'Initialization', accent: '#94a3b8', tab: 'initialization', icon: <PlayCircle size={16} /> },
   scheduler: { label: 'Scheduler', accent: '#94a3b8', tab: 'scheduler', icon: <Layers size={16} /> },
   processing_behavior: { label: 'Processing', accent: '#a855f7', tab: 'processing', icon: <Sparkles size={16} /> },
@@ -36,8 +36,8 @@ const KIND_META = {
 const KIND_ORDER = [
   'agent_init',
   'agent_behavior',
-  'env_init',
-  'env_behavior',
+  'world',
+  'world_behavior',
   'init_sequence',
   'scheduler',
   'processing_behavior',

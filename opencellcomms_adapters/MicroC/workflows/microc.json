@@ -17,14 +17,6 @@
           ]
         }
       ],
-      "environment": {
-        "init_subworkflow": "environment_init",
-        "behavior_subworkflows": [
-          "diffusion_step",
-          "division",
-          "iteration_plots"
-        ]
-      },
       "scheduler": {
         "subworkflow": "__scheduler__"
       },
@@ -40,7 +32,12 @@
       },
       "resource_kinds": [],
       "world": {
-        "subworkflow": null
+        "subworkflow": "environment_init",
+        "behavior_subworkflows": [
+          "diffusion_step",
+          "division",
+          "iteration_plots"
+        ]
       },
       "contract_enforcement": "warn"
     }
@@ -386,7 +383,7 @@
       ],
       "contract": {
         "owner": {
-          "type": "environment"
+          "type": "world"
         },
         "reads": [
           "simulation.parameters"

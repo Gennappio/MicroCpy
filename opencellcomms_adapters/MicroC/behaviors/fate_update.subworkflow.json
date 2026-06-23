@@ -2,7 +2,7 @@
   "format": "subworkflow",
   "version": "1.0",
   "name": "fate_update",
-  "kind": "env_behavior",
+  "kind": "world_behavior",
   "description": "MicroC: fate_update",
   "exported_from": "MicroC",
   "subworkflow": {

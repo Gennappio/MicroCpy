@@ -8,13 +8,11 @@ const InitSequencePalette = () => {
 
   const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
   const resourceKinds = workflow.metadata?.gui?.resource_kinds || [];
-  const envMeta = workflow.metadata?.gui?.environment || {};
   const worldSw = workflow.metadata?.gui?.world?.subworkflow;
   const calls = workflow.subworkflows?.[INIT_SEQUENCE_NAME]?.subworkflow_calls || [];
   const scheduled = new Set(calls.map((c) => c.subworkflow_name));
 
-  const envInit = envMeta.init_subworkflow;
-  const hasContent = !!worldSw || !!envInit || agentKinds.some((k) => k.init_subworkflow) || resourceKinds.some((k) => k.init_subworkflow);
+  const hasContent = !!worldSw || agentKinds.some((k) => k.init_subworkflow) || resourceKinds.some((k) => k.init_subworkflow);
 
   return (
     <div className="init-sequence-palette">
@@ -31,21 +29,6 @@ const InitSequencePalette = () => {
             color="#10b981"
             scheduled={scheduled.has(worldSw)}
             onAdd={() => addToInitSequence(worldSw)}
-          />
-        </section>
-      )}
-
-      {envInit && (
-        <section className="initseq-section">
-          <div className="initseq-section-header env">
-            <Globe size={13} />
-            <span>Environment</span>
-          </div>
-          <InitItem
-            name={envInit}
-            color="#10b981"
-            scheduled={scheduled.has(envInit)}
-            onAdd={() => addToInitSequence(envInit)}
           />
         </section>
       )}

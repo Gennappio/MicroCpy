@@ -15,7 +15,7 @@ const SYSTEM_SUBWORKFLOW_NAME_PATTERN = /^__[a-zA-Z][a-zA-Z0-9_]*__$/;
 const CONTRACT_REQUIRED_KINDS = new Set([
   'agent_behavior',
   'resource_behavior',
-  'env_behavior',
+  'world_behavior',
   'processing_behavior',
 ]);
 

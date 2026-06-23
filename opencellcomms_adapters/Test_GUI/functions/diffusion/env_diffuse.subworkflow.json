@@ -1,7 +1,7 @@
 {
   "format": "subworkflow",
   "name": "env_diffuse",
-  "kind": "env_behavior",
+  "kind": "world_behavior",
   "subworkflow": {
     "description": "Environment behavior: env_diffuse",
     "controller": {

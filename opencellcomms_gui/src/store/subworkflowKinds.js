@@ -6,8 +6,7 @@ export const KINDS = {
   RESOURCE_INIT: 'resource_init',
   RESOURCE_BEHAVIOR: 'resource_behavior',
   WORLD: 'world',
-  ENV_INIT: 'env_init',
-  ENV_BEHAVIOR: 'env_behavior',
+  WORLD_BEHAVIOR: 'world_behavior',
   PROCESSING_BEHAVIOR: 'processing_behavior',
   SCHEDULER: 'scheduler',
   INIT_SEQUENCE: 'init_sequence',
@@ -16,7 +15,8 @@ export const KINDS = {
 export const MAIN_TABS = {
   OVERVIEW: 'overview',
   AGENTS: 'agents',
-  ENVIRONMENT: 'environment',
+  RESOURCES: 'resources',
+  WORLD: 'world',
   INITIALIZATION: 'initialization',
   SCHEDULER: 'scheduler',
   PLANNER: 'planner',
@@ -31,7 +31,7 @@ export const WORLD_NAME = '__world__';
 export const BEHAVIOR_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
   KINDS.RESOURCE_BEHAVIOR,
-  KINDS.ENV_BEHAVIOR,
+  KINDS.WORLD_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
 ]);
 
@@ -42,7 +42,6 @@ export const INIT_KINDS = new Set([
   KINDS.AGENT_INIT,
   KINDS.RESOURCE_INIT,
   KINDS.WORLD,
-  KINDS.ENV_INIT,
 ]);
 
 // All canvases where function nodes can be placed (everything except scheduler).
@@ -53,8 +52,7 @@ export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.RESOURCE_INIT,
   KINDS.RESOURCE_BEHAVIOR,
   KINDS.WORLD,
-  KINDS.ENV_INIT,
-  KINDS.ENV_BEHAVIOR,
+  KINDS.WORLD_BEHAVIOR,
   KINDS.PROCESSING_BEHAVIOR,
   KINDS.COMPOSER,
   KINDS.SUBWORKFLOW,
@@ -68,8 +66,7 @@ export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
   { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behavior' },
-  { kind: KINDS.ENV_INIT, label: 'Environment · initialization' },
-  { kind: KINDS.ENV_BEHAVIOR, label: 'Coupling / reconciliation' },
+  { kind: KINDS.WORLD_BEHAVIOR, label: 'World · behavior (per-step)' },
   { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Reporting' },
 ];
 
@@ -114,17 +111,11 @@ export const defaultContractForKind = (kind, options = {}) => {
         writes: ['world.self'],
         emits: [],
       };
-    case KINDS.ENV_INIT:
+    case KINDS.WORLD_BEHAVIOR:
       return {
-        owner: { type: 'environment' },
-        reads: ['simulation.parameters'],
-        writes: ['simulation.config', 'world.self', 'agent.collection', 'resource.collection'],
-        emits: [],
-      };
-    case KINDS.ENV_BEHAVIOR:
-      return {
+        owner: { type: 'world' },
         reads: ['agent.collection', 'resource.collection', 'world.self'],
-        writes: [],
+        writes: ['world.self', 'resource.collection'],
         emits: [],
       };
     case KINDS.PROCESSING_BEHAVIOR:
@@ -145,10 +136,9 @@ export const ROLE_TO_COMPATIBILITY_CATEGORY = {
   [KINDS.AGENT_INIT]: 'INITIALIZATION',
   [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
   [KINDS.WORLD]: 'INITIALIZATION',
-  [KINDS.ENV_INIT]: 'INITIALIZATION',
   [KINDS.AGENT_BEHAVIOR]: 'INTRACELLULAR',
   [KINDS.RESOURCE_BEHAVIOR]: 'ENVIRONMENT',
-  [KINDS.ENV_BEHAVIOR]: 'DIFFUSION',
+  [KINDS.WORLD_BEHAVIOR]: 'DIFFUSION',
   [KINDS.PROCESSING_BEHAVIOR]: 'FINALIZATION',
 };
 
@@ -161,8 +151,6 @@ export const variantForKind = (kind) => {
     case KINDS.AGENT_BEHAVIOR:
     case KINDS.AGENT_INIT:
       return 'blue';
-    case KINDS.ENV_BEHAVIOR:
-    case KINDS.ENV_INIT:
     case KINDS.RESOURCE_BEHAVIOR:
     case KINDS.RESOURCE_INIT:
       return 'green';
@@ -172,6 +160,7 @@ export const variantForKind = (kind) => {
     case KINDS.COMPOSER:
       return 'orange';
     case KINDS.WORLD:
+    case KINDS.WORLD_BEHAVIOR:
       return 'green';
     case KINDS.SCHEDULER:
     case KINDS.INIT_SEQUENCE:

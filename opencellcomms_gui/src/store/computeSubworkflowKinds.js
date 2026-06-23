@@ -11,8 +11,8 @@
  *   - main                                        → composer
  *   - scheduler.subworkflow                       → scheduler
  *   - init_sequence.subworkflow                   → init_sequence
- *   - environment.init_subworkflow                → env_init
- *   - environment.behavior_subworkflows[i]        → env_behavior
+ *   - world.subworkflow                           → world
+ *   - world.behavior_subworkflows[i]              → world_behavior
  *   - agent_kinds[i].init_subworkflow             → agent_init
  *   - agent_kinds[i].behavior_subworkflows[j]     → agent_behavior
  *   - processing.behavior_subworkflows[i]         → processing_behavior
@@ -27,7 +27,6 @@ export const computeSubworkflowKinds = (workflow) => {
 
   const agentKinds = gui.agent_kinds || [];
   const resourceKinds = gui.resource_kinds || [];
-  const env = gui.environment || {};
   const scheduler = gui.scheduler || {};
   const processing = gui.processing || {};
   const initSeq = gui.init_sequence || {};
@@ -37,10 +36,8 @@ export const computeSubworkflowKinds = (workflow) => {
 
   const world = gui.world || {};
   if (world.subworkflow) kinds[world.subworkflow] = KINDS.WORLD;
-
-  if (env.init_subworkflow) kinds[env.init_subworkflow] = KINDS.ENV_INIT;
-  (env.behavior_subworkflows || []).forEach((n) => {
-    kinds[n] = KINDS.ENV_BEHAVIOR;
+  (world.behavior_subworkflows || []).forEach((n) => {
+    kinds[n] = KINDS.WORLD_BEHAVIOR;
   });
 
   agentKinds.forEach((k) => {
@@ -97,7 +94,6 @@ export const validateAbmMetadata = (workflowJson) => {
   if (!gui) return ['metadata.gui'];
   const missing = [];
   if (!Array.isArray(gui.agent_kinds)) missing.push('agent_kinds');
-  if (!gui.environment || typeof gui.environment !== 'object') missing.push('environment');
   if (!gui.scheduler || typeof gui.scheduler !== 'object') missing.push('scheduler');
   if (!gui.processing || typeof gui.processing !== 'object') missing.push('processing');
   return missing;

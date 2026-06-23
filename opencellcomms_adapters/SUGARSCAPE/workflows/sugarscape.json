@@ -27,10 +27,7 @@
         }
       ],
       "world": {
-        "subworkflow": "__world__"
-      },
-      "environment": {
-        "init_subworkflow": null,
+        "subworkflow": "__world__",
         "behavior_subworkflows": [
           "world_step"
         ]
