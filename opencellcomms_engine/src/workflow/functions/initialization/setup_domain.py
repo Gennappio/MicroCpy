@@ -31,14 +31,14 @@ from src.workflow.logging import log, log_always
 )
 def setup_domain(
     context: Dict[str, Any],
-    dimensions: int = 3,
-    size_x: float = 400.0,
-    size_y: float = 400.0,
+    dimensions: int = 2,
+    size_x: float = 500.0,
+    size_y: float = 500.0,
     size_z: float = 400.0,
     nx: int = 25,
     ny: int = 25,
     nz: int = 25,
-    cell_height: float = 5.0,
+    cell_height: float = 20.0,
     verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
