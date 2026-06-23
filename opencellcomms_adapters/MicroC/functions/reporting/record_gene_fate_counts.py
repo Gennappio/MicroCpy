@@ -191,7 +191,16 @@ def record_gene_fate_counts(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     _write_csv(output_dir / csv_filename, history)
-    _write_plot(output_dir / plot_filename, history, met_genes)
+    # Render the plot only on the final iteration — it is cumulative (the CSV holds
+    # every step), so re-rendering the figure every iteration is wasted work. When
+    # the loop total is unknown (e.g. a single run), render every call.
+    total_iterations = ctx.get("loop_total_iterations")
+    try:
+        is_final = total_iterations is None or iteration >= int(total_iterations)
+    except (TypeError, ValueError):
+        is_final = True
+    if is_final:
+        _write_plot(output_dir / plot_filename, history, met_genes)
     return True
 
 
