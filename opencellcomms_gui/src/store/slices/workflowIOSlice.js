@@ -55,20 +55,38 @@ export const createWorkflowIOSlice = (set, get) => ({
       throw new Error(errorMsg);
     }
 
-    // The `environment` category was removed (it homed behaviours to a tab that
-    // no longer exists, producing orphan subworkflows reachable from no tab).
-    // We do not migrate legacy formats — refuse to load instead. World setup now
-    // lives in `world.subworkflow`; per-step collective behaviours in
-    // `world.behavior_subworkflows`; agent/resource behaviours on their kind.
-    const legacyEnv = workflowJson.metadata?.gui?.environment;
-    if (legacyEnv && (legacyEnv.init_subworkflow || (legacyEnv.behavior_subworkflows || []).length > 0)) {
-      const errorMsg =
-        "This workflow uses the removed 'environment' category, which is no longer supported. " +
-        'Move environment.init_subworkflow → world.subworkflow, collective per-step behaviours → ' +
-        'world.behavior_subworkflows, and agent/resource behaviours onto their kind.';
-      console.error(`[STORE] ${errorMsg}`);
-      alert(errorMsg);
-      throw new Error(errorMsg);
+    // Strict taxonomy enforcement: only load workflows whose `metadata.gui` carries
+    // the exact taxonomy the GUI itself produces. Anything the GUI cannot author —
+    // removed categories (`environment`, `space`) or any stray key — is refused
+    // rather than silently half-loaded. A workflow with no `gui` block (a bare
+    // composable/processing workflow) is allowed.
+    const gui = workflowJson.metadata?.gui;
+    if (gui && typeof gui === 'object' && !Array.isArray(gui)) {
+      const ALLOWED_GUI_KEYS = new Set([
+        'agent_kinds', 'resource_kinds', 'world', 'scheduler', 'processing',
+        'init_sequence', 'function_libraries', 'user_functions',
+        'main_is_synthesized', 'contract_enforcement', 'planner', 'subworkflow_kinds',
+      ]);
+      // Hints for legacy keys we deliberately removed.
+      const LEGACY_HINTS = {
+        environment: "the 'environment' category was removed — use 'world' " +
+          '(world.subworkflow + world.behavior_subworkflows; agent/resource behaviours onto their kind)',
+        space: "'space' was renamed to 'world'",
+        processes: "the 'processes' phase block was removed",
+      };
+      const unknownKeys = Object.keys(gui).filter((k) => !ALLOWED_GUI_KEYS.has(k));
+      if (unknownKeys.length > 0) {
+        const hints = unknownKeys
+          .filter((k) => LEGACY_HINTS[k])
+          .map((k) => `  • ${k}: ${LEGACY_HINTS[k]}`);
+        const errorMsg =
+          'This workflow uses metadata.gui keys the current taxonomy does not support: ' +
+          `${unknownKeys.join(', ')}.\n\nOnly workflows authored with the current GUI taxonomy can be loaded` +
+          (hints.length ? `:\n${hints.join('\n')}` : '.');
+        console.error(`[STORE] ${errorMsg}`);
+        alert(errorMsg);
+        throw new Error(errorMsg);
+      }
     }
 
     // Phase 6: Resolve library paths relative to workflow file
