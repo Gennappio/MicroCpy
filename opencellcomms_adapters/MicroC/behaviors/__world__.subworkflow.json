@@ -10,7 +10,7 @@
     "controller": {
       "id": "controller-__world__",
       "type": "controller",
-      "label": "ENVIRONMENT_INIT CONTROLLER",
+      "label": "WORLD CONTROLLER",
       "position": {
         "x": 100,
         "y": 100
