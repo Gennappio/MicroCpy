@@ -7,7 +7,7 @@ from src.workflow.decorators import register_function
 @register_function(
     display_name="Grow Sugar",
     description="Regrow sugar toward its internal carrying-capacity landscape",
-    category="ENVIRONMENT",
+    category="WORLD",
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],

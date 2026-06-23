@@ -56,10 +56,10 @@ export const createWorkflowIOSlice = (set, get) => ({
     }
 
     // Strict taxonomy enforcement: only load workflows whose `metadata.gui` carries
-    // the exact taxonomy the GUI itself produces. Anything the GUI cannot author —
-    // removed categories (`environment`, `space`) or any stray key — is refused
-    // rather than silently half-loaded. A workflow with no `gui` block (a bare
-    // composable/processing workflow) is allowed.
+    // the exact set of keys the GUI itself produces. Any key the GUI cannot author
+    // (a removed/renamed category or a stray key) is refused rather than silently
+    // half-loaded, since unknown structure can leave the GUI in a broken state. A
+    // workflow with no `gui` block (a bare composable/processing workflow) is allowed.
     const gui = workflowJson.metadata?.gui;
     if (gui && typeof gui === 'object' && !Array.isArray(gui)) {
       const ALLOWED_GUI_KEYS = new Set([
@@ -67,22 +67,11 @@ export const createWorkflowIOSlice = (set, get) => ({
         'init_sequence', 'function_libraries', 'user_functions',
         'main_is_synthesized', 'contract_enforcement', 'planner', 'subworkflow_kinds',
       ]);
-      // Hints for legacy keys we deliberately removed.
-      const LEGACY_HINTS = {
-        environment: "the 'environment' category was removed — use 'world' " +
-          '(world.subworkflow + world.behavior_subworkflows; agent/resource behaviours onto their kind)',
-        space: "'space' was renamed to 'world'",
-        processes: "the 'processes' phase block was removed",
-      };
       const unknownKeys = Object.keys(gui).filter((k) => !ALLOWED_GUI_KEYS.has(k));
       if (unknownKeys.length > 0) {
-        const hints = unknownKeys
-          .filter((k) => LEGACY_HINTS[k])
-          .map((k) => `  • ${k}: ${LEGACY_HINTS[k]}`);
         const errorMsg =
           'This workflow uses metadata.gui keys the current taxonomy does not support: ' +
-          `${unknownKeys.join(', ')}.\n\nOnly workflows authored with the current GUI taxonomy can be loaded` +
-          (hints.length ? `:\n${hints.join('\n')}` : '.');
+          `${unknownKeys.join(', ')}. Only workflows authored with the current GUI taxonomy can be loaded.`;
         console.error(`[STORE] ${errorMsg}`);
         alert(errorMsg);
         throw new Error(errorMsg);

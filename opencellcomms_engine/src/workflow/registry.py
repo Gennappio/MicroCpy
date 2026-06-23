@@ -21,7 +21,7 @@ class FunctionCategory(Enum):
     INTRACELLULAR = "intracellular"
     DIFFUSION = "diffusion"
     INTERCELLULAR = "intercellular"
-    ENVIRONMENT = "environment"  # Tile-grid resource behaviors (growback, decay, ...)
+    WORLD = "world"  # World / tile-grid resource behaviors (growback, decay, ...)
     FINALIZATION = "finalization"
     UTILITY = "utility"
 
