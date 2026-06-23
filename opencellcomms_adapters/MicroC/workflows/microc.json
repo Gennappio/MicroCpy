@@ -66,7 +66,6 @@
           "description": "Initialize simulation infrastructure",
           "parameter_nodes": [
             "envinit-Setup_simulation-param_sim_name",
-            "envinit-Setup_simulation-param_sim_total_steps",
             "envinit-Setup_simulation-param_sim_dt",
             "envinit-Setup_simulation-param_sim_output_dir"
           ],
@@ -184,17 +183,6 @@
           "label": "Simulation Name",
           "parameters": {
             "name": "MicroC Simulation"
-          },
-          "position": {
-            "x": 100,
-            "y": 400
-          }
-        },
-        {
-          "id": "envinit-Setup_simulation-param_sim_total_steps",
-          "label": "Total Steps",
-          "parameters": {
-            "total_steps": 100
           },
           "position": {
             "x": 100,
