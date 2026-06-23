@@ -227,6 +227,48 @@ def _validate_parameter_declarations(func, param_definitions, func_name, source_
     return errors
 
 
+def _defaults_equal(a: Any, b: Any) -> bool:
+    """Compare two parameter defaults, treating int/float as numerically equal
+    (so 2 == 2.0) but keeping bool distinct from int (True != 1)."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b or a == b and type(a) is type(b)
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return float(a) == float(b)
+    return a == b
+
+
+def _validate_parameter_defaults(func, param_definitions, func_name, source_file) -> List[str]:
+    """Catch a decorator/signature default mismatch — a silent correctness bug.
+
+    The GUI shows (and a removed parameter node falls back to) the default declared
+    in ``@register_function(parameters=[...])``, while Python actually runs the
+    *signature* default. If those disagree, a node left at "its default" runs with a
+    different value than the GUI displays (e.g. setup_domain showed dimensions=2 but
+    ran dimensions=3). They must be identical.
+
+    The ``None`` sentinel is allowed: ``def f(x=None)`` with a declared dict/list/
+    scalar default is the standard pattern for mutable defaults (the real default is
+    resolved inside the function), so a signature default of ``None`` never conflicts.
+    """
+    sig = inspect.signature(func)
+    errors = []
+    for pd in param_definitions:
+        if pd.name not in sig.parameters:
+            continue
+        sig_default = sig.parameters[pd.name].default
+        if sig_default is inspect.Parameter.empty or sig_default is None:
+            continue
+        if not _defaults_equal(sig_default, pd.default):
+            errors.append(
+                f"'{func_name}' ({source_file}): parameter '{pd.name}' default mismatch — "
+                f"@register_function declares {pd.default!r} but the signature default is "
+                f"{sig_default!r}. The GUI shows the declared default while the function runs "
+                f"the signature default, so they must be identical. Set the signature default "
+                f"to {pd.default!r} (or update the declared default to match)."
+            )
+    return errors
+
+
 def _extract_inputs_from_signature(func: Callable) -> List[str]:
     """
     Extract input parameter names from function signature (excluding **kwargs).
@@ -422,6 +464,16 @@ def register_function(
         # VALIDATION: Check for common mistakes
         # =====================================================================
         _validate_function_signature(func, input_list, func_name, source_file)
+
+        # A declared default that disagrees with the signature default is always a
+        # bug (the GUI would show one value while the function runs another), so
+        # fail registration loudly — same policy as the input/signature check above.
+        default_mismatches = _validate_parameter_defaults(func, param_definitions, func_name, source_file)
+        if default_mismatches:
+            raise ValueError(
+                "\n" + "=" * 80 + "\n❌ PARAMETER DEFAULT MISMATCH\n" + "=" * 80 + "\n"
+                + "\n".join(default_mismatches)
+            )
 
         # Nudge migration toward the typed `env: BiologicalContext` API. Legacy
         # `context`-dict functions keep working (they get no type safety and

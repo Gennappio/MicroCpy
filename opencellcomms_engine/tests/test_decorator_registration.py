@@ -7,6 +7,8 @@ no external fixtures (the old script-style version depended on the removed
 tests/jayatilake_experiment data).
 """
 
+import pytest
+
 from src.workflow.decorators import (
     register_function,
     get_decorator_registry,
@@ -43,3 +45,51 @@ def test_merge_registries_unions_decorator_functions():
     decorator = get_decorator_registry()
     merged = merge_registries(FunctionRegistry(), decorator)
     assert len(merged.list_all()) >= len(decorator.list_all())
+
+
+# --- Parameter default mismatch guard ------------------------------------------
+# A declared default (shown in the GUI / used when a parameter node is removed)
+# that differs from the signature default (used at runtime) is a silent bug, so
+# registration must reject it. This locks that guard in place.
+
+def test_declared_default_mismatch_is_rejected():
+    with pytest.raises(ValueError, match="default mismatch"):
+        @register_function(
+            display_name="Mismatch",
+            description="declared default disagrees with signature default",
+            category="UTILITY",
+            parameters=[{"name": "dimensions", "type": "INT", "default": 2}],
+            inputs=["context"],
+        )
+        def _mismatch_fn(context, dimensions: int = 3, **kwargs):
+            return dimensions
+
+
+def test_matching_default_is_accepted():
+    @register_function(
+        display_name="Match",
+        description="declared default equals signature default",
+        category="UTILITY",
+        parameters=[{"name": "dimensions", "type": "INT", "default": 2}],
+        inputs=["context"],
+    )
+    def _match_fn(context, dimensions: int = 2, **kwargs):
+        return dimensions
+
+    assert get_decorator_registry().get("_match_fn") is not None
+
+
+def test_none_sentinel_default_is_accepted():
+    # Mutable defaults use a None sentinel in the signature with the real default
+    # declared in the decorator; this must not be flagged.
+    @register_function(
+        display_name="Sentinel",
+        description="None-sentinel signature with declared dict default",
+        category="UTILITY",
+        parameters=[{"name": "opts", "type": "DICT", "default": {}}],
+        inputs=["context"],
+    )
+    def _sentinel_fn(context, opts=None, **kwargs):
+        return opts or {}
+
+    assert get_decorator_registry().get("_sentinel_fn") is not None
