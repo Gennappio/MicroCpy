@@ -149,7 +149,7 @@ const useWorkflowStore = create((set, get) => ({
   // Planner: multiple parameter configurations
   ...createPlannerSlice(set, get),
 
-  // ABM: agent kinds, environment, scheduler, processing
+  // ABM: agent kinds, world, scheduler, processing
   ...createAbmSlice(set, get),
 }));
 

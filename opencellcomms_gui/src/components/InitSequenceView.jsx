@@ -22,8 +22,8 @@ const InitSequenceView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, on
     const scheduled = new Set(calls.map((c) => c.subworkflow_name));
 
     const defined = [];
-    const envInit = workflow.metadata?.gui?.environment?.init_subworkflow;
-    if (envInit) defined.push(envInit);
+    const worldInit = workflow.metadata?.gui?.world?.subworkflow;
+    if (worldInit) defined.push(worldInit);
     (workflow.metadata?.gui?.agent_kinds || []).forEach((k) => {
       if (k.init_subworkflow) defined.push(k.init_subworkflow);
     });

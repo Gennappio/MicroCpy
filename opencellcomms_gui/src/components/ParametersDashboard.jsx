@@ -522,7 +522,7 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
             nodes via edges. To see parameters here:
           </p>
           <ol>
-            <li>Open a behavior or init canvas (Agents / Environment / Processing)</li>
+            <li>Open a behavior or init canvas (Agents / World / Processing)</li>
             <li>Add a parameter node from the palette</li>
             <li>Connect it to a function node's parameter socket</li>
           </ol>

@@ -69,7 +69,7 @@ const InitSequencePalette = () => {
 
       {!hasContent && (
         <div className="initseq-empty">
-          Define init canvases in the Agents and Environment tabs first.
+          Define init canvases in the Agents and World tabs first.
         </div>
       )}
     </div>

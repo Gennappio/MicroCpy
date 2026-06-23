@@ -8,7 +8,7 @@ const SchedulerPalette = () => {
 
   const agentKinds = workflow.metadata?.gui?.agent_kinds || [];
   const resourceKinds = workflow.metadata?.gui?.resource_kinds || [];
-  const envMeta = workflow.metadata?.gui?.environment || {};
+  const worldMeta = workflow.metadata?.gui?.world || {};
   const kindsMap = workflow.metadata?.gui?.subworkflow_kinds || {};
   const schedulerCalls = workflow.subworkflows?.[SCHEDULER_NAME]?.subworkflow_calls || [];
   const scheduled = new Set(schedulerCalls.map((c) => c.subworkflow_name));
@@ -16,20 +16,20 @@ const SchedulerPalette = () => {
   // Phase 14C: defensive — never expose init kinds in the scheduler palette.
   // Inits belong in the Initialization tab and run exactly once before the loop.
   const isNotInit = (name) => !INIT_KINDS.has(kindsMap[name]);
-  const envBehaviors = (envMeta.behavior_subworkflows || []).filter(isNotInit);
+  const worldBehaviors = (worldMeta.behavior_subworkflows || []).filter(isNotInit);
 
   return (
     <div className="scheduler-palette">
       <div className="scheduler-palette-title">Available Behaviors</div>
 
-      {/* Environment behaviors */}
-      {envBehaviors.length > 0 && (
+      {/* World behaviors */}
+      {worldBehaviors.length > 0 && (
         <section className="sched-section">
           <div className="sched-section-header env">
             <Globe size={13} />
-            <span>Environment</span>
+            <span>World</span>
           </div>
-          {envBehaviors.map((name) => (
+          {worldBehaviors.map((name) => (
             <BehaviorItem
               key={name}
               name={name}
@@ -87,7 +87,7 @@ const SchedulerPalette = () => {
         );
       })}
 
-      {envBehaviors.length === 0
+      {worldBehaviors.length === 0
         && agentKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0)
         && resourceKinds.every((k) => (k.behavior_subworkflows || []).filter(isNotInit).length === 0) && (
         <div className="sched-empty">

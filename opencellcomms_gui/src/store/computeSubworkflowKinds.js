@@ -64,7 +64,7 @@ export const computeSubworkflowKinds = (workflow) => {
   // (directly or transitively) that has no ABM-derived kind is treated as a
   // generic composer child. This lets a bare `main → child composers` workflow
   // (or a pure processing canvas) load and render without the full
-  // agent/environment ABM scaffolding.
+  // agent/world ABM scaffolding.
   const visit = (name) => {
     const sw = subworkflows[name];
     if (!sw) return;

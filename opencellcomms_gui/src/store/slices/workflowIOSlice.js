@@ -341,7 +341,7 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     // ABM metadata is optional. A workflow may use a bare composable/processing
     // structure (e.g. main → child composers, or just a processing canvas)
-    // without the full agent/environment/scheduler scaffolding. Normalize any
+    // without the full agent/world/scheduler scaffolding. Normalize any
     // missing ABM fields to well-formed (always-iterable) shapes so such
     // workflows both load AND can be edited — the ABM mutators (abmSlice) assume
     // these arrays/objects always exist and would otherwise crash on first edit.

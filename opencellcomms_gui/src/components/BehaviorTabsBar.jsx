@@ -3,7 +3,7 @@ import { useState } from 'react';
 import './BehaviorTabsBar.css';
 
 /**
- * Shared secondary tab strip for Agents / Environment / Processing views.
+ * Shared secondary tab strip for Agents / World / Processing views.
  * Renders tabs for each subworkflow (init + behaviors) and an Add button.
  */
 const BehaviorTabsBar = ({
