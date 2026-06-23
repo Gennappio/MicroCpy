@@ -1,14 +1,14 @@
 {
   "format": "subworkflow",
   "version": "1.0",
-  "name": "environment_init",
+  "name": "__world__",
   "kind": "world",
-  "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+  "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
   "exported_from": "MicroC",
   "subworkflow": {
-    "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+    "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
     "controller": {
-      "id": "controller-environment_init",
+      "id": "controller-__world__",
       "type": "controller",
       "label": "ENVIRONMENT_INIT CONTROLLER",
       "position": {

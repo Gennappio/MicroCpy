@@ -30,7 +30,7 @@
       },
       "resource_kinds": [],
       "world": {
-        "subworkflow": "environment_init",
+        "subworkflow": "__world__",
         "behavior_subworkflows": [
           "gene_update",
           "fate_update",
@@ -43,10 +43,10 @@
     }
   },
   "subworkflows": {
-    "environment_init": {
-      "description": "MicroC: environment_init (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+    "__world__": {
+      "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
       "controller": {
-        "id": "controller-environment_init",
+        "id": "controller-__world__",
         "type": "controller",
         "label": "ENVIRONMENT_INIT CONTROLLER",
         "position": {
@@ -620,14 +620,14 @@
       },
       "subworkflow_calls": [
         {
-          "id": "init-call-environment_init",
+          "id": "init-call-__world__",
           "type": "subworkflow_call",
-          "subworkflow_name": "environment_init",
+          "subworkflow_name": "__world__",
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "environment_init",
+          "description": "__world__",
           "iterations": 1,
           "parameters": {},
           "enabled": true,
@@ -649,7 +649,7 @@
         }
       ],
       "execution_order": [
-        "init-call-environment_init",
+        "init-call-__world__",
         "init-call-tumor_cell_init"
       ]
     },
