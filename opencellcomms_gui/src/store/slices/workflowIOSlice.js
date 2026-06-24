@@ -537,9 +537,15 @@ export const createWorkflowIOSlice = (set, get) => ({
       currentStage: initialStage,
     }));
 
-    // Always sync planner tabs: restore from loaded workflow or clear stale state
+    // Always sync planner tabs: restore from loaded workflow, or seed a default
+    // so the Planner is never empty (a "Run 1" snapshot of current canvas params).
     const plannerData = workflowJson.metadata?.gui?.planner?.tabs;
-    get().setPlannerTabs(Array.isArray(plannerData) ? plannerData : []);
+    if (Array.isArray(plannerData) && plannerData.length > 0) {
+      get().setPlannerTabs(plannerData);
+    } else {
+      get().setPlannerTabs([]);   // resets nextTabCounter to 1, clears stale state
+      get().addPlannerTab();      // seeds "Run 1" with default snapshot, sets active
+    }
   },
 
   // Export workflow to JSON (V2-only)
