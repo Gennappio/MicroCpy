@@ -1,0 +1,1446 @@
+{
+  "version": "2.0",
+  "name": "Gene Network Update Test",
+  "description": "MicroC test workflow that initializes the model, runs the exact existing gene_update node, then marks fates and plots each iteration.",
+  "kernel": "biophysics",
+  "metadata": {
+    "author": "MicroC builder",
+    "created": "2026-06-19",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "tumor_cell",
+          "init_subworkflow": "tumor_cell_init",
+          "behavior_subworkflows": []
+        }
+      ],
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "final_summary"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "resource_kinds": [],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": [
+          "gene_update",
+          "fate_update",
+          "division",
+          "fate_summary",
+          "iteration_plots"
+        ]
+      },
+      "contract_enforcement": "warn",
+      "planner": {
+        "tabs": [
+          {
+            "id": "planner-tab-1782212844371-1",
+            "name": "Run 1",
+            "enabled": true,
+            "parameterOverrides": {
+              "envinit-Setup_simulation-param_sim_output_dir": {
+                "label": "Output Directory",
+                "parameters": {
+                  "output_dir": "results"
+                }
+              },
+              "envinit-Setup_substances-param_substances_list": {
+                "label": "Substances (JSON)",
+                "listType": "string",
+                "items": [
+                  "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+                  "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+                  "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+                ],
+                "targetParam": "substances"
+              },
+              "envinit-Setup_associations-param_associations_dict": {
+                "label": "Associations (Dict)",
+                "entries": [
+                  {
+                    "key": "Oxygen",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Oxygen_supply",
+                      "threshold": 0.022
+                    }
+                  },
+                  {
+                    "key": "Glucose",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "Glucose_supply",
+                      "threshold": 2
+                    }
+                  },
+                  {
+                    "key": "Lactate",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "MCT1_stimulus",
+                      "threshold": 1.5
+                    }
+                  },
+                  {
+                    "key": "HGF",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "cMET_stimulus",
+                      "threshold": 0.000001
+                    }
+                  },
+                  {
+                    "key": "TGFA",
+                    "valueType": "dict",
+                    "value": {
+                      "gene_input": "EGFR_stimulus",
+                      "threshold": 0.000001
+                    }
+                  }
+                ],
+                "targetParam": "associations"
+              },
+              "agentinit-Setup_population-param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "../data/initial_cells_1000_center_1500.csv"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Gene Update Test Iterations",
+                "parameters": {
+                  "steps": 30
+                }
+              },
+              "fate_update-param_necrosis_params": {
+                "label": "Necrosis Parameters",
+                "entries": [
+                  {
+                    "key": "oxygen_threshold",
+                    "valueType": "float",
+                    "value": 0.011
+                  },
+                  {
+                    "key": "glucose_threshold",
+                    "valueType": "float",
+                    "value": 0.39
+                  },
+                  {
+                    "key": "require_both",
+                    "valueType": "bool",
+                    "value": true
+                  }
+                ],
+                "targetParam": "necrosis_params"
+              },
+              "fate_update-param_max_growth_arrest_steps": {
+                "label": "Max Growth Arrest Steps",
+                "parameters": {
+                  "max_growth_arrest_steps": 100
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "workflow_source_path": "gene_network_update_test.json"
+  },
+  "subworkflows": {
+    "__world__": {
+      "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "world"
+        },
+        "reads": [
+          "simulation.parameters"
+        ],
+        "writes": [
+          "simulation.config",
+          "world.self",
+          "agent.collection",
+          "resource.collection",
+          "associations"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD CONTROLLER",
+        "position": {
+          "x": -190.22846582052534,
+          "y": -754.7824678275758
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "envinit-Setup_simulation-setup_sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 384,
+            "y": -462
+          },
+          "description": "Initialize simulation infrastructure",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_simulation-param_sim_output_dir"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "simulation.config",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-setup_domain_node",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {
+            "size_x": 1500,
+            "size_y": 1500,
+            "size_z": 1400
+          },
+          "enabled": true,
+          "position": {
+            "x": 396,
+            "y": -208
+          },
+          "description": "Define 2D spatial domain",
+          "custom_name": "setup_domain",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "world.self",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_population-setup_pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": true,
+            "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+          },
+          "enabled": true,
+          "position": {
+            "x": 406,
+            "y": 102
+          },
+          "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_substances-setup_all_substances",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Configure all 8 substances for diffusion-reaction",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_substances-param_substances_list"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.collection",
+              "resource.fields"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_associations-setup_all_associations",
+          "function_name": "setup_associations",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520.7303301163831
+          },
+          "description": "Configure all substance-to-gene associations",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_associations-param_associations_dict"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "associations",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "envinit-Setup_simulation-param_sim_output_dir",
+          "label": "Output Directory",
+          "parameters": {
+            "output_dir": "results"
+          },
+          "position": {
+            "x": -191.0653534490096,
+            "y": -387.1584447125314
+          }
+        },
+        {
+          "id": "envinit-Setup_substances-param_substances_list",
+          "type": "listParameterNode",
+          "label": "Substances (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+            "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
+            "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
+            "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": -94.87161038434198,
+            "y": 345.1572261690342
+          }
+        },
+        {
+          "id": "envinit-Setup_associations-param_associations_dict",
+          "type": "dictParameterNode",
+          "label": "Associations (Dict)",
+          "entries": [
+            {
+              "key": "Oxygen",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Oxygen_supply",
+                "threshold": 0.022
+              }
+            },
+            {
+              "key": "Glucose",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Glucose_supply",
+                "threshold": 2
+              }
+            },
+            {
+              "key": "Lactate",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT1_stimulus",
+                "threshold": 1.5
+              }
+            },
+            {
+              "key": "HGF",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "cMET_stimulus",
+                "threshold": 0.000001
+              }
+            },
+            {
+              "key": "TGFA",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "EGFR_stimulus",
+                "threshold": 0.000001
+              }
+            }
+          ],
+          "target_param": "associations",
+          "position": {
+            "x": -96.34326998567121,
+            "y": 571.5306197467866
+          }
+        }
+      ],
+      "execution_order": [
+        "envinit-Setup_simulation-setup_sim",
+        "envinit-Setup_simulation-setup_domain_node",
+        "envinit-Setup_population-setup_pop",
+        "envinit-Setup_substances-setup_all_substances",
+        "envinit-Setup_associations-setup_all_associations"
+      ],
+      "input_parameters": []
+    },
+    "tumor_cell_init": {
+      "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "checkpoint",
+          "simulation.config",
+          "agent.collection"
+        ],
+        "writes": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-tumor_cell_init",
+        "type": "controller",
+        "label": "TUMOR_CELL_INIT CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "agentinit-Setup_population-read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "agentinit-Setup_population-param_checkpoint_file"
+          ],
+          "contract": {
+            "reads": [
+              "checkpoint",
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "agentinit-Init_gene_networks-init_netlogo_gn",
+          "function_name": "initialize_netlogo_gene_networks",
+          "function_file": "",
+          "parameters": {
+            "bnd_file": "../data/jaya.bnd",
+            "random_initialization": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Initialize NetLogo-faithful gene networks for all cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "gene_network.definition"
+            ],
+            "writes": [
+              "gene_networks",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "agentinit-Fix_gene_nodes-fix_gene_nodes",
+          "function_name": "fix_gene_nodes",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "Mutation/knockout: clamp internal gene nodes (e.g. p53 = OFF) to a constant value for the whole run; daughters inherit. Toggle this node's enabled flag to switch the mutation on/off.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "agentinit-Fix_gene_nodes-param_fixed_nodes"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "writes": [
+              "gene_networks",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "agentinit-Setup_population-param_checkpoint_file",
+          "label": "Checkpoint File",
+          "parameters": {
+            "file_path": "../data/initial_cells_1000_center_1500.csv"
+          },
+          "position": {
+            "x": 90.63999999999999,
+            "y": 301.3600000000001
+          }
+        },
+        {
+          "id": "agentinit-Fix_gene_nodes-param_fixed_nodes",
+          "type": "dictParameterNode",
+          "label": "Fixed Gene Nodes",
+          "entries": [
+            {
+              "key": "p53",
+              "valueType": "bool",
+              "value": false
+            }
+          ],
+          "target_param": "fixed_nodes",
+          "position": {
+            "x": 90.63999999999999,
+            "y": 421.3600000000001
+          }
+        }
+      ],
+      "execution_order": [
+        "agentinit-Setup_population-read_checkpoint",
+        "agentinit-Init_gene_networks-init_netlogo_gn",
+        "agentinit-Fix_gene_nodes-fix_gene_nodes"
+      ],
+      "input_parameters": []
+    },
+    "gene_update": {
+      "description": "MicroC: gene_update",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "associations",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-gene_update",
+        "type": "controller",
+        "label": "GENE_UPDATE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gene_update-apply_associations",
+          "function_name": "apply_associations_to_inputs",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Translate substance concentrations → gene input states via associations",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "associations",
+              "gene_networks"
+            ],
+            "writes": [
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "gene_update-propagate_genes_netlogo",
+          "function_name": "propagate_gene_networks_netlogo",
+          "function_file": "",
+          "parameters": {
+            "propagation_steps": "5",
+            "reversible": false,
+            "verbose": false,
+            "debug_steps": false,
+            "oscillation": "true",
+            "oscillation_period": "100",
+            "ran_refresh": false,
+            "diffusion_step": 0,
+            "reset_fate": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "NetLogo-faithful graph walking gene network propagation",
+          "custom_name": "propagate_gene_networks_netlogo",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "gene_update-apply_associations",
+        "gene_update-propagate_genes_netlogo"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order for the gene-network update test",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-__world__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "__world__",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tumor_cell_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tumor_cell_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "tumor_cell_init",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-__world__",
+        "init-call-tumor_cell_init"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Runs MicroC gene_update, fate_update, a fate-count summary, and iteration_plots so gene-network outcomes are visible over time.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 30,
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ]
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sched-call-gene_update",
+          "type": "subworkflow_call",
+          "subworkflow_name": "gene_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "gene_update",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-fate_update",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fate_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 230
+          },
+          "description": "fate_update",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-division",
+          "type": "subworkflow_call",
+          "subworkflow_name": "division",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "division (proliferation births + apoptotic removal) — toggle via this node's enabled flag",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-fate_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fate_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 285
+          },
+          "description": "fate_summary",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-iteration_plots",
+          "type": "subworkflow_call",
+          "subworkflow_name": "iteration_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": false,
+          "position": {
+            "x": 400,
+            "y": 450
+          },
+          "description": "iteration_plots (disabled — substance fields are static in this test, so per-iteration heatmaps are redundant; toggle enabled to re-enable)",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "label": "Gene Update Test Iterations",
+          "parameters": {
+            "steps": 30
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
+      "execution_order": [
+        "sched-call-gene_update",
+        "sched-call-fate_update",
+        "sched-call-fate_summary",
+        "sched-call-division",
+        "sched-call-iteration_plots"
+      ],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main workflow (do not edit — managed by ABM structure)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "main-call-__init_sequence__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 30,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-final_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "final_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "description": "Processing: final_summary",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__",
+        "main-call-final_summary"
+      ],
+      "input_parameters": []
+    },
+    "division": {
+      "description": "MicroC: division (proliferating cells create daughters; apoptotic cells are removed). Reconciliation step — runs once per scheduler iteration over the whole population. Toggle on/off via the scheduler call's enabled flag.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.collection",
+          "agent.self.phenotype",
+          "gene_networks",
+          "world.self"
+        ],
+        "writes": [
+          "agent.collection",
+          "gene_networks",
+          "simulation.results"
+        ],
+        "consumes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-division",
+        "type": "controller",
+        "label": "DIVISION CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "division-cell_division",
+          "function_name": "update_cell_division",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Handle cell division for proliferating cells",
+          "custom_name": "update_cell_division",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks",
+              "world.self"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "division-remove_apoptotic",
+          "function_name": "remove_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Remove cells with Apoptosis phenotype from population",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "division-cell_division",
+        "division-remove_apoptotic"
+      ],
+      "input_parameters": []
+    },
+    "fate_update": {
+      "description": "MicroC: fate_update",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "resource.fields",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.phenotype",
+          "simulation.results"
+        ],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-fate_update",
+        "type": "controller",
+        "label": "FATE_UPDATE CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": -3.6849180327868964
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fate_update-mark_necrotic",
+          "function_name": "mark_necrotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Mark cells as necrotic based on user-defined conditions",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fate_update-param_necrosis_params"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_growth_arrest",
+          "function_name": "mark_growth_arrest_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Track cells in Growth_Arrest state with time limit",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fate_update-param_max_growth_arrest_steps"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_apoptotic",
+          "function_name": "mark_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_proliferating",
+          "function_name": "mark_proliferating_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "Mark cells as Proliferation or Quiescence based on gene network",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "fate_update-param_max_growth_arrest_steps",
+          "label": "Max Growth Arrest Steps",
+          "parameters": {
+            "max_growth_arrest_steps": 100
+          },
+          "position": {
+            "x": 60.76786885245906,
+            "y": 400.9855737704918
+          }
+        },
+        {
+          "id": "fate_update-param_necrosis_params",
+          "type": "dictParameterNode",
+          "label": "Necrosis Parameters",
+          "entries": [
+            {
+              "key": "oxygen_threshold",
+              "valueType": "float",
+              "value": 0.011
+            },
+            {
+              "key": "glucose_threshold",
+              "valueType": "float",
+              "value": 0.39
+            },
+            {
+              "key": "require_both",
+              "valueType": "bool",
+              "value": true
+            }
+          ],
+          "target_param": "necrosis_params",
+          "position": {
+            "x": 53.29508196721309,
+            "y": 150.59573770491795
+          }
+        }
+      ],
+      "execution_order": [
+        "fate_update-mark_necrotic",
+        "fate_update-mark_growth_arrest",
+        "fate_update-mark_apoptotic",
+        "fate_update-mark_proliferating"
+      ],
+      "input_parameters": []
+    },
+    "iteration_plots": {
+      "description": "MicroC: iteration_plots",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-iteration_plots",
+        "type": "controller",
+        "label": "ITERATION_PLOTS CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "iteration_plots-gen_loop_plots",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "plot_interval": "1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
+          "custom_name": "generate_iteration_plots",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "iteration_plots-gen_loop_plots"
+      ],
+      "input_parameters": []
+    },
+    "final_summary": {
+      "description": "MicroC: final_summary",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-final_summary",
+        "type": "controller",
+        "label": "FINAL_SUMMARY CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "final_summary-gen_final_plots",
+          "function_name": "generate_summary_plots",
+          "function_file": "",
+          "parameters": {
+            "marker": "FINAL",
+            "substances_to_plot": "Oxygen,Glucose,Lactate"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Generate final state visualization",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "final_summary-gen_final_plots"
+      ],
+      "input_parameters": []
+    },
+    "fate_summary": {
+      "description": "MicroC: fate_summary (logs and plots gene fate outputs and marked phenotypes over time)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "agent.self.phenotype"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-fate_summary",
+        "type": "controller",
+        "label": "FATE_SUMMARY CONTROLLER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fate_summary-record_counts",
+          "function_name": "record_gene_fate_counts",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Record Apoptosis, Growth_Arrest, Proliferation, and Necrosis counts for this iteration",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "agent.self.phenotype"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "fate_summary-record_counts"
+      ],
+      "input_parameters": []
+    }
+  }
+}

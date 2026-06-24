@@ -336,6 +336,15 @@ def _create_fresh_daughter_network(context: Dict[str, Any]):
             GLUT1I_concentration=GLUT1I_conc,
         )
 
+        # Inherit clamped (mutated/knocked-out) gene nodes from the parent line.
+        # Mutations are heritable: the daughter starts mutated and stays mutated.
+        clamped = context.get('gene_network_clamped_nodes')
+        if clamped:
+            daughter_gn._clamped = dict(clamped)
+            for node_name, value in clamped.items():
+                if node_name in daughter_gn.nodes:
+                    daughter_gn.nodes[node_name].current_state = value
+
         return daughter_gn
 
     except Exception as e:

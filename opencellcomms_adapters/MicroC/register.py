@@ -12,6 +12,7 @@ function name is a benign overwrite (same code, same signature).
 # Gene network functions
 import opencellcomms_adapters.MicroC.functions.gene_network.initialize_netlogo_gene_networks  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_netlogo  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.gene_network.fix_gene_nodes  # noqa: F401
 
 # Fate functions
 import opencellcomms_adapters.MicroC.functions.fate.mark_necrotic_cells  # noqa: F401

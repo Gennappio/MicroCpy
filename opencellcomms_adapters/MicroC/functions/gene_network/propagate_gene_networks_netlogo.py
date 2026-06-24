@@ -268,6 +268,9 @@ def _ensure_netlogo_attrs(cell_gn) -> None:
         cell_gn._cell_ran1 = random.random()
     if not hasattr(cell_gn, '_cell_ran2'):
         cell_gn._cell_ran2 = random.random()
+    # Clamped (mutated/knocked-out) nodes; empty unless fix_gene_nodes set them.
+    if not hasattr(cell_gn, '_clamped'):
+        cell_gn._clamped = {}
     # Cumulative per-cell fate-event counters over the run (NetLogo "fate fires"
     # / "fate reverts"). Not cleared by reset_fate — they track activity across
     # the whole simulation so the reporter can derive per-iteration deltas.
@@ -447,7 +450,16 @@ def _netlogo_influence_link_end(gene_network, source_name: str, target_name: str
     fate_reverted = False
 
     # NetLogo line 1522-1538: evaluate and update target
-    if target_node.update_function:
+    # CLAMP (mutation/knockout): a node listed in gene_network._clamped is pinned
+    # to its fixed value and never recomputed, so the mutation persists the whole
+    # run and propagates to downstream rules (which read its current state).
+    clamped = getattr(gene_network, '_clamped', None)
+    if clamped and target_name in clamped:
+        target_node.current_state = clamped[target_name]
+        if debug:
+            print(f"    {source_name} → {target_name}")
+            print(f"      CLAMPED at {clamped[target_name]}")
+    elif target_node.update_function:
         current_states = {name: node.current_state for name, node in gene_network.nodes.items()}
         new_state = target_node.update_function(current_states)
 
