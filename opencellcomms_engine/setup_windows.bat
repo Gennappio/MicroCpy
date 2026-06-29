@@ -13,7 +13,6 @@ if "%1"=="install-minimal" goto install-minimal
 if "%1"=="test" goto test
 if "%1"=="test-fast" goto test-fast
 if "%1"=="clean" goto clean
-if "%1"=="run-example" goto run-example
 goto help
 
 :help
@@ -30,7 +29,6 @@ echo   setup_windows.bat test-fast        Run fast tests only
 echo.
 echo Utilities:
 echo   setup_windows.bat clean            Clean build artifacts
-echo   setup_windows.bat run-example      Run example simulation
 echo.
 goto end
 
@@ -66,11 +64,6 @@ if exist dist rmdir /s /q dist
 if exist *.egg-info rmdir /s /q *.egg-info
 for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
 del /s /q *.pyc 2>nul
-goto end
-
-:run-example
-echo Running example simulation...
-python run_sim.py tests/jayatilake_experiment/jayatilake_experiment_config.yaml --steps 10
 goto end
 
 :end
