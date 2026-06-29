@@ -192,13 +192,18 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
         # block-buffered dump when the process exits.
         child_env = os.environ.copy()
         child_env["PYTHONUNBUFFERED"] = "1"
+        # Force UTF-8 for the engine's own stdout/stderr too (not just its nested
+        # tools). Without this, Windows decodes the pipe as cp1252 and any non-ASCII
+        # log line (Greek gene names, °, µ, emoji) raises UnicodeDecodeError here.
+        child_env["PYTHONIOENCODING"] = "utf-8"
 
         popen_kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
-            universal_newlines=True,
             cwd=str(engine_dir),
             env=child_env,
         )
@@ -956,7 +961,8 @@ def save_dialog():
         try:
             proc = subprocess.run(
                 [sys.executable, '-c', script],
-                capture_output=True, text=True, timeout=120,
+                capture_output=True, text=True, encoding='utf-8', errors='replace',
+                env={**os.environ, 'PYTHONIOENCODING': 'utf-8'}, timeout=120,
             )
         except subprocess.TimeoutExpired:
             return jsonify({'error': 'Save dialog timed out'}), 500
