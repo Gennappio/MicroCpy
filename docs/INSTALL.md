@@ -45,6 +45,41 @@ The installer will:
 4. Install Flask server dependencies
 5. Install GUI (React) dependencies
 
+## Run with Docker (any OS)
+
+Prefer one command and no local Python/Node setup? If you have **Docker Desktop**
+(Windows/macOS) or **Docker Engine + the Compose plugin** (Linux), run the whole
+stack — backend + GUI — in containers that behave identically on every OS:
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:3000** (the backend API runs on
+http://localhost:5001). Source is bind-mounted, so edits to engine/adapter/GUI
+code are picked up live, and simulation results written to
+`opencellcomms_gui/GUI_results/` appear on your host machine.
+
+Stop the stack with `Ctrl+C`, or from another terminal:
+
+```bash
+docker compose down
+```
+
+**Headless CLI run** (reuses the backend image, no GUI):
+
+```bash
+docker compose run --rm backend \
+  python /app/opencellcomms_engine/run_workflow.py \
+  --workflow /app/opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json
+```
+
+**Limitation:** the native *Save As* dialog (used by Export Behavior) and browser
+auto-open rely on a desktop session and do **not** work inside the headless
+container — type the path manually in the GUI instead. Everything else (designing
+and running workflows, live logs, the Results tab, the CLI) works normally. If you
+need the native dialogs, use the native install above.
+
 ## Manual Installation
 
 If you prefer to install manually or need more control:
@@ -125,8 +160,14 @@ pip install numba cython joblib dask
 ```
 
 ### 3D Visualization
+`vtk` is the cross-platform dependency used for VTK import/export:
 ```bash
-pip install mayavi vtk
+pip install vtk
+```
+`mayavi` is an optional, heavy 3D backend (hard to install on Windows, not used by
+the core engine); install it only if you specifically need it:
+```bash
+cd opencellcomms_engine && pip install -e ".[mayavi]"
 ```
 
 ### Jupyter Notebook Support
