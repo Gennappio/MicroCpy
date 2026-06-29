@@ -1,0 +1,19 @@
+# Keep the Docker build context lean and reproducible.
+.git
+.gitignore
+.venv
+venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/*.bak
+**/*.egg-info
+.pytest_cache
+.mypy_cache
+**/dist
+build
+# Per-run simulation output (regenerated each run; would bloat the image)
+opencellcomms_gui/GUI_results
+# Local dev artifacts
+api_server*.log
+api_server.pid

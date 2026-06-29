@@ -1,0 +1,46 @@
+# Full OpenCellComms stack, identical on Windows / macOS / Linux:
+#     docker compose up --build
+# Then open http://localhost:3000  (backend API on http://localhost:5001).
+#
+# Source is bind-mounted for live editing; simulation results written to
+# opencellcomms_gui/GUI_results/ appear on the host.
+#
+# Limitation: the native "Save As" dialog (tkinter) and browser auto-open do not
+# work inside the headless container — use manual path entry in the GUI. The CLI
+# engine, GUI design/run, live logs, and the Results tab all work.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5001:5001"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONIOENCODING: "utf-8"
+    volumes:
+      # Live code + host-visible results. The image's site-packages (installed
+      # dependencies) are NOT shadowed by these mounts, so deps survive; the
+      # engine code is imported from the bind-mounted source at runtime.
+      - ./opencellcomms_engine:/app/opencellcomms_engine
+      - ./opencellcomms_adapters:/app/opencellcomms_adapters
+      - ./opencellcomms_gui:/app/opencellcomms_gui
+
+  frontend:
+    build:
+      context: ./opencellcomms_gui
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # The browser runs on the host, so it reaches the backend at
+      # localhost:5001 directly (the GUI's hardcoded URL) — no proxy needed.
+      NO_OPEN: "1"
+    volumes:
+      - ./opencellcomms_gui:/app
+      # Keep the container's node_modules (correct platform binaries), don't let
+      # the host's directory shadow it.
+      - /app/node_modules
+    depends_on:
+      - backend

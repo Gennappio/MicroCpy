@@ -1,0 +1,13 @@
+# OpenCellComms GUI: Vite dev server. Serves http://localhost:3000.
+FROM node:20-slim
+WORKDIR /app
+
+# Install deps first for layer caching (lockfile optional).
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+# --host 0.0.0.0 so the host browser can reach the container's dev server.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,0 +1,36 @@
+# OpenCellComms backend: Flask API + headless simulation engine.
+# Part of the full-stack docker-compose; serves the API on http://localhost:5001.
+FROM python:3.11-slim
+
+# build-essential covers the rare scientific wheel that needs a source build;
+# most (numpy/scipy/h5py/tables/matplotlib/fipy) ship manylinux wheels.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Engine first (its deps change rarely) for better layer caching. Installing the
+# engine pulls in numpy/scipy/matplotlib/etc.; flask/flask-cors/anthropic power
+# the API + in-GUI agent; fipy is the diffusion solver.
+COPY opencellcomms_engine/ /app/opencellcomms_engine/
+RUN pip install -e /app/opencellcomms_engine \
+    && pip install flask flask-cors anthropic fipy
+
+# Adapters and their extra requirements (e.g. fipy via the legacy adapter).
+COPY opencellcomms_adapters/ /app/opencellcomms_adapters/
+RUN for req in /app/opencellcomms_adapters/*/requirements.txt; do \
+        if [ -f "$req" ]; then pip install -r "$req" || true; fi; \
+    done
+
+# GUI server (Flask app + the in-GUI agent module).
+COPY opencellcomms_gui/ /app/opencellcomms_gui/
+
+WORKDIR /app/opencellcomms_gui/server
+EXPOSE 5001
+# api.py already binds host=0.0.0.0 and disables the Werkzeug reloader.
+CMD ["python", "api.py"]
