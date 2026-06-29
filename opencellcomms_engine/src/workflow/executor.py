@@ -637,6 +637,21 @@ class WorkflowExecutor:
             context['_rng'] = rng
         return rng
 
+    def _should_log_step(self, context: Dict[str, Any]) -> bool:
+        """Throttle per-step batch logs to ~10 lines over the whole run.
+
+        Mirrors the scheduler's iteration banner (report_every = total // 10) so
+        per-agent behaviour summaries appear on the same steps as the banner.
+        Returns True when there is no active step loop (single-shot calls always
+        log).
+        """
+        it = context.get('loop_iteration')
+        total = context.get('loop_total_iterations')
+        if not it or not total or total <= 1:
+            return True
+        report_every = max(1, total // 10)
+        return it == 1 or it == total or it % report_every == 0
+
     def _run_for_each_entity(self, node, for_each: Dict[str, Any], context: Dict[str, Any],
                              merged_params: Dict[str, Any]) -> Dict[str, Any]:
         """Run an ABM behaviour sub-workflow over its owning entity kind.
@@ -658,12 +673,16 @@ class WorkflowExecutor:
             kind = for_each.get('kind')
             resources = [domain.resource(kind)] if kind else domain.resources()
             self._run_rng(context).shuffle(resources)
+            if self._should_log_step(context):
+                print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
+                      f"{len(resources)} {kind or 'resource'}(s)")
             for resource in resources:
                 context['_current_resource'] = resource
                 context['_current_resource_kind'] = resource.name
                 params = {'resource': resource.name, **merged_params}
                 context = self.execute_subworkflow(
-                    node.subworkflow_name, context, iterations=1, parameters=params
+                    node.subworkflow_name, context, iterations=1, parameters=params,
+                    quiet=True
                 )
             context['_current_resource'] = None
             context['_current_resource_kind'] = None
@@ -679,13 +698,17 @@ class WorkflowExecutor:
         kind = for_each.get('kind')
         agents = pop.agents_of_kind(kind) if kind else pop.agents()
         self._run_rng(context).shuffle(agents)
+        if self._should_log_step(context):
+            print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
+                  f"{len(agents)} {kind or 'agent'}(s)")
 
         for agent in agents:
             if not agent.is_alive():
                 continue
             context['_current_agent'] = agent
             context = self.execute_subworkflow(
-                node.subworkflow_name, context, iterations=1, parameters=merged_params
+                node.subworkflow_name, context, iterations=1, parameters=merged_params,
+                quiet=True
             )
         context['_current_agent'] = None
         return context
@@ -709,16 +732,20 @@ class WorkflowExecutor:
 
         cells = list(legacy.state.cells.values())
         self._run_rng(context).shuffle(cells)
+        if self._should_log_step(context):
+            print(f"[WORKFLOW] Running '{node.subworkflow_name}' over {len(cells)} cell(s)")
         for cell in cells:
             context['_current_cell'] = cell
             context = self.execute_subworkflow(
-                node.subworkflow_name, context, iterations=1, parameters=merged_params
+                node.subworkflow_name, context, iterations=1, parameters=merged_params,
+                quiet=True
             )
         context['_current_cell'] = None
         return context
 
     def execute_subworkflow(self, subworkflow_name: str, context: Dict[str, Any],
-                           iterations: int = 1, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                           iterations: int = 1, parameters: Optional[Dict[str, Any]] = None,
+                           quiet: bool = False) -> Dict[str, Any]:
         """
         Execute a sub-workflow.
 
@@ -727,6 +754,9 @@ class WorkflowExecutor:
             context: Execution context
             iterations: Number of times to execute the sub-workflow
             parameters: Additional parameters to pass to the sub-workflow
+            quiet: Suppress the per-execution "Executing sub-workflow" line.
+                Set by per-entity ``for_each`` asks, which run this once per
+                agent/resource/cell and would otherwise flood the log.
 
         Returns:
             Updated context
@@ -785,7 +815,7 @@ class WorkflowExecutor:
                     report_every = max(1, iterations // 10)
                     if iteration == 0 or (iteration + 1) % report_every == 0:
                         print(f"[WORKFLOW] ========== Iteration {iteration + 1}/{iterations}: '{subworkflow_name}' ==========")
-                else:
+                elif not quiet:
                     print(f"[WORKFLOW] Executing sub-workflow '{subworkflow_name}'")
 
                 # Merge input parameters into context
