@@ -32,6 +32,11 @@ that is `/occ_create-workflow`.
    `oxygen`), or a process bucket (`reporting`). If unsure, create none now;
    `/occ_new-function` will create role folders on demand.
 
+6. **Does it need any extra Python libraries?** Packages beyond what the engine
+   already ships (e.g. a special solver, a file-format reader). List them as pip
+   requirement strings, or say *none*. These become the plugin's
+   `requirements.txt` (see Step 3).
+
 ## Step 2 — Validate the name and check for collisions
 
 - Confirm the name is a valid identifier (Step 1 rule). If not, stop and ask.
@@ -51,6 +56,7 @@ opencellcomms_adapters/<name>/
 ├── __init__.py                      # empty
 ├── plugin.toml                      # manifest (below)
 ├── register.py                      # imports the plugin's functions (below)
+├── requirements.txt                 # only if extra libraries were named (below)
 └── functions/
     ├── __init__.py                  # empty
     └── <role>/                      # one per role from Step 1 (optional)
@@ -96,6 +102,27 @@ import per function here as you author them, e.g.:
 Use the `import ... # noqa: F401` style (matches existing plugins). Either that
 or `from ... import <fn>` is accepted by discovery; pick one and be consistent.
 
+**`requirements.txt`** — create this **only if** the user named extra libraries in
+Step 1. One pip requirement per line:
+
+```text
+# extra libraries this plugin needs
+<lib>>=<version>
+```
+
+Every install path auto-installs each plugin's `requirements.txt` — `install.sh`,
+`install.bat`, and the Docker backend image all loop over
+`opencellcomms_adapters/*/requirements.txt`. So **do not edit the installer
+scripts or the Dockerfile** for pip packages. After creating/changing it, tell the
+user how to apply it:
+- **Native:** re-run `./install.sh` (or `install.bat` on Windows).
+- **Docker:** rebuild with `docker compose up --build`.
+- Then restart the backend so the new functions register.
+
+A library that needs a *system* (apt) package is the one manual case — see
+`docs/PLUGINS.md` → **Dependencies** (document it in the plugin README for native
+installs, and add it to `Dockerfile.backend`'s `apt-get` line for Docker).
+
 ## Step 4 — Confirm and hand off
 
 Tell the user:
@@ -103,6 +130,9 @@ Tell the user:
 - That it is **auto-discovered on the next backend restart** — no `registry.py`
   edit, no hardcoded list (this is the whole point of the plugin model).
 - Restart with `./run.sh` (or Ctrl+C then `./run.sh`).
+- **If you created a `requirements.txt`:** re-run the installer (`./install.sh` /
+  `install.bat`) — or `docker compose up --build` for Docker — *before* the
+  restart, so the new libraries are installed.
 - Verify it loaded: `GET http://localhost:5001/api/plugins` (if the backend is
   running) should list it, or from `opencellcomms_engine/`:
   ```bash

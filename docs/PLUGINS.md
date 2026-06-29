@@ -22,6 +22,7 @@ plugins build on.
 opencellcomms_adapters/<plugin_name>/
 ├── plugin.toml                      # manifest (identity + contract)
 ├── register.py                      # imports the plugin's functions
+├── requirements.txt                 # optional: extra pip libraries this plugin needs
 ├── __init__.py
 └── functions/
     ├── __init__.py
@@ -33,6 +34,9 @@ opencellcomms_adapters/<plugin_name>/
 - **`register.py`** — a list of imports; importing it runs each function's
   `@register_function` decorator, registering it. The engine imports this file
   automatically (see [Discovery](#discovery)).
+- **`requirements.txt`** *(optional)* — extra pip libraries the plugin needs;
+  every installer and the Docker image install it automatically (see
+  [Dependencies](#dependencies-extra-python-libraries)).
 - **`functions/<model_role>/<fn>.py`** — one function per file (so each is
   readable and editable in the GUI). Use folders that describe the model role,
   such as `agent_behavior`, `resource_behavior`, `sugar`, or `forager`.
@@ -74,6 +78,48 @@ The manifest is **optional for loading** — a plugin with only a `register.py`
 still loads — but it's how the plugin gets a real identity, and it's what
 `GET /api/plugins` reports. New plugins created through the GUI get a manifest
 seeded automatically.
+
+---
+
+## Dependencies (extra Python libraries)
+
+If your plugin needs a Python library the engine doesn't already ship — a special
+solver, a file-format reader, a stats package — declare it in a **`requirements.txt`**
+at the plugin root:
+
+```text
+# opencellcomms_adapters/<name>/requirements.txt — one pip requirement per line
+networkx>=3.0
+openpyxl
+```
+
+You do **not** edit the installer scripts or the Dockerfile: every install path
+already loops over `opencellcomms_adapters/*/requirements.txt` and installs each one.
+
+| Install path | Picks up `requirements.txt`? | Apply a new/changed library by |
+|---|---|---|
+| `install.sh` (macOS/Linux) | ✅ automatically | re-running `./install.sh` |
+| `install.bat` (Windows) | ✅ automatically | re-running `install.bat` |
+| `Dockerfile.backend` / `docker compose` | ✅ automatically (at image build) | rebuilding: `docker compose up --build` |
+
+So the loop is: **add the line → re-install (native) or rebuild (Docker) →
+restart the backend** so the new functions register.
+
+> If a plugin's `requirements.txt` install *fails* (e.g. a wheel won't build), the
+> installers print a warning and **continue** — that plugin is skipped at runtime
+> rather than breaking the whole install. Keep requirements lean and prefer
+> packages with prebuilt wheels so they install cleanly on every OS.
+
+### System (non-pip) dependencies
+
+A few libraries need an OS-level package (a C library, a compiler) that pip can't
+install:
+
+- **Native installs:** name the OS package in your plugin's README (e.g.
+  `sudo apt install libfoo-dev`, or the macOS/Windows equivalent) so users add it
+  before running the installer.
+- **Docker:** add it to the `apt-get install` line in **`Dockerfile.backend`** —
+  the one place a system dependency is hand-edited — then rebuild.
 
 ---
 
