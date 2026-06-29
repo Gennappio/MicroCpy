@@ -43,6 +43,7 @@ const WorkflowConsole = ({ workflowName }) => {
   const fetchAllBadgeStats = useWorkflowStore((state) => state.fetchAllBadgeStats);
   const clearObservabilityState = useWorkflowStore((state) => state.clearObservabilityState);
   const getActivePlannerTabs = useWorkflowStore((state) => state.getActivePlannerTabs);
+  const plannerTabs = useWorkflowStore((state) => state.plannerTabs);
   // Path of the workflow file currently loaded in the GUI (null if unsaved).
   const workflowFilePath = useWorkflowStore((state) => state.workflowFilePath);
 
@@ -372,7 +373,10 @@ const WorkflowConsole = ({ workflowName }) => {
         // isRunning will be set to false by SSE handler on complete/error
 
       } else {
-        // Sequential planner run: execute each active tab
+        // Sequential planner run: execute each active tab.
+        // Names of all current planner tabs — the backend keeps only these
+        // result folders and prunes orphans from removed/renamed tabs.
+        const keepLabels = plannerTabs.map((t) => t.name);
         const timestamp = new Date().toLocaleTimeString();
         setDisplayedLogsStore(workflowName, [{
           type: 'info',
@@ -397,6 +401,7 @@ const WorkflowConsole = ({ workflowName }) => {
               workflow: tabWorkflow,
               entry_subworkflow: 'main',
               run_label: tab.name,
+              keep_labels: keepLabels,
             }),
           });
 

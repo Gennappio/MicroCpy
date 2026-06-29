@@ -324,13 +324,24 @@ def run_simulation():
     try:
         gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
         if run_label:
+            results_root = gui_dir / "GUI_results"
             # Planner multi-run: create labeled subdirectory, only clear that subdir
-            results_dir = gui_dir / "GUI_results" / run_label
+            results_dir = results_root / run_label
             if results_dir.exists():
                 shutil.rmtree(results_dir)
                 log_queue.put(f"[INFO] Cleared GUI_results/{run_label} directory\n")
             results_dir.mkdir(parents=True, exist_ok=True)
             log_queue.put(f"[INFO] GUI_results/{run_label} directory ready\n")
+            # Prune orphan label folders left behind by removed/renamed planner
+            # tabs so the Results tab mirrors the current planner tabs. The GUI
+            # sends keep_labels = the names of all current planner tabs.
+            keep_labels = data.get('keep_labels')
+            if keep_labels is not None:
+                keep = set(keep_labels) | {run_label}
+                for item in results_root.iterdir():
+                    if item.is_dir() and not item.name.startswith('.') and item.name not in keep:
+                        shutil.rmtree(item, ignore_errors=True)
+                        log_queue.put(f"[INFO] Removed stale results folder '{item.name}'\n")
         else:
             setup_results_directories(workflow_data, gui_dir)
     except Exception as e:
