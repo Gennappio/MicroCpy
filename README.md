@@ -52,6 +52,16 @@ run.bat
 
 Open http://localhost:3000 in your browser.
 
+### Run with Docker (any OS)
+
+Prefer one command, with no local Python/Node setup? With [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed:
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:3000. See the [Installation Guide](docs/INSTALL.md#run-with-docker-any-os) for details and caveats.
+
 ## 📖 Documentation
 
 | Document | Description |

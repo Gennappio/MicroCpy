@@ -47,23 +47,42 @@ Keep this picture in mind; the GUI tabs map directly onto it.
 
 ## 1. Install and launch (once)
 
-From the project root:
+From the project root, install once, then launch.
 
+**macOS / Linux:**
 ```bash
 ./install.sh      # one-time: creates a venv, installs the engine + GUI deps
 ./run.sh          # starts everything
 ```
 
-`run.sh` launches two servers and prints their URLs:
+**Windows:**
+```batch
+install.bat       :: one-time: creates a venv, installs the engine + GUI deps
+run.bat           :: starts everything
+```
+
+Either launcher starts two servers and prints their URLs:
 
 - **Frontend (the GUI):** http://localhost:3000  ← open this in your browser
 - **Backend (the engine):** http://localhost:5001 ← runs the Python simulation
 
-Leave `run.sh` running in its terminal. Open the Frontend URL. Stop everything
-later with `Ctrl+C` in that terminal.
+Leave the launcher running in its terminal. Open the Frontend URL. Stop
+everything later with `Ctrl+C` in that terminal (on Windows, close the two
+server windows).
 
 > Tip: `./run.sh -v` streams backend activity to the terminal — useful when a
 > run misbehaves.
+>
+> **Windows note:** wherever this guide shows `./run.sh` or `./install.sh`, use
+> `run.bat` / `install.bat` instead.
+
+**Prefer Docker?** With [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed, one command runs the whole stack on any OS, with no local Python or Node setup:
+
+```bash
+docker compose up --build      # then open http://localhost:3000
+```
+
+See [docs/INSTALL.md](docs/INSTALL.md#run-with-docker-any-os) for details and caveats.
 
 ---
 
