@@ -1,0 +1,25 @@
+# Normalize line endings across OSes.
+# Default: auto-detect text, store LF in the repo, check out LF everywhere.
+* text=auto eol=lf
+
+# Unix shell scripts MUST stay LF or bash/WSL refuses to run them.
+*.sh   text eol=lf
+
+# Windows scripts want CRLF.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Binary assets — never touch line endings.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.vtk  binary
+*.vtu  binary
+*.h5   binary
+*.hdf5 binary
+*.npy  binary
+*.npz  binary
