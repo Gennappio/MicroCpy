@@ -170,11 +170,11 @@ def plot_world(
 
 
 @register_function(
-    display_name="Plot World",
+    display_name="Plot Grid",
     description="Snapshot the grid bounds without resource heatmaps or agent markers",
     category="FINALIZATION",
     parameters=[
-        {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "world"},
+        {"name": "prefix", "type": "STRING", "description": "Output filename prefix", "default": "grid"},
     ],
     inputs=["context"],
     outputs=[],
@@ -182,7 +182,7 @@ def plot_world(
     compatible_kernels=["*"],
     requires=[],
 )
-def plot_world(env: BiologicalContext, prefix: str = "world", **kwargs) -> bool:
+def plot_grid(env: BiologicalContext, prefix: str = "grid", **kwargs) -> bool:
     return plot_world(
         env,
         resource="",
