@@ -75,8 +75,11 @@ setup(
             "joblib>=1.1.0",
         ],
         "visualization": [
-            "mayavi>=4.7.0",
             "vtk>=9.0.0",
+        ],
+        # Opt-in only: heavy 3D backend, hard to install on Windows, unused by core.
+        "mayavi": [
+            "mayavi>=4.7.0",
         ],
     },
     

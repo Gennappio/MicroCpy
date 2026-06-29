@@ -67,8 +67,13 @@ performance = [
     "dask>=2022.1.0",
 ]
 visualization = [
-    "mayavi>=4.7.0",
     "vtk>=9.0.0",
+]
+# mayavi is a heavy 3D backend (Qt + VTK build) that is painful to install on
+# Windows and is not imported anywhere in the codebase. Kept as an opt-in extra
+# so the default visualization install stays cross-platform.
+mayavi = [
+    "mayavi>=4.7.0",
 ]
 diffusion = [
     "fipy>=3.4.0",
