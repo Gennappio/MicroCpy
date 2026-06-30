@@ -99,6 +99,35 @@ echo [OK] GUI dependencies installed
 cd ..
 
 echo.
+echo Installing developer tooling (tests + pre-commit hook)...
+echo [!] Optional - if this step fails you can still run OpenCellComms.
+
+REM Dev extras (pytest, linters, pre-commit) live in the engine's 'dev' optional
+REM dependencies. Failures here are non-fatal: running the app must never depend
+REM on the test stack.
+cd opencellcomms_engine
+pip install -e ".[dev]" >nul 2>&1
+if errorlevel 1 (
+    echo [!] Developer dependencies failed - app still runs; tests won't until fixed
+) else (
+    echo [OK] Developer dependencies installed ^(pytest, linters, pre-commit^)
+)
+cd ..
+
+REM Activate the git pre-commit hook (runs the fast engine tests at commit time).
+where pre-commit >nul 2>&1
+if errorlevel 1 (
+    echo [!] pre-commit unavailable - skipping hook ^(run 'pre-commit install' manually^)
+) else (
+    pre-commit install >nul 2>&1
+    if errorlevel 1 (
+        echo [!] Could not install pre-commit hook - run 'pre-commit install' manually
+    ) else (
+        echo [OK] pre-commit hook installed ^(fast engine tests run on commit^)
+    )
+)
+
+echo.
 echo ================================================================
 echo              Installation Complete!
 echo ================================================================

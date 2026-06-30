@@ -14,11 +14,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Engine first (its deps change rarely) for better layer caching. Installing the
-# engine pulls in numpy/scipy/matplotlib/etc.; flask/flask-cors/anthropic power
-# the API + in-GUI agent; fipy is the diffusion solver.
+# Engine first (its deps change rarely) for better layer caching. The [dev]
+# extra adds pytest + linters so the fast suite runs in-container
+# (docker compose exec backend sh -c 'cd opencellcomms_engine && pytest -m "not slow"');
+# this is a live-editing image (source is bind-mounted), so dev deps belong here.
+# The pre-commit *hook* is deliberately NOT activated: it writes to .git/hooks and
+# you commit from the host, not the container (there is no .git at /app).
+# flask/flask-cors/anthropic power the API + in-GUI agent; fipy is the diffusion solver.
 COPY opencellcomms_engine/ /app/opencellcomms_engine/
-RUN pip install -e /app/opencellcomms_engine \
+RUN pip install -e "/app/opencellcomms_engine[dev]" \
     && pip install flask flask-cors anthropic fipy
 
 # Adapters and their extra requirements (e.g. fipy via the legacy adapter).

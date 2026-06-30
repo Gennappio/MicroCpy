@@ -48,6 +48,10 @@ install:
 
 install-dev:
 	$(PIP) install -e ".[dev,docs,jupyter,performance,visualization]"
+	@echo "Activating pre-commit hook (non-fatal)..."
+	@cd .. && pre-commit install >/dev/null 2>&1 \
+		&& echo "[OK] pre-commit hook installed (fast engine tests run on commit)" \
+		|| echo "[!] pre-commit hook not installed - run 'pre-commit install' from the repo root"
 
 install-minimal:
 	$(PIP) install -e .

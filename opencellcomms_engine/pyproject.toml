@@ -49,6 +49,7 @@ dev = [
     "black>=22.0.0",
     "flake8>=4.0.0",
     "mypy>=0.910",
+    "pre-commit>=2.20.0",
 ]
 docs = [
     "sphinx>=4.0.0",

@@ -115,6 +115,31 @@ print_status "GUI dependencies installed"
 cd ..
 
 echo ""
+echo "Installing developer tooling (tests + pre-commit hook)..."
+print_warning "Optional — if this step fails you can still run OpenCellComms."
+
+# Dev extras (pytest, linters, pre-commit) live in the engine's 'dev' optional
+# dependencies. Wrapped in 'if' so a build failure under 'set -e' does not abort
+# the install — running the app must never depend on the test stack.
+if ( cd opencellcomms_engine && pip install -e ".[dev]" > /dev/null 2>&1 ); then
+    print_status "Developer dependencies installed (pytest, linters, pre-commit)"
+else
+    print_warning "Developer dependencies failed — app still runs; 'make test' won't until fixed"
+fi
+
+# Activate the git pre-commit hook (runs the fast engine tests at commit time).
+# Runs from the repo root where .git and .pre-commit-config.yaml live.
+if command -v pre-commit > /dev/null 2>&1 && [ -e .git ]; then
+    if pre-commit install > /dev/null 2>&1; then
+        print_status "pre-commit hook installed (fast engine tests run on commit)"
+    else
+        print_warning "Could not install pre-commit hook — run 'pre-commit install' manually"
+    fi
+else
+    print_warning "pre-commit unavailable or not a git checkout — skipping hook"
+fi
+
+echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║              Installation Complete!                          ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

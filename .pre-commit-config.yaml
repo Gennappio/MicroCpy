@@ -1,7 +1,8 @@
 # Pre-commit hooks for OpenCellComms.
 #
-# Activate once per clone:
-#   pip install pre-commit
+# install.sh / install.bat and `make install-dev` activate this hook for you
+# (non-fatally). To do it by hand in a clone that skipped that step:
+#   pip install pre-commit   # or: pip install -e "opencellcomms_engine[dev]"
 #   pre-commit install
 #
 # Runs the FAST engine test suite (~2s; excludes @pytest.mark.slow integration
