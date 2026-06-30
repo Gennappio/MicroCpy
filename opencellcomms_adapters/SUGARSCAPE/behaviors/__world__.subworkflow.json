@@ -12,7 +12,7 @@
     "controller": {
       "id": "controller-__world__",
       "type": "initNode",
-      "label": "WORLD CONTROLLER",
+      "label": "WORLD",
       "position": {
         "x": 100,
         "y": 100
