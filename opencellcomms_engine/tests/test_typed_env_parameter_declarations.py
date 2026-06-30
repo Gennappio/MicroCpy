@@ -70,7 +70,9 @@ def test_typed_env_functions_declare_their_parameters():
     offenders = []
     for f in _function_files():
         try:
-            tree = ast.parse(f.read_text())
+            # Python source is UTF-8 by spec; read it as such so the scan works
+            # on Windows (where read_text() would otherwise default to cp1252).
+            tree = ast.parse(f.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
         for fn, param in _undeclared_params(tree):

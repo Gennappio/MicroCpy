@@ -124,6 +124,8 @@ def test_generated_project_structure(tmp_path: Path) -> None:
 
 
 def test_missing_required_field_raises(tmp_path: Path) -> None:
+    if not DEFAULT_PHYSIBOSS_ROOT.exists():
+        pytest.skip(f"PhysiBoSS-master not found at {DEFAULT_PHYSIBOSS_ROOT}")
     spec = _minimal_spec()
     del spec["domain"]["x_min"]
     with pytest.raises(SpecError, match="x_min"):
@@ -135,6 +137,8 @@ def test_missing_required_field_raises(tmp_path: Path) -> None:
 
 
 def test_substrate_without_name_raises(tmp_path: Path) -> None:
+    if not DEFAULT_PHYSIBOSS_ROOT.exists():
+        pytest.skip(f"PhysiBoSS-master not found at {DEFAULT_PHYSIBOSS_ROOT}")
     spec = _minimal_spec()
     del spec["substrates"][0]["name"]
     with pytest.raises(SpecError, match="name"):
