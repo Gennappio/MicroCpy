@@ -116,13 +116,19 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
   decision to confirm here.
 
 ### Stage 1 — Core engine: `DiffusingResource`
-- Implement `DiffusingResource(Resource)` in `src/abm/resource.py`, holding a
-  substance field and a `run_step` that invokes the existing FiPy solve for that
-  field, reading cell uptake from `abm_population`.
-- Resolve the **mesh ↔ lattice** bridge (does the resource own the FiPy mesh, or
-  a `simulator`-like helper?). This is the main unknown.
-- **Exit gate:** unit test — a `DiffusingResource` diffuses a known field to the
-  same result the legacy solver produces on the same inputs (no cells yet).
+- **DONE.** Implemented `DiffusingResource(Resource)` in `src/abm/resource.py` as a
+  Resource-shaped VIEW over a shared `MultiSubstanceSimulator` (the existing FiPy
+  solver) — numerics identical to the legacy path **by construction**, not
+  reimplemented. Diffusion is a collective `simulator.update()`; `run_step` is a
+  no-op (the Stage-3 behaviour drives the solve).
+- **Mesh ↔ lattice resolved: strictly 1:1.** The substance field *is* the FiPy
+  mesh field — `field[y, x]` ↔ `var.value[x*ny + y]` — so there is **no
+  interpolation**. (The cell-*position* lattice is a different resolution, but
+  that only matters when depositing reaction sources — Stage 2.)
+- **Exit gate (met):** `tests/test_abm_diffusing_resource.py` — driving the solve
+  through `DiffusingResource` yields a field bit-identical to the legacy solver on
+  the same source; the 1:1 bridge holds for asymmetric points; the field actually
+  diffuses. Fast (~0.7s), kept in the gate.
 
 ### Stage 2 — Oxygen-only vertical slice — **GO/NO-GO GATE**
 - Minimal throwaway workflow: `setup_world` + one `setup_resource` (oxygen) +

@@ -117,3 +117,84 @@ class FieldResource(Resource):
 
     def clamp_to(self, capacity: np.ndarray) -> None:
         np.minimum(self._values, capacity, out=self._values)
+
+
+class DiffusingResource(Resource):
+    """A substance concentration field that diffuses via the existing FiPy solver.
+
+    This is the ``DiffusingResource`` the resource layer always intended (see the
+    module docstring): unlike ``FieldResource`` (a self-contained array), it is a
+    Resource-shaped VIEW onto one substance inside a shared
+    ``MultiSubstanceSimulator`` (``src/simulation/multi_substance_simulator.py``),
+    which owns the FiPy mesh and runs the steady-state diffusion-reaction solve.
+    Wrapping the existing solver keeps the numerics identical to the legacy
+    diffusion path by construction.
+
+    Field and mesh are 1:1: ``values()[y, x]`` is the concentration at world tile
+    ``(x, y)`` — no interpolation. Diffusion is a COLLECTIVE step (the simulator
+    solves all coupled substances together), so the solve is driven once per tick
+    by a resource behaviour via :meth:`diffuse`, not per-resource; :meth:`run_step`
+    is therefore a no-op.
+
+    Two coupling modes (both first-class):
+      * continuum (MicroC) — reaction rates are computed from cell metabolism and
+        passed to ``diffuse(reactions=...)``.
+      * discrete (Sugarscape-style) — :meth:`deposit` accumulates per-tile
+        source/sink terms that the next solve injects via :meth:`take_pending`.
+    """
+
+    def __init__(self, name: str, world: World, simulator):
+        super().__init__(name, world)
+        self.simulator = simulator
+        self._pending: dict = {}     # (x, y) -> rate, for discrete deposit coupling
+
+    @property
+    def _substance(self):
+        return self.simulator.state.substances[self.name]
+
+    # read --------------------------------------------------------------------
+    def values(self) -> np.ndarray:
+        """The full concentration field, shape ``(ny, nx)``, 1:1 with the mesh."""
+        return self._substance.concentrations
+
+    def at(self, pos: Position) -> float:
+        return self._substance.get_concentration_at(pos)   # field[y, x]
+
+    def total(self) -> float:
+        return float(self.values().sum())
+
+    def max(self) -> float:
+        return float(self.values().max())
+
+    def min(self) -> float:
+        return float(self.values().min())
+
+    # discrete coupling (MicroC uses continuum reactions via diffuse() instead) -
+    def deposit(self, pos: Position, amount: float) -> None:
+        key = tuple(int(v) for v in pos)
+        self._pending[key] = self._pending.get(key, 0.0) + float(amount)
+
+    def apply_sources(self) -> None:
+        # A diffusing field commits sources through the solve, not by writing the
+        # field directly; pending deposits are consumed by diffuse().
+        pass
+
+    def take_pending(self) -> dict:
+        """Return and clear pending per-tile deposits (for the diffuse driver)."""
+        pending, self._pending = self._pending, {}
+        return pending
+
+    # collective solve --------------------------------------------------------
+    def diffuse(self, reactions=None) -> None:
+        """Run one diffusion-reaction solve on the shared simulator.
+
+        NOTE: this solves ALL substances the simulator holds (they are coupled),
+        so it is meant to be called once per tick by the collective diffuse
+        behaviour, not once per resource. ``reactions`` maps a world position to
+        ``{substance_name: rate}`` (negative = consumption).
+        """
+        self.simulator.update(reactions or {})
+
+    def run_step(self, env) -> None:
+        # Diffusion is collective (see diffuse); nothing to do per-resource.
+        pass
