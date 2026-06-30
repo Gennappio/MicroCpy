@@ -1,5 +1,5 @@
 import { Handle, Position } from 'reactflow';
-import { Lock, ExternalLink, Repeat, PlayCircle, Sparkles, ArrowDownUp } from 'lucide-react';
+import { Lock, ExternalLink, Repeat, PlayCircle, Sparkles, ArrowDownUp, ChevronRight, ChevronDown } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import './OverviewNode.css';
 
@@ -32,6 +32,7 @@ export const OverviewNode = ({ data, selected }) => {
   const setCurrentStage = useWorkflowStore((s) => s.setCurrentStage);
 
   const isSystem = !!data.system;
+  const isReconToggle = !!data.reconToggle;
   const canOpen = !isSystem && !!data.navTab && !!data.navTarget;
 
   const openCanvas = (e) => {
@@ -40,18 +41,36 @@ export const OverviewNode = ({ data, selected }) => {
     setCurrentStage(data.navTarget);
   };
 
+  const toggleRecon = (e) => {
+    e.stopPropagation();
+    data.onToggle?.(data.groupKey);
+  };
+
+  const onClick = isReconToggle ? toggleRecon : canOpen ? openCanvas : undefined;
+  const Chevron = data.expanded ? ChevronDown : ChevronRight;
+
   return (
     <div
-      className={`ov-node ${isSystem ? 'system' : ''} ${selected ? 'selected' : ''}`}
+      className={`ov-node ${isSystem ? 'system' : ''} ${isReconToggle ? 'recon-toggle' : ''} ${selected ? 'selected' : ''}`}
       data-variant={data.variant || 'slate'}
-      onClick={canOpen ? openCanvas : undefined}
-      title={canOpen ? `Open ${data.navTarget} canvas` : data.source || undefined}
+      onClick={onClick}
+      title={
+        isReconToggle
+          ? data.expanded
+            ? 'Collapse reconciliation pipeline'
+            : 'Expand reconciliation pipeline'
+          : canOpen
+            ? `Open ${data.navTarget} canvas`
+            : data.source || undefined
+      }
     >
       <Handle type="target" position={Position.Top} style={HIDDEN_HANDLE} isConnectable={false} />
 
       <div className="ov-node-head">
+        {isReconToggle && <Chevron size={13} className="ov-recon-chevron" />}
         {isSystem && <Lock size={12} className="ov-lock" />}
         <span className="ov-node-title">{data.title}</span>
+        {isReconToggle && <span className="ov-tag">{data.stepCount} steps</span>}
       </div>
 
       {(data.forEach || data.iterations || data.intent || data.knob) && (

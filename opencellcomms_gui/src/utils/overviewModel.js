@@ -10,9 +10,9 @@
  *     → processing         (reporting, once)
  *
  * Inside the loop, any behaviour that contains the engine `apply_reconciliation`
- * function is expanded into the canonical, locked reconciliation pipeline
- * (see reconciliationSteps.js). Those are "system" nodes: visible, ordered,
- * read-only.
+ * function shows a single locked, read-only summary node. It is collapsed by
+ * default; expanding it (tracked per-group in `options.expandedRecon`) reveals
+ * the canonical ordered pipeline (see reconciliationSteps.js) as "system" nodes.
  */
 
 import { computeSubworkflowKinds } from '../store/computeSubworkflowKinds';
@@ -65,7 +65,11 @@ const forEachLabel = (forEach) => {
  * @returns {{ nodes: Array, edges: Array, empty: boolean, reason?: string,
  *            loopCount: number }}
  */
-export const buildOverviewModel = (workflow) => {
+export const buildOverviewModel = (workflow, options = {}) => {
+  const { expandedRecon, onToggleRecon } = options;
+  const isReconExpanded = (key) =>
+    expandedRecon instanceof Set && expandedRecon.has(key);
+
   const gui = workflow?.metadata?.gui;
   const subs = workflow?.subworkflows || {};
   if (!gui || !subs.main) {
@@ -137,23 +141,47 @@ export const buildOverviewModel = (workflow) => {
     return { id, sw };
   };
 
-  // If a behaviour runs the engine reconciliation, expand the locked pipeline.
-  const expandReconciliation = (sw) => {
+  // A behaviour that runs the engine reconciliation gets a single locked
+  // summary node (collapsed by default). Expanding it reveals the ordered
+  // pipeline below. Collapse state is tracked per behaviour in expandedRecon.
+  const expandReconciliation = (sw, behaviorName) => {
     const fn = (sw?.functions || []).find(
       (f) => f.function_name === RECONCILIATION_FUNCTION,
     );
     if (!fn) return;
     const cullDead = fn.parameters?.cull_dead ?? true;
+    const groupKey = `recon:${behaviorName}`;
+    const expanded = isReconExpanded(groupKey);
 
-    pushHeader(
-      'recon:header',
-      'apply_reconciliation',
-      `${RECONCILIATION_SOURCE} · locked`,
-      'system',
-    );
+    // The summary node is the toggle — present whether expanded or collapsed.
+    const summaryId = `${groupKey}:summary`;
+    nodes.push({
+      id: summaryId,
+      type: 'overviewNode',
+      position: { x: COL_X, y },
+      data: {
+        title: 'apply_reconciliation',
+        variant: 'slate',
+        system: true,
+        reconToggle: true,
+        expanded,
+        stepCount: RECONCILIATION_STEPS.length,
+        source: `${RECONCILIATION_SOURCE} · locked`,
+        groupKey,
+        onToggle: onToggleRecon,
+        description: expanded
+          ? null
+          : `Engine commit phase — ${RECONCILIATION_STEPS.length} locked steps. Click to expand.`,
+      },
+      draggable: false,
+    });
+    connect(summaryId);
+    y += Y_NODE;
+
+    if (!expanded) return;
 
     RECONCILIATION_STEPS.forEach((step) => {
-      const id = `recon:${step.id}`;
+      const id = `${groupKey}:${step.id}`;
       const knob =
         step.param === 'cull_dead'
           ? { knob: `cull_dead = ${cullDead}` }
@@ -211,8 +239,8 @@ export const buildOverviewModel = (workflow) => {
       const { id, sw } = pushBehavior('loop', call);
       if (!firstLoopId) firstLoopId = id;
       lastLoopId = id;
-      expandReconciliation(sw);
-      lastLoopId = prevId; // include any expanded system steps in the loop band
+      expandReconciliation(sw, call.subworkflow_name);
+      lastLoopId = prevId; // include the reconciliation node(s) in the loop band
     });
 
     // Dashed return edge expresses "repeat next tick" without group-node math.

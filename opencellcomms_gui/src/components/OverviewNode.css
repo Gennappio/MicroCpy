@@ -148,3 +148,8 @@
 .ov-node:not(.system) { cursor: pointer; }
 .ov-node:not(.system):hover { box-shadow: 0 3px 10px rgba(79, 70, 229, 0.18); transform: translateY(-1px); }
 .ov-open:hover { background: #e0e7ff; }
+
+/* Reconciliation summary — system-locked, but clickable to expand/collapse. */
+.ov-node.recon-toggle { cursor: pointer; }
+.ov-node.recon-toggle:hover { box-shadow: 0 3px 10px rgba(100, 116, 139, 0.22); transform: translateY(-1px); }
+.ov-recon-chevron { color: #64748b; flex-shrink: 0; }

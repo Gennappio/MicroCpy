@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -28,9 +28,26 @@ const OverviewView = () => {
   const workflow = useWorkflowStore((s) => s.workflow);
   const stageNodes = useWorkflowStore((s) => s.stageNodes);
   const stageEdges = useWorkflowStore((s) => s.stageEdges);
+
+  // Reconciliation pipelines are collapsed by default; this tracks which groups
+  // the user has expanded (keyed by `recon:<behaviour>`).
+  const [expandedRecon, setExpandedRecon] = useState(() => new Set());
+  const toggleRecon = useCallback((key) => {
+    setExpandedRecon((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
   const model = useMemo(
-    () => buildOverviewModel(assembleLiveWorkflow(workflow, stageNodes, stageEdges)),
-    [workflow, stageNodes, stageEdges],
+    () =>
+      buildOverviewModel(assembleLiveWorkflow(workflow, stageNodes, stageEdges), {
+        expandedRecon,
+        onToggleRecon: toggleRecon,
+      }),
+    [workflow, stageNodes, stageEdges, expandedRecon, toggleRecon],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(model.nodes);
