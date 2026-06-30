@@ -410,8 +410,11 @@ def _netlogo_downstream_change(gene_network, current_tick: int, debug: bool = Fa
         gene_network._last_node = _get_random_start_node(gene_network)
         return None, False
 
-    # Pick ONE random outgoing link (NetLogo: ask one-of my-out-links)
-    target_name = random.choice(list(current_node.outputs))
+    # Pick ONE random outgoing link (NetLogo: ask one-of my-out-links).
+    # `outputs` is a set, whose iteration order is PYTHONHASHSEED-dependent;
+    # sort first so the walk (and thus the whole sim) is reproducible across
+    # processes. Uniform random choice is preserved.
+    target_name = random.choice(sorted(current_node.outputs))
 
     # Apply the influence link update
     return _netlogo_influence_link_end(
