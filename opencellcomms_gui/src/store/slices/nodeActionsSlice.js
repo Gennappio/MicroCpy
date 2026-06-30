@@ -5,6 +5,8 @@
  * toggle enabled/verbose states, and stage nodes/edges management.
  */
 
+import { controllerLabel } from '../subworkflowKinds';
+
 /**
  * Creates the node actions slice
  * @param {Function} set - Zustand set function
@@ -219,7 +221,7 @@ export const createNodeActionsSlice = (set, get) => ({
             controller: {
               id: 'controller-main',
               type: 'controller',
-              label: 'MAIN CONTROLLER',
+              label: controllerLabel('main'),
               position: { x: 100, y: 100 },
               number_of_steps: 1
             },
@@ -238,7 +240,7 @@ export const createNodeActionsSlice = (set, get) => ({
           type: 'controllerNode',
           position: { x: 100, y: 100 },
           data: {
-            label: 'MAIN CONTROLLER',
+            label: controllerLabel('main'),
             numberOfSteps: 1
           },
           deletable: false

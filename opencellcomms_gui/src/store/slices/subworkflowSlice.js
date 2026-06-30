@@ -5,6 +5,8 @@
  * and description updates.
  */
 
+import { controllerLabel } from '../subworkflowKinds';
+
 /**
  * Creates the subworkflow management slice
  * @param {Function} set - Zustand set function
@@ -52,7 +54,7 @@ export const createSubworkflowSlice = (set, get) => ({
               controller: {
                 id: `controller-${name}`,
                 type: 'initNode',
-                label: `${name.toUpperCase()} CONTROLLER`,
+                label: controllerLabel(name),
                 position: { x: 100, y: 100 },
                 number_of_steps: 1
               },
@@ -71,7 +73,7 @@ export const createSubworkflowSlice = (set, get) => ({
             type: 'initNode',
             position: { x: 100, y: 100 },
             data: {
-              label: `${name.toUpperCase()} CONTROLLER`,
+              label: controllerLabel(name),
               numberOfSteps: 1
             },
             deletable: false
@@ -171,7 +173,7 @@ export const createSubworkflowSlice = (set, get) => ({
             controller: {
               ...subworkflow.controller,
               id: `controller-${newName}`,
-              label: `${newName.toUpperCase()} CONTROLLER`
+              label: controllerLabel(newName)
             }
           };
         } else {

@@ -9,7 +9,7 @@
  * canvas graph is authoritative, so everything here reads from the canvas.
  */
 
-import { INIT_SEQUENCE_NAME } from '../store/subworkflowKinds';
+import { INIT_SEQUENCE_NAME, controllerLabel } from '../store/subworkflowKinds';
 
 export const deriveForEachForBehavior = (gui, behaviorName) => {
   // Iteration is OWNERSHIP-driven (scope = tab): a behaviour homed to an
@@ -172,7 +172,7 @@ const rebuildSubworkflow = (workflow, name, nodes, edges) => {
     ? {
         id: controllerNode.id,
         type: 'controller',
-        label: controllerNode.data.label || `${name.toUpperCase()} CONTROLLER`,
+        label: controllerLabel(name),
         position: controllerNode.position,
         number_of_steps: resolvedSteps,
         ...(stepsParamNodeIds.length > 0 ? { parameter_nodes: stepsParamNodeIds } : {}),
@@ -181,7 +181,7 @@ const rebuildSubworkflow = (workflow, name, nodes, edges) => {
       ? {
           id: persisted.id || `controller-${name}`,
           type: 'controller',
-          label: persisted.label || `${name.toUpperCase()} CONTROLLER`,
+          label: controllerLabel(name),
           position: persisted.position || { x: 100, y: 100 },
           number_of_steps: persisted.number_of_steps || 1,
         }
@@ -254,7 +254,7 @@ const synthesizeMain = (workflow, subworkflows) => {
     controller: {
       id: 'controller-main',
       type: 'controller',
-      label: 'MAIN CONTROLLER',
+      label: controllerLabel('main'),
       position: { x: 100, y: 100 },
       number_of_steps: 1,
     },

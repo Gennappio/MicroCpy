@@ -4,6 +4,7 @@ import {
   INIT_SEQUENCE_NAME,
   WORLD_NAME,
   defaultContractForKind,
+  controllerLabel,
 } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
 
@@ -16,7 +17,7 @@ const makeSubworkflow = (name, description, kind, contract = null) => ({
   controller: {
     id: `controller-${name}`,
     type: 'initNode',
-    label: `${name.toUpperCase()} CONTROLLER`,
+    label: controllerLabel(name),
     position: { x: 100, y: 100 },
     number_of_steps: 1,
   },
@@ -31,7 +32,7 @@ const makeControllerNode = (name) => ({
   id: `controller-${name}`,
   type: 'initNode',
   position: { x: 100, y: 100 },
-  data: { label: `${name.toUpperCase()} CONTROLLER`, numberOfSteps: 1 },
+  data: { label: controllerLabel(name), numberOfSteps: 1 },
   deletable: false,
 });
 

@@ -28,6 +28,14 @@ export const SCHEDULER_NAME = '__scheduler__';
 export const INIT_SEQUENCE_NAME = '__init_sequence__';
 export const WORLD_NAME = '__world__';
 
+// The display label for a subworkflow's controller (init) node is ALWAYS derived
+// from the subworkflow name — never stored or hand-edited — so it stays
+// consistent and can't drift to an arbitrary value. Underscores become spaces,
+// trimmed, uppercased: "sugar_growback" -> "SUGAR GROWBACK",
+// "__scheduler__" -> "SCHEDULER".
+export const controllerLabel = (name) =>
+  String(name || '').replace(/_+/g, ' ').trim().toUpperCase();
+
 export const BEHAVIOR_KINDS = new Set([
   KINDS.AGENT_BEHAVIOR,
   KINDS.RESOURCE_BEHAVIOR,

@@ -9,7 +9,7 @@
 import { validateWorkflow } from '../../utils/workflowValidation';
 import pathUtils from '../pathUtils';
 import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
-import { INIT_SEQUENCE_NAME } from '../subworkflowKinds';
+import { INIT_SEQUENCE_NAME, controllerLabel } from '../subworkflowKinds';
 import {
   assembleSubworkflowsFromStages,
   deriveForEachForBehavior,
@@ -122,8 +122,10 @@ export const createWorkflowIOSlice = (set, get) => ({
         id: controller.id,
         type: 'initNode',
         position: controller.position || { x: 100, y: 100 },
+        // label is derived from the subworkflow name (see controllerLabel), not
+        // read from the stored controller.label, so it stays locked & consistent.
         data: {
-          label: controller.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
+          label: controllerLabel(subworkflowName),
           numberOfSteps: controller.number_of_steps || 1
         },
         deletable: false
@@ -434,7 +436,7 @@ export const createWorkflowIOSlice = (set, get) => ({
           id: controllerId,
           type: 'initNode',
           position: populatedSw.controller.position || { x: 100, y: 100 },
-          data: { label: populatedSw.controller.label, numberOfSteps: 1 },
+          data: { label: controllerLabel(initSeqName), numberOfSteps: 1 },
           deletable: false,
         },
         ...newCalls.map((call) => ({
@@ -783,7 +785,7 @@ export const createWorkflowIOSlice = (set, get) => ({
     // Export controller
     const controller = controllerNode ? {
       id: controllerNode.id,
-      label: controllerNode.data.label || `${subworkflowName.toUpperCase()} CONTROLLER`,
+      label: controllerLabel(subworkflowName),
       position: controllerNode.position,
       number_of_steps: controllerNode.data.numberOfSteps || 1
     } : null;
@@ -853,7 +855,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         type: 'initNode',
         position: swData.controller.position || { x: 100, y: 100 },
         data: {
-          label: swData.controller.label || `${name.toUpperCase()} CONTROLLER`,
+          label: controllerLabel(name),
           numberOfSteps: swData.controller.number_of_steps || 1
         },
         deletable: false
@@ -864,7 +866,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         type: 'initNode',
         position: { x: 100, y: 100 },
         data: {
-          label: `${name.toUpperCase()} CONTROLLER`,
+          label: controllerLabel(name),
           numberOfSteps: 1
         },
         deletable: false
@@ -981,12 +983,14 @@ export const createWorkflowIOSlice = (set, get) => ({
             description: swData.description || '',
             enabled: swData.enabled !== false,
             deletable: swData.deletable !== false,
-            controller: swData.controller || {
-              id: `controller-${name}`,
-              type: 'controller',
-              label: `${name.toUpperCase()} CONTROLLER`,
-              position: { x: 100, y: 100 },
-              number_of_steps: 1
+            controller: {
+              ...(swData.controller || {
+                id: `controller-${name}`,
+                type: 'controller',
+                position: { x: 100, y: 100 },
+                number_of_steps: 1
+              }),
+              label: controllerLabel(name)
             },
             functions: swData.functions || [],
             subworkflow_calls: swData.subworkflow_calls || [],
