@@ -148,12 +148,22 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
   Picard metabolism step must scale on read (the legacy code already does, by
   hand). Deposition — Stage 2's subject — is unaffected.
 
-### Stage 3 — Full substance set + coupled collective behaviour
-- All 8 substances as `DiffusingResource`s; rewrite/adapt
-  `run_diffusion_solver_coupled` into the `env`-style **`diffuse_substances`**
-  resource-collective behaviour that drives the coupled Picard solve over them.
-- **Exit gate:** the 8-field solve matches the legacy coupled solver (fields +
-  coupling convergence) on a fixed cell configuration.
+### Stage 3 — Full substance set + coupled collective behaviour — **DONE**
+- `add_diffusing_resources(domain, world, simulator)` (`src/abm/resource.py`) wraps
+  every substance of a `MultiSubstanceSimulator` as a `DiffusingResource` on the
+  domain — the 8 MicroC substances become first-class resources, each exposing its
+  field 1:1, all sharing the one simulator.
+- `diffuse_substances(env)` (`src/workflow/functions/diffusion/diffuse_substances.py`)
+  is the env-style collective behaviour; it drives the coupled Picard solve by
+  delegating to the existing `run_diffusion_solver_coupled`, so numerics are
+  identical. (Stage 4 adapts the metabolism recompute inside that loop to read
+  `abm_population` agents; here it reuses the legacy `population` path.)
+- **Exit gate (met):** `tests/test_abm_diffuse_substances.py` — the 8 substances
+  wrap 1:1; the resource-driven collective solve is bit-identical to the legacy
+  simulator on the same multi-substance reactions, with cross-substance effects
+  (O₂ consumed / lactate produced); `diffuse_substances` matches the legacy node on
+  an identical context (slow, the Picard loop). The full Picard-with-live-cells run
+  is validated end to end in Stage 4 against the golden.
 
 ### Stage 4 — Cells & metabolism onto `abm_population`
 - `tumor_cell_init` places agents in `abm_population`; `gene_update` /

@@ -14,7 +14,12 @@ from src.abm.agent import Agent
 from src.abm.domain import Domain
 from src.abm.model import build_model, build_world
 from src.abm.population import Population
-from src.abm.resource import DiffusingResource, FieldResource, Resource
+from src.abm.resource import (
+    DiffusingResource,
+    FieldResource,
+    Resource,
+    add_diffusing_resources,
+)
 from src.abm.world import LatticeWorld, World
 
 __all__ = [
@@ -23,6 +28,7 @@ __all__ = [
     "Resource",
     "FieldResource",
     "DiffusingResource",
+    "add_diffusing_resources",
     "Agent",
     "Population",
     "Domain",

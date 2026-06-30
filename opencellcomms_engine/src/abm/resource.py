@@ -198,3 +198,17 @@ class DiffusingResource(Resource):
     def run_step(self, env) -> None:
         # Diffusion is collective (see diffuse); nothing to do per-resource.
         pass
+
+
+def add_diffusing_resources(domain, world: World, simulator) -> "object":
+    """Register every substance held by a ``MultiSubstanceSimulator`` as a
+    ``DiffusingResource`` on ``domain`` — so the (8, for MicroC) coupled
+    substances become first-class resources that show up on the Resources tab.
+
+    All resources share the one simulator: they diffuse together via the
+    collective solve (``DiffusingResource.diffuse`` / the diffuse_substances
+    behaviour), not independently. Returns the domain for chaining.
+    """
+    for name in simulator.state.substances:
+        domain.add_resource(DiffusingResource(name, world, simulator))
+    return domain
