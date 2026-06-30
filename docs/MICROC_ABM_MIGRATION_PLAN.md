@@ -130,14 +130,23 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
   the same source; the 1:1 bridge holds for asymmetric points; the field actually
   diffuses. Fast (~0.7s), kept in the gate.
 
-### Stage 2 — Oxygen-only vertical slice — **GO/NO-GO GATE**
-- Minimal throwaway workflow: `setup_world` + one `setup_resource` (oxygen) +
-  one `diffuse` behaviour + a handful of static cells with fixed uptake.
-- Run on the new motor; compare oxygen field + uptake to the legacy solver on
-  the identical setup.
-- **Exit gate:** numerical match within Stage-0 tolerance.
-  **If it fails, stop and rethink the approach** (the mesh↔lattice mapping may be
-  fundamentally incompatible) before any further investment.
+### Stage 2 — Oxygen-only vertical slice — **GATE PASSED → GO**
+- `tests/test_abm_oxygen_slice.py`: a few static cells consume oxygen at a fixed
+  rate; the new-motor path (abm agents → reactions from `agent.position` →
+  `DiffusingResource.diffuse`) produces a field **bit-identical** to the legacy
+  solver, with agent placement round-tripping and sources landing on the correct
+  bio→substance-scaled mesh cells. Fast (~0.8s), in the gate.
+- **Coordinate handling is clean with ZERO conversion**, provided the new motor:
+  (a) places agents on the **bio-grid** — a `LatticeWorld` with
+  `tile_size == cell_height` (so `nx = size_µm/cell_height_µm`, 75 for MicroC),
+  and (b) keys reactions by **raw** `agent.position`. The legacy
+  `_create_source_field_from_reactions` then applies the same `×nx/bio_grid_nx`
+  scale and sources land on identical mesh cells.
+- **Hazard carried to Stage 4 (sensing, not deposition):** `DiffusingResource.at()`
+  / `values()` index the 50×50 mesh directly with no bio→substance scaling, so a
+  cell sensing oxygen at a bio-coordinate would read the wrong mesh cell. The
+  Picard metabolism step must scale on read (the legacy code already does, by
+  hand). Deposition — Stage 2's subject — is unaffected.
 
 ### Stage 3 — Full substance set + coupled collective behaviour
 - All 8 substances as `DiffusingResource`s; rewrite/adapt
