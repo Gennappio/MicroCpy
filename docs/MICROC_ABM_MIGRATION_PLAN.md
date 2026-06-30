@@ -1,0 +1,219 @@
+# MicroC → ABM Library Migration Plan
+
+**Status:** Draft for approval · **Scope:** engine + adapter + GUI metadata · **Type:** behaviour-preserving migration
+
+Bring MicroC onto the new ABM motor (`abm_population` + `Domain`/`Resource` +
+reconciliation) so that its substances become first-class **Resources** and its
+structure matches the tab ontology the platform is built around. This is the
+**completion of the original design**, not a redesign: `src/abm/resource.py`
+already names *oxygen* as a resource and declares that *"a later
+`DiffusingResource` will wrap the FiPy substance solver behind this same
+interface"* — that piece was deferred and never built, which is why MicroC is
+stranded on the legacy path and the Resource tab is empty.
+
+---
+
+## 1. Goals
+
+- MicroC runs on the **new motor**: cells live in `abm_population`, not the
+  legacy `CellPopulation`.
+- The 8 substances are declared as **`resource_kinds`** and appear in the
+  **Resource tab**, with their setup as resource init and their diffusion as a
+  resource behaviour.
+- The diffusion driver is a **new-style (`env`) behaviour**, not the old
+  `context`-dict function.
+- **World tab = the domain only.** Substance setup/run leaves the World;
+  `division` moves to **reconciliation**.
+- **The science does not change.** Numerical outputs match the pre-migration
+  MicroC within an agreed tolerance.
+
+## 2. Non-goals (explicit)
+
+- **Not** converting MicroC's continuum uptake to Sugarscape-style discrete
+  per-agent `consume_resource` reconciliation. MicroC's reaction–diffusion PDE
+  with Michaelis–Menten uptake is scientifically intentional and is **kept**.
+  Substance uptake stays a reaction term solved by FiPy; reconciliation is used
+  only for **structural** changes (division/death).
+- **Not** changing the biology, parameters, gene networks, or solver numerics.
+- **Not** deleting the legacy `CellPopulation` / `simulator` paths in this work
+  (other models may still use them; deprecation is a later, separate decision).
+
+## 3. Current state (verified by reading the code)
+
+| Aspect | MicroC today | New motor (Sugarscape) |
+|---|---|---|
+| Population | legacy `CellPopulation` in `context['population']` | `abm_population` built by `setup_world` |
+| Substances | fields inside `context['simulator']` (FiPy mesh) | `Domain` resources (`FieldResource`) |
+| Diffusion | `run_diffusion_solver_coupled(context, …)` — **old style**, reads `simulator` + `population`, Picard-couples cell metabolism ↔ PDE, mutates simulator in place | a Resource `Step` behaviour |
+| `resource_kinds` | **`[]`** (empty) | the resources |
+| Structural change | `division` as a **World behaviour** | reconciliation `add_agent` / `remove_agent` |
+| `agent_kinds` | `tumor_cell` present in GUI metadata **but execution is legacy** | real `abm_population` agents |
+
+Key implication: both of your targets are the *deep* version. MicroC is **fully
+legacy under the hood**; the `agent_kinds` metadata is cosmetic until the motor
+changes.
+
+## 4. Target state
+
+- `setup_world` builds `LatticeWorld` + `Domain` + `abm_population`.
+- 8 `setup_resource` nodes create one `DiffusingResource` per substance
+  (Oxygen, Glucose, Lactate, H, TGFA, FGF, HGF, GI).
+- One **resource-collective** behaviour (`diffuse_substances`, `env`-style) runs
+  the coupled FiPy solve once per tick over all substance resources.
+- `tumor_cell` is a real agent; `gene_update` / `fate_update` run per-agent via
+  the ask; `division` is committed by reconciliation.
+- GUI: **Resources** tab lists the 8 substances; **World** tab holds only the
+  domain; **Agents** tab unchanged.
+
+## 5. Key architectural decisions
+
+1. **Coupling → one collective behaviour.** The 8 substances are solved together
+   (Picard coupling, `max_coupling_iterations`/`coupling_tolerance`). They are
+   declared as 8 `resource_kinds` for visibility, but their diffusion is a
+   **single once-per-step resource-collective behaviour**, not eight independent
+   `Step`s. (The class layer already blesses "resource/collective behaviours run
+   once".)
+2. **Two resource-coupling modes are both first-class.** Discrete per-agent
+   consumption via reconciliation (Sugarscape) **and** continuum reaction via a
+   `DiffusingResource.Step` (MicroC). This must be documented so the empty-tab
+   confusion never recurs — continuum resources are not second-class.
+3. **`DiffusingResource` wraps the *existing* solver.** We do not reimplement
+   diffusion; we adapt `run_diffusion_solver_coupled` behind the `Resource`
+   interface so numerics are identical by construction.
+4. **Keep the legacy paths intact** during migration; cut over only when the
+   golden reference matches.
+
+## 6. Risks & the prime directive
+
+**Prime directive: behaviour preservation.** MicroC is a validated tumour model.
+Motor + diffusion changes can silently shift results (FiPy-mesh ↔ lattice-grid
+mapping, coupling order, uptake bookkeeping). Every stage is gated on matching a
+**golden reference** (Stage 0).
+
+| Risk | Mitigation |
+|---|---|
+| Mesh↔lattice mapping is lossy | Stage 2 vertical slice proves/disproves this **before** committing to the full migration (hard gate) |
+| Non-determinism hides regressions | Stage 0 first establishes seeded determinism; abort if not reproducible |
+| Cell uptake differs on `abm_population` | Stage 4 compares uptake fields cell-by-cell against legacy |
+| Scope creep into other legacy models | Legacy paths untouched; MicroC-only cutover |
+
+## 7. Staged plan
+
+Each stage has a **deliverable** and an **exit gate**. Stages 0–2 are
+sequential; **Stage 2 is go/no-go** for the whole approach.
+
+### Stage 0 — Safety net (golden reference) — *prerequisite*
+- Pick a representative, **seeded** MicroC config (standard `microc.json`, small
+  grid, ~10–20 steps).
+- Build a comparison harness that captures, per checkpoint: each substance field
+  array, cell positions/phenotypes/gene states/key metabolic vars, and
+  aggregates (phenotype counts, total uptake).
+- **First, prove determinism:** two runs with the same seed produce identical
+  output. If not, fix that before anything else.
+- **Exit gate:** a committed golden-reference dataset + a `compare(run_a, run_b,
+  tol)` function with an agreed tolerance (e.g. relative L2 on fields < 1e-6;
+  exact match on discrete cell state). Defining "same science" tolerance is a
+  decision to confirm here.
+
+### Stage 1 — Core engine: `DiffusingResource`
+- Implement `DiffusingResource(Resource)` in `src/abm/resource.py`, holding a
+  substance field and a `run_step` that invokes the existing FiPy solve for that
+  field, reading cell uptake from `abm_population`.
+- Resolve the **mesh ↔ lattice** bridge (does the resource own the FiPy mesh, or
+  a `simulator`-like helper?). This is the main unknown.
+- **Exit gate:** unit test — a `DiffusingResource` diffuses a known field to the
+  same result the legacy solver produces on the same inputs (no cells yet).
+
+### Stage 2 — Oxygen-only vertical slice — **GO/NO-GO GATE**
+- Minimal throwaway workflow: `setup_world` + one `setup_resource` (oxygen) +
+  one `diffuse` behaviour + a handful of static cells with fixed uptake.
+- Run on the new motor; compare oxygen field + uptake to the legacy solver on
+  the identical setup.
+- **Exit gate:** numerical match within Stage-0 tolerance.
+  **If it fails, stop and rethink the approach** (the mesh↔lattice mapping may be
+  fundamentally incompatible) before any further investment.
+
+### Stage 3 — Full substance set + coupled collective behaviour
+- All 8 substances as `DiffusingResource`s; rewrite/adapt
+  `run_diffusion_solver_coupled` into the `env`-style **`diffuse_substances`**
+  resource-collective behaviour that drives the coupled Picard solve over them.
+- **Exit gate:** the 8-field solve matches the legacy coupled solver (fields +
+  coupling convergence) on a fixed cell configuration.
+
+### Stage 4 — Cells & metabolism onto `abm_population`
+- `tumor_cell_init` places agents in `abm_population`; `gene_update` /
+  `fate_update` run per-agent via the ask; the uptake/metabolism computation
+  reads agent state instead of `CellPopulation`.
+- **Exit gate:** with cells live and coupled, fields + per-cell metabolic vars
+  match the golden reference over N steps.
+
+### Stage 5 — Structural changes via reconciliation
+- Move `division` (and any death/removal) from the World behaviour to
+  reconciliation `add_agent` / `remove_agent` / cull intents.
+- **Exit gate:** cell population trajectory (count, lineage, positions) matches
+  the golden reference.
+
+### Stage 6 — Re-home & GUI metadata cutover
+- `microc.json` `metadata.gui`: populate `resource_kinds` (8 substances with
+  their init + the `diffuse_substances` behaviour); strip substance setup/run
+  from `world`; `world.behavior_subworkflows` keeps only true world concerns;
+  `division` homed via reconciliation.
+- Verify tab ontology: **Resources** populated, **World** = domain only,
+  **Agents** intact, no orphan behaviours (per the CLAUDE.md homing rule).
+- **Exit gate:** GUI loads MicroC with a non-empty Resource tab and every
+  behaviour reachable from a real tab.
+
+### Stage 7 — Full validation & sign-off
+- End-to-end MicroC run on the new motor vs the Stage-0 golden reference.
+- Update `docs/ABM_LAYER.md` / `ABM_GUI.md` with the two resource-coupling modes
+  (discrete vs continuum) and the `DiffusingResource` pattern.
+- **Exit gate:** full run within tolerance; docs updated; legacy path still
+  available but MicroC no longer uses it.
+
+## 8. Verification strategy (applies to every stage)
+
+- **Determinism + seed control** is the foundation (Stage 0).
+- Compare at three levels: **fields** (per-substance arrays, relative-norm
+  tolerance), **agents** (discrete state — ideally exact), **aggregates**
+  (phenotype counts, totals).
+- Keep the legacy run reproducible throughout so any stage can diff against it.
+- A regression test that runs the golden comparison lands with Stage 0 and is
+  kept green through Stage 7.
+
+## 9. Open questions (to be answered by Stage 1–2)
+
+1. **Mesh vs lattice:** does FiPy keep its own mesh inside `DiffusingResource`,
+   or is the FiPy field reconciled to/from the `LatticeWorld` grid each step?
+   Resolution shapes the whole engine piece.
+2. **Who owns the solver:** retire the `simulator` object for MicroC, or keep a
+   thin solver helper the resource delegates to?
+3. **Are `tumor_cell_init` / `gene_update` / `fate_update` `env`-ready** for the
+   `abm_population` (per-`env.agent`), or do they assume legacy `env.cell`?
+4. **Uptake provenance:** exactly which agent state the Michaelis–Menten uptake
+   reads, so it can be reproduced identically from `abm_population`.
+
+## 10. Effort & sequencing
+
+- **Stage 0** — small–medium, but do it first; it is the safety net.
+- **Stages 1–2** — the genuinely uncertain core; treat Stage 2 as the gate
+  before committing further. Largest technical risk concentrated here.
+- **Stages 3–5** — medium each, mostly mechanical once Stage 2 holds, but each
+  needs its own verification pass.
+- **Stage 6–7** — small–medium re-homing + validation.
+
+Overall: a **multi-day, engine-level migration with real validation work** — not
+an afternoon. The de-risking order (0 → 1 → 2 gate) means we learn whether the
+approach is viable cheaply, before the bulk of the work.
+
+## 11. Rollback / safety
+
+- All work is behind the existing legacy paths until Stage 6 cutover; reverting
+  is "don't flip MicroC's metadata".
+- The golden-reference regression test is the tripwire — if any stage diverges,
+  it fails loudly and we fix before proceeding.
+
+---
+
+*Approval needed on:* (a) the tolerance definition for "same science" (Stage 0),
+(b) keeping continuum uptake (Non-goal #1), and (c) green-lighting Stage 2 as the
+go/no-go gate.
