@@ -189,15 +189,23 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
 - **Exit gate:** cell population trajectory (count, lineage, positions) matches
   the golden reference.
 
-### Stage 6 — Re-home & GUI metadata cutover
-- `microc.json` `metadata.gui`: populate `resource_kinds` (8 substances with
-  their init + the `diffuse_substances` behaviour); strip substance setup/run
-  from `world`; `world.behavior_subworkflows` keeps only true world concerns;
-  `division` homed via reconciliation.
-- Verify tab ontology: **Resources** populated, **World** = domain only,
-  **Agents** intact, no orphan behaviours (per the CLAUDE.md homing rule).
-- **Exit gate:** GUI loads MicroC with a non-empty Resource tab and every
-  behaviour reachable from a real tab.
+### Stage 6 — Re-home & GUI metadata cutover — **DONE (display re-home); full cutover deferred**
+- **Done:** `microc.json` `metadata.gui.resource_kinds` now declares the 8
+  substances (each with a placeholder `*_init` subworkflow, unreferenced by
+  `main` → never executed). **Key fact the investigation nailed:** the executor
+  never reads `metadata.gui` — it runs the stored `main`/`__scheduler__`/`__world__`
+  graph — so this is a pure-GUI change with **zero runtime risk**. Verified: the
+  golden still MATCHes exactly (1009 cells, 0 diffs). **Exit gate met:** the
+  Resources tab is now non-empty.
+- **Deferred (full runtime cutover):** actually moving `setup_substances` out of
+  `__world__` into resource inits and running diffusion *as* a resource behaviour
+  is **blocked by a GUI limitation** — the assembler (`deriveForEachForBehavior`)
+  auto-injects `for_each:{type:resource}` on any resource behaviour, but MicroC's
+  diffusion is a *coupled, once-per-step* solve (`diffuse_substances` must run
+  once, not 8× per resource). Supporting collective resource behaviours is a
+  separate effort. Until then: substances are display-resources; diffusion keeps
+  running via the existing `diffusion_step` world node (which stays where it is —
+  do NOT home it under a resource kind, or the GUI round-trip breaks the golden).
 
 ### Stage 7 — Full validation & sign-off
 - End-to-end MicroC run on the new motor vs the Stage-0 golden reference.

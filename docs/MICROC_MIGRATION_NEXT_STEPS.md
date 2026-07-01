@@ -129,7 +129,20 @@ structural change to the engine reconciliation pipeline:
 - Watch determinism: division placement already de-ordered (Stage 0); keep it
   order-independent.
 
-## Stage 6 — GUI metadata re-home + wire the behaviour
+## Stage 6 — GUI metadata re-home + wire the behaviour — **DONE (display re-home); full cutover deferred**
+
+**Done:** `microc.json` `metadata.gui.resource_kinds` now lists the 8 substances
+(+ placeholder `*_init` subworkflows, unreferenced by `main`). The executor
+ignores `metadata.gui`, so this is zero-runtime-risk — golden still MATCHes. The
+Resources tab is populated.
+
+**Blocked / deferred (the full cutover, items below):** moving diffusion to run
+*as* a resource behaviour is blocked because the GUI assembler
+(`assembleWorkflow.js deriveForEachForBehavior`) forces `for_each:{type:resource}`
+on resource behaviours, but MicroC's coupled diffusion must run **once per step**,
+not 8×. Needs a "collective resource behaviour" concept in the GUI first. Do NOT
+home `diffusion_step` under a `resource_kind` until then (a GUI open+save would
+flip it to per-resource and break the golden). Original items kept for reference:
 
 1. **Register `diffuse_substances`** as a usable node: import it in
    `src/workflow/functions/diffusion/__init__.py` (pulled in via

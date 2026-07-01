@@ -30,7 +30,16 @@
       "init_sequence": {
         "subworkflow": "__init_sequence__"
       },
-      "resource_kinds": [],
+      "resource_kinds": [
+        { "name": "Oxygen", "init_subworkflow": "oxygen_init", "behavior_subworkflows": [] },
+        { "name": "Glucose", "init_subworkflow": "glucose_init", "behavior_subworkflows": [] },
+        { "name": "Lactate", "init_subworkflow": "lactate_init", "behavior_subworkflows": [] },
+        { "name": "H", "init_subworkflow": "h_init", "behavior_subworkflows": [] },
+        { "name": "TGFA", "init_subworkflow": "tgfa_init", "behavior_subworkflows": [] },
+        { "name": "FGF", "init_subworkflow": "fgf_init", "behavior_subworkflows": [] },
+        { "name": "HGF", "init_subworkflow": "hgf_init", "behavior_subworkflows": [] },
+        { "name": "GI", "init_subworkflow": "gi_init", "behavior_subworkflows": [] }
+      ],
       "world": {
         "subworkflow": "__world__",
         "behavior_subworkflows": [
@@ -43,6 +52,126 @@
     }
   },
   "subworkflows": {
+    "oxygen_init": {
+      "description": "Oxygen resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-oxygen_init",
+        "type": "controller",
+        "label": "OXYGEN INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "glucose_init": {
+      "description": "Glucose resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-glucose_init",
+        "type": "controller",
+        "label": "GLUCOSE INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "lactate_init": {
+      "description": "Lactate resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-lactate_init",
+        "type": "controller",
+        "label": "LACTATE INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "h_init": {
+      "description": "H resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-h_init",
+        "type": "controller",
+        "label": "H INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "tgfa_init": {
+      "description": "TGFA resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-tgfa_init",
+        "type": "controller",
+        "label": "TGFA INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "fgf_init": {
+      "description": "FGF resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-fgf_init",
+        "type": "controller",
+        "label": "FGF INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "hgf_init": {
+      "description": "HGF resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-hgf_init",
+        "type": "controller",
+        "label": "HGF INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
+    "gi_init": {
+      "description": "GI resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "controller": {
+        "id": "controller-gi_init",
+        "type": "controller",
+        "label": "GI INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [],
+      "input_parameters": []
+    },
     "__world__": {
       "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
       "controller": {
