@@ -129,20 +129,28 @@ structural change to the engine reconciliation pipeline:
 - Watch determinism: division placement already de-ordered (Stage 0); keep it
   order-independent.
 
-## Stage 6 — GUI metadata re-home + wire the behaviour — **DONE (display re-home); full cutover deferred**
+## Stage 6 — substances as real per-resource inits (the "mix") — **DONE (golden MATCH)**
 
-**Done:** `microc.json` `metadata.gui.resource_kinds` now lists the 8 substances
-(+ placeholder `*_init` subworkflows, unreferenced by `main`). The executor
-ignores `metadata.gui`, so this is zero-runtime-risk — golden still MATCHes. The
-Resources tab is populated.
+**Done (real, not cosmetic):** each of the 8 substances now has a **real
+per-resource init canvas** on the Resources tab. Every `*_init` subworkflow runs
+`setup_substances` for its one substance and is wired into `__init_sequence__`
+(after `__world__`, before `tumor_cell_init`, in canonical order). The collective
+`setup_substances` node was **removed** from `__world__`. Because per-substance
+`setup_substances` calls append to `config.substances` and reinitialize
+cumulatively (idempotent — see `initialize_substances`), the final simulator state
+is identical to the old single collective call, so the golden still MATCHes
+(bit-exact, 3 steps). The removal is the proof it's wired: with the collective node
+gone, an unrun init would leave the fields empty and the golden would diverge.
 
-**Blocked / deferred (the full cutover, items below):** moving diffusion to run
-*as* a resource behaviour is blocked because the GUI assembler
-(`assembleWorkflow.js deriveForEachForBehavior`) forces `for_each:{type:resource}`
-on resource behaviours, but MicroC's coupled diffusion must run **once per step**,
-not 8×. Needs a "collective resource behaviour" concept in the GUI first. Do NOT
-home `diffusion_step` under a `resource_kind` until then (a GUI open+save would
-flip it to per-resource and break the golden). Original items kept for reference:
+**Coupled diffusion stays a collective World step — by design.** The diffusion is
+one FiPy solve per tick over all substances together (a domain-level process, not
+any single substance's step), so it remains a World/Domain step rather than a
+per-resource behaviour. This is the deliberate **mix**: per-resource *init*,
+collective *run*. (The GUI still auto-scopes per-resource *behaviours* to
+`for_each:{type:resource}`; homing the collective solve under a resource kind would
+need a "collective resource behaviour" concept in the GUI — a genuine future item,
+but no longer what makes the substances real. Do NOT home `diffusion_step` under a
+`resource_kind` until the GUI supports it.) Original reference items:
 
 1. **Register `diffuse_substances`** as a usable node: import it in
    `src/workflow/functions/diffusion/__init__.py` (pulled in via

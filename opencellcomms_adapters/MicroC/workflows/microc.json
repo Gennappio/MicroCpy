@@ -53,123 +53,387 @@
   },
   "subworkflows": {
     "oxygen_init": {
-      "description": "Oxygen resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "Oxygen resource - configures the Oxygen substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-oxygen_init",
         "type": "controller",
         "label": "OXYGEN INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "oxygen_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Oxygen substance",
+          "parameter_nodes": [
+            "oxygen_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "oxygen_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "oxygen_init-setup"
+      ],
       "input_parameters": []
     },
     "glucose_init": {
-      "description": "Glucose resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "Glucose resource - configures the Glucose substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-glucose_init",
         "type": "controller",
         "label": "GLUCOSE INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "glucose_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Glucose substance",
+          "parameter_nodes": [
+            "glucose_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "glucose_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "glucose_init-setup"
+      ],
       "input_parameters": []
     },
     "lactate_init": {
-      "description": "Lactate resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "Lactate resource - configures the Lactate substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-lactate_init",
         "type": "controller",
         "label": "LACTATE INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "lactate_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Lactate substance",
+          "parameter_nodes": [
+            "lactate_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "lactate_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "lactate_init-setup"
+      ],
       "input_parameters": []
     },
     "h_init": {
-      "description": "H resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "H resource - configures the H substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-h_init",
         "type": "controller",
         "label": "H INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "h_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the H substance",
+          "parameter_nodes": [
+            "h_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "h_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "h_init-setup"
+      ],
       "input_parameters": []
     },
     "tgfa_init": {
-      "description": "TGFA resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "TGFA resource - configures the TGFA substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-tgfa_init",
         "type": "controller",
         "label": "TGFA INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "tgfa_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the TGFA substance",
+          "parameter_nodes": [
+            "tgfa_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "tgfa_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "tgfa_init-setup"
+      ],
       "input_parameters": []
     },
     "fgf_init": {
-      "description": "FGF resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "FGF resource - configures the FGF substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-fgf_init",
         "type": "controller",
         "label": "FGF INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "fgf_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the FGF substance",
+          "parameter_nodes": [
+            "fgf_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "fgf_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "fgf_init-setup"
+      ],
       "input_parameters": []
     },
     "hgf_init": {
-      "description": "HGF resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "HGF resource - configures the HGF substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-hgf_init",
         "type": "controller",
         "label": "HGF INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "hgf_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the HGF substance",
+          "parameter_nodes": [
+            "hgf_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "hgf_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "hgf_init-setup"
+      ],
       "input_parameters": []
     },
     "gi_init": {
-      "description": "GI resource. Substances are set up collectively by setup_substances in the world init; this is a placeholder init canvas for the Resources tab (not executed).",
+      "description": "GI resource - configures the GI substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
       "controller": {
         "id": "controller-gi_init",
         "type": "controller",
         "label": "GI INIT",
-        "position": { "x": 100, "y": 100 },
+        "position": {
+          "x": 100,
+          "y": 100
+        },
         "number_of_steps": 1
       },
-      "functions": [],
+      "functions": [
+        {
+          "id": "gi_init-setup",
+          "function_name": "setup_substances",
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the GI substance",
+          "parameter_nodes": [
+            "gi_init-param_substances"
+          ]
+        }
+      ],
       "subworkflow_calls": [],
-      "parameters": [],
-      "execution_order": [],
+      "parameters": [
+        {
+          "id": "gi_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "targetParam": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "gi_init-setup"
+      ],
       "input_parameters": []
     },
     "__world__": {
@@ -257,28 +521,6 @@
             "writes": [
               "agent.collection",
               "gene_networks"
-            ],
-            "emits": []
-          }
-        },
-        {
-          "id": "envinit-Setup_substances-setup_all_substances",
-          "function_name": "setup_substances",
-          "position": {
-            "x": 400,
-            "y": 300
-          },
-          "description": "Configure all 8 substances for diffusion-reaction",
-          "parameter_nodes": [
-            "envinit-Setup_substances-param_substances_list"
-          ],
-          "contract": {
-            "reads": [
-              "simulation.config"
-            ],
-            "writes": [
-              "resource.collection",
-              "resource.fields"
             ],
             "emits": []
           }
@@ -418,27 +660,6 @@
           }
         },
         {
-          "id": "envinit-Setup_substances-param_substances_list",
-          "type": "listParameterNode",
-          "label": "Substances (JSON)",
-          "listType": "string",
-          "items": [
-            "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-14,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":0.1,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-13,\"production_rate\":3.0e-09,\"uptake_rate\":0.0,\"initial_value\":1.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
-            "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}",
-            "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}",
-            "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
-          ],
-          "targetParam": "substances",
-          "position": {
-            "x": 100,
-            "y": 600
-          }
-        },
-        {
           "id": "envinit-Setup_associations-param_associations_dict",
           "type": "dictParameterNode",
           "label": "Associations (Dict)",
@@ -495,7 +716,6 @@
         "envinit-Setup_simulation-setup_sim",
         "envinit-Setup_simulation-setup_domain_node",
         "envinit-Setup_population-setup_pop",
-        "envinit-Setup_substances-setup_all_substances",
         "envinit-Setup_associations-setup_all_associations"
       ],
       "contract": {
@@ -1487,6 +1707,118 @@
           "parameter_nodes": []
         },
         {
+          "id": "init-call-oxygen_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "oxygen_init",
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "oxygen_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-glucose_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "glucose_init",
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "glucose_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-lactate_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "lactate_init",
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "lactate_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-h_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "h_init",
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "h_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tgfa_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tgfa_init",
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "tgfa_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-fgf_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fgf_init",
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "fgf_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-hgf_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "hgf_init",
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "hgf_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-gi_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "gi_init",
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "gi_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "parameter_nodes": []
+        },
+        {
           "id": "init-call-tumor_cell_init",
           "type": "subworkflow_call",
           "subworkflow_name": "tumor_cell_init",
@@ -1503,6 +1835,14 @@
       ],
       "execution_order": [
         "init-call-__world__",
+        "init-call-oxygen_init",
+        "init-call-glucose_init",
+        "init-call-lactate_init",
+        "init-call-h_init",
+        "init-call-tgfa_init",
+        "init-call-fgf_init",
+        "init-call-hgf_init",
+        "init-call-gi_init",
         "init-call-tumor_cell_init"
       ]
     }

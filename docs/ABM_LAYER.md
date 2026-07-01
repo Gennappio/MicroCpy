@@ -140,12 +140,15 @@ a simulator's substances as resources with
 the `diffuse_substances` behaviour (`src/workflow/functions/diffusion/`).
 
 **Why the diffusion step is collective, not per-resource.** Coupled
-multi-substance diffusion is one solve per tick over all fields together. The GUI
-currently auto-scopes any resource behaviour to `for_each:{type:resource}`, so a
-collective diffusion behaviour can't yet be homed under a resource kind there.
-Consequently MicroC's substances are declared as `resource_kinds` (they appear on
-the Resources tab) while the diffusion keeps running as a world-level step until
-the GUI supports collective resource behaviours. See
+multi-substance diffusion is one solve per tick over all fields together — a
+domain-level process, not something any single substance owns. So MicroC uses a
+**mix**: each substance is set up by its own per-resource **init** canvas (on the
+Resources tab), while the coupled diffusion runs once per step as a collective
+World/Domain step. The substances are real resources with real init canvases (each
+`*_init` subworkflow runs `setup_substances` for one substance, wired into
+`__init_sequence__`); only the shared solve stays collective. The GUI auto-scopes
+per-resource *behaviours* to `for_each:{type:resource}`, which is why the coupled
+solve is a World step rather than a per-resource behaviour. See
 `docs/MICROC_ABM_MIGRATION_PLAN.md` (Stage 6) for the full story.
 
 ---

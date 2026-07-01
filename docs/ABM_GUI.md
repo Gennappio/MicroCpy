@@ -65,11 +65,12 @@ A resource is a field on the world. Two flavours (see `docs/ABM_LAYER.md` §4b):
 - **discrete** (`FieldResource`, e.g. Sugarscape sugar) — agents `deposit` sinks;
   its Step (growback) runs per-resource.
 - **continuum** (`DiffusingResource`, e.g. MicroC substances) — a FiPy-backed
-  concentration field; its diffusion is a **coupled, once-per-step collective
-  solve**, not a per-resource step. Such substances show on the Resources tab, but
-  because the GUI auto-scopes resource behaviours to `for_each:{type:resource}`, a
-  collective diffusion behaviour currently stays a world/collective step rather
-  than being homed under a resource kind.
+  concentration field. Each substance is **set up by its own per-resource init
+  canvas** (Resources tab; the `*_init` subworkflow runs `setup_substances` for
+  that one substance), but its diffusion is a **coupled, once-per-step collective
+  solve** over all substances together, so the solve runs as a World/Domain step
+  rather than a per-resource behaviour (the GUI auto-scopes per-resource behaviours
+  to `for_each:{type:resource}`).
 
 ## Running
 
