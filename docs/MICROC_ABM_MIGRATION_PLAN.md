@@ -1,6 +1,6 @@
 # MicroC → ABM Library Migration Plan
 
-**Status:** Draft for approval · **Scope:** engine + adapter + GUI metadata · **Type:** behaviour-preserving migration
+**Status:** Core migration complete (Stages 0–4, 6, 7); Stage 5 + the full runtime cutover deferred (see Outcome). · **Scope:** engine + adapter + GUI metadata · **Type:** behaviour-preserving migration
 
 Bring MicroC onto the new ABM motor (`abm_population` + `Domain`/`Resource` +
 reconciliation) so that its substances become first-class **Resources** and its
@@ -10,6 +10,33 @@ already names *oxygen* as a resource and declares that *"a later
 `DiffusingResource` will wrap the FiPy substance solver behind this same
 interface"* — that piece was deferred and never built, which is why MicroC is
 stranded on the legacy path and the Resource tab is empty.
+
+---
+
+## Outcome (final)
+
+MicroC now runs on the new ABM motor with its science preserved **bit-for-bit**:
+
+- ✅ **Cells** are `abm_population` agents; `gene_update` / `fate_update` run via
+  the per-agent ask (Stage 4).
+- ✅ **Substances** appear as `resource_kinds` on the Resources tab — the empty-tab
+  problem that motivated this whole migration is fixed (Stage 6).
+- ✅ **Reproducibility + golden harness** guard every change; the full 3-step run
+  is bit-identical to the pre-migration golden (Stages 0 and 7).
+- ✅ **`DiffusingResource` + `diffuse_substances`** (a FiPy-backed continuum
+  resource + its collective solve) are built, tested, and documented (Stages 1–3,
+  `docs/ABM_LAYER.md` §4b).
+
+Two items are **deliberately deferred**, each for a documented reason:
+- **Diffusion running *as* a resource behaviour** (the full runtime cutover) —
+  blocked by the GUI forcing `for_each:{type:resource}` on resource behaviours,
+  while MicroC's coupled diffusion must run once per step (Stage 6). Diffusion
+  keeps running through the world `diffusion_step` node meanwhile.
+- **Division → reconciliation** (Stage 5) — skipped: reconciliation resolves
+  conflicts and ordering that MicroC (single, non-contending division) doesn't
+  have, and adopting its simultaneous-update semantics would *change* results and
+  break the golden. Worth revisiting only if MicroC gains removal, migration, or
+  contested discrete resources.
 
 ---
 
@@ -207,12 +234,19 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
   running via the existing `diffusion_step` world node (which stays where it is —
   do NOT home it under a resource kind, or the GUI round-trip breaks the golden).
 
-### Stage 7 — Full validation & sign-off
-- End-to-end MicroC run on the new motor vs the Stage-0 golden reference.
-- Update `docs/ABM_LAYER.md` / `ABM_GUI.md` with the two resource-coupling modes
-  (discrete vs continuum) and the `DiffusingResource` pattern.
-- **Exit gate:** full run within tolerance; docs updated; legacy path still
-  available but MicroC no longer uses it.
+### Stage 7 — Full validation & sign-off — **DONE**
+- End-to-end MicroC on the new motor is **bit-identical** to the Stage-0 golden;
+  `tests/migration/test_microc_golden.py` passes (78s), re-proving order-
+  independence at a different hash seed.
+- `docs/ABM_LAYER.md` (§4b) and `docs/ABM_GUI.md` document the two resource-
+  coupling modes (discrete `deposit` vs continuum `DiffusingResource`) and why the
+  coupled diffusion step is collective, not per-resource.
+- **Exit gate — met, with one honest amendment:** full run bit-identical; docs
+  updated. The original "MicroC no longer uses the legacy path" is only *partly*
+  true — cells no longer use it, but **diffusion still runs through the legacy
+  `run_diffusion_solver_coupled`** (via the world `diffusion_step` node), pending
+  the collective-resource-behaviour GUI support (Stage 6 deferral). The legacy
+  path remains available for other models regardless.
 
 ## 8. Verification strategy (applies to every stage)
 

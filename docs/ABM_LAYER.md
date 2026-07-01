@@ -121,6 +121,35 @@ already unambiguous: `src.core.domain` vs `src.abm.domain`.)
 
 ---
 
+## 4b. Two kinds of resource: discrete vs continuum
+
+A `Resource` (`src/abm/resource.py`) is non-agent field state on the World. The
+platform supports two agent↔resource coupling modes, both first-class:
+
+| | `FieldResource` (discrete) | `DiffusingResource` (continuum) |
+|--|--|--|
+| example | Sugarscape sugar | MicroC oxygen / glucose / … |
+| storage | a plain numpy field on the lattice | a substance inside a shared `MultiSubstanceSimulator` (the FiPy solver), exposed 1:1 as `values()[y, x]` |
+| agent coupling | **discrete**: agents `deposit(pos, ±amt)` source/sink terms; `apply_sources()` commits them once per step | **continuum**: reaction rates come from cell metabolism and feed a coupled diffusion-reaction solve |
+| the step | a per-resource `run_step` (e.g. growback) | a **collective** `diffuse(reactions)` — one FiPy solve over *all* coupled substances, not per-resource |
+
+`DiffusingResource` *wraps* the existing solver rather than reimplementing it, so
+its numerics are identical to the legacy diffusion path by construction. Register
+a simulator's substances as resources with
+`add_diffusing_resources(domain, world, simulator)`; drive the coupled solve with
+the `diffuse_substances` behaviour (`src/workflow/functions/diffusion/`).
+
+**Why the diffusion step is collective, not per-resource.** Coupled
+multi-substance diffusion is one solve per tick over all fields together. The GUI
+currently auto-scopes any resource behaviour to `for_each:{type:resource}`, so a
+collective diffusion behaviour can't yet be homed under a resource kind there.
+Consequently MicroC's substances are declared as `resource_kinds` (they appear on
+the Resources tab) while the diffusion keeps running as a world-level step until
+the GUI supports collective resource behaviours. See
+`docs/MICROC_ABM_MIGRATION_PLAN.md` (Stage 6) for the full story.
+
+---
+
 ## 5. What's in the `biology/` folder?
 
 The original engine model of cells — the ABM layer **wraps** these, it does not

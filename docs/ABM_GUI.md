@@ -59,6 +59,18 @@ A collective never decides *for* its agents (that kills emergence). So:
 - **Domain** orchestrates resources and may apply *exogenous* world change
   (boundary conditions, perturbations) — the world changing, which agents sense.
 
+### Discrete vs continuum resources
+
+A resource is a field on the world. Two flavours (see `docs/ABM_LAYER.md` §4b):
+- **discrete** (`FieldResource`, e.g. Sugarscape sugar) — agents `deposit` sinks;
+  its Step (growback) runs per-resource.
+- **continuum** (`DiffusingResource`, e.g. MicroC substances) — a FiPy-backed
+  concentration field; its diffusion is a **coupled, once-per-step collective
+  solve**, not a per-resource step. Such substances show on the Resources tab, but
+  because the GUI auto-scopes resource behaviours to `for_each:{type:resource}`, a
+  collective diffusion behaviour currently stays a world/collective step rather
+  than being homed under a resource kind.
+
 ## Running
 
 The executor owns the loop: `main` calls the init sequence once, then the
