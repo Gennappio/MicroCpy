@@ -64,6 +64,25 @@
           ],
           "emits": []
         }
+      },
+      {
+        "id": "agentinit-Build_abm_population-build_abm",
+        "function_name": "build_tumor_cell_abm_population",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "description": "Wrap the loaded cells in an abm_population so MicroC runs on the ABM motor",
+        "contract": {
+          "reads": [
+            "agent.collection",
+            "simulation.config"
+          ],
+          "writes": [
+            "abm_population"
+          ],
+          "emits": []
+        }
       }
     ],
     "parameters": [
@@ -81,7 +100,8 @@
     ],
     "execution_order": [
       "agentinit-Setup_population-read_checkpoint",
-      "agentinit-Init_gene_networks-init_netlogo_gn"
+      "agentinit-Init_gene_networks-init_netlogo_gn",
+      "agentinit-Build_abm_population-build_abm"
     ],
     "contract": {
       "owner": {
@@ -105,7 +125,8 @@
     "subworkflows_referenced": [],
     "functions_required": [
       "initialize_netlogo_gene_networks",
-      "read_checkpoint"
+      "read_checkpoint",
+      "build_tumor_cell_abm_population"
     ]
   }
 }

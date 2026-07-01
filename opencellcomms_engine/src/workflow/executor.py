@@ -706,11 +706,18 @@ class WorkflowExecutor:
             if not agent.is_alive():
                 continue
             context['_current_agent'] = agent
+            # Bind the underlying cell too, so legacy dual-mode per-cell functions
+            # (which act on env.cell when set, else the whole population) run on
+            # exactly this agent's cell — e.g. MicroC's gene_update/fate_update.
+            context['_current_cell'] = agent.cell
             context = self.execute_subworkflow(
                 node.subworkflow_name, context, iterations=1, parameters=merged_params,
                 quiet=True
             )
         context['_current_agent'] = None
+        # Must clear: otherwise a stale _current_cell leaks into post-loop, non
+        # for_each calls (division, iteration_plots) and flips them to per-cell mode.
+        context['_current_cell'] = None
         return context
 
     def _run_for_each_legacy_cell(self, node, context: Dict[str, Any],

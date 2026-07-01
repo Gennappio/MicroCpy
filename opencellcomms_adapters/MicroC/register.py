@@ -9,6 +9,9 @@ When both jayatilake and MicroC are imported, the second registration of a given
 function name is a benign overwrite (same code, same signature).
 """
 
+# Initialization
+import opencellcomms_adapters.MicroC.functions.initialization.build_tumor_cell_abm_population  # noqa: F401
+
 # Gene network functions
 import opencellcomms_adapters.MicroC.functions.gene_network.initialize_netlogo_gene_networks  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_netlogo  # noqa: F401

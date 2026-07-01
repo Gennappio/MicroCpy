@@ -165,12 +165,23 @@ sequential; **Stage 2 is go/no-go** for the whole approach.
   an identical context (slow, the Picard loop). The full Picard-with-live-cells run
   is validated end to end in Stage 4 against the golden.
 
-### Stage 4 — Cells & metabolism onto `abm_population`
-- `tumor_cell_init` places agents in `abm_population`; `gene_update` /
-  `fate_update` run per-agent via the ask; the uptake/metabolism computation
-  reads agent state instead of `CellPopulation`.
-- **Exit gate:** with cells live and coupled, fields + per-cell metabolic vars
-  match the golden reference over N steps.
+### Stage 4 — Cells & metabolism onto `abm_population` — **DONE (golden MATCH)**
+- `build_tumor_cell_abm_population` (a new `tumor_cell_init` node) wraps MicroC's
+  **existing** `CellPopulation` in an `abm.Population` (`pop.cellpop = legacy` +
+  `_rebind`), so `abm_population` and `context['population']` are the SAME cells —
+  same order, same seeded shuffle. The executor now routes `gene_update` /
+  `fate_update` through the per-agent ask, and `_run_for_each_entity` binds
+  `_current_cell = agent.cell` (cleared after the loop) so MicroC's dual-mode
+  per-cell functions run unchanged. Diffusion/metabolism keep reading
+  `context['population']` (which *is* `abm_population.cellpop`).
+- **Finding — `_kind` does not survive metabolism.** `_recalculate_metabolism`
+  REPLACES `metabolic_state` each tick, wiping any `_kind` tag → `agents_of_kind`
+  goes empty and updates stop. MicroC is single-kind, so its `for_each` drops the
+  `kind` filter (iterate ALL agents). **Multi-kind models will need `_kind` to
+  survive metabolism** (merge instead of replace, or a dedicated cell field).
+- **Exit gate (met):** the full MicroC run on the new motor is **bit-identical** to
+  the golden — 8 fields `max_abs=0`, 1009 cells, 0 state diffs, aggregates match;
+  `tests/migration/test_microc_golden.py` passes (78s).
 
 ### Stage 5 — Structural changes via reconciliation
 - Move `division` (and any death/removal) from the World behaviour to

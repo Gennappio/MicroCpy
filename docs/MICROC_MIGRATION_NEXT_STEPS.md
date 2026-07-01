@@ -66,7 +66,18 @@ deliberately change MicroC's trajectory again, regenerate it with
 
 ---
 
-## Stage 4 — cells & metabolism onto `abm_population` (the next big one)
+## Stage 4 — cells & metabolism onto `abm_population` — **DONE (golden MATCH)**
+
+Implemented via option (b): `build_tumor_cell_abm_population`
+(`opencellcomms_adapters/MicroC/functions/initialization/`) wraps MicroC's
+existing `CellPopulation` (same cells), added as the last `tumor_cell_init` node;
+`_run_for_each_entity` now binds `_current_cell = agent.cell`. **Gotcha that bit
+us (relevant to Stage 5):** `_recalculate_metabolism` REPLACES `metabolic_state`
+each tick, wiping the `_kind` tag → `agents_of_kind` empty. MicroC is single-kind
+so its `for_each` dropped the `kind` filter. If Stage 5 stashes agent state in
+`metabolic_state` (via `agent.set`), it will be wiped too — use a field metabolism
+doesn't own, or make metabolism merge. The rest of the original Stage-4 notes
+below are retained for reference.
 
 **Goal:** MicroC runs on the new motor. Today `executor.py` builds **no**
 `abm_population` for MicroC, so the per-agent ask falls back to

@@ -28,6 +28,12 @@ class Agent:
 
     # identity / state --------------------------------------------------------
     @property
+    def cell(self) -> "Cell":
+        """The underlying engine Cell. Lets legacy per-cell functions run through
+        the per-agent ask by binding it as ``context['_current_cell']``."""
+        return self._cell
+
+    @property
     def id(self) -> str:
         return self._cell.state.id
 
