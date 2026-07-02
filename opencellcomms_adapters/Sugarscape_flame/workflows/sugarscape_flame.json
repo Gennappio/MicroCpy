@@ -1,0 +1,26 @@
+{
+  "version": "2.0",
+  "name": "Sugarscape (FLAME GPU)",
+  "description": "Sugarscape run on the GPU via the flamegpu facade kernel. The engine hands this whole workflow to the Sugarscape_flame backend, which builds and runs a pyflamegpu model. Parameters live in metadata.flamegpu and mirror the CPU SUGARSCAPE workflow for comparison.",
+  "kernel": "flamegpu",
+  "seed": 42,
+  "metadata": {
+    "author": "",
+    "notes": "Needs a CUDA GPU + pyflamegpu wheel for the active Python (see backend/flamegpu_backend.py).",
+    "flamegpu": {
+      "grid_size": 50,
+      "steps": 60,
+      "n_foragers": 120,
+      "growback_rate": 1.0,
+      "sugar_peak": 4.0,
+      "radius_frac": 0.45,
+      "sugar_min": 5.0,
+      "sugar_max": 25.0,
+      "metabolism_min": 1.0,
+      "metabolism_max": 4.0,
+      "vision_min": 1,
+      "vision_max": 6
+    }
+  },
+  "subworkflows": {}
+}

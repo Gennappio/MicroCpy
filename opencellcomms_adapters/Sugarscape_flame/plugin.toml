@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "Sugarscape_flame"
+version = "0.1.0"
+description = "Sugarscape on FLAME GPU — a spike proving the engine's facade-kernel backend seam can host a GPU-accelerated ABM. Declares a `flamegpu` kernel whose backend builds and runs a pyflamegpu model, bypassing the Python stage executor (same mechanism PhysiCell uses)."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["flamegpu"]
