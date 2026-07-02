@@ -676,16 +676,23 @@ class WorkflowExecutor:
             if self._should_log_step(context):
                 print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
                       f"{len(resources)} {kind or 'resource'}(s)")
-            for resource in resources:
-                context['_current_resource'] = resource
-                context['_current_resource_kind'] = resource.name
-                params = {'resource': resource.name, **merged_params}
-                context = self.execute_subworkflow(
-                    node.subworkflow_name, context, iterations=1, parameters=params,
-                    quiet=True
-                )
-            context['_current_resource'] = None
-            context['_current_resource_kind'] = None
+            # Save/restore the current-resource binding (rather than blanking to
+            # None) so a nested for_each restores its parent's binding on exit and
+            # an exception mid-loop can't leak a stale binding into post-loop nodes.
+            prev_resource = context.get('_current_resource')
+            prev_resource_kind = context.get('_current_resource_kind')
+            try:
+                for resource in resources:
+                    context['_current_resource'] = resource
+                    context['_current_resource_kind'] = resource.name
+                    params = {'resource': resource.name, **merged_params}
+                    context = self.execute_subworkflow(
+                        node.subworkflow_name, context, iterations=1, parameters=params,
+                        quiet=True
+                    )
+            finally:
+                context['_current_resource'] = prev_resource
+                context['_current_resource_kind'] = prev_resource_kind
             return context
 
         pop = context.get('abm_population')
@@ -702,22 +709,29 @@ class WorkflowExecutor:
             print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
                   f"{len(agents)} {kind or 'agent'}(s)")
 
-        for agent in agents:
-            if not agent.is_alive():
-                continue
-            context['_current_agent'] = agent
-            # Bind the underlying cell too, so legacy dual-mode per-cell functions
-            # (which act on env.cell when set, else the whole population) run on
-            # exactly this agent's cell — e.g. MicroC's gene_update/fate_update.
-            context['_current_cell'] = agent.cell
-            context = self.execute_subworkflow(
-                node.subworkflow_name, context, iterations=1, parameters=merged_params,
-                quiet=True
-            )
-        context['_current_agent'] = None
-        # Must clear: otherwise a stale _current_cell leaks into post-loop, non
-        # for_each calls (division, iteration_plots) and flips them to per-cell mode.
-        context['_current_cell'] = None
+        # Save/restore the agent/cell bindings rather than blanking to None. A
+        # nested for_each thus restores its parent's binding on exit, and the
+        # try/finally guarantees a stale _current_cell can't leak into post-loop,
+        # non-for_each calls (division, iteration_plots) — which would flip them to
+        # per-cell mode — even if execute_subworkflow raises.
+        prev_agent = context.get('_current_agent')
+        prev_cell = context.get('_current_cell')
+        try:
+            for agent in agents:
+                if not agent.is_alive():
+                    continue
+                context['_current_agent'] = agent
+                # Bind the underlying cell too, so legacy dual-mode per-cell functions
+                # (which act on env.cell when set, else the whole population) run on
+                # exactly this agent's cell — e.g. MicroC's gene_update/fate_update.
+                context['_current_cell'] = agent.cell
+                context = self.execute_subworkflow(
+                    node.subworkflow_name, context, iterations=1, parameters=merged_params,
+                    quiet=True
+                )
+        finally:
+            context['_current_agent'] = prev_agent
+            context['_current_cell'] = prev_cell
         return context
 
     def _run_for_each_legacy_cell(self, node, context: Dict[str, Any],
@@ -741,13 +755,16 @@ class WorkflowExecutor:
         self._run_rng(context).shuffle(cells)
         if self._should_log_step(context):
             print(f"[WORKFLOW] Running '{node.subworkflow_name}' over {len(cells)} cell(s)")
-        for cell in cells:
-            context['_current_cell'] = cell
-            context = self.execute_subworkflow(
-                node.subworkflow_name, context, iterations=1, parameters=merged_params,
-                quiet=True
-            )
-        context['_current_cell'] = None
+        prev_cell = context.get('_current_cell')
+        try:
+            for cell in cells:
+                context['_current_cell'] = cell
+                context = self.execute_subworkflow(
+                    node.subworkflow_name, context, iterations=1, parameters=merged_params,
+                    quiet=True
+                )
+        finally:
+            context['_current_cell'] = prev_cell
         return context
 
     def execute_subworkflow(self, subworkflow_name: str, context: Dict[str, Any],
