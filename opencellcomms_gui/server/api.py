@@ -1199,6 +1199,39 @@ from src.workflow.decorators import register_function
 
         type_to_py = {'INT': 'int', 'FLOAT': 'float', 'BOOL': 'bool', 'STRING': 'str', 'DICT': 'dict'}
 
+        # Role-aware body hints. `category` here is the role folder the function
+        # lives in (agent_behavior / resource_behavior / world_behavior / ...), so
+        # an agent Step gets the ABM `env` API the class layer advertises rather
+        # than the legacy cell-centric hints. All are surfaced on the same
+        # `env: BiologicalContext` object.
+        _role = (category or '').strip().lower()
+        _ABM_HINTS = {
+            'agent_behavior': (
+                "    # env.agent             -> the current agent (bound per-ask)\n"
+                "    # env.agent.neighbors() -> neighbouring agents\n"
+                "    # env.agent.sense('sugar')      -> resource value at the agent's tile\n"
+                "    # env.resource('sugar')         -> a resource field (.at(pos), .total())\n"
+                "    # env.request_move(agent, pos)  -> deferred move intent\n"
+                "    # env.request_consume_resource(agent, name, amount) -> deferred uptake\n"
+            ),
+            'resource_behavior': (
+                "    # env.resource(name)    -> this resource field\n"
+                "    # env.current_resource  -> the resource currently being asked\n"
+                "    # field.values() / field.total()    -> read the whole field\n"
+                "    # field.apply_sources(...)          -> deposit/produce\n"
+            ),
+            'world_behavior': (
+                "    # env.world       -> the spatial world (bounds, neighbors, occupancy)\n"
+                "    # env.population  -> the collective (count, census, agents_of_kind)\n"
+                "    # env.domain      -> all resources; env.population.census() -> snapshot\n"
+            ),
+        }
+        _LEGACY_HINTS = (
+            '    # requires=["population"]    -> for cell in env.cells: ...\n'
+            "    # requires=[\"simulator\"]     -> env.concentration('substance', cell)\n"
+            '    # requires=["gene_networks"] -> cell.gene("GeneName").is_on()\n'
+        )
+
         def fmt_default(val, py_type):
             if py_type == 'str':
                 return repr(val if val is not None else '')
@@ -1285,12 +1318,11 @@ from src.workflow.decorators import register_function
                     '    compatible_kernels=["biophysics"],\n'
                     f'    requires={requires_repr},'
                 )
+                api_hints = _ABM_HINTS.get(_role, _LEGACY_HINTS)
                 body = (
                     f'    """TODO: implement {fn_name}."""\n'
                     f'    # Available on env: env.config, env.step, env.dt, env.results\n'
-                    f'    # requires=["population"]    -> for cell in env.cells: ...\n'
-                    f"    # requires=[\"simulator\"]     -> env.concentration('substance', cell)\n"
-                    f'    # requires=["gene_networks"] -> cell.gene("GeneName").is_on()\n'
+                    f'{api_hints}'
                     f'    # TODO: implement behavior\n'
                     f'    return True\n'
                 )

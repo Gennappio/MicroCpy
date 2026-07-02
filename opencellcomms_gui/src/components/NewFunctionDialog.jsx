@@ -20,6 +20,26 @@ const CAPABILITIES = [
   { token: 'gene_networks', label: 'Gene networks', hint: "cell.gene('X').is_on()" },
 ];
 
+// ABM role canvases (agent/resource/world Step behaviors) author against the
+// typed `env` API — env.agent, env.world, env.resource — which the abm kernel
+// provides directly, so they don't need the cell-centric capability tokens above.
+// Shown as read-only guidance mirroring the generated stub's hints.
+const ABM_ROLE_HINTS = {
+  agent_behavior: [
+    "env.agent — the current agent (bound per-ask)",
+    "env.agent.neighbors() / env.agent.sense('sugar')",
+    'env.resource(name), env.request_move(agent, pos)',
+  ],
+  resource_behavior: [
+    'env.resource(name) — this field (.values(), .total())',
+    'env.current_resource, field.apply_sources(...)',
+  ],
+  world_behavior: [
+    'env.world, env.population, env.domain',
+    'env.population.census() — snapshot',
+  ],
+};
+
 const defaultForType = (t) => {
   switch (t) {
     case 'INT': return 0;
@@ -303,7 +323,19 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContrac
               This function <strong>creates or loads the cells</strong> (a setup step that runs once at the start)
             </label>
 
-            {!typedEnvExempt && (
+            {!typedEnvExempt && ABM_ROLE_HINTS[role] && (
+              <div className="nf-caps-list">
+                <div className="nf-caps-title">This {roleLabel} uses the ABM <code>env</code> API</div>
+                <div className="nf-caps-subtitle">
+                  Available directly on <code>env</code> — no capabilities to tick:
+                </div>
+                {ABM_ROLE_HINTS[role].map((h) => (
+                  <div className="nf-cap-row" key={h}><code className="nf-cap-hint">{h}</code></div>
+                ))}
+              </div>
+            )}
+
+            {!typedEnvExempt && !ABM_ROLE_HINTS[role] && (
               <div className="nf-caps-list">
                 <div className="nf-caps-title">What does this function need to look at?</div>
                 <div className="nf-caps-subtitle">
