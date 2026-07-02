@@ -21,6 +21,14 @@ reproducible regardless of `PYTHONHASHSEED` (the gene-walk previously sampled a
 hash-ordered `set`). The run is bit-for-bit reproducible given `seed=123`; this
 golden has 1009 cells after 3 steps.
 
+**Re-blessed** to include the signalling-substance coupling: cells now secrete /
+take up TGFA, FGF, HGF, GI (generic first-order reaction term) and produce H
+(glycolytic protons), per the NetLogo reference
+`v3_microC_Metabolic_Symbiosis.nlogo3d` (`-CONSUMPTION-OF-PATCH-37` /
+`-PRODUCTION-OF-PATCH-32` and the H branch ~line 3487). Oxygen/Glucose/Lactate
+keep their Michaelis-Menten metabolism and are unchanged from the prior golden;
+the previous reference froze those four signalling fields as inert.
+
 Regenerate / verify:
 
 ```

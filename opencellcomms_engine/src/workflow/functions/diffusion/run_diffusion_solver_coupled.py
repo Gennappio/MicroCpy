@@ -306,7 +306,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
     km_glucose = custom_params.get('KG', 0.5)
     km_lactate = custom_params.get('KL', 1.0)
     max_atp = custom_params.get('max_atp', 30.0)
-    proton_coeff = custom_params.get('proton_coefficient', 0.01)
+    proton_coeff = custom_params.get('proton_coefficient', 0.001)  # NetLogo the-proton-coefficient slider default
     glyco_oxygen_ratio = custom_params.get('glyco_oxygen_ratio', 0.5)
 
     # Get grid parameters for coordinate conversion
@@ -413,6 +413,13 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
             glucose_consumption += glucose_consumption_glyco
             lactate_production += glucose_consumption_glyco * 3.0
 
+        # H (proton) production — glycolytic protons, proportional to local
+        # glucose availability and independent of the ATP mode. Reference:
+        # v3_microC_Metabolic_Symbiosis.nlogo3d line ~3487-3489 (the n-cell3>=0
+        # H branch): H_prod = (item3_Oxygen * 2/6) * proton_coeff * (max_atp/2)
+        # * Glucose/(Km_glucose+Glucose), per effective living cell.
+        h_production = (vmax_oxygen * 2.0 / 6.0) * proton_coeff * (max_atp / 2.0) * glucose_mm
+
         debug_total_oxygen_consumption += oxygen_consumption
         debug_max_oxygen_consumption = max(debug_max_oxygen_consumption, oxygen_consumption)
 
@@ -427,6 +434,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
             'glucose_consumption': glucose_consumption*glucose_conversion_factor,
             'lactate_production': lactate_production*lactate_conversion_factor,
             'lactate_consumption': lactate_consumption,
+            'h_production': h_production,
         }
 
         # Update cell state
@@ -485,6 +493,8 @@ def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any]
             metabolic_state.get('lactate_production', 0.0) -
             metabolic_state.get('lactate_consumption', 0.0)
         )
+        # H (protons) — production only (positive), from glycolytic metabolism.
+        position_reactions[position]['H'] = metabolic_state.get('h_production', 0.0)
 
         if oxygen_consumption > 0:
             cells_with_oxygen_consumption += 1
@@ -497,9 +507,98 @@ def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any]
     log(context, f"Cells with oxygen_consumption > 0: {cells_with_oxygen_consumption}", prefix="[REACTIONS]", node_verbose=verbose)
     log(context, f"Total oxygen consumption: {total_oxygen_consumption:.2e} mol/s", prefix="[REACTIONS]", node_verbose=verbose)
     log(context, f"Max oxygen consumption (single cell): {max_oxygen_consumption:.2e} mol/s", prefix="[REACTIONS]", node_verbose=verbose)
+    _add_growth_factor_reactions(position_reactions, population, simulator, context, verbose=verbose)
+
     log(context, f"Unique positions with reactions: {len(position_reactions)}", prefix="[REACTIONS]", node_verbose=verbose)
 
     return position_reactions
+
+
+# Signalling substances driven by the generic NetLogo reaction term (as opposed
+# to the Michaelis-Menten metabolism used for Oxygen/Glucose/Lactate). Per the
+# reference model (v3_microC_Metabolic_Symbiosis.nlogo3d, procedures
+# -CONSUMPTION-OF-PATCH-37 / -PRODUCTION-OF-PATCH-32 and the "OTHERS" field
+# update) each such substance obeys, per cell:
+#     sink   = uptake_rate    * local_conc * fate_weight   (first order in conc)
+#     source = production_rate * fate_weight               (only where the
+#              substance's gene output node is ON; of these four only TGFA has a
+#              non-zero production_rate in the reference parameters)
+# with fate_weight = 1 (proliferating/normal), 0.5 (growth-arrest), 0 (necrosis)
+# — the n_cell - 0.5*n_growth_arrest - n_necrosis weighting. uptake_rate and
+# production_rate are the diffusion-parameters consumption/production constants,
+# carried on each SubstanceConfig (mol/s/cell, same convention as vmax_oxygen).
+_GROWTH_FACTOR_SUBSTANCES = ('TGFA', 'FGF', 'HGF', 'GI')
+
+
+def _fate_weight(phenotype_name: str) -> float:
+    if phenotype_name == 'Necrosis':
+        return 0.0
+    if phenotype_name == 'Growth_Arrest':
+        return 0.5
+    return 1.0
+
+
+def _add_growth_factor_reactions(position_reactions, population, simulator,
+                                 context: Dict[str, Any], verbose: Optional[bool] = None) -> None:
+    """Add the generic secretion/uptake reaction terms for the signalling
+    substances (TGFA/FGF/HGF/GI) into ``position_reactions`` (keyed by cell
+    world position, like the metabolic reactions). Uses the production/uptake
+    rates declared on each SubstanceConfig — previously carried but never
+    applied. Leaves the Oxygen/Glucose/Lactate Michaelis-Menten terms untouched."""
+    config = context.get('config')
+    substances = getattr(config, 'substances', None) if config else None
+    if not substances:
+        return
+
+    rates = {}
+    for name in _GROWTH_FACTOR_SUBSTANCES:
+        cfg = substances.get(name)
+        if cfg is None:
+            continue
+        rates[name] = (float(getattr(cfg, 'production_rate', 0.0) or 0.0),
+                       float(getattr(cfg, 'uptake_rate', 0.0) or 0.0))
+    if not rates:
+        return
+
+    try:
+        concentrations = simulator.get_substance_concentrations()
+    except Exception as e:
+        log_always(f"Growth-factor reactions skipped (no concentrations): {e}", prefix="[COUPLED]")
+        return
+
+    cell_size_um = 20.0
+    if config and hasattr(config, 'domain'):
+        dom = config.domain
+        gsx = dom.size_x.micrometers / dom.nx
+        gsy = dom.size_y.micrometers / dom.ny
+        nx, ny = dom.nx, dom.ny
+    else:
+        gsx = gsy = 30.0
+        nx = ny = None
+
+    for cell in population.state.cells.values():
+        phenotype = cell.state.phenotype
+        phenotype_name = phenotype.name if hasattr(phenotype, 'name') else (str(phenotype) if phenotype else '')
+        weight = _fate_weight(phenotype_name)
+        if weight == 0.0:
+            continue  # necrotic cells neither secrete nor take up
+
+        pos = cell.state.position
+        cx, cy = pos[0], pos[1]
+        gx = int(cx * cell_size_um / gsx)
+        gy = int(cy * cell_size_um / gsy)
+        if nx is not None:
+            gx = max(0, min(nx - 1, gx))
+            gy = max(0, min(ny - 1, gy))
+
+        gene_states = cell.state.gene_states or {}
+        bucket = position_reactions.setdefault(pos, {})
+        for name, (production_rate, uptake_rate) in rates.items():
+            local = max(0.0, concentrations.get(name, {}).get((gx, gy), 0.0))
+            rate = -uptake_rate * local * weight
+            if production_rate > 0.0 and gene_states.get(name):
+                rate += production_rate * weight
+            bucket[name] = bucket.get(name, 0.0) + rate
 
 
 def _blend_reactions(
