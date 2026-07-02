@@ -141,8 +141,8 @@ def plot_world(
         names = [r.name for r in resources]
         pick = resource if resource in names else names[0]
         chosen = domain.resource(pick)
-        ax.imshow(chosen.values(), origin="lower", cmap="YlOrBr",
-                  extent=[0, world.nx, 0, world.ny], aspect="equal", zorder=1)
+        chosen.heatmap(ax=ax, cmap="YlOrBr",
+                       extent=[0, world.nx, 0, world.ny], zorder=1)
 
     # Agents as dots, colored by kind
     if show_agents:

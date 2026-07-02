@@ -521,6 +521,32 @@ class BiologicalContext:
         return self._ctx.get('_current_resource')
 
     @property
+    def resources(self):
+        """All Resource fields on the Domain (empty list if no domain). Mirrors
+        ``env.agents`` so a node can sweep every field without reaching into
+        ``env.domain``."""
+        domain = self._ctx.get('domain')
+        return domain.resources() if domain is not None else []
+
+    @property
+    def rng(self):
+        """The single seeded run RNG (numpy Generator). Stochastic behaviours must
+        draw from this — not ``np.random.*`` — to stay reproducible. Prefers the
+        run RNG the executor seeds into context['_rng']; falls back to the ABM
+        population's generator, then a default one stored back so repeat calls are
+        stable within a run."""
+        rng = self._ctx.get('_rng')
+        if rng is not None:
+            return rng
+        pop = self._ctx.get('abm_population')
+        rng = getattr(pop, '_rng', None)
+        if rng is None:
+            import numpy as np
+            rng = np.random.default_rng()
+        self._ctx['_rng'] = rng
+        return rng
+
+    @property
     def agents(self):
         """All ABM agents (empty list if no ABM population is present)."""
         pop = self._ctx.get('abm_population')
@@ -583,6 +609,43 @@ class BiologicalContext:
         fig.savefig(out_path, dpi=110, bbox_inches="tight")
         plt.close(fig)
         return out_path
+
+    def plot_field(self, name: str, filename: Optional[str] = None, **kwargs) -> "Path":
+        """Render a resource field as a heatmap to ``plots_dir`` and return the
+        path. Convenience over ``env.resource(name).heatmap()`` + save."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        ax = self.resource(name).heatmap(**kwargs)
+        out_dir = self.plots_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / (filename or f"{name}.png")
+        ax.figure.savefig(out_path, dpi=110, bbox_inches="tight")
+        plt.close(ax.figure)
+        return out_path
+
+    # --- Recording (per-step named series) -----------------------------------
+
+    def record(self, key: str, value: float, step: Optional[int] = None) -> None:
+        """Append a named scalar to the run's record buffer, one entry per call.
+        Build a time series without a hand-rolled accumulator in results; plot it
+        with ``env.plot_records``. Reads the current step when ``step`` is None."""
+        records = self._ctx.setdefault('_records', {})
+        records.setdefault(key, []).append(
+            {"step": step if step is not None else self.step, "value": value}
+        )
+
+    @property
+    def records(self) -> Dict[str, List[Dict[str, Any]]]:
+        """The recorded series buffer: ``{key: [{"step", "value"}, ...]}``."""
+        return self._ctx.setdefault('_records', {})
+
+    def plot_records(self, keys: List[str], filename: str, **kwargs) -> "Path":
+        """Plot one or more recorded series (by key) as a time series to
+        ``plots_dir``. Thin wrapper over ``plot_timeseries``."""
+        series = {k: [e["value"] for e in self.records.get(k, [])] for k in keys}
+        return self.plot_timeseries(series, filename, **kwargs)
 
     # --- Intent queue --------------------------------------------------------
 
