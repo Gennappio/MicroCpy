@@ -59,6 +59,22 @@ class Resource:
     def apply_sources(self) -> None:
         raise NotImplementedError
 
+    # observability -----------------------------------------------------------
+    def heatmap(self, ax=None, cmap: str = "YlOrBr", origin: str = "lower", **imshow_kw):
+        """Draw this field as a heatmap and return the matplotlib Axes. Creates a
+        figure if ``ax`` is None. Uses ``values()`` (the (ny, nx) field), so it
+        works for any resource that exposes a field. Extra keyword args
+        (``extent``, ``zorder``, ...) pass through to ``imshow``."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            _fig, ax = plt.subplots(figsize=(5, 5))
+        imshow_kw.setdefault("aspect", "equal")
+        ax.imshow(self.values(), origin=origin, cmap=cmap, **imshow_kw)
+        return ax
+
 
 class FieldResource(Resource):
     """A scalar field stored as a numpy array over a (lattice) World."""
@@ -158,7 +174,9 @@ class DiffusingResource(Resource):
         return self._substance.concentrations
 
     def at(self, pos: Position) -> float:
-        return self._substance.get_concentration_at(pos)   # field[y, x]
+        # Normalize first (wrap/clamp per topology) so boundary queries answer the
+        # same way as FieldResource.at, which goes through world.normalize.
+        return self._substance.get_concentration_at(self.world.normalize(pos))   # field[y, x]
 
     def total(self) -> float:
         return float(self.values().sum())
@@ -171,7 +189,10 @@ class DiffusingResource(Resource):
 
     # discrete coupling (MicroC uses continuum reactions via diffuse() instead) -
     def deposit(self, pos: Position, amount: float) -> None:
-        key = tuple(int(v) for v in pos)
+        # Key by the normalized position (as FieldResource.deposit does) so a
+        # deposit at an out-of-bounds/toroidal position lands on the same tile a
+        # read would.
+        key = self.world.normalize(pos)
         self._pending[key] = self._pending.get(key, 0.0) + float(amount)
 
     def apply_sources(self) -> None:

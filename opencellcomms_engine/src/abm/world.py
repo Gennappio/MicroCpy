@@ -77,7 +77,13 @@ class World(ABC):
 
 
 class LatticeWorld(World):
-    """A discrete 2D (or 3D-ready) grid in integer tile coordinates."""
+    """A discrete 2D grid in integer tile coordinates.
+
+    2D only: every spatial method here (normalize/neighbors/bounds/interpolate)
+    works in (ti, tj). A 3D lattice would be a separate World implementation, not
+    a flag on this one — so ``dimension`` other than 2 is rejected rather than
+    silently flattened.
+    """
 
     def __init__(
         self,
@@ -88,6 +94,11 @@ class LatticeWorld(World):
         topology_y: str = "bounded",
         dimension: int = 2,
     ) -> None:
+        if dimension != 2:
+            raise NotImplementedError(
+                f"LatticeWorld is 2D only; got dimension={dimension}. A 3D lattice "
+                "needs a dedicated World implementation (its spatial methods are all 2D)."
+            )
         nx = max(1, int(round(size_x / tile_size)))
         ny = max(1, int(round(size_y / tile_size)))
         self._grid = TileGrid(size_x, size_y, nx, ny, topology_x, topology_y)

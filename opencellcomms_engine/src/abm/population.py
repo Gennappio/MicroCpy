@@ -120,6 +120,19 @@ class Population:
     def census(self) -> Dict:
         return {"count": self.count(), "by_kind": self.count_by_kind()}
 
+    def snapshot(self) -> Dict[str, tuple]:
+        """Agent positions grouped by kind: ``{kind: (xs, ys)}`` (parallel lists).
+        The structured form a plotter needs to scatter agents by kind without
+        re-iterating and unpacking positions by hand."""
+        out: Dict[str, list] = {}
+        for c in self.cellpop.state.cells.values():
+            kind = c.state.metabolic_state.get("_kind", "?")
+            xs_ys = out.setdefault(kind, ([], []))
+            pos = c.state.position
+            xs_ys[0].append(pos[0])
+            xs_ys[1].append(pos[1])
+        return {k: (list(xs), list(ys)) for k, (xs, ys) in out.items()}
+
     def record_census(self, step: Optional[int] = None) -> Dict:
         """Append the current census to ``self.history`` and return it. Opt-in —
         call once per step from a reporting node to build a population-over-time
