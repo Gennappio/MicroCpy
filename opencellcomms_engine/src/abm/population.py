@@ -46,6 +46,10 @@ class Population:
         # The live occupancy dict the World reads; Population owns the writes.
         self.world.bind_occupancy(self.cellpop.state.spatial_grid)
 
+        # Per-step census history (opt-in: only populated when a reporting node
+        # calls record_census). Each entry: {"step", "count", "by_kind"}.
+        self.history: List[Dict] = []
+
         # Agent kinds: name -> {"setup", "step", "params"}.
         self.kinds: Dict[str, Dict] = {}
         # Collective behaviours (thin: placement + cull/census, never agent-regulating).
@@ -115,6 +119,14 @@ class Population:
 
     def census(self) -> Dict:
         return {"count": self.count(), "by_kind": self.count_by_kind()}
+
+    def record_census(self, step: Optional[int] = None) -> Dict:
+        """Append the current census to ``self.history`` and return it. Opt-in —
+        call once per step from a reporting node to build a population-over-time
+        series (nothing accumulates otherwise)."""
+        snapshot = {"step": step, **self.census()}
+        self.history.append(snapshot)
+        return snapshot
 
     # movement (the only writer of occupancy) ---------------------------------
     def relocate(self, agent: Agent, pos: Position) -> None:

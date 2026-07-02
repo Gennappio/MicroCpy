@@ -121,7 +121,6 @@ def plot_world(
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from pathlib import Path
 
     world = env.world
     domain = env.domain
@@ -160,7 +159,7 @@ def plot_world(
     step = env.step
     ax.set_title(f"{prefix} — step {step}" + (f" · {chosen.name}" if chosen else ""))
 
-    out_dir = Path(env.raw_context.get("plots_dir", "results/plots"))
+    out_dir = env.plots_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{prefix}_step{step:04d}.png" if isinstance(step, int) else out_dir / f"{prefix}.png"
     fig.savefig(out_path, dpi=110, bbox_inches="tight")

@@ -24,6 +24,8 @@ class Domain:
         self._resources: "Dict[str, Resource]" = {}
         self._setup_fn: Optional[Callable] = None
         self._step_fn: Optional[Callable] = None
+        # Per-step totals history (opt-in; see record_totals).
+        self.history: List[Dict] = []
 
     def add_resource(self, resource: Resource) -> "Domain":
         self._resources[resource.name] = resource
@@ -39,6 +41,19 @@ class Domain:
 
     def sample(self, name: str, pos: Position) -> float:
         return self.resource(name).at(pos)
+
+    def totals(self) -> Dict[str, float]:
+        """Total field amount per resource, right now (resources exposing total())."""
+        return {name: r.total() for name, r in self._resources.items()
+                if hasattr(r, "total")}
+
+    def record_totals(self, step: Optional[int] = None) -> Dict:
+        """Append the current per-resource totals to ``self.history`` and return
+        the snapshot. Opt-in — call once per step to build a resource-over-time
+        series."""
+        snapshot = {"step": step, "totals": self.totals()}
+        self.history.append(snapshot)
+        return snapshot
 
     def on_setup(self, fn): self._setup_fn = fn; return self
     def on_step(self, fn): self._step_fn = fn; return self

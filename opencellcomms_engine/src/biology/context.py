@@ -548,6 +548,42 @@ class BiologicalContext:
     def set_agent(self, agent) -> None:
         self._ctx['_current_agent'] = agent
 
+    @property
+    def plots_dir(self):
+        """The directory plotting nodes should write to (Path). Typed accessor so
+        nodes don't reach into raw_context for the 'plots_dir' config field."""
+        from pathlib import Path
+        return Path(self._ctx.get('plots_dir', 'results/plots'))
+
+    def plot_timeseries(self, series: Dict[str, List[float]], filename: str,
+                        title: str = "", xlabel: str = "step", ylabel: str = "") -> "Path":
+        """Write a line plot of one or more named series to ``plots_dir``.
+
+        ``series`` maps a label to its y-values (x is the value index). Pairs with
+        Population.record_census / Domain.record_totals to plot quantities over
+        time. Returns the output path.
+        """
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        out_dir = self.plots_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / filename
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        for label, ys in series.items():
+            ax.plot(range(len(ys)), ys, label=str(label))
+        if title:
+            ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        if len(series) > 1:
+            ax.legend()
+        fig.savefig(out_path, dpi=110, bbox_inches="tight")
+        plt.close(fig)
+        return out_path
+
     # --- Intent queue --------------------------------------------------------
 
     @property
