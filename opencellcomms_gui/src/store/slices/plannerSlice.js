@@ -95,7 +95,16 @@ export const createPlannerSlice = (set, get) => ({
     set((state) => ({
       plannerTabs: state.plannerTabs.map((t) => {
         if (t.id !== tabId) return t;
-        const oldData = t.parameterOverrides[paramNodeId];
+        let oldData = t.parameterOverrides[paramNodeId];
+        if (!oldData) {
+          // This param node was added to the canvas after the tab was
+          // snapshotted (a newer parameter the saved tab predates). The
+          // dashboard already renders it from the live canvas value, so adopt
+          // that same value as the override base instead of silently dropping
+          // the edit.
+          const { stageNodes, stageEdges, workflow } = get();
+          oldData = snapshotAllParamNodeData(stageNodes, stageEdges, workflow.metadata)[paramNodeId];
+        }
         if (!oldData) return t;
         return {
           ...t,
