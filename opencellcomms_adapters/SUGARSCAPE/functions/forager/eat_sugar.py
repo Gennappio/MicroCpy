@@ -11,7 +11,7 @@ from src.workflow.decorators import register_function
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],
-    requires=[],
+    requires=["abm_population", "domain"],
     operates_on=["sugar"],
 )
 def eat_sugar(env: BiologicalContext, **kwargs):
@@ -19,6 +19,7 @@ def eat_sugar(env: BiologicalContext, **kwargs):
     if agent is None:
         return True
 
-    target = agent.get("_pending_position", agent.position)
-    env.request_consume_resource("sugar", position=target, store_as="sugar")
+    # No position: reconciliation credits sugar at the agent's post-move tile,
+    # after move arbitration has decided where it actually ends up.
+    env.request_consume_resource("sugar", store_as="sugar")
     return True

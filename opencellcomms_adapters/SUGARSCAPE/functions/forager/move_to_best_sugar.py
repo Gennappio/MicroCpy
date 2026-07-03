@@ -11,7 +11,7 @@ from src.workflow.decorators import register_function
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],
-    requires=[],
+    requires=["abm_population", "domain"],
     operates_on=["sugar"],
 )
 def move_to_best_sugar(env: BiologicalContext, **kwargs):
@@ -35,7 +35,8 @@ def move_to_best_sugar(env: BiologicalContext, **kwargs):
         ):
             best, best_sugar, best_distance = cell, visible_sugar, distance
 
-    agent.set("_pending_position", best)
+    # Queue the move only; reconciliation arbitrates contested tiles and eating
+    # happens at the agent's actual post-move tile (see eat_sugar).
     if best != pos:
         env.request_move(target=best)
     return True

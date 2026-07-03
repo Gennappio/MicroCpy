@@ -690,15 +690,18 @@ class BiologicalContext:
                                  position: Optional[Position] = None, store_as: Optional[str] = None, **payload: Any) -> None:
         agent = self.agent
         resolved_agent_id = agent_id or (agent.id if agent is not None else None)
-        resolved_position = position if position is not None else (agent.position if agent is not None else None)
-        if resolved_agent_id is None or resolved_position is None:
-            raise ValueError("request_consume_resource needs an agent and a position")
+        if resolved_agent_id is None:
+            raise ValueError("request_consume_resource needs agent_id or a current env.agent")
+        # Leave position=None to mean "wherever the agent ends up": reconciliation
+        # resolves it to the agent's post-move position, so consuming stays correct
+        # even when the agent's move was denied by tile arbitration. Pass an
+        # explicit position to pin the consume to a fixed tile.
         self.emit_intent(
             'consume_resource',
             resource=resource,
             amount=amount,
             agent_id=resolved_agent_id,
-            position=resolved_position,
+            position=position,
             store_as=store_as or resource,
             **payload
         )

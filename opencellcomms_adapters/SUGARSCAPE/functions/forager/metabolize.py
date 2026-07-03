@@ -6,19 +6,20 @@ from src.workflow.decorators import register_function
 
 @register_function(
     display_name="Metabolize",
-    description="Agent burns sugar; dies (requests removal) if it runs out",
+    description="Agent burns sugar (death is decided later, by cull_starved)",
     category="INTERCELLULAR",
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],
-    requires=[],
+    requires=["abm_population"],
 )
 def metabolize(env: BiologicalContext, **kwargs):
     agent = env.agent
     if agent is None:
         return True
 
+    # Self-state write (order-independent). Death is NOT decided here: eating is
+    # deferred to reconciliation, so the balance is not final until this step's
+    # sugar has been credited. cull_starved makes the starvation call afterwards.
     agent.set("sugar", agent.get("sugar", 0.0) - agent.get("metabolism", 1.0))
-    if agent.get("sugar", 0.0) < 0:
-        env.request_remove_agent(reason="starved")
     return True

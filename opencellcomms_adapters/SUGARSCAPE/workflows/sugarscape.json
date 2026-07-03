@@ -884,6 +884,30 @@
           }
         },
         {
+          "id": "world-cull",
+          "function_name": "cull_starved",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Remove foragers left with negative sugar after eating.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
           "id": "world-census",
           "function_name": "census",
           "function_file": "",
@@ -891,7 +915,7 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 260
+            "y": 370
           },
           "description": "Print agent count and resource totals.",
           "custom_name": "",
@@ -911,6 +935,7 @@
       "parameters": [],
       "execution_order": [
         "world-reconciliation",
+        "world-cull",
         "world-census"
       ],
       "input_parameters": [],
