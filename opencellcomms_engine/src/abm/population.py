@@ -8,9 +8,11 @@ death; the Population enacts it. Per the read/write discipline, this is the only
 place agents appear or disappear, and the collective never decides *for* an
 agent — it places them, commits their decisions, and observes.
 
-A Population can hold several agent **kinds**, each with its own Setup/Step
-behaviours and trait params; ``run_agent_step`` asks each kind's agents with
-that kind's Step.
+A Population can hold agents of several **kinds** (each agent is tagged with its
+kind). The workflow executor's per-entity ``for_each`` ask iterates a kind's
+agents in random order and runs its behaviour subworkflow; the Population just
+exposes ``agents_of_kind`` and commits their decisions (``relocate``/``cull``).
+The executor owns the loop — there is no library-side run loop here.
 """
 
 from __future__ import annotations
@@ -49,21 +51,6 @@ class Population:
         # Per-step census history (opt-in: only populated when a reporting node
         # calls record_census). Each entry: {"step", "count", "by_kind"}.
         self.history: List[Dict] = []
-
-        # Agent kinds: name -> {"setup", "step", "params"}.
-        self.kinds: Dict[str, Dict] = {}
-        # Collective behaviours (thin: placement + cull/census, never agent-regulating).
-        self._collective_setup: Optional[Callable] = None
-        self._collective_step: Optional[Callable] = None
-
-    # behaviour binding -------------------------------------------------------
-    def add_kind(self, name: str, setup: Optional[Callable] = None,
-                 step: Optional[Callable] = None, params: Optional[Dict] = None) -> "Population":
-        self.kinds[name] = {"setup": setup, "step": step, "params": params or {}}
-        return self
-
-    def on_setup(self, fn): self._collective_setup = fn; return self
-    def on_step(self, fn): self._collective_step = fn; return self
 
     # creation ----------------------------------------------------------------
     def spawn(self, pos: Position, kind: Optional[str] = None, **state) -> Optional[Agent]:
@@ -120,6 +107,13 @@ class Population:
     def census(self) -> Dict:
         return {"count": self.count(), "by_kind": self.count_by_kind()}
 
+    def to_observation(self) -> Dict:
+        """Compact, JSON-able summary the observability snapshot/diff layer reads
+        (via ``summarize_value``) instead of a constant object address — so a
+        step-over-step diff actually shows the population changing: total agents
+        and per-kind counts."""
+        return {"count": self.count(), "by_kind": self.count_by_kind()}
+
     def snapshot(self) -> Dict[str, tuple]:
         """Agent positions grouped by kind: ``{kind: (xs, ys)}`` (parallel lists).
         The structured form a plotter needs to scatter agents by kind without
@@ -150,37 +144,6 @@ class Population:
             del occ[old]
         cell.state.position = pos
         occ[pos] = cell.state.id
-
-    # activation (NetLogo `ask`) ---------------------------------------------
-    def ask(self, env, fn: Callable, agents: Optional[List[Agent]] = None, order: str = "random") -> None:
-        agents = self.agents() if agents is None else agents
-        if order == "random":
-            self._rng.shuffle(agents)
-        for a in agents:
-            if a.is_alive():
-                env.set_agent(a)
-                fn(env)
-        env.set_agent(None)
-
-    def run_setup(self, env) -> None:
-        if self._collective_setup:
-            self._collective_setup(env)
-        for name, k in self.kinds.items():
-            if k["setup"]:
-                env.set_kind(name, k["params"])
-                k["setup"](env)
-        env.set_kind(None, {})
-
-    def run_agent_step(self, env, order: str = "random") -> None:
-        for name, k in self.kinds.items():
-            if k["step"]:
-                env.set_kind(name, k["params"])
-                self.ask(env, k["step"], agents=self.agents_of_kind(name), order=order)
-        env.set_kind(None, {})
-
-    def run_collective_step(self, env) -> None:
-        if self._collective_step:
-            self._collective_step(env)
 
     # structural change (commit deaths) --------------------------------------
     def cull(self, predicate: Optional[Callable[[Agent], bool]] = None) -> int:

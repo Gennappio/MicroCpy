@@ -1,14 +1,14 @@
 """
-Resource — a scalar field over a World, with Unity-style Setup/Step behaviours.
+Resource — a scalar field over a World.
 
 A Resource is non-agent state that lives on the world: sugar, oxygen, a
-pheromone. Slice 1 ships ``FieldResource`` (a plain, non-diffusing field).
-Diffusion is *one* possible Step behavior, not the foundation — a later
-``DiffusingResource`` will wrap the FiPy substance solver behind this same
-interface.
+pheromone. ``FieldResource`` is a plain, self-contained array; ``DiffusingResource``
+is a view onto one substance in the shared FiPy solver. Behaviour *nodes* read and
+update these fields (``env.resource(name)``); the field mechanics live here.
 
 Agent coupling is order-safe: agents never scribble on the field directly, they
-``deposit`` source/sink terms that ``apply_sources`` commits once per step.
+``deposit`` source/sink terms that ``apply_sources`` commits once per step (the
+reconciliation node calls ``apply_sources``).
 """
 
 from __future__ import annotations
@@ -21,33 +21,12 @@ from src.abm.world import Position, World
 
 
 class Resource:
-    """Base resource: a named field bound to a World + Setup/Step hooks."""
+    """Base resource: a named field bound to a World."""
 
     def __init__(self, name: str, world: World):
         self.name = name
         self.world = world
         self.params: dict = {}
-        self._setup_fn: Optional[Callable] = None
-        self._step_fn: Optional[Callable] = None
-
-    # behaviour binding (the model builder attaches registered functions here) --
-    def on_setup(self, fn: Optional[Callable]) -> "Resource":
-        self._setup_fn = fn
-        return self
-
-    def on_step(self, fn: Optional[Callable]) -> "Resource":
-        self._step_fn = fn
-        return self
-
-    def run_setup(self, env) -> None:
-        if self._setup_fn:
-            self._setup_fn(env)
-
-    def run_step(self, env) -> None:
-        """Commit deposited source/sink terms, then run the Step behaviour."""
-        self.apply_sources()
-        if self._step_fn:
-            self._step_fn(env)
 
     # subclasses implement the field mechanics
     def at(self, pos: Position) -> float:
@@ -149,8 +128,7 @@ class DiffusingResource(Resource):
     Field and mesh are 1:1: ``values()[y, x]`` is the concentration at world tile
     ``(x, y)`` — no interpolation. Diffusion is a COLLECTIVE step (the simulator
     solves all coupled substances together), so the solve is driven once per tick
-    by a resource behaviour via :meth:`diffuse`, not per-resource; :meth:`run_step`
-    is therefore a no-op.
+    by a resource behaviour via :meth:`diffuse`, not per-resource.
 
     Two coupling modes (both first-class):
       * continuum (MicroC) — reaction rates are computed from cell metabolism and
@@ -215,10 +193,6 @@ class DiffusingResource(Resource):
         ``{substance_name: rate}`` (negative = consumption).
         """
         self.simulator.update(reactions or {})
-
-    def run_step(self, env) -> None:
-        # Diffusion is collective (see diffuse); nothing to do per-resource.
-        pass
 
 
 def add_diffusing_resources(domain, world: World, simulator) -> "object":

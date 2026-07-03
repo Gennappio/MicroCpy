@@ -1,4 +1,4 @@
-"""Unit tests for the ABM Agent + Population (occupancy, ask, cull, coupling)."""
+"""Unit tests for the ABM Agent + Population (occupancy, kinds, cull, coupling)."""
 
 import warnings
 
@@ -8,7 +8,6 @@ from src.abm.domain import Domain
 from src.abm.population import Population
 from src.abm.resource import FieldResource
 from src.abm.world import LatticeWorld
-from src.biology.context import BiologicalContext
 
 
 def world():
@@ -65,14 +64,18 @@ def test_cull_predicate():
     assert pop.count() == 1
 
 
-def test_ask_visits_every_agent_once():
-    sp, pop, dom = world()
-    for i in range(5):
-        pop.spawn((i, 0))
-    env = BiologicalContext({"domain": dom, "abm_population": pop})
-    seen = []
-    pop.ask(env, lambda e: seen.append(e.agent.id), order="sequential")
-    assert len(seen) == 5 and len(set(seen)) == 5
+def test_agents_of_kind_returns_each_agent_once():
+    # The primitive the executor's per-entity `for_each` ask iterates over.
+    sp, pop, _ = world()
+    for i in range(3):
+        pop.spawn((i, 0), kind="forager")
+    for i in range(2):
+        pop.spawn((i, 1), kind="predator")
+    foragers = pop.agents_of_kind("forager")
+    ids = [a.id for a in foragers]
+    assert len(foragers) == 3 and len(set(ids)) == 3
+    assert all(a.kind == "forager" for a in foragers)
+    assert len(pop.agents_of_kind("predator")) == 2
 
 
 def test_populate_constant_trait():

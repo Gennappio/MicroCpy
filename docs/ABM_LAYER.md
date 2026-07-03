@@ -3,7 +3,7 @@
 This explains the new `src/abm/` library: what each file does, who owns what, and
 how the pieces fit. It answers four questions people keep asking:
 
-1. What is `model.py` for?
+1. How does a description become a running model?
 2. Which class owns the time?
 3. Why are there two `domain.py`?
 4. What's in the `biology/` folder?
@@ -37,37 +37,28 @@ Files, one line each:
 | `src/abm/resource.py` | `Resource`, `FieldResource` | a field on the world (e.g. sugar) + its Setup/Step |
 | `src/abm/domain.py` | `Domain` | owns the World + all Resources; runs their Steps |
 | `src/abm/agent.py` | `Agent` | one individual; asks the World, writes itself |
-| `src/abm/population.py` | `Population` | owns all Agents; activation (`ask`) + births/deaths |
-| `src/abm/model.py` | *(no class)* | the **builder**: JSON description → wired Domain+Population |
+| `src/abm/population.py` | `Population` | owns all Agents; occupancy + births/deaths (the executor drives activation) |
 
 ---
 
-## 2. What is `model.py` for?
+## 2. How does a description become a running model?
 
-`model.py` is **not a class**. It is a *factory*: it reads a plain description
-(a dict / JSON) and builds the objects for you, wiring behaviours by name. It is
-the seam the GUI will target — the GUI produces the description, `build_model`
-turns it into a running model. Without it you'd hand-construct every object.
+Through **init nodes on the canvas**, not a hidden builder. The GUI's World and
+Resource/Agent setup canvases serialize to ordinary nodes — `setup_world`,
+`setup_resource`, a placement node — and when the executor runs the
+initialization sequence those nodes construct the `World`, `Domain`, and
+`Population` and put them in the shared `context` (`context['domain']`,
+`context['abm_population']`). Every behaviour then reaches them through the typed
+`env`: `env.world`, `env.resource(name)`, `env.population`, `env.agent`.
 
-```python
-from src.abm import build_model
+So the "description" is just the workflow JSON, and the thing that turns it into a
+running model is the executor walking the init nodes — the same node path the GUI
+produces and a scientist can read.
 
-description = {
-    "world": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
-              "topology_x": "toroidal", "topology_y": "toroidal"},
-    "resources": [{"name": "food", "initial": 1.0, "step": "regrow_food"}],
-    "agents":     {"step": "eat_step"},
-    "population": {"setup": "scatter", "count": 10},
-}
-
-# Behaviour *names* in the description are resolved to functions — either from an
-# explicit map (shown here) or from the function registry (what the GUI uses).
-domain, population = build_model(description, behaviours={
-    "scatter": scatter, "eat_step": eat_step, "regrow_food": regrow_food,
-})
-```
-
-That's all `model.py` does: description in, `(Domain, Population)` out.
+> **Historical note.** An earlier `src/abm/model.py` held a `build_model(description)`
+> factory plus `Population.run_agent_step` / `Domain.run_step` helpers — a second,
+> parallel way to build and drive a model that the executor never used. It was
+> removed so there is exactly **one** path: the node/executor path below.
 
 ---
 
@@ -86,21 +77,21 @@ def eat_step(env):
     ...
 ```
 
-**Who decides the *order* of a step?** That's the *scheduler*, and right now it
-lives in whoever runs the loop:
+**Who decides the *order* of a step?** The *scheduler* — the special
+`__scheduler__` subworkflow. The executor runs its `execution_order` once per
+step; each entry is a node, and a per-entity `for_each` entry runs its behaviour
+subworkflow once per agent (or resource). Conceptually:
 
-```python
-for t in range(steps):                       # <- the loop / scheduler
-    population.run_agent_step(env)            # ask each agent its Step
-    domain.run_step(env)                      # each resource: apply sinks + Step
-    population.run_collective_step(env)       # cull the dead, etc.
+```
+for t in range(number_of_steps):           # the __scheduler__ loop (executor-owned)
+    for node in scheduler.execution_order: # e.g. ask foragers, regrow sugar, reconcile
+        run(node, env)                     # a for_each ask runs the behaviour once per agent
 ```
 
-In a demo that loop is the harness; in a real run it is the v2.0 workflow
-scheduler. So: **the engine owns the clock; the scheduler owns the order; the
-ABM classes just expose `Setup`/`Step` for the scheduler to call.** (If we later
-want a single object to own "run N steps in this order", that would be a new
-`Scheduler`/`Model` class — it does not exist yet, on purpose.)
+So: **the engine owns the clock; the `__scheduler__` node order owns the step
+order; the ABM classes just hold the state (World/Domain/Population) that the
+behaviour nodes read and write.** There is no library-side run loop — §7 shows how
+the GUI's node order becomes this loop.
 
 ---
 
@@ -187,8 +178,6 @@ starve. This is the whole shape in ~25 lines.
 
 ```python
 import numpy as np
-from src.abm import build_model
-from src.biology.context import BiologicalContext
 
 # --- behaviours (each receives `env`; agent steps use env.agent) -------------
 def scatter(env):                                   # Population Setup
@@ -205,35 +194,20 @@ def eat_step(env):                                  # Agent Step (per agent)
 def regrow_food(env):                               # Resource Step (per field)
     env.resource("food").grow_to(np.full(env.world.shape, 1.0), 0.1)
 
-# --- build + run -------------------------------------------------------------
-description = {
-    "world": {"type": "lattice", "size_x": 20, "size_y": 20, "tile_size": 1,
-              "topology_x": "toroidal", "topology_y": "toroidal"},
-    "resources": [{"name": "food", "initial": 1.0, "step": "regrow_food"}],
-    "agents":     {"step": "eat_step"},
-    "population": {"setup": "scatter", "count": 10},
-}
-domain, population = build_model(description, behaviours={
-    "scatter": scatter, "eat_step": eat_step, "regrow_food": regrow_food})
-
-env = BiologicalContext({"domain": domain, "abm_population": population})
-domain.run_setup(env)               # build resources, seed them
-population.run_setup(env)           # place the 10 agents
-
-for t in range(3):                  # <- HAND-WRITTEN stand-in for the scheduler
-    population.run_agent_step(env)          # ask agents: eat_step
-    domain.run_step(env)                    # food: apply sinks, then regrow
-    population.run_collective_step(env)     # (no collective step here)
-    print(f"step {t}: {population.count()} agents, food {domain.resource('food').total():.0f}")
+# --- how it runs -------------------------------------------------------------
+# You do NOT hand-write a builder or a loop. The equivalent workflow is:
+#   * an init sequence: a `setup_world` node (builds World + Domain + Population),
+#     a `setup_resource "food"` node, and a placement node running `scatter`;
+#   * a `__scheduler__` whose execution_order is: ask foragers (for_each agent) ->
+#     `eat_step`; a resource for_each -> `regrow_food`; then a reconcile node
+#     (`apply_reconciliation`) that commits the queued sinks and deaths.
+# The executor builds the objects from the init nodes and drives the loop.
 ```
 
-Read it top-to-bottom and every earlier question is visible: `build_model` wires
-it (Q1), the `for` loop is the scheduler and `env` carries the clock (Q2),
-`Domain` is the ABM one (Q3), and `Population`/`Agent` are wrapping the
-`biology/` cells underneath (Q4).
-
-> **That `for` loop is a stand-in.** In a real run you do **not** hand-write it —
-> the GUI builds it. See section 7.
+Read it top-to-bottom: the behaviours are ordinary node-functions on `env` (Q2's
+clock is reached via `env.step`), `Domain` is the ABM one (Q3), and
+`Population`/`Agent` wrap the `biology/` cells underneath (Q4). The init nodes
+build it and the `__scheduler__` order is the loop (Q1) — see section 7.
 
 ---
 

@@ -1,29 +1,28 @@
 """
 Domain — the collective over resources; owns the World.
 
-Domain orchestrates its resources' Setup/Step (and, later, world-level dynamics
-like boundary changes or cross-resource reactions). ``run_step`` is the
-composite "Domain Step": it runs each resource's step in insertion order, which
-is visible and controllable, not hidden.
+Domain is the registry of resource fields on the world: init nodes add resources
+to it (``setup_resource``) and behaviours read/sample them (``env.resource(name)``).
+Resource dynamics are ordinary behaviour nodes on the Resources/Scheduler
+canvases, run by the executor — the Domain holds the fields, it does not drive a
+hidden step loop.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from src.abm.resource import Resource
 from src.abm.world import Position, World
 
 
 class Domain:
-    """Owns the World and its Resources; orchestrates resource updates."""
+    """Owns the World and its Resources; the registry behaviours read fields from."""
 
     def __init__(self, world: World):
         self.world = world
         self.params: Dict = {}
         self._resources: "Dict[str, Resource]" = {}
-        self._setup_fn: Optional[Callable] = None
-        self._step_fn: Optional[Callable] = None
         # Per-step totals history (opt-in; see record_totals).
         self.history: List[Dict] = []
 
@@ -47,6 +46,12 @@ class Domain:
         return {name: r.total() for name, r in self._resources.items()
                 if hasattr(r, "total")}
 
+    def to_observation(self) -> Dict:
+        """Compact, JSON-able summary the observability snapshot/diff layer reads
+        (via ``summarize_value``) instead of a constant object address — so a diff
+        shows resource fields changing over steps: the field total per resource."""
+        return {"resources": sorted(self._resources), "totals": self.totals()}
+
     def record_totals(self, step: Optional[int] = None) -> Dict:
         """Append the current per-resource totals to ``self.history`` and return
         the snapshot. Opt-in — call once per step to build a resource-over-time
@@ -54,18 +59,3 @@ class Domain:
         snapshot = {"step": step, "totals": self.totals()}
         self.history.append(snapshot)
         return snapshot
-
-    def on_setup(self, fn): self._setup_fn = fn; return self
-    def on_step(self, fn): self._step_fn = fn; return self
-
-    def run_setup(self, env) -> None:
-        if self._setup_fn:
-            self._setup_fn(env)
-        for r in self._resources.values():
-            r.run_setup(env)
-
-    def run_step(self, env) -> None:
-        if self._step_fn:
-            self._step_fn(env)
-        for r in self._resources.values():
-            r.run_step(env)

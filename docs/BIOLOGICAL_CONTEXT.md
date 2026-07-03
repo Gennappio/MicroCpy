@@ -236,9 +236,9 @@ compares correctly during migration — but prefer the `mark_*()` methods.
 Beyond the cell/substance views, `env` surfaces the **ABM object model**
 (`opencellcomms_engine/src/abm/`): `World`, `Domain`, `Resource`, `Population`,
 `Agent`. These are the objects a spatial agent-based model (Sugarscape-style) is
-built from; the model builder (`build_model`) stores them in the context and
-`env` hands them to your node-functions. See `docs/ABM_LAYER.md` for the
-architecture; this is the `env`-facing API surface.
+built from; the `setup_world` / `setup_resource` init nodes construct them into
+the context and `env` hands them to your node-functions. See `docs/ABM_LAYER.md`
+for the architecture; this is the `env`-facing API surface.
 
 Two calling conventions decide *which* entity your function acts on:
 
@@ -318,13 +318,13 @@ one **collective** solve over all coupled substances (driven once per tick by th
 ### `env.population` / `env.domain` — the collectives
 
 `Population` owns the agents and is the **only** place they appear
-(`spawn`/`populate`) or disappear (`cull`); it also owns activation order
-(`ask`). `Domain` owns the World and all resources. Node behaviours rarely call
-these directly — the executor drives `run_setup` / `run_agent_step` /
-`run_step` / `run_collective_step` — but useful read helpers include
-`population.count()`, `population.count_by_kind()`, `population.snapshot()`
-(positions grouped by kind, for plotting), `population.record_census(step)`, and
-`domain.totals()` / `domain.record_totals(step)`.
+(`spawn`/`populate`) or disappear (`cull`). `Domain` owns the World and all
+resources. The executor drives activation — its per-entity `for_each` ask
+iterates a kind's agents in random order and binds `env.agent` — so node
+behaviours mostly use the read helpers: `population.count()`,
+`population.count_by_kind()`, `population.snapshot()` (positions grouped by kind,
+for plotting), `population.record_census(step)`, `population.to_observation()`,
+and `domain.totals()` / `domain.record_totals(step)` / `domain.to_observation()`.
 
 ---
 
