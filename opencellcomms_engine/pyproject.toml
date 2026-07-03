@@ -79,8 +79,16 @@ mayavi = [
 diffusion = [
     "fipy>=3.4.0",
 ]
+# Reference intracellular Boolean engine (cmaboss = the compiled MaBoSS core,
+# with the `maboss` Python wrapper). Only used by the step_maboss cross-check
+# tests, which skip when it is absent -- the engine has no runtime dependency
+# on it. cmaboss ships as pre-releases, so the floor allows 1.0.0bN.
+maboss = [
+    "maboss>=0.8.0",
+    "cmaboss>=1.0.0b1",
+]
 all = [
-    "opencellcomms[dev,docs,jupyter,performance,visualization,diffusion]",
+    "opencellcomms[dev,docs,jupyter,performance,visualization,diffusion,maboss]",
 ]
 
 [project.scripts]

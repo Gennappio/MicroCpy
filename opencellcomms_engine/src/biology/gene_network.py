@@ -9,6 +9,7 @@ from typing import Dict, List, Set, Optional, Callable, Any
 from pathlib import Path
 from collections import defaultdict
 import os
+import math
 import random
 import re
 
@@ -32,16 +33,21 @@ class BooleanExpression:
             self._compiled_func = lambda states: False
             return
 
-        # Extract variable names from expression
-        variables = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', self.expression)
-        boolean_ops = {'and', 'or', 'not', 'AND', 'OR', 'NOT', 'True', 'False', 'true', 'false'}
-        input_vars = list(set(v for v in variables if v not in boolean_ops))
-
-        # Convert expression to Python syntax
+        # Convert to Python operators first: symbolic (& | !) and MaBoSS word
+        # forms (AND / OR / NOT, any case). Word forms use \b boundaries so a
+        # gene whose name merely contains them (e.g. NOTCH1, ANDR) is left
+        # intact. Doing this before variable extraction keeps only real node
+        # names in input_vars.
         expr = self.expression
-        expr = expr.replace('&', ' and ')
-        expr = expr.replace('|', ' or ')
-        expr = expr.replace('!', ' not ')
+        expr = expr.replace('&', ' and ').replace('|', ' or ').replace('!', ' not ')
+        expr = re.sub(r'\bAND\b', ' and ', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'\bOR\b', ' or ', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'\bNOT\b', ' not ', expr, flags=re.IGNORECASE)
+
+        # Extract variable names (everything that isn't a boolean operator/literal)
+        variables = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', expr)
+        boolean_ops = {'and', 'or', 'not', 'True', 'False'}
+        input_vars = list(set(v for v in variables if v not in boolean_ops))
 
         # Build code that extracts variables from states dict
         if input_vars:
@@ -83,6 +89,16 @@ class NetworkNode:
     inputs: List[str] = field(default_factory=list)
     is_input: bool = False
     is_output: bool = False
+    # MaBoSS continuous-time transition rates. Only consumed by step_maboss();
+    # the discrete update modes ignore them. Default 1.0 = MaBoSS's own default.
+    rate_up: float = 1.0
+    rate_down: float = 1.0
+
+
+def _istate_to_bool(raw: str) -> bool:
+    """Interpret a MaBoSS `.istate` right-hand side (TRUE/FALSE or 1.0/0.0)."""
+    return raw.strip().upper() in ('TRUE', '1', '1.0')
+
 
 class BooleanNetwork(IGeneNetwork):
     """
@@ -517,7 +533,126 @@ class BooleanNetwork(IGeneNetwork):
             return selected_gene  # Return which gene was updated
 
         return None  # No state change
-    
+
+    # ------------------------------------------------------------------
+    # MaBoSS continuous-time stochastic mode
+    #
+    # The discrete modes above (synchronous / netlogo) update by step COUNT and
+    # ignore transition rates. MaBoSS instead evolves the network as a
+    # continuous-time Markov process: a node whose current value disagrees with
+    # its logic flips TOWARD the logic value, at a per-node rate (`rate_up` for
+    # 0->1, `rate_down` for 1->0). This is the only mode in which a change to a
+    # single `$u_`/`$d_` rate is meaningful -- which is exactly what a PhysiBoSS
+    # rate perturbation such as `$u_FOXP3_2 = 0.2` is.
+    # ------------------------------------------------------------------
+
+    def load_cfg(self, cfg_file: Path, set_initial_states: bool = True) -> None:
+        """Load MaBoSS `.cfg` transition rates (and optionally initial states).
+
+        Parses `$u_<Node>` / `$d_<Node>` rate parameters and `<Node>.istate`
+        lines, applying them by the standard MaBoSS naming convention
+        (`$u_<Node>` -> that node's `rate_up`). Rates are consumed only by
+        `step_maboss`; the discrete modes ignore them, so this never changes
+        existing behaviour. istate values may be written TRUE/FALSE or 1.0/0.0;
+        probabilistic istates are not supported.
+        """
+        content = Path(cfg_file).read_text()
+
+        params: Dict[str, float] = {}
+        for m in re.finditer(r'\$(\w+)\s*=\s*([0-9.eE+-]+)\s*;', content):
+            params[m.group(1)] = float(m.group(2))
+
+        for name, node in self.nodes.items():
+            node.rate_up = params.get(f'u_{name}', node.rate_up)
+            node.rate_down = params.get(f'd_{name}', node.rate_down)
+
+        if set_initial_states:
+            for m in re.finditer(r'(\w+)\.istate\s*=\s*([A-Za-z0-9.]+)\s*;', content):
+                node = self.nodes.get(m.group(1))
+                if node is not None:
+                    node.current_state = _istate_to_bool(m.group(2))
+
+    def set_rate(self, node_name: str, up: Optional[float] = None,
+                 down: Optional[float] = None) -> None:
+        """Override a node's transition rate(s).
+
+        The `FOXP3_2_lower` perturbation is exactly `set_rate('FOXP3_2', up=0.2)`.
+        Unknown node names are ignored.
+        """
+        node = self.nodes.get(node_name)
+        if node is None:
+            return
+        if up is not None:
+            node.rate_up = up
+        if down is not None:
+            node.rate_down = down
+
+    def step_maboss(self, time_delta: float,
+                    rng: Optional[random.Random] = None) -> Dict[str, bool]:
+        """Advance the network by `time_delta` of continuous time (MaBoSS/Gillespie).
+
+        Repeatedly: compute each candidate node's instantaneous transition rate
+        (a node is a candidate when its current state disagrees with its logic
+        value and it is neither an input nor a fixed/knocked-out node), draw an
+        exponential waiting time from the total rate, and -- if it falls within
+        the remaining interval -- flip one node chosen in proportion to its
+        rate, then recompute. Stops at a fixed point (total rate 0) or once the
+        next event would fall past `time_delta`. Pass a seeded `random.Random`
+        for reproducibility.
+        """
+        if time_delta <= 0:
+            return self.get_all_states()
+        rng = rng or random
+
+        candidates = [
+            name for name, node in self.nodes.items()
+            if node.update_function is not None and name not in self.fixed_nodes
+        ]
+        if not candidates:
+            return self.get_all_states()
+
+        states = {name: node.current_state for name, node in self.nodes.items()}
+
+        t = 0.0
+        while True:
+            total = 0.0
+            active: List = []  # (name, rate) for nodes that can transition now
+            for name in candidates:
+                node = self.nodes[name]
+                wants_on = node.update_function(states)
+                cur = states[name]
+                if not cur and wants_on:
+                    rate = node.rate_up
+                elif cur and not wants_on:
+                    rate = node.rate_down
+                else:
+                    continue  # already matches logic -> stable
+                if rate > 0.0:
+                    active.append((name, rate))
+                    total += rate
+
+            if total <= 0.0:
+                break  # fixed point
+
+            t += -math.log(1.0 - rng.random()) / total
+            if t > time_delta:
+                break  # no further transition within the interval
+
+            threshold = rng.random() * total
+            acc = 0.0
+            chosen = active[-1][0]
+            for name, rate in active:
+                acc += rate
+                if threshold <= acc:
+                    chosen = name
+                    break
+
+            new_val = not states[chosen]
+            states[chosen] = new_val
+            self.nodes[chosen].current_state = new_val
+
+        return self.get_all_states()
+
     def get_output_states(self) -> Dict[str, bool]:
         """Get current output node states"""
         return {
@@ -584,7 +719,9 @@ class BooleanNetwork(IGeneNetwork):
                 update_function=node.update_function,  # Functions can be shared
                 inputs=node.inputs.copy(),
                 is_input=node.is_input,
-                is_output=node.is_output
+                is_output=node.is_output,
+                rate_up=node.rate_up,
+                rate_down=node.rate_down,
             )
             new_network.nodes[name] = new_node
 
@@ -733,7 +870,9 @@ class HierarchicalBooleanNetwork(BooleanNetwork):
                 update_function=node.update_function,
                 inputs=node.inputs.copy(),
                 is_input=node.is_input,
-                is_output=node.is_output
+                is_output=node.is_output,
+                rate_up=node.rate_up,
+                rate_down=node.rate_down,
             )
             new_network.nodes[name] = new_node
 
