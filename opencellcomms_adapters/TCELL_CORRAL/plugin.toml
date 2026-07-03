@@ -1,0 +1,8 @@
+# OpenCellComms plugin manifest. See docs/PLUGINS.md for the full schema.
+[plugin]
+name = "TCELL_CORRAL"
+version = "0.1.0"
+description = "Corral T-helper differentiation model (PhysiCell/PhysiBoSS FOXP3_2) — CCL21 chemotaxis + per-cell MaBoSS networks driving Treg/Th1/Th17 fate."
+author = ""
+engine_version = ">=0.0.0"
+compatible_kernels = ["biophysics"]
