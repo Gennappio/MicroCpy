@@ -43,8 +43,11 @@ def _v1_workflow(kernel: str) -> WorkflowDefinition:
 
 def test_provides_derived_from_core_keys():
     bio = get_kernel("biophysics")
+    # Core keys (from core_keys) plus the ABM class-layer tokens (extra_provides),
+    # which let ABM behaviours require the runtime-built world/domain/abm_population.
     assert bio.provides() == {
-        "population", "simulator", "gene_network", "mesh_manager", "gene_networks"
+        "population", "simulator", "gene_network", "mesh_manager", "gene_networks",
+        "world", "domain", "abm_population",
     }
     assert get_kernel("physicell").provides() == set()
 

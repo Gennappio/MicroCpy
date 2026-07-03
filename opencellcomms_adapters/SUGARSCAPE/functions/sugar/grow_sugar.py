@@ -11,7 +11,7 @@ from src.workflow.decorators import register_function
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],
-    requires=[],
+    requires=["domain"],
     operates_on=["sugar"],
     parameters=[
         {"name": "resource", "type": "STRING", "default": "sugar"},

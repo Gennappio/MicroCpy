@@ -11,7 +11,7 @@ from src.workflow.decorators import register_function
     inputs=["context"],
     outputs=[],
     compatible_kernels=["*"],
-    requires=[],
+    requires=["abm_population"],
     parameters=[
         {"name": "kind", "type": "STRING", "default": "forager"},
         {"name": "count", "type": "INT", "default": 300},

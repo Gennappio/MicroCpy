@@ -184,6 +184,13 @@ BIOPHYSICS_KERNEL = KernelDefinition(
     compatible_categories=["INITIALIZATION", "INTRACELLULAR", "DIFFUSION", "INTERCELLULAR", "FINALIZATION", "UTILITY"],
     kernel_id="biophysics",
     version="1.0",
+    # ABM class-layer objects. These are created at runtime by the setup_world /
+    # setup_resource nodes (like `population`/`simulator`, they are not built by the
+    # kernel initializer), but declaring them here lets ABM behaviours state
+    # requires=["abm_population"/"domain"/"world"] and be rejected up front under a
+    # kernel that does not host the ABM layer — instead of failing deep in a
+    # per-agent loop with a KeyError.
+    extra_provides=["world", "domain", "abm_population"],
 )
 
 register_kernel(BIOPHYSICS_KERNEL)
