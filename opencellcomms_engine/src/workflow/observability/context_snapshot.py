@@ -126,7 +126,25 @@ def summarize_value(value: Any, max_preview_len: int = 200) -> ValueSummary:
     # Handle Path objects
     if isinstance(value, Path):
         return ValueSummary("Path", str(value))
-    
+
+    # Objects that expose a compact, JSON-able observation (e.g. the ABM
+    # Population / Domain) summarize *through* it, so the snapshot/diff shows
+    # agent counts and resource totals changing over steps instead of a constant
+    # object address. Without this, a mutated-in-place ABM object reprs to the
+    # same `<Population object at 0x...>` every step and the diff looks empty.
+    to_observation = getattr(value, "to_observation", None)
+    if callable(to_observation):
+        try:
+            observation = to_observation()
+            inner = summarize_value(observation, max_preview_len=max_preview_len)
+            return ValueSummary(
+                type(value).__name__,
+                inner.preview,
+                truncated=inner.truncated,
+            )
+        except Exception:
+            pass  # fall through to repr
+
     # Fallback: use repr with truncation
     try:
         repr_str = repr(value)
