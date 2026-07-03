@@ -95,7 +95,10 @@ def apply_associations_to_inputs(
                 cells_iter = list(population.state.cells.items())
                 print(f"[ASSOCIATIONS] Applying {len(associations)} associations (spatial, per-cell)")
             cells_on_count = {gene_input: 0 for gene_input in associations.values()}
-            first_cell_logged = per_cell  # suppress the per-cell SAMPLE log when per-cell
+            # Track the spatial concentration range per input so the resolution
+            # table can show min..max and flag whether the field actually varies.
+            conc_min = {gene_input: None for gene_input in associations.values()}
+            conc_max = {gene_input: None for gene_input in associations.values()}
 
             for cell_id, cell in cells_iter:
                 # Get cell grid position
@@ -124,17 +127,11 @@ def apply_associations_to_inputs(
                     cell_input_states[gene_input] = is_on
                     if is_on:
                         cells_on_count[gene_input] += 1
-
-                # Log first cell for diagnostics
-                if not first_cell_logged:
-                    print(f"   [SAMPLE] cell={cell_id}, grid=({grid_x},{grid_y}):")
-                    for substance_name, gene_input in associations.items():
-                        local_conc = substance_concentrations.get(
-                            substance_name, {}).get((grid_x, grid_y), 0.0)
-                        threshold = thresholds.get(gene_input, 0.0)
-                        status = "ON" if cell_input_states[gene_input] else "OFF"
-                        print(f"     {substance_name} ({local_conc:.4g}) > {threshold} -> {gene_input} = {status}")
-                    first_cell_logged = True
+                    lc = float(local_conc)
+                    if conc_min[gene_input] is None or lc < conc_min[gene_input]:
+                        conc_min[gene_input] = lc
+                    if conc_max[gene_input] is None or lc > conc_max[gene_input]:
+                        conc_max[gene_input] = lc
 
                 # Write to context['gene_networks'] (new pattern)
                 if cell_id in gene_networks:
@@ -151,9 +148,39 @@ def apply_associations_to_inputs(
 
             if not per_cell:
                 total_cells = len(population.state.cells)
-                print(f"   [SUMMARY] {total_cells} cells processed. Inputs ON counts:")
-                for gene_input, count in cells_on_count.items():
-                    print(f"     {gene_input}: {count}/{total_cells} ON")
+                cur_step = env.raw_context.get('current_step')
+                iter_str = f"iter {cur_step}" if cur_step is not None else "init"
+                print(f"[INPUT RESOLUTION] {iter_str} | {total_cells} cells | "
+                      f"rule: concentration > threshold -> ON")
+                print(f"   {'substance':<10} {'conc':<16} {'thr':<10} "
+                      f"{'test':<26} {'input':<16} state ON/total")
+                all_uniform = True
+                for substance_name, gene_input in associations.items():
+                    thr = float(thresholds.get(gene_input, 0.0))
+                    cmin = conc_min.get(gene_input)
+                    cmax = conc_max.get(gene_input)
+                    on = cells_on_count.get(gene_input, 0)
+                    if cmin is None:
+                        cmin = cmax = 0.0
+                    uniform = (cmin == cmax)
+                    all_uniform = all_uniform and uniform
+                    if uniform:
+                        conc_disp = f"{cmin:.4g}"
+                        test_disp = f"{cmin:.4g} > {thr:g}"
+                    else:
+                        conc_disp = f"{cmin:.4g}..{cmax:.4g}"
+                        test_disp = f"[{cmin:.4g}..{cmax:.4g}] > {thr:g}"
+                    if total_cells > 0 and on == total_cells:
+                        state_disp = "ON "
+                    elif on == 0:
+                        state_disp = "OFF"
+                    else:
+                        state_disp = "MIX"
+                    print(f"   {substance_name:<10} {conc_disp:<16} {thr:<10g} "
+                          f"{test_disp:<26} {gene_input:<16} {state_disp}  {on}/{total_cells}")
+                if all_uniform:
+                    print("   [note] all fields spatially uniform (min==max) -> no gradient; "
+                          "if you expected spatial variation, check that a diffusion solver runs")
 
         # --- Fallback: no simulator (standalone gene network / initialization) ---
         elif population:
