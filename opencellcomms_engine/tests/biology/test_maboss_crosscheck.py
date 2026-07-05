@@ -31,11 +31,15 @@ maboss = pytest.importorskip("maboss")
 pytest.importorskip("cmaboss")  # the compiled engine maboss.load(cmaboss=True) needs
 
 
-_PHYSICELL_BN = Path(
-    r"C:\Users\genna\Documents\PhysiCell\config\differentiation\boolean_network"
+# Vendored copy of the PhysiCell/PhysiBoSS Corral network (byte-identical to the
+# source), so this cross-check runs anywhere cmaboss is installed rather than only
+# on a machine with a local PhysiCell checkout.
+_PHYSICELL_BN = (
+    Path(__file__).resolve().parents[3]
+    / "opencellcomms_adapters" / "TCELL_CORRAL" / "data"
 )
 _HAVE_TCELL = (_PHYSICELL_BN / "tcell_corral.bnd").exists()
-_TCELL_REASON = "PhysiCell tcell_corral MaBoSS files not present on this machine"
+_TCELL_REASON = "TCELL_CORRAL tcell_corral MaBoSS files not found in the adapter data dir"
 
 # The nine nodes PhysiCell's "contact with dendritic_cell" signal drives ON.
 CONTACT_INPUTS = ["IL1_In", "MHCII_b1", "MHCII_b2", "IL12_In",
