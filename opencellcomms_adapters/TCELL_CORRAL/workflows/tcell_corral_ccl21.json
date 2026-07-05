@@ -1,0 +1,112 @@
+{
+  "version": "2.0",
+  "name": "TCELL_CORRAL — CCL21 diffusion checkpoint",
+  "description": "Increment 3: register CCL21, place the cells, and solve steady-state CCL21 diffusion (endothelial source, first-order decay). Confirms a gradient forms around the single endothelial cell.",
+  "kernel": "biophysics",
+  "seed": 42,
+  "metadata": {
+    "author": "TCELL_CORRAL builder",
+    "created": "2026-07-03",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        { "name": "tcell", "init_subworkflow": "ccl21_init", "behavior_subworkflows": [] }
+      ],
+      "resource_kinds": [],
+      "world": { "subworkflow": "__world__", "behavior_subworkflows": ["ccl21_diffuse"] },
+      "init_sequence": { "subworkflow": "__init_sequence__" },
+      "scheduler": { "subworkflow": "__scheduler__" },
+      "processing": { "behavior_subworkflows": [] },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": { "tabs": [ { "id": "tab-wt", "name": "WT", "enabled": true, "parameterOverrides": {} } ] },
+      "contract_enforcement": "warn"
+    }
+  },
+  "subworkflows": {
+    "__world__": {
+      "description": "World setup plus the CCL21 chemokine field.",
+      "enabled": true,
+      "deletable": true,
+      "controller": { "id": "controller-__world__", "type": "controller", "label": "WORLD", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "w-sim", "function_name": "setup_simulation", "function_file": "", "parameters": { "output_dir": "results" }, "enabled": true, "position": { "x": 400, "y": 80 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "w-domain", "function_name": "setup_domain", "function_file": "", "parameters": { "dimensions": 2, "size_x": 600.0, "size_y": 600.0, "nx": 30, "ny": 30, "cell_height": 15.0 }, "enabled": true, "position": { "x": 400, "y": 200 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "w-pop", "function_name": "setup_population", "function_file": "", "parameters": { "enable_gene_network": true }, "enabled": true, "position": { "x": 400, "y": 320 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "w-ccl21", "function_name": "setup_ccl21_field", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 440 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["w-sim", "w-domain", "w-pop", "w-ccl21"],
+      "input_parameters": []
+    },
+    "ccl21_init": {
+      "description": "Place the Corral cells and wrap them into the ABM population.",
+      "enabled": true,
+      "deletable": true,
+      "controller": { "id": "controller-ccl21_init", "type": "controller", "label": "CCL21 INIT", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "ci-place", "function_name": "place_cells_from_csv", "function_file": "", "parameters": { "file_path": "cells.csv" }, "enabled": true, "position": { "x": 400, "y": 100 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "ci-wrap", "function_name": "build_tcell_abm_population", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["ci-place", "ci-wrap"],
+      "input_parameters": []
+    },
+    "ccl21_diffuse": {
+      "description": "World behaviour: solve steady-state CCL21 diffusion for this step.",
+      "enabled": true,
+      "deletable": true,
+      "controller": { "id": "controller-ccl21_diffuse", "type": "controller", "label": "CCL21 DIFFUSE", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [
+        { "id": "cd-diffuse", "function_name": "diffuse_ccl21", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["cd-diffuse"],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order: world, then cell placement.",
+      "enabled": true,
+      "deletable": false,
+      "controller": { "id": "controller-__init_sequence__", "type": "controller", "label": "INIT SEQUENCE", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [],
+      "subworkflow_calls": [
+        { "id": "is-world", "type": "subworkflow_call", "subworkflow_name": "__world__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "description": "__world__", "parameter_nodes": [] },
+        { "id": "is-ccl21", "type": "subworkflow_call", "subworkflow_name": "ccl21_init", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "description": "ccl21_init", "parameter_nodes": [] }
+      ],
+      "parameters": [],
+      "execution_order": ["is-world", "is-ccl21"],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Per-step loop: solve CCL21 diffusion.",
+      "enabled": true,
+      "deletable": false,
+      "controller": { "id": "controller-__scheduler__", "type": "controller", "label": "SCHEDULER", "position": { "x": 100, "y": 100 }, "number_of_steps": 3 },
+      "functions": [],
+      "subworkflow_calls": [
+        { "id": "sc-diffuse", "type": "subworkflow_call", "subworkflow_name": "ccl21_diffuse", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 120 }, "description": "ccl21_diffuse (world)", "parameter_nodes": [] }
+      ],
+      "parameters": [],
+      "execution_order": ["sc-diffuse"],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main: initialization, then the diffusion loop.",
+      "enabled": true,
+      "deletable": false,
+      "controller": { "id": "controller-main", "type": "controller", "label": "MAIN", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [],
+      "subworkflow_calls": [
+        { "id": "m-init", "type": "subworkflow_call", "subworkflow_name": "__init_sequence__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "description": "Initialization sequence", "parameter_nodes": [] },
+        { "id": "m-sched", "type": "subworkflow_call", "subworkflow_name": "__scheduler__", "iterations": 3, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "description": "Main simulation loop", "parameter_nodes": [] }
+      ],
+      "parameters": [],
+      "execution_order": ["m-init", "m-sched"],
+      "input_parameters": []
+    }
+  }
+}

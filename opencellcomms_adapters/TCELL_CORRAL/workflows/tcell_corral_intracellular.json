@@ -1,0 +1,380 @@
+{
+  "version": "2.0",
+  "name": "TCELL_CORRAL — intracellular checkpoint",
+  "description": "Increment 2: load the 3 Corral cell kinds, build per-T0 MaBoSS networks, force DC contact ON, and step the intracellular layer. Confirms Treg/Th1/Th17 approx the validated baseline (Treg ~0.5) before any spatial layer.",
+  "kernel": "biophysics",
+  "seed": 42,
+  "metadata": {
+    "author": "TCELL_CORRAL builder",
+    "created": "2026-07-03",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "tcell",
+          "init_subworkflow": "tcell_init",
+          "behavior_subworkflows": ["tcell_step"]
+        }
+      ],
+      "resource_kinds": [],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": ["record_fates"]
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": []
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-wt",
+            "name": "WT",
+            "enabled": true,
+            "parameterOverrides": {}
+          },
+          {
+            "id": "tab-foxp3-lower",
+            "name": "FOXP3_2_lower",
+            "enabled": false,
+            "parameterOverrides": {
+              "ti-overrides": {
+                "label": "Up-rate overrides",
+                "targetParam": "up_rate_overrides",
+                "entries": [
+                  { "key": "FOXP3_2", "valueType": "float", "value": 0.2 }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "contract_enforcement": "warn"
+    }
+  },
+  "subworkflows": {
+    "__world__": {
+      "description": "World setup: simulation config, 2D domain (600x600 um, 40x40 bio-grid), legacy cell population.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "w-sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": { "output_dir": "results" },
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "w-domain",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {
+            "dimensions": 2,
+            "size_x": 600.0,
+            "size_y": 600.0,
+            "nx": 30,
+            "ny": 30,
+            "cell_height": 15.0
+          },
+          "enabled": true,
+          "position": { "x": 400, "y": 220 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "w-pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": { "enable_gene_network": true },
+          "enabled": true,
+          "position": { "x": 400, "y": 340 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["w-sim", "w-domain", "w-pop"],
+      "input_parameters": []
+    },
+    "tcell_init": {
+      "description": "tcell Setup: place PhysiCell cells, build per-T0 MaBoSS networks, wrap into the ABM population, and (scaffold) force DC contact ON.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-tcell_init",
+        "type": "controller",
+        "label": "TCELL INIT",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "ti-place",
+          "function_name": "place_cells_from_csv",
+          "function_file": "",
+          "parameters": { "file_path": "cells.csv" },
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ti-build",
+          "function_name": "build_tcell_networks",
+          "function_file": "",
+          "parameters": { "bnd_file": "tcell_corral.bnd", "cfg_file": "tcell_corral.cfg", "kind": "tcell" },
+          "enabled": true,
+          "position": { "x": 400, "y": 220 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": ["ti-overrides"]
+        },
+        {
+          "id": "ti-wrap",
+          "function_name": "build_tcell_abm_population",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 340 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ti-activate",
+          "function_name": "activate_all_tcells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 460 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "ti-overrides",
+          "type": "dictParameterNode",
+          "label": "Up-rate overrides",
+          "entries": [],
+          "target_param": "up_rate_overrides",
+          "position": { "x": 100, "y": 220 }
+        }
+      ],
+      "execution_order": ["ti-place", "ti-build", "ti-wrap", "ti-activate"],
+      "input_parameters": []
+    },
+    "tcell_step": {
+      "description": "tcell Step (per-agent): advance the cell's MaBoSS network by intracellular_dt of continuous time.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-tcell_step",
+        "type": "controller",
+        "label": "TCELL STEP",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "ts-step",
+          "function_name": "step_tcell_network",
+          "function_file": "",
+          "parameters": { "intracellular_dt": 6.0 },
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["ts-step"],
+      "input_parameters": []
+    },
+    "record_fates": {
+      "description": "World report (per step): count Treg/Th1/Th17 across the T0 cells and record the proportions.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-record_fates",
+        "type": "controller",
+        "label": "RECORD FATES",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "rf-record",
+          "function_name": "record_fate_counts",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": ["rf-record"],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order: world, then the tcell Setup.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "is-world",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "description": "__world__",
+          "parameter_nodes": []
+        },
+        {
+          "id": "is-tcell",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tcell_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 220 },
+          "description": "tcell_init",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["is-world", "is-tcell"],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Per-step loop: advance each T0 cell's MaBoSS network, then record fate proportions.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 30,
+        "parameter_nodes": ["steps_param"]
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sc-step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tcell_step",
+          "iterations": 1,
+          "for_each": { "type": "agent", "kind": "tcell", "order": "random" },
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 120 },
+          "description": "tcell_step (per T0 cell)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sc-record",
+          "type": "subworkflow_call",
+          "subworkflow_name": "record_fates",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 240 },
+          "description": "record_fates (once per step)",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "steps_param",
+          "label": "Steps",
+          "parameters": { "steps": 30 },
+          "position": { "x": 100, "y": 300 }
+        }
+      ],
+      "execution_order": ["sc-step", "sc-record"],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main: initialization sequence, then the scheduler loop.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN",
+        "position": { "x": 100, "y": 100 },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "m-init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 100 },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "m-sched",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 30,
+          "parameters": {},
+          "enabled": true,
+          "position": { "x": 400, "y": 220 },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": ["m-init", "m-sched"],
+      "input_parameters": []
+    }
+  }
+}

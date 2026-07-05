@@ -39,6 +39,10 @@ def step_tcell_network(
 
     stepped = 0
     for cell in cell_source:
+        # Once a cell has committed a fate, its network is no longer consulted
+        # (mirrors PhysiCell: the cell has transformed and stops differentiating).
+        if cell.raw.state.metabolic_state.get("fate", "naive") != "naive":
+            continue
         gn = env.gene_network(cell)
         if gn is None:
             continue

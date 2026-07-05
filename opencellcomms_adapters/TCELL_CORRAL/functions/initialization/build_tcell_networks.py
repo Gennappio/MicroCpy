@@ -9,7 +9,9 @@ table instead of an XML edit.
 
 Each cell's network is advanced every tick by ``step_tcell_network`` using the
 engine's continuous-time stochastic mode. Intended to run in the ``tcell``
-kind's Setup canvas; it builds a network for every cell in ``env.cells``.
+kind's Setup canvas; it builds a network for every cell of the target ``kind``
+(default ``tcell``), skipping other kinds (dendritic / endothelial) in the
+multi-kind Corral population.
 """
 
 from pathlib import Path
@@ -39,6 +41,10 @@ _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
          "description": "Per-node up-transition ($u_) rate overrides. The FOXP3_2_lower "
                         "perturbation is {\"FOXP3_2\": 0.2}; empty = wild type.",
          "default": {}},
+        {"name": "kind", "type": "STRING",
+         "description": "Only build networks for cells of this ABM kind. Untagged cells "
+                        "(no _kind) still get one, so single-kind models are unaffected.",
+         "default": "tcell"},
     ],
     inputs=["context"],
     outputs=["gene_network"],
@@ -51,6 +57,7 @@ def build_tcell_networks(
     bnd_file: str = "tcell_corral.bnd",
     cfg_file: str = "tcell_corral.cfg",
     up_rate_overrides: Union[Dict, None] = None,
+    kind: str = "tcell",
     **kwargs,
 ) -> bool:
     if len(env.cells) == 0:
@@ -73,11 +80,16 @@ def build_tcell_networks(
         template.set_rate(node, up=up)                # e.g. FOXP3_2 -> 0.2
 
     env.raw_context.setdefault("gene_networks", {})
+    built = 0
     for cell in env.cells:
+        cell_kind = cell.raw.state.metabolic_state.get("_kind")
+        if cell_kind is not None and cell_kind != kind:
+            continue                        # only T0 (tcell) cells carry a network
         cell_gn = template.copy()
         env.set_gene_network(cell, cell_gn)
         cell.set_gene_state_snapshot(cell_gn.get_all_states())
+        built += 1
 
     active = ", ".join(f"$u_{k}={v}" for k, v in overrides.items()) or "wild type"
-    print(f"[TCELL_CORRAL] Built {len(env.cells)} MaBoSS networks ({active})")
+    print(f"[TCELL_CORRAL] Built {built} MaBoSS networks for kind '{kind}' ({active})")
     return True
