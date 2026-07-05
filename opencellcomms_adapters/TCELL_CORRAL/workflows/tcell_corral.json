@@ -127,9 +127,10 @@
       "controller": { "id": "controller-reports", "type": "controller", "label": "REPORTS", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
       "functions": [
         { "id": "rp-dc", "function_name": "report_dc_progress", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "rp-fate", "function_name": "record_fate_counts", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+        { "id": "rp-fate", "function_name": "record_fate_counts", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "rp-plot", "function_name": "plot_ccl21_cells", "function_file": "", "parameters": { "plot_interval": 5, "minutes_per_step": 6.0 }, "enabled": true, "position": { "x": 400, "y": 340 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
       ],
-      "subworkflow_calls": [], "parameters": [], "execution_order": ["rp-dc", "rp-fate"], "input_parameters": []
+      "subworkflow_calls": [], "parameters": [], "execution_order": ["rp-dc", "rp-fate", "rp-plot"], "input_parameters": []
     },
     "final_report": {
       "description": "Processing (post-loop): plot the committed-fate time series.",

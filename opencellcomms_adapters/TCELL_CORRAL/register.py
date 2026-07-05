@@ -38,3 +38,4 @@ import opencellcomms_adapters.TCELL_CORRAL.functions.intercellular.differentiate
 import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.record_fate_counts  # noqa: F401
 import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.report_dc_progress  # noqa: F401
 import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.plot_fate_timeseries  # noqa: F401
+import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.plot_ccl21_cells  # noqa: F401
