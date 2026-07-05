@@ -21,6 +21,7 @@ import opencellcomms_adapters.TCELL_CORRAL.functions.initialization.place_cells_
 import opencellcomms_adapters.TCELL_CORRAL.functions.initialization.build_tcell_networks  # noqa: F401
 import opencellcomms_adapters.TCELL_CORRAL.functions.initialization.build_tcell_abm_population  # noqa: F401
 import opencellcomms_adapters.TCELL_CORRAL.functions.initialization.setup_ccl21_field  # noqa: F401
+import opencellcomms_adapters.TCELL_CORRAL.functions.initialization.fix_tcell_nodes  # noqa: F401
 
 # --- Intracellular (per-cell MaBoSS) --------------------------------------
 import opencellcomms_adapters.TCELL_CORRAL.functions.intracellular.activate_all_tcells  # noqa: F401
@@ -36,3 +37,4 @@ import opencellcomms_adapters.TCELL_CORRAL.functions.intercellular.differentiate
 # --- Reporting ------------------------------------------------------------
 import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.record_fate_counts  # noqa: F401
 import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.report_dc_progress  # noqa: F401
+import opencellcomms_adapters.TCELL_CORRAL.functions.reporting.plot_fate_timeseries  # noqa: F401
