@@ -18,7 +18,10 @@ from src.biology.context import BiologicalContext
 
 try:
     from fipy import CellVariable, DiffusionTerm, ImplicitSourceTerm
-    from fipy.solvers.scipy import LinearGMRESSolver as Solver
+    # Direct LU: the mesh is small (~900 cells) and the CCL21 source magnitudes
+    # are large, which makes the iterative GMRES solver hit its iteration cap
+    # (a noisy DivergenceWarning). A direct solve is exact and warning-free here.
+    from fipy.solvers.scipy import LinearLUSolver as Solver
     _HAVE_FIPY = True
 except Exception:
     _HAVE_FIPY = False
@@ -90,7 +93,7 @@ def diffuse_ccl21(env: BiologicalContext, **kwargs) -> bool:
 
     equation = DiffusionTerm(coeff=D) - ImplicitSourceTerm(coeff=decay) == -source_var
     try:
-        equation.solve(var=var, solver=Solver(iterations=1000, tolerance=1e-6))
+        equation.solve(var=var, solver=Solver())
     except Exception as e:
         print(f"[TCELL_CORRAL] CCL21 solve failed: {e}")
         return False
