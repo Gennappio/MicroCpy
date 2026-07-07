@@ -37,25 +37,26 @@ the GUI, an editable **node up-rate table** on the network node (`FOXP3_2` →
 
 ## Status
 
-**Implemented and validated (intracellular core):**
+**Complete and validated.** Both layers are implemented as node-functions under
+`functions/` and wired into `workflows/tcell_corral.json`:
 
-| File | Node | What it does |
-|---|---|---|
-| `functions/initialization/build_tcell_networks.py` | Build T-cell MaBoSS Networks | One `BooleanNetwork` per T0 cell from `data/tcell_corral.bnd/.cfg`; applies `up_rate_overrides` (the FOXP3_2 knob). |
-| `functions/intracellular/step_tcell_network.py` | Step T-cell Networks (MaBoSS) | Advances each cell's network by `intracellular_dt` via `step_maboss` (per-agent when `env.cell` is bound). |
+- **Intracellular core** — per-cell MaBoSS via the engine's `step_maboss`
+  (`build_tcell_networks`, `step_tcell_network`, `sense_dc_contact`,
+  `fix_tcell_nodes`).
+- **Spatial ABM layer** — CSV population loader, CCL21 diffusion/secretion, DC
+  chemotaxis, contact sensing, fate commitment, and fate-specific motility.
 
-**Vendored data (`data/`):** `tcell_corral.bnd/.cfg` (the ~90-node network),
-`dendritic_cells.bnd/.cfg` (the 4-node DC network), `cells.csv` (108 cells: 100
-T0, 7 dendritic_cell, 1 endothelial_cell). Copied unchanged from the PhysiCell
-project.
+The five PhysiCell configs (WT · FOXP3_2 lower/mutant · NFKB lower/mutant) are
+exposed as GUI planner tabs on two `dictParameterNode`s.
 
-**Not yet built (spatial layer + wiring).** The CSV population loader, CCL21
-diffusion/secretion, DC chemotaxis + contact sensing, fate commitment,
-fate-specific motility, and the behaviour/workflow JSON are the next increments.
+**Vendored data (`data/`):** `tcell_corral.bnd/.cfg` (95-node network),
+`dendritic_cells.bnd/.cfg` (4-node DC network), `cells.csv` (100 T0 / 7 DC / 1
+endothelial), and `rules.csv` — copied unchanged from the PhysiCell project.
 
-➡️ See **[`NEXT_STEPS.md`](NEXT_STEPS.md)** for the full sequenced roadmap:
-per-function contracts, the embedded PhysiCell reference values, the design
-decisions/gotchas, and how to resume on another machine.
+➡️ **[`MODEL.md`](MODEL.md)** — what the model simulates, how PhysiCell does it,
+how this port does it, and every difference between the two.
+➡️ **[`VALIDATION.md`](VALIDATION.md)** — the cmaboss (Boolean) and PhysiBoSS
+(spatial) validation results.
 
 ## Validation target
 

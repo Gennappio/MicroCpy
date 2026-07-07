@@ -5,7 +5,7 @@ Counts each fate two ways: (1) the live MaBoSS output-node state
 committed ``fate`` field once ``commit_tcell_fate`` (Increment 5) has fixed it.
 Proportions are stored via ``env.record`` so a downstream plot node can chart them
 over time, and printed each call for the CLI checkpoint (baseline is roughly
-Treg 0.5 / Th1 0.26 / Th17 0.22 — see NEXT_STEPS.md Section 0).
+Treg 0.5 / Th1 0.26 / Th17 0.22 — see MODEL.md §5).
 """
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
