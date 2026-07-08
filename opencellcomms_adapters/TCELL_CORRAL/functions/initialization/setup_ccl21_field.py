@@ -5,10 +5,10 @@ as a FiPy substance on the shared MultiSubstanceSimulator: a diffusion
 coefficient, a per-kind secretion (endothelial) / uptake (Th17) rate, and a
 first-order decay.
 
-Decay has no slot on ``SubstanceConfig``, so it is stashed in
-``context['ccl21_decay_rate']`` for ``diffuse_ccl21`` to apply as a FiPy implicit
-sink. All rates are SI (metres, seconds) to match the diffusion solver — the
-PhysiCell values (1000 um^2/min, 0.005/min) are pre-converted in the defaults.
+Decay is carried on ``SubstanceConfig.decay_rate`` (a first-class field); the
+diffusion step reads it back via ``cfg.decay_rate``. All rates are SI (metres,
+seconds) to match the diffusion solver — the PhysiCell values (1000 um^2/min,
+0.005/min) are pre-converted in the defaults.
 """
 from typing import Any, Dict, Optional
 
@@ -72,10 +72,10 @@ def setup_ccl21_field(
         "initial_value": initial_value,
         "boundary_value": 0.0,
         "boundary_type": "neumann",     # Dirichlet off -> no-flux edges (PhysiCell)
+        "decay_rate": decay_rate,       # first-class SubstanceConfig field (1/s)
         "unit": "mM",
     }
     _configure_substances(config, simulator, [ccl21])
-    context["ccl21_decay_rate"] = float(decay_rate)
     print(f"[TCELL_CORRAL] CCL21 field ready (D={diffusion_coeff:.3e} m^2/s, "
           f"decay={decay_rate:.3e}/s, secretion={secretion_rate}, uptake={uptake_rate})")
     return True

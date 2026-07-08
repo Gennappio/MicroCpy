@@ -88,6 +88,7 @@ class SubstanceConfig:
     initial_value: Concentration
     boundary_value: Concentration
     boundary_type: str = "fixed"
+    decay_rate: float = 0.0  # first-order decay, 1/s (SI)
 
 @dataclass
 class ThresholdConfig:
@@ -278,7 +279,8 @@ class OpenCellCommsConfig(IConfig):
                 uptake_rate=sub_data['uptake_rate'],
                 initial_value=Concentration(sub_data['initial_value'], "mM"),
                 boundary_value=Concentration(sub_data['boundary_value'], "mM"),
-                boundary_type=sub_data['boundary_type']
+                boundary_type=sub_data['boundary_type'],
+                decay_rate=sub_data.get('decay_rate', 0.0)
             )
 
         # Load associations (substance -> gene_input mapping)
@@ -409,7 +411,8 @@ class OpenCellCommsConfig(IConfig):
                 uptake_rate=sub_data['uptake_rate'],
                 initial_value=Concentration(sub_data['initial_value'], "mM"),
                 boundary_value=Concentration(sub_data['boundary_value'], "mM"),
-                boun9dary_type=sub_data['boundary_type']
+                boundary_type=sub_data['boundary_type'],
+                decay_rate=sub_data.get('decay_rate', 0.0)
             )
 
         # Associations and thresholds

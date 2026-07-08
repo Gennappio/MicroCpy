@@ -75,6 +75,7 @@ def setup_substances(
             - initial_value: Initial concentration
             - boundary_value: Boundary concentration
             - boundary_type: "fixed" or "neumann"
+            - decay_rate: First-order decay rate, 1/s (optional, default 0)
             - unit: Concentration unit (e.g., "mM", "uM")
         associations: Dict mapping substance names to gene network inputs
         **kwargs: Additional parameters

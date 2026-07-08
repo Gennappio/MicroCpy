@@ -253,6 +253,7 @@ def _collect_substance_definitions(kwargs: Dict[str, Any], context: Dict[str, An
             'initial_value': kwargs.get('initial_value', 0.0),
             'boundary_value': kwargs.get('boundary_value', 0.0),
             'boundary_type': kwargs.get('boundary_type', 'fixed'),
+            'decay_rate': kwargs.get('decay_rate', 0.0),
             'unit': kwargs.get('unit', 'mM'),
         })
         return substances
@@ -310,7 +311,8 @@ def _configure_substances(config, simulator, substances, reinitialize_simulator=
             uptake_rate=sub_def.get('uptake_rate', 0.0),
             initial_value=Concentration(sub_def.get('initial_value', 0.0), sub_def.get('unit', 'mM')),
             boundary_value=Concentration(sub_def.get('boundary_value', 0.0), sub_def.get('unit', 'mM')),
-            boundary_type=sub_def.get('boundary_type', 'fixed')
+            boundary_type=sub_def.get('boundary_type', 'fixed'),
+            decay_rate=sub_def.get('decay_rate', 0.0)
         )
 
         config.substances[name] = sub_config

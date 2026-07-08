@@ -7,11 +7,12 @@ Solves the steady-state reaction-diffusion balance
 on the shared FiPy mesh. Two things the generic ``run_diffusion_solver_coupled``
 cannot do are handled here: (1) the endothelial source is **kind-gated** (that
 cell has no gene network, so the gene-gated growth-factor path never fires), and
-(2) the first-order decay ``k`` — which ``SubstanceConfig`` has no field for — is
-added as a FiPy ``ImplicitSourceTerm``, together with the Th17 uptake, applied as
-an implicit sink on the *current* concentration (not the previous step's field)
-so a strong sink cannot set up the step-to-step oscillation an explicit sink
-would. Runs once per step as a world behaviour (no for_each).
+(2) the first-order decay ``k`` (from ``cfg.decay_rate``, now a first-class
+``SubstanceConfig`` field) is added as a FiPy ``ImplicitSourceTerm``, together
+with the Th17 uptake, applied as an implicit sink on the *current* concentration
+(not the previous step's field) so a strong sink cannot set up the step-to-step
+oscillation an explicit sink would. Runs once per step as a world behaviour (no
+for_each).
 """
 import numpy as np
 
@@ -33,7 +34,7 @@ except Exception:
     requires=["population", "simulator"],
     display_name="Diffuse CCL21",
     description="Steady-state CCL21 diffusion with endothelial secretion, Th17 uptake, "
-                "and the first-order decay SubstanceConfig lacks.",
+                "and first-order decay read from the substance config.",
     category="DIFFUSION",
     parameters=[],
     inputs=["context"],
@@ -47,9 +48,9 @@ def diffuse_ccl21(env: BiologicalContext, **kwargs) -> bool:
         return False
 
     ctx = env.raw_context
-    config = ctx.get("config")
-    simulator = ctx.get("simulator")
-    population = ctx.get("population")
+    config = env.config                      # typed accessor; simulator/population below
+    simulator = ctx.get("simulator")         # need the low-level FiPy internals (no typed API)
+    population = ctx.get("population")        # need per-cell metabolic_state (_kind / fate)
     if config is None or simulator is None or population is None:
         return False
     if "CCL21" not in simulator.state.substances:
@@ -59,7 +60,7 @@ def diffuse_ccl21(env: BiologicalContext, **kwargs) -> bool:
     cfg = simulator.state.substances["CCL21"].config
     secretion = float(getattr(cfg, "production_rate", 0.0) or 0.0)
     uptake = float(getattr(cfg, "uptake_rate", 0.0) or 0.0)
-    decay = float(ctx.get("ccl21_decay_rate", 0.0))
+    decay = float(getattr(cfg, "decay_rate", 0.0) or 0.0)
 
     dom = config.domain
     gsx = dom.size_x.micrometers / dom.nx

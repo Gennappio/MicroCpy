@@ -482,7 +482,12 @@ class MultiSubstanceSimulator:
             # CRITICAL FIX: FiPy uses OPPOSITE sign convention!
             # In FiPy, the equation is: ∇·(D∇c) + S = 0
             # So we need to NEGATE the source term!
-            equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
+            decay_rate = float(getattr(config, 'decay_rate', 0.0) or 0.0)
+            if decay_rate > 0.0:
+                # First-order decay -k*c, implicit on the current field (config.decay_rate, 1/s)
+                equation = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=decay_rate) == -source_var
+            else:
+                equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
             # Solve for steady state using the exact same approach as standalone script
             solver = Solver(iterations=1000, tolerance=1e-6)

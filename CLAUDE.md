@@ -166,6 +166,28 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 - `docs/engine/GETTING_STARTED.md` — Tutorial
 - `docs/engine/UPDATE_MECHANISMS_COMPARISON.md` — Boolean update mode tradeoffs
 
+## Prefer the typed `env: BiologicalContext` over `raw_context`
+
+Where a capability exists on the typed `env` API, use it — do not reach into
+`env.raw_context` (or take the raw `context: Dict`) for something that already has a
+typed accessor. `env.config`, `env.cells` / `env.agents`, `env.world`,
+`env.resource(name)`, `env.concentration(...)`, `env.record(...)`, `env.rng`,
+`env.plots_dir` all exist for exactly this. The typed layer owns coordinate
+conversion and kernel-gating and reads clearly in the GUI.
+
+- **The tell:** a function typed `env: BiologicalContext` whose body's first move is
+  `ctx = env.raw_context` to pull something with an accessor (e.g. `ctx["config"]`
+  instead of `env.config`) is a bug. Use the accessor, or be honest it is
+  infrastructure and take `context: Dict` with `typed_env_exempt=True`.
+- **`raw_context` is a real escape hatch — for genuinely unsupported cases only:** a
+  plugin-private context key, or an operation the typed layer can't express (e.g.
+  assembling a custom FiPy PDE). "Where possible" is the operative clause.
+- **A recurring `raw_context` use is a backlog item for the typed layer, not a
+  resting place.** If you keep reaching past `env` for the same capability (a
+  substance's decay rate, a field solve), promote it — a config field on the
+  substance/resource, or a verb in `src/abm/resource.py` — instead of copying the
+  escape hatch into the next plugin.
+
 ## Workflow JSON & GUI Readability
 
 - **Never inline complex values** (dicts, lists) directly in a function node's `"parameters"`. They render as unreadable flat strings in the GUI.
