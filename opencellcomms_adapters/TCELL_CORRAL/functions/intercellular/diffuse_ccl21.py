@@ -2,14 +2,16 @@
 
 Solves the steady-state reaction-diffusion balance
 
-    D * laplacian(c) - k*c + secretion(endothelial) - uptake(Th17) = 0
+    D * laplacian(c) - (k + u_Th17)*c + secretion(endothelial) = 0
 
 on the shared FiPy mesh. Two things the generic ``run_diffusion_solver_coupled``
 cannot do are handled here: (1) the endothelial source is **kind-gated** (that
 cell has no gene network, so the gene-gated growth-factor path never fires), and
 (2) the first-order decay ``k`` — which ``SubstanceConfig`` has no field for — is
-added as a FiPy ``ImplicitSourceTerm`` using the rate stashed by
-``setup_ccl21_field``. Runs once per step as a world behaviour (no for_each).
+added as a FiPy ``ImplicitSourceTerm``, together with the Th17 uptake, applied as
+an implicit sink on the *current* concentration (not the previous step's field)
+so a strong sink cannot set up the step-to-step oscillation an explicit sink
+would. Runs once per step as a world behaviour (no for_each).
 """
 import numpy as np
 
@@ -64,13 +66,12 @@ def diffuse_ccl21(env: BiologicalContext, **kwargs) -> bool:
     gsy = dom.size_y.micrometers / dom.ny
     cell_um = dom.cell_height.micrometers
 
-    # Uptake reads the previous step's field (standard explicit coupling).
-    ccl21_field = simulator.get_substance_concentrations().get("CCL21", {})
-
-    # Per-cell reactions keyed by bio-grid position, like _add_growth_factor_reactions:
-    # endothelial cells secrete a constant source; Th17 cells take up proportionally.
+    # Endothelial cells secrete a constant source (kind-gated: no gene network).
+    # Th17 uptake is applied below as an implicit first-order sink coefficient,
+    # not as a source term read from the previous field.
     reactions = {}
     n_src = n_sink = 0
+    sink_coeff = np.full(dom.nx * dom.ny, decay, dtype=float)   # first-order decay everywhere
     for cell in population.state.cells.values():
         kind = cell.state.metabolic_state.get("_kind")
         pos = cell.state.position
@@ -80,18 +81,20 @@ def diffuse_ccl21(env: BiologicalContext, **kwargs) -> bool:
         elif kind == "tcell" and cell.state.metabolic_state.get("fate") == "Th17":
             gx = max(0, min(dom.nx - 1, int(pos[0] * cell_um / gsx)))
             gy = max(0, min(dom.ny - 1, int(pos[1] * cell_um / gsy)))
-            local = max(0.0, ccl21_field.get((gx, gy), 0.0))
-            reactions.setdefault(pos, {})["CCL21"] = -uptake * local
+            sink_coeff[gx * dom.ny + gy] += uptake     # FiPy 2D index x*ny+y; implicit on current c
             n_sink += 1
 
-    # Reuse the simulator's bio-grid -> mesh mapping for the explicit source field,
-    # then solve  D*laplacian(c) - k*c == -source  (ImplicitSourceTerm supplies decay).
+    # Reuse the simulator's bio-grid -> mesh mapping for the endothelial source, then
+    # solve  D*laplacian(c) - (k + uptake_Th17)*c == -source.  Th17 uptake is an
+    # ImplicitSourceTerm on the current concentration (as in PhysiCell/BioFVM), so the
+    # strong sink is stable instead of oscillating with the previous step's field.
     source_field = simulator._create_source_field_from_reactions("CCL21", reactions)
     source_var = CellVariable(mesh=simulator.fipy_mesh, value=source_field)
+    sink_var = CellVariable(mesh=simulator.fipy_mesh, value=sink_coeff)
     var = simulator.fipy_variables["CCL21"]
     D = float(cfg.diffusion_coeff)
 
-    equation = DiffusionTerm(coeff=D) - ImplicitSourceTerm(coeff=decay) == -source_var
+    equation = DiffusionTerm(coeff=D) - ImplicitSourceTerm(coeff=sink_var) == -source_var
     try:
         equation.solve(var=var, solver=Solver())
     except Exception as e:
