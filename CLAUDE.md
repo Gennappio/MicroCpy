@@ -204,6 +204,22 @@ The homing rule, by where the behavior runs:
   owner, and a scientist cannot find or edit it. This is exactly the failure mode
   that produced `gene_network_update_test.json`.
 
+- **NEVER** park a resource's dynamics in **`world.behavior_subworkflows`**. A
+  behavior whose *primary actor* is a named substance/field (diffusion, decay,
+  secretion, uptake of e.g. `CCL21`) belongs under that substance's
+  **`resource_kinds[k]`** — `init_subworkflow` = the field's registration/Setup,
+  `behavior_subworkflows` = its per-tick Step. World *is* a real tab, so a resource
+  behavior parked there is **reachable** and passes the no-orphan check above — but
+  it is still **mis-homed**: a scientist looking for the CCL21 resource opens
+  **Resources**, not **World**. `world.behavior_subworkflows` is only for
+  world-level *lattice* mechanics with no owning entity (e.g. move-intent
+  `reconciliation`). Two tells you got this wrong: a behavior that reads or writes a
+  named substance field sitting under World, and a plugin that has diffusing
+  substances but an **empty `resource_kinds`** (the substance is being smuggled in
+  as world infrastructure — give it a resource kind). Being collective /
+  once-per-step (`no for_each`) does **not** make it World; a resource's Step is
+  collective too. `for_each`-ness is *how* a behavior runs, not *who owns it*.
+
 If a behavior genuinely cannot be attributed to any object, the **Processing** tab
 is the only legitimate catch-all — never Environment, and never a bare
 `__scheduler__` call with no category. `environment.init_subworkflow` /

@@ -14,8 +14,10 @@
         { "name": "dendritic_cell", "init_subworkflow": null, "behavior_subworkflows": ["dc_step"] },
         { "name": "endothelial_cell", "init_subworkflow": null, "behavior_subworkflows": [] }
       ],
-      "resource_kinds": [],
-      "world": { "subworkflow": "__world__", "behavior_subworkflows": ["ccl21_diffuse", "world_reconcile", "reports"] },
+      "resource_kinds": [
+        { "name": "CCL21", "init_subworkflow": "ccl21_init", "behavior_subworkflows": ["ccl21_diffuse"] }
+      ],
+      "world": { "subworkflow": "__world__", "behavior_subworkflows": ["world_reconcile", "reports"] },
       "init_sequence": { "subworkflow": "__init_sequence__" },
       "scheduler": { "subworkflow": "__scheduler__" },
       "processing": { "behavior_subworkflows": ["final_report"] },
@@ -59,17 +61,16 @@
   },
   "subworkflows": {
     "__world__": {
-      "description": "World setup plus the CCL21 chemokine field.",
+      "description": "World setup: simulation, domain, population.",
       "enabled": true, "deletable": true,
       "controller": { "id": "controller-__world__", "type": "controller", "label": "WORLD", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
       "functions": [
         { "id": "w-sim", "function_name": "setup_simulation", "function_file": "", "parameters": { "output_dir": "results" }, "enabled": true, "position": { "x": 400, "y": 80 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
         { "id": "w-domain", "function_name": "setup_domain", "function_file": "", "parameters": { "dimensions": 2, "size_x": 600.0, "size_y": 600.0, "nx": 30, "ny": 30, "cell_height": 15.0 }, "enabled": true, "position": { "x": 400, "y": 200 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "w-pop", "function_name": "setup_population", "function_file": "", "parameters": { "enable_gene_network": true }, "enabled": true, "position": { "x": 400, "y": 320 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "w-ccl21", "function_name": "setup_ccl21_field", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 440 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
+        { "id": "w-pop", "function_name": "setup_population", "function_file": "", "parameters": { "enable_gene_network": true }, "enabled": true, "position": { "x": 400, "y": 320 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
       ],
       "subworkflow_calls": [], "parameters": [],
-      "execution_order": ["w-sim", "w-domain", "w-pop", "w-ccl21"], "input_parameters": []
+      "execution_order": ["w-sim", "w-domain", "w-pop"], "input_parameters": []
     },
     "tcell_init": {
       "description": "tcell Setup: place cells, build per-T0 MaBoSS networks, apply any mutant clamp, wrap into the ABM population.",
@@ -88,8 +89,15 @@
       ],
       "execution_order": ["ti-place", "ti-build", "ti-fix", "ti-wrap"], "input_parameters": []
     },
+    "ccl21_init": {
+      "description": "CCL21 resource Setup: register the chemokine field (D, decay, secretion, uptake) on the world mesh.",
+      "enabled": true, "deletable": true,
+      "controller": { "id": "controller-ccl21_init", "type": "controller", "label": "CCL21 INIT", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
+      "functions": [ { "id": "ci-setup", "function_name": "setup_ccl21_field", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] } ],
+      "subworkflow_calls": [], "parameters": [], "execution_order": ["ci-setup"], "input_parameters": []
+    },
     "ccl21_diffuse": {
-      "description": "World: solve steady-state CCL21 diffusion for this step.",
+      "description": "CCL21 resource Step: solve steady-state CCL21 diffusion (endothelial source, Th17 uptake, decay) for this step.",
       "enabled": true, "deletable": true,
       "controller": { "id": "controller-ccl21_diffuse", "type": "controller", "label": "CCL21 DIFFUSE", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
       "functions": [ { "id": "cd-diffuse", "function_name": "diffuse_ccl21", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] } ],
@@ -140,15 +148,16 @@
       "subworkflow_calls": [], "parameters": [], "execution_order": ["fr-plot"], "input_parameters": []
     },
     "__init_sequence__": {
-      "description": "Initialization order: world, then cell placement + networks + clamp.",
+      "description": "Initialization order: world, CCL21 resource field, then cell placement + networks + clamp.",
       "enabled": true, "deletable": false,
       "controller": { "id": "controller-__init_sequence__", "type": "controller", "label": "INIT SEQUENCE", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
       "functions": [],
       "subworkflow_calls": [
         { "id": "is-world", "type": "subworkflow_call", "subworkflow_name": "__world__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "description": "__world__", "parameter_nodes": [] },
-        { "id": "is-tcell", "type": "subworkflow_call", "subworkflow_name": "tcell_init", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "description": "tcell_init", "parameter_nodes": [] }
+        { "id": "is-ccl21", "type": "subworkflow_call", "subworkflow_name": "ccl21_init", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "description": "ccl21_init (CCL21 resource setup)", "parameter_nodes": [] },
+        { "id": "is-tcell", "type": "subworkflow_call", "subworkflow_name": "tcell_init", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 340 }, "description": "tcell_init", "parameter_nodes": [] }
       ],
-      "parameters": [], "execution_order": ["is-world", "is-tcell"], "input_parameters": []
+      "parameters": [], "execution_order": ["is-world", "is-ccl21", "is-tcell"], "input_parameters": []
     },
     "__scheduler__": {
       "description": "Per-step loop: diffuse CCL21, DC chemotaxis, T0 sense+step+commit+move, reconcile, report.",
