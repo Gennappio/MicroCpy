@@ -265,5 +265,204 @@ export function createStaggeredLayout(functionNodes, paramNodes, edges, executio
   };
 }
 
-export default { getLayoutedNodes, createStaggeredLayout };
+// Node classification for the "Tidy" auto-arrange button.
+const TIDY_EXEC_TYPES = new Set(['workflowFunction', 'subworkflowCall', 'initNode', 'controllerNode']);
+const TIDY_PARAM_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictParameterNode']);
+const TIDY_PARAM_SOURCES = new Set(['params', 'list-out', 'dict-out']);
+
+// Per-type fallback sizes for nodes React Flow hasn't measured yet.
+const TIDY_FALLBACK_DIMS = {
+  workflowFunction: { width: 350, height: 160 },
+  subworkflowCall: { width: 350, height: 140 },
+  parameterNode: { width: 230, height: 110 },
+  listParameterNode: { width: 230, height: 140 },
+  dictParameterNode: { width: 230, height: 140 },
+  initNode: { width: 200, height: 90 },
+  controllerNode: { width: 200, height: 90 },
+};
+const TIDY_DEFAULT_DIMS = { width: 220, height: 100 };
+
+const isExecNode = (n) => TIDY_EXEC_TYPES.has(n.type) || n.id.startsWith('controller-');
+const isParamNode = (n) => TIDY_PARAM_TYPES.has(n.type);
+
+function tidyDimsFor(node, measured) {
+  const m = measured && measured.get(node.id);
+  if (m && m.width && m.height) return { width: m.width, height: m.height };
+  return TIDY_FALLBACK_DIMS[node.type] || TIDY_DEFAULT_DIMS;
+}
+
+/**
+ * "Tidy" auto-arrange for a stage canvas.
+ *
+ * Lays the main branch (controller + the function/subworkflow-call nodes wired
+ * to it) out as a single top-to-bottom column in execution order, dagre over the
+ * func-out/init-out -> func-in edges only. Each node's parameter nodes are stacked
+ * in a column to its LEFT, and dagre reserves enough vertical room per node for
+ * that stack so adjacent nodes' params can't collide. Anything detached from the
+ * controller (disconnected nodes, orphan params) is stacked in a column to the
+ * RIGHT of the main branch. Only `position` is changed, so the export path (which
+ * reads node.position) is unaffected.
+ *
+ * @param {Array} nodes - React Flow nodes
+ * @param {Array} edges - React Flow edges
+ * @param {Map<string,{width:number,height:number}>} measured - measured sizes by node id
+ * @param {Object} options - spacing overrides
+ * @returns {Array} - nodes with updated positions
+ */
+export function getTidyLayout(nodes, edges, measured, options = {}) {
+  const {
+    rankSpacing = 120,
+    nodeSpacing = 80,
+    paramGap = 60,
+    paramSpacing = 20,
+    branchGap = 180, // horizontal gap between the main branch and the detached column
+    stackGap = 60, // vertical gap between stacked detached items
+  } = options;
+
+  const execNodes = nodes.filter(isExecNode);
+  const paramNodes = nodes.filter(isParamNode);
+  if (execNodes.length === 0) return nodes; // nothing to arrange (defensive)
+
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const dimsById = (id) => tidyDimsFor(nodeById.get(id), measured);
+  const execIds = new Set(execNodes.map((n) => n.id));
+
+  // Map each parameter node to the execution node it feeds (first owner wins).
+  const ownerOf = {};
+  const paramsByOwner = {};
+  edges.forEach((edge) => {
+    if (!TIDY_PARAM_SOURCES.has(edge.sourceHandle) || !execIds.has(edge.target) || ownerOf[edge.source]) {
+      return;
+    }
+    const paramNode = paramNodes.find((n) => n.id === edge.source);
+    if (!paramNode) return;
+    ownerOf[edge.source] = edge.target;
+    (paramsByOwner[edge.target] = paramsByOwner[edge.target] || []).push(paramNode);
+  });
+
+  const paramStackHeight = (ownerId) => {
+    const ps = paramsByOwner[ownerId];
+    if (!ps || ps.length === 0) return 0;
+    return ps.reduce((sum, p) => sum + tidyDimsFor(p, measured).height, 0) + (ps.length - 1) * paramSpacing;
+  };
+  const paramStackWidth = (ownerId) => {
+    const ps = paramsByOwner[ownerId];
+    if (!ps || ps.length === 0) return 0;
+    return Math.max(...ps.map((p) => tidyDimsFor(p, measured).width));
+  };
+
+  const newPos = {};
+
+  // Stack an owner's parameter column immediately to its left, centered on it.
+  const placeParamsLeft = (ownerId, ownerX, ownerCy) => {
+    const params = paramsByOwner[ownerId];
+    if (!params) return;
+    const colWidth = paramStackWidth(ownerId);
+    const x = ownerX - paramGap - colWidth;
+    let y = ownerCy - paramStackHeight(ownerId) / 2;
+    params.forEach((p) => {
+      newPos[p.id] = { x, y };
+      y += tidyDimsFor(p, measured).height + paramSpacing;
+    });
+  };
+
+  // Split execution nodes into the controller's connected "main branch" and
+  // everything detached from it (walk execution edges as undirected).
+  const execEdges = edges.filter(
+    (e) =>
+      (e.sourceHandle === 'func-out' || e.sourceHandle === 'init-out') &&
+      execIds.has(e.source) &&
+      execIds.has(e.target)
+  );
+  const adjacency = {};
+  execEdges.forEach((e) => {
+    (adjacency[e.source] = adjacency[e.source] || []).push(e.target);
+    (adjacency[e.target] = adjacency[e.target] || []).push(e.source);
+  });
+  const controller = execNodes.find(
+    (n) => n.type === 'controllerNode' || n.type === 'initNode' || n.id.startsWith('controller-')
+  );
+  const mainSet = new Set();
+  if (controller) {
+    const queue = [controller.id];
+    mainSet.add(controller.id);
+    while (queue.length) {
+      const cur = queue.shift();
+      (adjacency[cur] || []).forEach((nb) => {
+        if (!mainSet.has(nb)) {
+          mainSet.add(nb);
+          queue.push(nb);
+        }
+      });
+    }
+  }
+  const mainExec = mainSet.size ? execNodes.filter((n) => mainSet.has(n.id)) : execNodes;
+  const mainIds = new Set(mainExec.map((n) => n.id));
+  const detachedExec = execNodes.filter((n) => !mainIds.has(n.id));
+
+  // Dagre top-to-bottom over the main branch. Reserve vertical room for each
+  // node's parameter stack so params of adjacent nodes can't collide.
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({ rankdir: 'TB', nodesep: nodeSpacing, ranksep: rankSpacing, marginx: 40, marginy: 40 });
+  mainExec.forEach((node) => {
+    const d = tidyDimsFor(node, measured);
+    dagreGraph.setNode(node.id, { width: d.width, height: Math.max(d.height, paramStackHeight(node.id)) });
+  });
+  execEdges.forEach((e) => {
+    if (mainIds.has(e.source) && mainIds.has(e.target)) dagreGraph.setEdge(e.source, e.target);
+  });
+  dagre.layout(dagreGraph);
+
+  mainExec.forEach((node) => {
+    const gp = dagreGraph.node(node.id);
+    const d = tidyDimsFor(node, measured);
+    const x = gp.x - d.width / 2;
+    newPos[node.id] = { x, y: gp.y - d.height / 2 };
+    placeParamsLeft(node.id, x, gp.y);
+  });
+
+  // Bounding box of the main branch as placed so far (execution nodes + params).
+  const placedIds = Object.keys(newPos);
+  let rightEdge = -Infinity;
+  let topEdge = Infinity;
+  placedIds.forEach((id) => {
+    rightEdge = Math.max(rightEdge, newPos[id].x + dimsById(id).width);
+    topEdge = Math.min(topEdge, newPos[id].y);
+  });
+  if (!Number.isFinite(rightEdge)) {
+    rightEdge = 0;
+    topEdge = 0;
+  }
+
+  // Detached nodes (with their params) and orphan params go in a column to the
+  // RIGHT of the main branch, stacked vertically, so they never overlap it.
+  const orphanParams = paramNodes.filter((p) => !ownerOf[p.id]);
+  if (detachedExec.length > 0 || orphanParams.length > 0) {
+    const maxDetachedParamWidth = detachedExec.reduce((m, n) => Math.max(m, paramStackWidth(n.id)), 0);
+    const colX = rightEdge + branchGap + (maxDetachedParamWidth ? maxDetachedParamWidth + paramGap : 0);
+    let stackY = topEdge;
+
+    detachedExec.forEach((node) => {
+      const d = tidyDimsFor(node, measured);
+      const slotHeight = Math.max(d.height, paramStackHeight(node.id));
+      const cy = stackY + slotHeight / 2;
+      newPos[node.id] = { x: colX, y: cy - d.height / 2 };
+      placeParamsLeft(node.id, colX, cy);
+      stackY += slotHeight + stackGap;
+    });
+
+    orphanParams.forEach((p) => {
+      newPos[p.id] = { x: colX, y: stackY };
+      stackY += tidyDimsFor(p, measured).height + paramSpacing;
+    });
+  }
+
+  // Position-only result; clear any stray parent linkage so coordinates stay absolute.
+  return nodes.map((n) =>
+    newPos[n.id] ? { ...n, position: newPos[n.id], parentId: undefined, extent: undefined } : n
+  );
+}
+
+export default { getLayoutedNodes, createStaggeredLayout, getTidyLayout };
 

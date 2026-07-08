@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   BackgroundVariant,
+  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import WorkflowFunctionNode from './WorkflowFunctionNode';
@@ -21,6 +22,8 @@ import ControllerSettings from './ControllerSettings';
 import useWorkflowStore from '../store/workflowStore';
 import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import { getDefaultParameters } from '../data/functionRegistry';
+import { getTidyLayout } from '../utils/layoutUtils';
+import { Wand2 } from 'lucide-react';
 import './WorkflowCanvas.css';
 
 const nodeTypes = {
@@ -642,6 +645,19 @@ const WorkflowCanvas = ({ stage }) => {
     [selectedNode, setNodes]
   );
 
+  // "Tidy" — auto-arrange the current canvas: execution nodes top-to-bottom in
+  // execution order, parameter nodes stacked to the left of the node they feed.
+  const handleTidy = useCallback(() => {
+    if (!reactFlowInstance) return;
+    const measured = new Map(
+      reactFlowInstance.getNodes().map((n) => [n.id, { width: n.width, height: n.height }])
+    );
+    const currentEdges = reactFlowInstance.getEdges();
+    setNodes((nds) => getTidyLayout(nds, currentEdges, measured));
+    // Re-fit after the position change paints (same setTimeout(...,0) pattern used on load).
+    setTimeout(() => reactFlowInstance.fitView({ padding: 0.2, duration: 300 }), 0);
+  }, [reactFlowInstance, setNodes]);
+
   return (
     <div className="workflow-canvas" ref={reactFlowWrapper}>
       <ReactFlow
@@ -660,6 +676,11 @@ const WorkflowCanvas = ({ stage }) => {
         attributionPosition="bottom-left"
       >
         <Controls />
+        <Panel position="top-left">
+          <button className="tidy-btn" onClick={handleTidy} title="Auto-arrange nodes">
+            <Wand2 size={14} /> Tidy
+          </button>
+        </Panel>
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
