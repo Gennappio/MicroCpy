@@ -193,6 +193,10 @@ After showing the code and getting approval (or "go ahead"):
   ```bash
   python -c "from src.workflow.registry import get_default_registry; print([f.name for f in get_default_registry().list_all() if '<function_name>' in f.name])"
   ```
+- Sanity-check the function with `python scripts/validate_functions.py` (signature
+  vs. decorator, parameter types). If you also placed it into a workflow, run
+  `python scripts/validate_workflow.py <workflow.json>` and fix any orphan or
+  inlined dict/list it reports.
 - Next steps:
   - Add it to a workflow canvas: `/occ_add-to-workflow`
   - Build a fresh workflow from this plugin's behaviors: `/occ_create-workflow`

@@ -142,7 +142,10 @@ workflow `"version": "2.0"`,
 
 1. Write to `opencellcomms_adapters/<plugin>/workflows/<name>.json` (create the
    `workflows/` folder if needed). Validate it parses:
-   `python -c "import json; json.load(open('<path>'))"`.
+   `python -c "import json; json.load(open('<path>'))"`. Then run the readability
+   linter and fix anything it reports before continuing — from
+   `opencellcomms_engine/`, `python scripts/validate_workflow.py <path>` — it must
+   exit 0 (no orphan behaviors, no inlined dict/list parameters).
 2. **Flag gaps:** if the mapping references a behavior or function that doesn't
    exist (an agent with no step canvas, a behavior emitting intents with no
    reconciliation canvas, a `function_name` not in the registry), say so plainly

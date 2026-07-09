@@ -22,3 +22,12 @@ repos:
         language: system
         pass_filenames: false
         files: '^(opencellcomms_engine|opencellcomms_adapters)/.*\.py$'
+      # Blocks a commit that introduces an orphan behaviour (a subworkflow the
+      # scheduler runs but no GUI tab owns) or an inlined dict/list parameter, in
+      # any workflow JSON being committed. Only staged workflow files are checked,
+      # so untouched legacy workflows never fail an unrelated commit.
+      - id: workflow-readability
+        name: workflow readability (orphans, inlined dicts)
+        entry: python opencellcomms_engine/scripts/validate_workflow.py
+        language: system
+        files: '(^|/)workflows/.*\.json$'

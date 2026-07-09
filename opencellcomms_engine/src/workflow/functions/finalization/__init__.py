@@ -10,6 +10,7 @@ from .save_simulation_data import save_simulation_data
 from .save_checkpoint import save_checkpoint_vtk
 from .export_final_state import export_final_state
 from .collect_statistics import collect_statistics
+from .write_run_summary import write_run_summary
 from .plot_world import plot_agents, plot_grid, plot_resources, plot_world
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     'save_checkpoint_vtk',
     'export_final_state',
     'collect_statistics',
+    'write_run_summary',
     'plot_world',
     'plot_grid',
     'plot_agents',

@@ -25,6 +25,13 @@ import io
 from pathlib import Path
 from contextlib import redirect_stdout
 
+# This script prints emoji (✅/⚠️/❌); make that safe on non-UTF-8 consoles
+# (e.g. Windows cp1252), where encoding them would otherwise raise.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 # Add engine directory to path so we can import from src
 sys.path.insert(0, str(Path(__file__).parent.parent))
 # Add parent directory so opencellcomms_adapters can be imported
@@ -151,6 +158,22 @@ def validate_functions():
                         )
         except Exception:
             pass  # If we can't inspect, skip — decorator already validates at import time
+
+    # =========================================================================
+    # Check 5: one file = one node (warn — legacy files intentionally bundle many)
+    # =========================================================================
+    from collections import defaultdict
+    by_file = defaultdict(list)
+    for fn_name, fn_meta in all_functions.items():
+        if getattr(fn_meta, "source_file", None):
+            by_file[fn_meta.source_file].append(fn_name)
+    for source_file, fns in sorted(by_file.items()):
+        if len(fns) > 1:
+            warnings.append(
+                f"⚠️  {len(fns)} functions registered in one file: {source_file}\n"
+                f"   Prefer one file = one node = one atomic function (readable on the GUI canvas).\n"
+                f"   Functions: {', '.join(sorted(fns))}"
+            )
 
     # =========================================================================
     # Print results

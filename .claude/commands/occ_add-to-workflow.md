@@ -108,7 +108,10 @@ Ask the user: "Use the default parameters, or customize any values?"
 2. Find the target canvas under `subworkflows`.
 3. Append the node to its `"functions"` array.
 4. Append the node id to its `"execution_order"`.
-5. Write it back and **validate the JSON parses** (`python -c "import json; json.load(open('<path>'))"`).
+5. Write it back and **validate the JSON parses** (`python -c "import json; json.load(open('<path>'))"`),
+   then **run the readability linter** and fix anything it reports — from
+   `opencellcomms_engine/`, `python scripts/validate_workflow.py <path>` — it must
+   exit 0 (no orphan behaviors, no inlined dict/list parameters).
 
 **If a standalone behavior file exists** for this canvas
 (`opencellcomms_adapters/<plugin>/behaviors/<canvas>.subworkflow.json`), update it
