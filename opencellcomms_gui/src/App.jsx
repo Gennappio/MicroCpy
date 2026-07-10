@@ -373,7 +373,7 @@ function App() {
           <span>Version: {workflow.version}</span>
         </div>
         <div className="footer-hint">
-          Agents → World → Scheduler → Planner → Processing → Results
+          World → Agents → Resources → Scheduler → Planner → Processing → Results
         </div>
       </footer>
     </div>

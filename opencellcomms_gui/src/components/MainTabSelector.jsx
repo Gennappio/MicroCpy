@@ -19,9 +19,17 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
       {/* ABM design tabs */}
       <div className="main-tab-group">
         <button
+          className={`main-tab world-tab ${currentMainTab === 'world' ? 'active' : ''}`}
+          onClick={() => onTabChange('world')}
+          title="Build the world and create the initial agents & resources — they exist here before their per-entity functions run"
+        >
+          <Globe size={18} />
+          <span>World</span>
+        </button>
+        <button
           className={`main-tab agents-tab ${currentMainTab === 'agents' ? 'active' : ''}`}
           onClick={() => onTabChange('agents')}
-          title="Define agent kinds and their behaviors"
+          title="Define agent kinds and their per-agent behaviors (init + step)"
         >
           <Users size={18} />
           <span>Agents</span>
@@ -33,14 +41,6 @@ const MainTabSelector = ({ currentMainTab, onTabChange }) => {
         >
           <Boxes size={18} />
           <span>Resources</span>
-        </button>
-        <button
-          className={`main-tab world-tab ${currentMainTab === 'world' ? 'active' : ''}`}
-          onClick={() => onTabChange('world')}
-          title="Build the world grid (setup_world or a custom grid builder)"
-        >
-          <Globe size={18} />
-          <span>World</span>
         </button>
         <button
           className={`main-tab initialization-tab ${currentMainTab === 'initialization' ? 'active' : ''}`}

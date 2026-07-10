@@ -100,7 +100,7 @@ const useWorkflowStore = create((set, get) => ({
 
   currentStage: SCHEDULER_NAME,
 
-  currentMainTab: 'agents',
+  currentMainTab: 'world',
 
   stageNodes: {
     [INIT_SEQUENCE_NAME]: [],

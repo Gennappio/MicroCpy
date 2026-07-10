@@ -76,6 +76,25 @@ pick the closest one, but the **contract `phase`** is what matters.
 
 Biological functions take a typed `env`, **not** the raw `context` dict.
 
+**First decide: does this run once (collective), or once per agent? The canvas decides
+— not which entity it sits under.** An agent kind has up to three canvases:
+- **Creation** (`create_subworkflow`, authored in the World tab) runs **once**,
+  collectively, no `for_each`. Brings agents into existence — placement,
+  `env.population.populate(...)`, wrapping into the ABM population — plus any parse-once
+  shared setup. `env.agent` is `None`; work on `for cell in env.cells:`.
+- **Per-agent init** (`init_subworkflow`, e.g. `tcell_init`) runs **once per agent**
+  (via `for_each`, after creation) — initialize the single bound `env.agent`/`env.cell`
+  (assign this cell's network, clamp it); **never** loop over `env.cells`.
+- **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) runs **once per
+  agent** each tick via the scheduler's `for_each` ask — same, no cell loop.
+
+This is the #1 structural error, in both directions: a `for cell in env.cells` loop
+inside a per-agent init/step **double-iterates**, and an `env.agent`-based function on
+a collective creation canvas **does nothing** (`env.agent` is `None`). The tell:
+`for cell in env.cells` / `populate` ⇒ collective **creation** (World/Init);
+`env.agent` / `env.cell` ⇒ per-agent init or step. **Not every kind has a per-agent
+init** — if setup is order-dependent-collective, it's all Creation.
+
 **Per-agent functions** (`agent_behavior` / `coupling`, run once per agent via the
 scheduler's `for_each` ask) act on the single bound agent:
 - The current agent → `agent = env.agent` (may be `None` — return `True` if so)

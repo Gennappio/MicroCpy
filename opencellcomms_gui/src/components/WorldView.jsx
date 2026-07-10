@@ -34,6 +34,12 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   const worldMeta = workflow.metadata?.gui?.world || {};
   const worldSub = worldMeta.subworkflow;
   const behaviors = worldMeta.behavior_subworkflows || [];
+  // Agent CREATION canvases (collective, run once in init) are homed to their
+  // agent kind but authored here in World: agents/resources are created in the
+  // World tab, before their per-entity (per-agent) functions run.
+  const agentCreates = (workflow.metadata?.gui?.agent_kinds || [])
+    .map((k) => k.create_subworkflow)
+    .filter(Boolean);
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');
@@ -46,11 +52,11 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   // Keep currentStage in sync with this tab's canvases (setup + behaviors);
   // otherwise the FunctionPalette sees '__scheduler__' and disables "New Function".
   useEffect(() => {
-    const valid = [worldSub, ...behaviors].filter(Boolean);
+    const valid = [worldSub, ...agentCreates, ...behaviors].filter(Boolean);
     if (worldSub && !valid.includes(currentStage)) {
       setCurrentStage(worldSub);
     }
-  }, [worldSub, behaviors.join(','), currentStage]);
+  }, [worldSub, agentCreates.join(','), behaviors.join(','), currentStage]);
 
   const handleCreateBehavior = () => {
     const name = newBehaviorName.trim();
@@ -71,6 +77,7 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
 
   const tabs = [
     ...(worldSub ? [{ name: worldSub, label: 'Init', deletable: false }] : []),
+    ...agentCreates.map((c) => ({ name: c, label: c, deletable: false })),
     ...behaviors.map((b) => ({ name: b, label: b, deletable: true })),
   ];
 

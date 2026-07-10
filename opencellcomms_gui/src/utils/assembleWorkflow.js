@@ -12,12 +12,13 @@
 import { INIT_SEQUENCE_NAME, controllerLabel } from '../store/subworkflowKinds';
 
 export const deriveForEachForBehavior = (gui, behaviorName) => {
-  // Iteration is OWNERSHIP-driven (scope = tab): a behaviour homed to an
-  // agent/resource kind runs once per entity via the per-entity `for_each` ask;
-  // everything else runs once per step. A behaviour that must run once must
-  // therefore simply NOT be homed to an agent/resource kind (it lives on the
-  // World/Scheduler side). There is no phase concept.
+  // Iteration is OWNERSHIP-driven (scope = tab). A per-agent canvas -- an agent
+  // kind's per-agent init_subworkflow OR any of its behavior_subworkflows (step)
+  // -- runs once per agent via the `for_each` ask. Collective agent CREATION
+  // (create_subworkflow) and resource setup run ONCE, so they are deliberately
+  // NOT matched here and fall through to null (= run once). There is no phase.
   const agentKind = (gui.agent_kinds || []).find((k) =>
+    k.init_subworkflow === behaviorName ||
     (k.behavior_subworkflows || []).includes(behaviorName),
   );
   if (agentKind) return { type: 'agent', kind: agentKind.name, order: 'random' };

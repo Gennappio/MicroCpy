@@ -1,6 +1,7 @@
 export const KINDS = {
   COMPOSER: 'composer',
   SUBWORKFLOW: 'subworkflow',
+  AGENT_CREATE: 'agent_create',
   AGENT_INIT: 'agent_init',
   AGENT_BEHAVIOR: 'agent_behavior',
   RESOURCE_INIT: 'resource_init',
@@ -55,6 +56,7 @@ export const INIT_KINDS = new Set([
 // All canvases where function nodes can be placed (everything except scheduler).
 // Init canvases hold functions too (e.g. setup_population, setup_substances).
 export const FUNCTION_HOSTING_KINDS = new Set([
+  KINDS.AGENT_CREATE,
   KINDS.AGENT_INIT,
   KINDS.AGENT_BEHAVIOR,
   KINDS.RESOURCE_INIT,
@@ -158,6 +160,7 @@ export const variantForKind = (kind) => {
   switch (kind) {
     case KINDS.AGENT_BEHAVIOR:
     case KINDS.AGENT_INIT:
+    case KINDS.AGENT_CREATE:
       return 'blue';
     case KINDS.RESOURCE_BEHAVIOR:
     case KINDS.RESOURCE_INIT:

@@ -106,7 +106,7 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
             e.stopPropagation();
             // Navigate to the owning tab based on target kind
             const tabMap = {
-              agent_init: 'agents', agent_behavior: 'agents',
+              agent_create: 'world', agent_init: 'agents', agent_behavior: 'agents',
               resource_init: 'resources', resource_behavior: 'resources',
               world: 'world', world_behavior: 'world',
               processing_behavior: 'processing',

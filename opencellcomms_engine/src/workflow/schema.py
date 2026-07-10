@@ -1160,6 +1160,8 @@ class WorkflowDefinition:
             kinds[name] = "world_behavior"
 
         for agent_kind in gui.get("agent_kinds") or []:
+            if agent_kind.get("create_subworkflow"):
+                kinds[agent_kind["create_subworkflow"]] = "agent_create"
             if agent_kind.get("init_subworkflow"):
                 kinds[agent_kind["init_subworkflow"]] = "agent_init"
             for name in agent_kind.get("behavior_subworkflows") or []:

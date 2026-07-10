@@ -41,6 +41,7 @@ export const computeSubworkflowKinds = (workflow) => {
   });
 
   agentKinds.forEach((k) => {
+    if (k.create_subworkflow) kinds[k.create_subworkflow] = KINDS.AGENT_CREATE;
     if (k.init_subworkflow) kinds[k.init_subworkflow] = KINDS.AGENT_INIT;
     (k.behavior_subworkflows || []).forEach((b) => {
       kinds[b] = KINDS.AGENT_BEHAVIOR;
