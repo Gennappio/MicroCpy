@@ -11,7 +11,7 @@
       "agent_kinds": [
         {
           "name": "forager",
-          "init_subworkflow": "forager_init",
+          "create_subworkflow": "forager_init",
           "behavior_subworkflows": [
             "forager_step"
           ]

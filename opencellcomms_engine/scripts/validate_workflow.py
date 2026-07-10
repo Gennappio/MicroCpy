@@ -96,7 +96,8 @@ def derive_homed_kinds(gui, subworkflows):
         claim(n, "world_behavior")
 
     for ak in gui.get("agent_kinds") or []:
-        claim(ak.get("init_subworkflow"), "agent_init")
+        claim(ak.get("create_subworkflow"), "agent_create")  # collective creation (World/Init)
+        claim(ak.get("init_subworkflow"), "agent_init")       # per-agent init (for_each)
         for n in ak.get("behavior_subworkflows") or []:
             claim(n, "agent_behavior")
 
@@ -199,6 +200,31 @@ def check_inlined_params(subworkflows, registry, errors, warnings):
                     )
 
 
+def check_agent_init_per_agent(gui, subworkflows, warnings):
+    """Warn when an agent kind's init canvas is called without for_each. In the
+    per-agent init model an agent's init runs once per agent (env.agent bound);
+    collective creation belongs in create_subworkflow. A plain (no-for_each) init
+    call is a likely mis-migration."""
+    init_seq = (gui.get("init_sequence") or {}).get("subworkflow")
+    calls = {}
+    for orch in ("main", init_seq):
+        sw = subworkflows.get(orch) if orch else None
+        for c in (sw or {}).get("subworkflow_calls") or []:
+            name = c.get("subworkflow_name")
+            if name:
+                calls.setdefault(name, c)
+    for ak in gui.get("agent_kinds") or []:
+        init_sw = ak.get("init_subworkflow")
+        call = calls.get(init_sw) if init_sw else None
+        if call is not None and not call.get("for_each"):
+            warnings.append(
+                f"agent kind '{ak.get('name')}' init canvas '{init_sw}' is called "
+                f"without for_each: an agent init should run per-agent. Add "
+                f"for_each {{type: agent, kind: '{ak.get('name')}'}} to its init-sequence "
+                f"call and move any collective creation into a create_subworkflow."
+            )
+
+
 def check_workflow(path, registry):
     """Returns (errors, warnings) for one workflow file."""
     errors, warnings = [], []
@@ -212,6 +238,7 @@ def check_workflow(path, registry):
 
     check_orphans(gui, subworkflows, errors)
     check_inlined_params(subworkflows, registry, errors, warnings)
+    check_agent_init_per_agent(gui, subworkflows, warnings)
     return errors, warnings
 
 

@@ -10,7 +10,7 @@
       "agent_kinds": [
         {
           "name": "tumor_cell",
-          "init_subworkflow": "tumor_cell_init",
+          "create_subworkflow": "tumor_cell_init",
           "behavior_subworkflows": [
             "gene_update",
             "fate_update"

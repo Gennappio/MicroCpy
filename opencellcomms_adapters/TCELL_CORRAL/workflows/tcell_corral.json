@@ -10,14 +10,14 @@
     "gui": {
       "function_libraries": [],
       "agent_kinds": [
-        { "name": "tcell", "init_subworkflow": "tcell_init", "behavior_subworkflows": ["tcell_step"] },
+        { "name": "tcell", "create_subworkflow": "tcell_create", "init_subworkflow": "tcell_init", "behavior_subworkflows": ["tcell_step"] },
         { "name": "dendritic_cell", "init_subworkflow": null, "behavior_subworkflows": ["dc_step"] },
         { "name": "endothelial_cell", "init_subworkflow": null, "behavior_subworkflows": [] }
       ],
       "resource_kinds": [
         { "name": "CCL21", "init_subworkflow": "ccl21_init", "behavior_subworkflows": ["ccl21_diffuse"] }
       ],
-      "world": { "subworkflow": "__world__", "behavior_subworkflows": ["tcell_create", "world_reconcile", "reports"] },
+      "world": { "subworkflow": "__world__", "behavior_subworkflows": ["world_reconcile", "reports"] },
       "init_sequence": { "subworkflow": "__init_sequence__" },
       "scheduler": { "subworkflow": "__scheduler__" },
       "processing": { "behavior_subworkflows": ["final_report"] },
