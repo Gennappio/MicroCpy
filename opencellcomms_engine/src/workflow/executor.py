@@ -671,7 +671,25 @@ class WorkflowExecutor:
                 return context
 
             kind = for_each.get('kind')
-            resources = [domain.resource(kind)] if kind else domain.resources()
+            try:
+                resources = [domain.resource(kind)] if kind else domain.resources()
+            except KeyError:
+                # The kind isn't a registered ABM domain resource -- e.g. a
+                # FiPy-solved field (CCL21, MicroC substances) registered on the
+                # simulator/mesh, whose "behaviour" is a COLLECTIVE field solve,
+                # not a per-instance op. Run it ONCE, binding the kind name for
+                # functions that take a `resource` default. (The CLI-authored
+                # workflow omits for_each here; the GUI re-adds it from the resource
+                # kind, so tolerate both.)
+                prev_kind = context.get('_current_resource_kind')
+                context['_current_resource_kind'] = kind
+                try:
+                    return self.execute_subworkflow(
+                        node.subworkflow_name, context, iterations=1,
+                        parameters={'resource': kind, **merged_params}, quiet=True,
+                    )
+                finally:
+                    context['_current_resource_kind'] = prev_kind
             self._run_rng(context).shuffle(resources)
             if self._should_log_step(context):
                 print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
