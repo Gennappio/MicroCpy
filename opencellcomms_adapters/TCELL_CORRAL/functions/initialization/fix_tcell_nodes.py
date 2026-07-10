@@ -52,7 +52,9 @@ def fix_tcell_nodes(
     clamped = {name: _to_bool(v) for name, v in dict(fixed_nodes).items()}
     fixed = 0
     missing = set()
-    for cell in env.cells:
+    # Per-agent when called with for_each (env.cell bound); else the whole pop --
+    # the same function works under both conventions (see BiologicalContext.cell).
+    for cell in ([env.cell] if env.cell is not None else env.cells):
         if cell.raw.state.metabolic_state.get("_kind") not in (None, kind):
             continue
         gn = env.gene_network(cell)

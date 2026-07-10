@@ -73,15 +73,24 @@ def build_tcell_networks(
     overrides = {k: float(v) for k, v in (up_rate_overrides or {}).items()}
 
     # Parse + configure the template once, then copy() it per cell -- copy()
-    # carries the rates and initial states and skips re-parsing the .bnd.
-    template = BooleanNetwork(network_file=bnd_path)
-    template.load_cfg(cfg_path)                       # $u_/$d_ rates + istate
-    for node, up in overrides.items():
-        template.set_rate(node, up=up)                # e.g. FOXP3_2 -> 0.2
+    # carries the rates and initial states and skips re-parsing the .bnd. The
+    # template is cached on the (plugin-private) context key so this stays cheap
+    # when the node runs per-agent (for_each) in the tcell per-agent init canvas
+    # -- the .bnd is parsed once for the whole run, not once per cell.
+    template = env.raw_context.get("_tcell_net_template")
+    if template is None:
+        template = BooleanNetwork(network_file=bnd_path)
+        template.load_cfg(cfg_path)                   # $u_/$d_ rates + istate
+        for node, up in overrides.items():
+            template.set_rate(node, up=up)            # e.g. FOXP3_2 -> 0.2
+        env.raw_context["_tcell_net_template"] = template
 
     env.raw_context.setdefault("gene_networks", {})
     built = 0
-    for cell in env.cells:
+    # Per-agent when called with for_each (env.cell is the bound T0); falls back
+    # to the whole population when called collectively -- the same function works
+    # under both conventions (see BiologicalContext.cell).
+    for cell in ([env.cell] if env.cell is not None else env.cells):
         cell_kind = cell.raw.state.metabolic_state.get("_kind")
         if cell_kind is not None and cell_kind != kind:
             continue                        # only T0 (tcell) cells carry a network
