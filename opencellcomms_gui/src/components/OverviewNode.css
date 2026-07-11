@@ -52,6 +52,7 @@
   transition: box-shadow 0.15s, transform 0.15s;
 }
 .ov-node[data-variant='blue']   { border-left-color: #3b82f6; }
+.ov-node[data-variant='cyan']   { border-left-color: #06b6d4; }
 .ov-node[data-variant='green']  { border-left-color: #10b981; }
 .ov-node[data-variant='purple'] { border-left-color: #8b5cf6; }
 .ov-node[data-variant='orange'] { border-left-color: #f59e0b; }

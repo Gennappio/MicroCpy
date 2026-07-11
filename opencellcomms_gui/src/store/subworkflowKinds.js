@@ -172,10 +172,10 @@ export const variantForKind = (kind) => {
     case KINDS.AGENT_BEHAVIOR:
     case KINDS.AGENT_INIT:
     case KINDS.AGENT_CREATE:
-      return 'blue';
+      return 'cyan';
     case KINDS.RESOURCE_BEHAVIOR:
     case KINDS.RESOURCE_INIT:
-      return 'green';
+      return 'orange';
     case KINDS.PROCESSING_BEHAVIOR:
     case KINDS.SUBWORKFLOW:
       return 'purple';
