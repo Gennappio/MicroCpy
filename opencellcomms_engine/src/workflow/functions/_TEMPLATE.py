@@ -3,6 +3,17 @@
 
 [Detailed description of what this function does and when to use it]
 
+Which canvas does this belong on? (collective vs per-agent — the #1 structural choice)
+    - Creation (create_subworkflow, authored in World) and collective reporting run
+      ONCE: env.agent is None; use `for cell in env.cells:` /
+      `env.population.populate(...)`. The example below is this collective shape.
+    - Per-agent init (init_subworkflow) and per-agent step (behavior_subworkflows)
+      run ONCE PER AGENT via for_each: use `agent = env.agent` (guard `is None`) and
+      never loop `env.cells`.
+    Getting this wrong is the classic bug in both directions: a `for cell` loop in a
+    per-agent function double-iterates; an `env.agent` function on a creation canvas
+    does nothing (env.agent is None).
+
 Example:
     This function can be used in workflows like:
     - [Use case 1]

@@ -1206,6 +1206,16 @@ from src.workflow.decorators import register_function
         # `env: BiologicalContext` object.
         _role = (category or '').strip().lower()
         _ABM_HINTS = {
+            'agent_create': (
+                "    # Creation is COLLECTIVE -- it runs once; env.agent is None here.\n"
+                "    # env.population.populate('kind', count, trait=lambda rng: ...) -> create agents\n"
+                "    # for cell in env.cells: ...   -> operate on the whole population\n"
+            ),
+            'agent_init': (
+                "    # agent.set('key', value) / agent.get('key')  -> this agent's state\n"
+                "    # agent.position / agent.cell                 -> where it is\n"
+                "    # (runs once per agent; do NOT loop env.cells here)\n"
+            ),
             'agent_behavior': (
                 "    # env.agent             -> the current agent (bound per-ask)\n"
                 "    # env.agent.neighbors() -> neighbouring agents\n"
@@ -1319,13 +1329,33 @@ from src.workflow.decorators import register_function
                     f'    requires={requires_repr},'
                 )
                 api_hints = _ABM_HINTS.get(_role, _LEGACY_HINTS)
-                body = (
-                    f'    """TODO: implement {fn_name}."""\n'
-                    f'    # Available on env: env.config, env.step, env.dt, env.results\n'
-                    f'{api_hints}'
-                    f'    # TODO: implement behavior\n'
-                    f'    return True\n'
-                )
+                if _role == 'agent_create':
+                    # Collective creation: runs once over the whole population.
+                    body = (
+                        f'    """TODO: implement {fn_name} (collective creation, runs once)."""\n'
+                        f'{api_hints}'
+                        f"    # TODO: bring this kind's agents into existence (env.agent is None here)\n"
+                        f'    return True\n'
+                    )
+                elif _role in ('agent_init', 'agent_behavior'):
+                    # Per-agent: runs once per agent via the scheduler/init for_each ask.
+                    body = (
+                        f'    """TODO: implement {fn_name} (runs once per agent)."""\n'
+                        f'    agent = env.agent  # the single bound agent; never loop env.cells here\n'
+                        f'    if agent is None:\n'
+                        f'        return True\n'
+                        f'{api_hints}'
+                        f'    # TODO: implement per-agent logic\n'
+                        f'    return True\n'
+                    )
+                else:
+                    body = (
+                        f'    """TODO: implement {fn_name}."""\n'
+                        f'    # Available on env: env.config, env.step, env.dt, env.results\n'
+                        f'{api_hints}'
+                        f'    # TODO: implement behavior\n'
+                        f'    return True\n'
+                    )
 
             fn_block = (
                 f'\n@register_function(\n'
@@ -1391,7 +1421,7 @@ from src.workflow.decorators import register_function
                 # home for each kind of function up front. Existing plugins are
                 # left untouched.
                 ROLE_FOLDERS = [
-                    'agent_init', 'agent_behavior',
+                    'agent_create', 'agent_init', 'agent_behavior',
                     'env_init', 'env_behavior',
                     'processing_behavior',
                 ]
