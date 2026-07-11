@@ -316,6 +316,32 @@ def check_agent_creation_structure(gui, subworkflows, errors, warnings):
         )
 
 
+def check_execution_order_complete(subworkflows, warnings):
+    """Warn when a sub-workflow's execution_order is non-empty but omits an enabled
+    node that exists in it. The executor runs ONLY execution_order when it is present
+    (a fully empty order falls back to definition/array order), so an omitted call or
+    function is **silently never run**. Schema validation already rejects unknown ids
+    (schema.py); this covers the reverse -- missing ids -- which is exactly the symptom
+    of a GUI export that failed to wire an edge for a call node."""
+    for name, sw in subworkflows.items():
+        order = sw.get("execution_order") or []
+        if not order:
+            continue  # empty order uses the engine's definition-order fallback
+        ordered = set(order)
+        missing = []
+        for node in (sw.get("functions") or []) + (sw.get("subworkflow_calls") or []):
+            nid = node.get("id")
+            if nid and node.get("enabled", True) and nid not in ordered:
+                missing.append(nid)
+        if missing:
+            warnings.append(
+                f"sub-workflow '{name}': execution_order omits node(s) {sorted(missing)} "
+                f"that exist in it -- they will NOT run (the engine executes only "
+                f"execution_order when it is non-empty). Wire them into the execution "
+                f"chain, or clear execution_order to fall back to definition order."
+            )
+
+
 def check_workflow(path, registry):
     """Returns (errors, warnings, skip_reason) for one workflow file.
 
@@ -341,6 +367,7 @@ def check_workflow(path, registry):
     check_inlined_params(subworkflows, registry, errors, warnings)
     check_agent_init_per_agent(gui, subworkflows, errors)
     check_agent_creation_structure(gui, subworkflows, errors, warnings)
+    check_execution_order_complete(subworkflows, warnings)
     return errors, warnings, None
 
 

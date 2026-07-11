@@ -188,3 +188,43 @@ def test_negative_example_is_caught_by_the_check():
     errors = []
     vw.check_agent_init_per_agent(gui, subs, errors)
     assert any("without for_each" in e for e in errors)
+
+
+# ── execution_order completeness (partial order silently drops calls) ─────────
+
+def test_execution_order_completeness_warns_on_dropped_call():
+    subs = {
+        "seq": {
+            "subworkflow_calls": [
+                {"id": "c1", "subworkflow_name": "a"},
+                {"id": "c2", "subworkflow_name": "b"},  # in calls, absent from order
+            ],
+            "execution_order": ["c1"],
+        }
+    }
+    warnings = []
+    vw.check_execution_order_complete(subs, warnings)
+    assert any("execution_order omits" in w and "c2" in w for w in warnings)
+
+
+def test_execution_order_empty_is_not_flagged():
+    # A fully empty order uses the engine's definition-order fallback -> not flagged.
+    subs = {"seq": {"subworkflow_calls": [{"id": "c1", "subworkflow_name": "a"}], "execution_order": []}}
+    warnings = []
+    vw.check_execution_order_complete(subs, warnings)
+    assert warnings == []
+
+
+def test_execution_order_ignores_disabled_nodes():
+    subs = {
+        "seq": {
+            "subworkflow_calls": [
+                {"id": "c1", "subworkflow_name": "a"},
+                {"id": "c2", "subworkflow_name": "b", "enabled": False},  # wouldn't run anyway
+            ],
+            "execution_order": ["c1"],
+        }
+    }
+    warnings = []
+    vw.check_execution_order_complete(subs, warnings)
+    assert warnings == []
