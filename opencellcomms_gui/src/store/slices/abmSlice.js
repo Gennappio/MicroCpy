@@ -67,9 +67,8 @@ export const createAbmSlice = (set, get) => ({
 
   addAgentKind: (name) => {
     if (get().workflow.metadata.gui.agent_kinds.find((k) => k.name === name)) return;
-    // New kinds are create-only: a collective creation canvas (authored in World)
-    // brings the agents into existence. A per-agent init_subworkflow is opt-in and
-    // added later, not scaffolded here (matches MicroC/SUGARSCAPE).
+    // New kinds are create-only: a collective Creation canvas (under the agent kind)
+    // brings the agents into existence, plus per-agent Steps (matches MicroC/SUGARSCAPE).
     const createName = `${name}_create`;
     set((state) => {
       if (state.workflow.metadata.gui.agent_kinds.find((k) => k.name === name)) return state;
@@ -115,7 +114,7 @@ export const createAbmSlice = (set, get) => ({
       if (!kind) return state;
 
       const toRemove = new Set(
-        [kind.create_subworkflow, kind.init_subworkflow, ...(kind.behavior_subworkflows || [])].filter(Boolean),
+        [kind.create_subworkflow, ...(kind.behavior_subworkflows || [])].filter(Boolean),
       );
       const newSubworkflows = { ...state.workflow.subworkflows };
       const newNodes = { ...state.stageNodes };

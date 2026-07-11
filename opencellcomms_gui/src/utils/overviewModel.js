@@ -26,8 +26,7 @@ import {
 // Which authoring tab owns a given subworkflow kind (mirrors the deep-link map
 // already used by SubWorkflowCallNode).
 const KIND_TO_TAB = {
-  agent_create: 'world',
-  agent_init: 'agents',
+  agent_create: 'agents',
   agent_behavior: 'agents',
   resource_init: 'resources',
   resource_behavior: 'resources',
@@ -286,21 +285,11 @@ export const buildOverviewModel = (workflow, options = {}) => {
     });
     let anyCreation = false;
     agentKinds.forEach((k) => {
-      const create = k.create_subworkflow;
-      const init = k.init_subworkflow;
-      if (create && create in idxOf) {
-        anyCreation = true;
-        if (init && init in idxOf && idxOf[create] >= idxOf[init]) {
-          structuralIssues.push({
-            severity: 'error',
-            message: `${k.name}: creation "${create}" is scheduled after its per-agent init "${init}" — agents must be created first.`,
-          });
-        }
-      }
-      if (init && !create) {
+      if (k.create_subworkflow && k.create_subworkflow in idxOf) anyCreation = true;
+      if (k.init_subworkflow) {
         structuralIssues.push({
           severity: 'error',
-          message: `${k.name}: has a per-agent init "${init}" but no creation canvas — its agents are never created.`,
+          message: `${k.name}: per-agent init "${k.init_subworkflow}" is no longer supported — do per-cell setup collectively in the creation canvas.`,
         });
       }
     });

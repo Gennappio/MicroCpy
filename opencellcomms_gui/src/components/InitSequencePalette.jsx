@@ -13,7 +13,7 @@ const InitSequencePalette = () => {
   const scheduled = new Set(calls.map((c) => c.subworkflow_name));
 
   const hasContent = !!worldSw
-    || agentKinds.some((k) => k.create_subworkflow || k.init_subworkflow)
+    || agentKinds.some((k) => k.create_subworkflow)
     || resourceKinds.some((k) => k.init_subworkflow);
 
   return (
@@ -36,28 +36,18 @@ const InitSequencePalette = () => {
       )}
 
       {agentKinds.map((kind) => (
-        (kind.create_subworkflow || kind.init_subworkflow) && (
+        kind.create_subworkflow && (
           <section key={kind.name} className="initseq-section">
             <div className="initseq-section-header agent">
               <Users size={13} />
               <span>{kind.name}</span>
             </div>
-            {kind.create_subworkflow && (
-              <InitItem
-                name={kind.create_subworkflow}
-                color="#3b82f6"
-                scheduled={scheduled.has(kind.create_subworkflow)}
-                onAdd={() => addToInitSequence(kind.create_subworkflow)}
-              />
-            )}
-            {kind.init_subworkflow && (
-              <InitItem
-                name={kind.init_subworkflow}
-                color="#3b82f6"
-                scheduled={scheduled.has(kind.init_subworkflow)}
-                onAdd={() => addToInitSequence(kind.init_subworkflow)}
-              />
-            )}
+            <InitItem
+              name={kind.create_subworkflow}
+              color="#06b6d4"
+              scheduled={scheduled.has(kind.create_subworkflow)}
+              onAdd={() => addToInitSequence(kind.create_subworkflow)}
+            />
           </section>
         )
       ))}

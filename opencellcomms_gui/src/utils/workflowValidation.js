@@ -231,11 +231,9 @@ export function validateContracts(workflow, stageNodes = {}) {
  * scripts/validate_workflow.py's check_agent_creation_structure. Blocks export of a
  * structurally-invalid ABM so the GUI can't produce what the CLI/pre-commit rejects.
  *
- * Note: `for_each` is ownership-derived at assembly (deriveForEachForBehavior), so a
- * create_subworkflow always exports collective and an init_subworkflow always exports
- * per-agent — INV2/INV4 cannot be violated via the GUI and are not re-checked here.
- * The GUI-reachable failures are INV5 (a per-agent init with no creation canvas),
- * INV3 (creation scheduled after init), and INV1 (no creation scheduled — a warning).
+ * An agent kind has two canvases: a collective Creation (runs once) and per-agent
+ * Steps. It reports a leftover per-agent init (no longer supported — fold it into the
+ * creation canvas) and warns when agent kinds have no creation scheduled at all.
  */
 export function validateAbmCreationStructure(workflow, stageNodes) {
   const errors = [];
@@ -253,27 +251,11 @@ export function validateAbmCreationStructure(workflow, stageNodes) {
     const nm = n.data?.subworkflowName;
     if (nm) { scheduledNames.add(nm); if (!(nm in nameToId)) nameToId[nm] = n.id; }
   });
-  // Best-effort order from the (pruned) execution_order cache; only used when both
-  // ids resolve, so an ambiguous order never false-blocks (the CLI is authoritative).
-  const order = workflow.subworkflows?.[initSeqName]?.execution_order || seqNodes.map((n) => n.id);
-  const orderIndex = (nm) => { const id = nameToId[nm]; return id ? order.indexOf(id) : -1; };
-
   let anyCreationScheduled = false;
   agentKinds.forEach((k) => {
-    const create = k.create_subworkflow;
-    const init = k.init_subworkflow;
-    if (create && scheduledNames.has(create)) {
-      anyCreationScheduled = true;
-      if (init && scheduledNames.has(init)) {
-        const ci = orderIndex(create);
-        const ii = orderIndex(init);
-        if (ci >= 0 && ii >= 0 && ci >= ii) {
-          errors.push(`Agent kind '${k.name}': creation '${create}' is scheduled at or after its per-agent init '${init}'. Agents must be created before their per-agent init runs — reorder creation first in Initialization.`);
-        }
-      }
-    }
-    if (init && !create) {
-      errors.push(`Agent kind '${k.name}' has a per-agent init '${init}' but no creation canvas: its agents are never created. Add a creation canvas in the World tab (or, if '${init}' is the collective creation, make it the creation canvas).`);
+    if (k.create_subworkflow && scheduledNames.has(k.create_subworkflow)) anyCreationScheduled = true;
+    if (k.init_subworkflow) {
+      errors.push(`Agent kind '${k.name}' has a per-agent init ('${k.init_subworkflow}'), which is no longer supported — do per-cell setup collectively in the creation canvas (for cell in env.cells).`);
     }
   });
   if (!anyCreationScheduled) {

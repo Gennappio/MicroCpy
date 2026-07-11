@@ -278,52 +278,42 @@ capability: the **per-agent "ask"** — a `subworkflow_call` with
 `for_each: {kind, order}` runs the called behaviour subworkflow **once per agent**
 of that kind, binding the current agent so each inner node sees `env.agent`.
 
-**An agent kind has up to three canvases; know which run collectively and which run
+**An agent kind has exactly two canvases; know which runs collectively and which runs
 per-agent — don't confuse them just because they live "under the agent kind":**
 - **Creation** (`create_subworkflow`, authored under its **agent kind** in the
   **Agents** tab — the collective *Creation* canvas, mirroring a resource's *Setup*;
   e.g. `tcell_create`) runs **once**, collectively, with **no `for_each`**. This is
   where agents are brought into existence — placement, wrapping into the ABM
-  population, and any parse-once shared setup. `env.agent` is `None`; work on the whole
+  population, **any once-only per-cell setup** (assign each cell's gene network, clamp
+  its nodes), and any parse-once shared setup. `env.agent` is `None`; work on the whole
   population (`for cell in env.cells:` or `env.population.populate(...)`). You cannot
   iterate agents before they exist, so creation is collective by definition, and runs
   once during Init (ordered in the Initialization tab).
-- **Per-agent init** (`init_subworkflow`, e.g. `tcell_init`) runs **once per agent**,
-  called with `for_each` in the init sequence **after** creation. It initializes the
-  single bound agent via `env.agent` / `env.cell` (e.g. assign this cell's gene
-  network, clamp its nodes) and must **never** loop over `env.cells`.
 - **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) runs **once per
-  agent** each tick via the scheduler's `for_each` ask. Same `env.agent`, no cell loop.
+  agent** each tick via the scheduler's `for_each` ask. `env.agent`/`env.cell` is the
+  bound agent; no cell loop.
+
+There is **no separate per-agent init phase**: once-only per-cell setup is done
+collectively in the Creation canvas (`for cell in env.cells:`), not a `for_each` pass.
 
 **The tell:** `for cell in env.cells:` (or `populate`) → a once-run **collective
 creation** function (the kind's Creation canvas). `env.agent` / `env.cell` → a
-**per-agent** init or step function. The *canvas* decides how it runs (Creation =
-collective, Init/Step = per-agent) — check which canvas a function sits on.
-
-**Not every agent kind has a per-agent init.** If a kind's setup is inherently
-collective (e.g. MicroC/SUGARSCAPE build all cell networks or place all agents in one
-order-dependent pass, where per-agent iteration would change results), the whole thing
-is **Creation** — there is no `init_subworkflow`, and the Agents tab holds the
-Creation canvas plus the per-agent Step. Only split out a per-agent `init_subworkflow`
-when the per-agent work
-is genuinely **independent per cell** (e.g. TCELL copies a shared network template onto
-each cell, order-independent). The two classic mistakes are symmetric: `for_each` on a
-collective creation call (re-creates everything once per agent), and an internal
-`for cell` loop inside a per-agent function (double-iterates).
+**per-agent Step**. The *canvas* decides how it runs — check which canvas a function
+sits on. The two classic mistakes are symmetric: `for_each` on a collective creation
+call (re-creates everything once per agent), and an internal `for cell` loop inside a
+per-agent Step (double-iterates).
 
 **These structural rules are enforced, not just documented.**
 `scripts/validate_workflow.py` (run by the CLI, the pre-commit hook, and the
-`/occ_new-*` skills) **hard-errors**: a `create_subworkflow` scheduled with
-`for_each` (creation is collective), a per-agent `init_subworkflow` scheduled
-*without* `for_each` (the canonical mislabeled-init bug), a creation scheduled at or
-after its kind's per-agent init, and a kind that declares an `init_subworkflow` but
-no `create_subworkflow` (the legacy shape — its agents are never created). It
-**warns** when agent kinds exist but no creation is scheduled anywhere. The GUI
-mirrors these on the **Overview** tab and blocks **Export** on the same errors, so a
+`/occ_new-*` skills) **hard-errors**: a `create_subworkflow` scheduled with `for_each`
+(creation is collective), and an agent kind that declares a per-agent
+`init_subworkflow` (that phase was removed — fold its per-cell setup into the Creation
+canvas). It **warns** when agent kinds exist but no creation is scheduled anywhere. The
+GUI mirrors these on the **Overview** tab and blocks **Export** on the same errors, so a
 structurally-invalid ABM is caught before it can run. A kind created collectively
-inside *another* kind's creation canvas (it has neither its own `create_subworkflow`
-nor `init_subworkflow`, e.g. TCELL_CORRAL's `dendritic_cell`) is intentionally not
-errored — that is the warn case, not a hard failure.
+inside *another* kind's creation canvas (it has no `create_subworkflow` of its own,
+e.g. TCELL_CORRAL's `dendritic_cell`) is intentionally not errored — that is the warn
+case, not a hard failure.
 
 **Copy examples only from canonical workflows** — `MicroC/workflows/microc.json`,
 `TCELL_CORRAL/workflows/tcell_corral.json`, `SUGARSCAPE/workflows/sugarscape.json`.

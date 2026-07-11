@@ -77,24 +77,22 @@ pick the closest one, but the **contract `phase`** is what matters.
 Biological functions take a typed `env`, **not** the raw `context` dict.
 
 **First decide: does this run once (collective), or once per agent? The canvas decides
-— not which entity it sits under.** An agent kind has up to three canvases:
+— not which entity it sits under.** An agent kind has two canvases:
 - **Creation** (`create_subworkflow`, the agent kind's **Creation** canvas in the
-  Agents tab — mirroring a resource's **Setup**) runs **once**,
-  collectively, no `for_each`. Brings agents into existence — placement,
-  `env.population.populate(...)`, wrapping into the ABM population — plus any parse-once
-  shared setup. `env.agent` is `None`; work on `for cell in env.cells:`.
-- **Per-agent init** (`init_subworkflow`, e.g. `tcell_init`) runs **once per agent**
-  (via `for_each`, after creation) — initialize the single bound `env.agent`/`env.cell`
-  (assign this cell's network, clamp it); **never** loop over `env.cells`.
+  Agents tab — mirroring a resource's **Setup**) runs **once**, collectively, no
+  `for_each`. Brings agents into existence — placement, `env.population.populate(...)`,
+  wrapping into the ABM population, and **any once-only per-cell setup** (assign each
+  cell's network, clamp it) done via `for cell in env.cells:`. `env.agent` is `None`.
 - **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) runs **once per
-  agent** each tick via the scheduler's `for_each` ask — same, no cell loop.
+  agent** each tick via the scheduler's `for_each` ask — binds `env.agent`/`env.cell`,
+  no cell loop.
 
 This is the #1 structural error, in both directions: a `for cell in env.cells` loop
-inside a per-agent init/step **double-iterates**, and an `env.agent`-based function on
-a collective creation canvas **does nothing** (`env.agent` is `None`). The tell:
-`for cell in env.cells` / `populate` ⇒ collective **creation** (World/Init);
-`env.agent` / `env.cell` ⇒ per-agent init or step. **Not every kind has a per-agent
-init** — if setup is order-dependent-collective, it's all Creation.
+inside a per-agent Step **double-iterates**, and an `env.agent`-based function on the
+collective Creation canvas **does nothing** (`env.agent` is `None`). The tell:
+`for cell in env.cells` / `populate` ⇒ collective **Creation** (runs once);
+`env.agent` / `env.cell` ⇒ per-agent **Step** (every tick). There is **no separate
+per-agent init phase** — once-only per-cell setup goes in Creation.
 
 **Per-agent functions** (`agent_behavior` / `coupling`, run once per agent via the
 scheduler's `for_each` ask) act on the single bound agent:
@@ -217,9 +215,8 @@ After showing the code and getting approval (or "go ahead"):
   vs. decorator, parameter types). If you also placed it into a workflow, run
   `python scripts/validate_workflow.py <workflow.json>` and fix everything it
   reports — orphans, inlined dict/list, and the agent-creation structure errors
-  (a `create_subworkflow` scheduled with `for_each`, a per-agent `init_subworkflow`
-  scheduled without `for_each`, a creation scheduled after its init, or a kind with
-  an `init_subworkflow` but no `create_subworkflow`).
+  (a `create_subworkflow` scheduled with `for_each`, or a leftover per-agent
+  `init_subworkflow` — that phase was removed, so fold per-cell setup into creation).
 - Next steps:
   - Add it to a workflow canvas: `/occ_add-to-workflow`
   - Build a fresh workflow from this plugin's behaviors: `/occ_create-workflow`

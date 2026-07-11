@@ -12,13 +12,12 @@
 import { INIT_SEQUENCE_NAME, controllerLabel } from '../store/subworkflowKinds';
 
 export const deriveForEachForBehavior = (gui, behaviorName) => {
-  // Iteration is OWNERSHIP-driven (scope = tab). A per-agent canvas -- an agent
-  // kind's per-agent init_subworkflow OR any of its behavior_subworkflows (step)
-  // -- runs once per agent via the `for_each` ask. Collective agent CREATION
-  // (create_subworkflow) and resource setup run ONCE, so they are deliberately
-  // NOT matched here and fall through to null (= run once). There is no phase.
+  // Iteration is OWNERSHIP-driven (scope = tab). A per-agent canvas -- any of an
+  // agent kind's behavior_subworkflows (Steps) -- runs once per agent via the
+  // `for_each` ask. Collective agent CREATION (create_subworkflow) and resource
+  // setup run ONCE, so they are deliberately NOT matched here and fall through to
+  // null (= run once). There is no phase.
   const agentKind = (gui.agent_kinds || []).find((k) =>
-    k.init_subworkflow === behaviorName ||
     (k.behavior_subworkflows || []).includes(behaviorName),
   );
   if (agentKind) return { type: 'agent', kind: agentKind.name, order: 'random' };

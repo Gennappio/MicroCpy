@@ -10,9 +10,9 @@
     "gui": {
       "function_libraries": [],
       "agent_kinds": [
-        { "name": "tcell", "create_subworkflow": "tcell_create", "init_subworkflow": "tcell_init", "behavior_subworkflows": ["tcell_step"] },
-        { "name": "dendritic_cell", "init_subworkflow": null, "behavior_subworkflows": ["dc_step"] },
-        { "name": "endothelial_cell", "init_subworkflow": null, "behavior_subworkflows": [] }
+        { "name": "tcell", "create_subworkflow": "tcell_create", "behavior_subworkflows": ["tcell_step"] },
+        { "name": "dendritic_cell", "behavior_subworkflows": ["dc_step"] },
+        { "name": "endothelial_cell", "behavior_subworkflows": [] }
       ],
       "resource_kinds": [
         { "name": "CCL21", "init_subworkflow": "ccl21_init", "behavior_subworkflows": ["ccl21_diffuse"] }
@@ -73,30 +73,21 @@
       "execution_order": ["w-sim", "w-domain", "w-pop"], "input_parameters": []
     },
     "tcell_create": {
-      "description": "Agent creation (World/Init, collective, runs once): place the Corral cells from CSV, then wrap them into the ABM population so the per-agent asks can bind env.agent/env.cell.",
+      "description": "tcell creation (collective, runs once): place the Corral cells from CSV, wrap them into the ABM population, build one MaBoSS network per T0 cell, and clamp any mutation nodes.",
       "enabled": true, "deletable": true,
       "controller": { "id": "controller-tcell_create", "type": "controller", "label": "TCELL CREATE", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
       "functions": [
         { "id": "tc-place", "function_name": "place_cells_from_csv", "function_file": "", "parameters": { "file_path": "cells.csv" }, "enabled": true, "position": { "x": 400, "y": 80 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
-        { "id": "tc-wrap", "function_name": "build_tcell_abm_population", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 200 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] }
-      ],
-      "subworkflow_calls": [], "parameters": [],
-      "execution_order": ["tc-place", "tc-wrap"], "input_parameters": []
-    },
-    "tcell_init": {
-      "description": "tcell per-agent init (runs once per T0 via for_each, env.agent/env.cell bound): build this cell's MaBoSS network from the shared template, then apply any mutant clamp. No cell loop -- the executor iterates the agents.",
-      "enabled": true, "deletable": true,
-      "controller": { "id": "controller-tcell_init", "type": "controller", "label": "TCELL INIT", "position": { "x": 100, "y": 100 }, "number_of_steps": 1 },
-      "functions": [
-        { "id": "ti-build", "function_name": "build_tcell_networks", "function_file": "", "parameters": { "bnd_file": "tcell_corral.bnd", "cfg_file": "tcell_corral.cfg", "kind": "tcell" }, "enabled": true, "position": { "x": 400, "y": 80 }, "custom_name": "", "step_count": 1, "parameter_nodes": ["ti-overrides"] },
-        { "id": "ti-fix", "function_name": "fix_tcell_nodes", "function_file": "", "parameters": { "kind": "tcell" }, "enabled": true, "position": { "x": 400, "y": 200 }, "custom_name": "", "step_count": 1, "parameter_nodes": ["ti-fixed"] }
+        { "id": "tc-wrap", "function_name": "build_tcell_abm_population", "function_file": "", "parameters": {}, "enabled": true, "position": { "x": 400, "y": 200 }, "custom_name": "", "step_count": 1, "parameter_nodes": [] },
+        { "id": "ti-build", "function_name": "build_tcell_networks", "function_file": "", "parameters": { "bnd_file": "tcell_corral.bnd", "cfg_file": "tcell_corral.cfg", "kind": "tcell" }, "enabled": true, "position": { "x": 400, "y": 320 }, "custom_name": "", "step_count": 1, "parameter_nodes": ["ti-overrides"] },
+        { "id": "ti-fix", "function_name": "fix_tcell_nodes", "function_file": "", "parameters": { "kind": "tcell" }, "enabled": true, "position": { "x": 400, "y": 440 }, "custom_name": "", "step_count": 1, "parameter_nodes": ["ti-fixed"] }
       ],
       "subworkflow_calls": [],
       "parameters": [
         { "id": "ti-overrides", "type": "dictParameterNode", "label": "Up-rate overrides", "entries": [], "target_param": "up_rate_overrides", "position": { "x": 100, "y": 200 } },
         { "id": "ti-fixed", "type": "dictParameterNode", "label": "Fixed gene nodes", "entries": [], "target_param": "fixed_nodes", "position": { "x": 100, "y": 320 } }
       ],
-      "execution_order": ["ti-build", "ti-fix"], "input_parameters": []
+      "execution_order": ["tc-place", "tc-wrap", "ti-build", "ti-fix"], "input_parameters": []
     },
     "ccl21_init": {
       "description": "CCL21 resource Setup: register the chemokine field (D, decay, secretion, uptake) on the world mesh.",
@@ -164,10 +155,9 @@
       "subworkflow_calls": [
         { "id": "is-world", "type": "subworkflow_call", "subworkflow_name": "__world__", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 100 }, "description": "__world__", "parameter_nodes": [] },
         { "id": "is-ccl21", "type": "subworkflow_call", "subworkflow_name": "ccl21_init", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 220 }, "description": "ccl21_init (CCL21 resource setup)", "parameter_nodes": [] },
-        { "id": "is-tcell-create", "type": "subworkflow_call", "subworkflow_name": "tcell_create", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 340 }, "description": "tcell_create (place + wrap into ABM population, collective)", "parameter_nodes": [] },
-        { "id": "is-tcell", "type": "subworkflow_call", "subworkflow_name": "tcell_init", "iterations": 1, "for_each": { "type": "agent", "kind": "tcell", "order": "random" }, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 460 }, "description": "tcell_init (per T0 cell, after creation)", "parameter_nodes": [] }
+        { "id": "is-tcell-create", "type": "subworkflow_call", "subworkflow_name": "tcell_create", "iterations": 1, "parameters": {}, "enabled": true, "position": { "x": 400, "y": 340 }, "description": "tcell_create (place cells, build networks, clamp; collective)", "parameter_nodes": [] }
       ],
-      "parameters": [], "execution_order": ["is-world", "is-ccl21", "is-tcell-create", "is-tcell"], "input_parameters": []
+      "parameters": [], "execution_order": ["is-world", "is-ccl21", "is-tcell-create"], "input_parameters": []
     },
     "__scheduler__": {
       "description": "Per-step loop: diffuse CCL21, DC chemotaxis, T0 sense+step+commit+move, reconcile, report.",

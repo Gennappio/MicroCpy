@@ -2,7 +2,6 @@ export const KINDS = {
   COMPOSER: 'composer',
   SUBWORKFLOW: 'subworkflow',
   AGENT_CREATE: 'agent_create',
-  AGENT_INIT: 'agent_init',
   AGENT_BEHAVIOR: 'agent_behavior',
   RESOURCE_INIT: 'resource_init',
   RESOURCE_BEHAVIOR: 'resource_behavior',
@@ -48,7 +47,6 @@ export const BEHAVIOR_KINDS = new Set([
 // (only these are draggable into __init_sequence__) and by the Scheduler palette
 // (which must explicitly EXCLUDE these).
 export const INIT_KINDS = new Set([
-  KINDS.AGENT_INIT,
   KINDS.RESOURCE_INIT,
   KINDS.WORLD,
 ]);
@@ -57,7 +55,6 @@ export const INIT_KINDS = new Set([
 // Init canvases hold functions too (e.g. setup_population, setup_substances).
 export const FUNCTION_HOSTING_KINDS = new Set([
   KINDS.AGENT_CREATE,
-  KINDS.AGENT_INIT,
   KINDS.AGENT_BEHAVIOR,
   KINDS.RESOURCE_INIT,
   KINDS.RESOURCE_BEHAVIOR,
@@ -72,8 +69,7 @@ export const FUNCTION_HOSTING_KINDS = new Set([
 // the old v1 execution stages. The chosen role becomes the function's folder
 // (functions/<role>/) so placement is self-describing.
 export const FUNCTION_ROLE_OPTIONS = [
-  { kind: KINDS.AGENT_CREATE, label: 'Agent · creation (in World)' },
-  { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
+  { kind: KINDS.AGENT_CREATE, label: 'Agent · creation' },
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
   { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behavior' },
@@ -90,13 +86,6 @@ export const defaultContractForKind = (kind, options = {}) => {
     case KINDS.AGENT_CREATE:
       // Collective creation: brings agents into existence (placement + wrap into
       // the population). Runs once, so it writes the whole agent collection.
-      return {
-        owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
-        reads: ['world.self', 'resource.collection'],
-        writes: ['agent.collection'],
-        emits: [],
-      };
-    case KINDS.AGENT_INIT:
       return {
         owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
         reads: ['world.self', 'resource.collection'],
@@ -154,7 +143,6 @@ export const defaultContractForKind = (kind, options = {}) => {
 // @register_function enum while older registry consumers still expect it.
 export const ROLE_TO_COMPATIBILITY_CATEGORY = {
   [KINDS.AGENT_CREATE]: 'INITIALIZATION',
-  [KINDS.AGENT_INIT]: 'INITIALIZATION',
   [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
   [KINDS.WORLD]: 'INITIALIZATION',
   [KINDS.AGENT_BEHAVIOR]: 'INTRACELLULAR',
@@ -170,7 +158,6 @@ export const KIND_TO_CATEGORY = ROLE_TO_COMPATIBILITY_CATEGORY;
 export const variantForKind = (kind) => {
   switch (kind) {
     case KINDS.AGENT_BEHAVIOR:
-    case KINDS.AGENT_INIT:
     case KINDS.AGENT_CREATE:
       return 'cyan';
     case KINDS.RESOURCE_BEHAVIOR:

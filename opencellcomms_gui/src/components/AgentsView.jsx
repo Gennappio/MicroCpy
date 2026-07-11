@@ -12,7 +12,7 @@ import './AgentsView.css';
 // has one, else its per-agent init, else its first Step behavior, else null (a kind
 // created collectively inside another kind's canvas, with no canvases of its own).
 const landingStageFor = (kind) =>
-  kind?.create_subworkflow || kind?.init_subworkflow || kind?.behavior_subworkflows?.[0] || null;
+  kind?.create_subworkflow || kind?.behavior_subworkflows?.[0] || null;
 
 const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
   const {
@@ -53,7 +53,7 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
   // sees currentStage='__scheduler__' and disables "New Function".
   useEffect(() => {
     if (!activeKind) return;
-    const validNames = [activeKind.create_subworkflow, activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])].filter(Boolean);
+    const validNames = [activeKind.create_subworkflow, ...(activeKind.behavior_subworkflows || [])].filter(Boolean);
     if (!validNames.includes(currentStage)) {
       setCurrentStage(landingStageFor(activeKind));
     }
@@ -75,7 +75,7 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     removeAgentBehavior(activeKind.name, behaviorName);
     if (currentStage === behaviorName) {
       const remaining = (activeKind.behavior_subworkflows || []).filter((b) => b !== behaviorName);
-      setCurrentStage(activeKind.create_subworkflow || activeKind.init_subworkflow || remaining[0] || null);
+      setCurrentStage(activeKind.create_subworkflow || remaining[0] || null);
     }
   };
 
@@ -85,10 +85,6 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     // Collective Creation canvas (runs once, env.agent is None) — first, if present.
     if (kind.create_subworkflow) {
       tabs.push({ name: kind.create_subworkflow, label: 'Creation', deletable: false });
-    }
-    // Per-agent Init canvas (for_each) — only kinds that have one (e.g. TCELL).
-    if (kind.init_subworkflow) {
-      tabs.push({ name: kind.init_subworkflow, label: 'Init', deletable: false });
     }
     (kind.behavior_subworkflows || []).forEach((b) => {
       tabs.push({ name: b, label: b, deletable: true });

@@ -106,7 +106,7 @@ no tab, invisible to the scientist. This is the rule in CLAUDE.md
 ```json
 "gui": {
   "function_libraries": [],
-  "agent_kinds": [ { "name": "<kind>", "init_subworkflow": "<kind>_init",
+  "agent_kinds": [ { "name": "<kind>", "create_subworkflow": "<kind>_create",
                      "behavior_subworkflows": ["<kind>_step", "world_step"] } ],
   "resource_kinds": [ { "name": "<res>", "init_subworkflow": "<res>_init",
                         "behavior_subworkflows": ["<res>_growback"] } ],

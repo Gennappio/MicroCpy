@@ -13,7 +13,6 @@
  *   - init_sequence.subworkflow                   → init_sequence
  *   - world.subworkflow                           → world
  *   - world.behavior_subworkflows[i]              → world_behavior
- *   - agent_kinds[i].init_subworkflow             → agent_init
  *   - agent_kinds[i].behavior_subworkflows[j]     → agent_behavior
  *   - processing.behavior_subworkflows[i]         → processing_behavior
  */
@@ -42,7 +41,6 @@ export const computeSubworkflowKinds = (workflow) => {
 
   agentKinds.forEach((k) => {
     if (k.create_subworkflow) kinds[k.create_subworkflow] = KINDS.AGENT_CREATE;
-    if (k.init_subworkflow) kinds[k.init_subworkflow] = KINDS.AGENT_INIT;
     (k.behavior_subworkflows || []).forEach((b) => {
       kinds[b] = KINDS.AGENT_BEHAVIOR;
     });

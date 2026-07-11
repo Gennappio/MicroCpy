@@ -1,12 +1,12 @@
 """Regression tests for the agent-creation structural checks in the workflow
 validator (`scripts/validate_workflow.py`).
 
-These enforce the creation-in-World model as HARD ERRORS so a coding agent cannot
-ship a model whose agents are never (properly) created:
-  - INV2 (error): a create_subworkflow scheduled WITH for_each (creation is collective).
-  - INV3 (error): creation scheduled at/after a kind's per-agent init.
-  - INV4 (error): a per-agent init_subworkflow scheduled WITHOUT for_each.
-  - INV1 (warn, model-level): agent kinds exist but no creation is scheduled anywhere.
+Agent kinds have two canvases: a collective Creation (create_subworkflow, runs once)
+and per-agent Steps. Per-agent agent init was removed from the model, so these enforce:
+  - a leftover per-agent init_subworkflow -> hard error (no longer supported),
+  - INV2 (error): a create_subworkflow scheduled WITH for_each (creation is collective),
+  - INV1 (warn): agent kinds exist but no creation is scheduled anywhere,
+  - execution_order completeness (a partial order silently drops calls).
 
 The validator lives in `scripts/` (not `src/`), so it is loaded from its path.
 """
@@ -28,10 +28,7 @@ FE = {"type": "agent", "kind": "cell", "order": "random"}
 
 def _model(agent_kinds, init_calls, scheduler=True):
     """Build (gui, subworkflows). init_calls: list of (name, id, for_each|None) in order."""
-    gui = {
-        "init_sequence": {"subworkflow": "__init_sequence__"},
-        "agent_kinds": agent_kinds,
-    }
+    gui = {"init_sequence": {"subworkflow": "__init_sequence__"}, "agent_kinds": agent_kinds}
     if scheduler:
         gui["scheduler"] = {"subworkflow": "__scheduler__"}
     calls = []
@@ -40,23 +37,21 @@ def _model(agent_kinds, init_calls, scheduler=True):
         if fe:
             call["for_each"] = fe
         calls.append(call)
-    subs = {
-        "__init_sequence__": {
-            "subworkflow_calls": calls,
-            "execution_order": [c["id"] for c in calls],
-        }
-    }
+    subs = {"__init_sequence__": {
+        "subworkflow_calls": calls,
+        "execution_order": [c["id"] for c in calls],
+    }}
     return gui, subs
 
 
 def _run(gui, subs):
     errors, warnings = [], []
-    vw.check_agent_init_per_agent(gui, subs, errors)
+    vw.check_no_agent_init(gui, errors)
     vw.check_agent_creation_structure(gui, subs, errors, warnings)
     return errors, warnings
 
 
-# ── clean cases (no errors, no warnings) ──────────────────────────────────────
+# ── clean case ────────────────────────────────────────────────────────────────
 
 def test_create_only_kind_is_clean():
     gui, subs = _model(
@@ -68,18 +63,30 @@ def test_create_only_kind_is_clean():
     assert warnings == []
 
 
-def test_create_plus_per_agent_init_is_clean():
+# ── per-agent agent init is forbidden ─────────────────────────────────────────
+
+def test_agent_init_is_forbidden():
+    # A create + a per-agent init: the init is no longer supported.
     gui, subs = _model(
         [{"name": "cell", "create_subworkflow": "cell_create",
           "init_subworkflow": "cell_init", "behavior_subworkflows": []}],
         [("cell_create", "i1", None), ("cell_init", "i2", FE)],
     )
-    errors, warnings = _run(gui, subs)
-    assert errors == []
-    assert warnings == []
+    errors, _ = _run(gui, subs)
+    assert any("cell_init" in e and "no longer supported" in e for e in errors)
 
 
-# ── each invariant fires ──────────────────────────────────────────────────────
+def test_agent_init_only_kind_is_forbidden():
+    # Legacy init-only shape (no create) is also forbidden.
+    gui, subs = _model(
+        [{"name": "cell", "init_subworkflow": "cell_init", "behavior_subworkflows": []}],
+        [("cell_init", "i1", FE)],
+    )
+    errors, _ = _run(gui, subs)
+    assert any("cell_init" in e and "no longer supported" in e for e in errors)
+
+
+# ── INV2 / INV1 ───────────────────────────────────────────────────────────────
 
 def test_inv2_creation_with_for_each_errors():
     gui, subs = _model(
@@ -87,74 +94,40 @@ def test_inv2_creation_with_for_each_errors():
         [("cell_create", "i1", FE)],   # creation must NOT carry for_each
     )
     errors, _ = _run(gui, subs)
-    assert any("creation canvas 'cell_create' is scheduled with for_each" in e for e in errors)
-
-
-def test_inv3_creation_after_init_errors():
-    gui, subs = _model(
-        [{"name": "cell", "create_subworkflow": "cell_create",
-          "init_subworkflow": "cell_init", "behavior_subworkflows": []}],
-        [("cell_init", "i1", FE), ("cell_create", "i2", None)],  # init before create — wrong
-    )
-    errors, _ = _run(gui, subs)
-    assert any("before their" in e and "cell_create" in e for e in errors)
-
-
-def test_inv4_init_without_for_each_errors():
-    gui, subs = _model(
-        [{"name": "cell", "create_subworkflow": "cell_create",
-          "init_subworkflow": "cell_init", "behavior_subworkflows": []}],
-        [("cell_create", "i1", None), ("cell_init", "i2", None)],  # init missing for_each
-    )
-    errors, _ = _run(gui, subs)
-    assert any("without for_each" in e for e in errors)
+    assert any("creation canvas 'cell_create'" in e and "for_each" in e for e in errors)
 
 
 def test_inv1_no_creation_scheduled_warns():
-    # create_subworkflow declared but never scheduled → no agents created.
     gui, subs = _model(
         [{"name": "cell", "create_subworkflow": "cell_create", "behavior_subworkflows": []}],
-        [("__world__", "i0", None)],
+        [("__world__", "i0", None)],   # create declared but not scheduled
     )
     errors, warnings = _run(gui, subs)
     assert errors == []
     assert any("no create_subworkflow is scheduled" in w for w in warnings)
 
 
-def test_inv5_legacy_init_only_kind_errors():
-    # Legacy shape: a per-agent init (with for_each, so INV4 is clean) but no
-    # collective creation. INV5 hard-errors it (decision B: flag + block).
-    gui, subs = _model(
-        [{"name": "cell", "init_subworkflow": "cell_init", "behavior_subworkflows": []}],
-        [("cell_init", "i1", FE)],
-    )
-    errors, _ = _run(gui, subs)
-    assert any("has a per-agent init 'cell_init' but no" in e for e in errors)
-
-
 def test_collectively_created_kind_with_no_own_canvases_is_not_errored():
-    # A kind created inside another kind's creation canvas has NEITHER create nor
-    # init (like tcell_corral's dendritic_cell). It must not be INV5-errored; at
-    # most the model-level INV1 warn applies (and here a creation IS scheduled).
+    # A kind created inside another kind's creation canvas (neither create nor init,
+    # like tcell_corral's dendritic_cell) must not be errored; INV1 doesn't fire
+    # because a creation IS scheduled.
     gui, subs = _model(
         [
             {"name": "cell", "create_subworkflow": "cell_create", "behavior_subworkflows": []},
-            {"name": "scenery", "behavior_subworkflows": ["scenery_step"]},  # no create, no init
+            {"name": "scenery", "behavior_subworkflows": ["scenery_step"]},
         ],
         [("cell_create", "i1", None)],
     )
     errors, warnings = _run(gui, subs)
     assert errors == []
-    assert warnings == []  # cell_create is scheduled → no INV1 warn
+    assert warnings == []
 
-
-# ── gating: non-ABM files are untouched ───────────────────────────────────────
 
 def test_no_scheduler_is_not_checked():
     gui, subs = _model(
         [{"name": "cell", "create_subworkflow": "cell_create", "behavior_subworkflows": []}],
-        [("__world__", "i0", None)],   # creation not scheduled, but...
-        scheduler=False,               # ...no scheduler → not an ABM model
+        [("__world__", "i0", None)],
+        scheduler=False,
     )
     errors, warnings = [], []
     vw.check_agent_creation_structure(gui, subs, errors, warnings)
@@ -169,46 +142,39 @@ def test_no_scheduler_is_not_checked():
     "opencellcomms_adapters/TCELL_CORRAL/workflows/tcell_corral.json",
 ])
 def test_canonical_workflows_have_no_creation_errors(rel):
-    """Migrated headline workflows (incl. tcell_corral's collectively-created
-    dendritic/endothelial kinds) must not be flagged as errors."""
+    """Headline workflows are all create-only now (tcell_corral's init was folded in)."""
     errors, warnings, skip = vw.check_workflow(str(vw.REPO_ROOT / rel), None)
     assert skip is None
     assert errors == [], f"{rel} unexpectedly errored: {errors}"
 
 
 def test_negative_example_is_caught_by_the_check():
-    """gene_network_update_test.json is skip-marked (excluded from --all), but its
-    structure is the canonical mislabeled-init bug: tumor_cell's init is scheduled
-    without for_each. Run the check directly (bypassing the skip) and confirm it
-    hard-errors."""
+    """gene_network_update_test.json (skip-marked, excluded from --all) has a
+    tumor_cell init_subworkflow -- the removed per-agent init. Run the check directly
+    (bypassing the skip) and confirm it hard-errors."""
     path = vw.REPO_ROOT / "opencellcomms_adapters/MicroC/workflows/gene_network_update_test.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    gui = data["metadata"]["gui"]
-    subs = data["subworkflows"]
     errors = []
-    vw.check_agent_init_per_agent(gui, subs, errors)
-    assert any("without for_each" in e for e in errors)
+    vw.check_no_agent_init(data["metadata"]["gui"], errors)
+    assert any("no longer supported" in e for e in errors)
 
 
-# ── execution_order completeness (partial order silently drops calls) ─────────
+# ── execution_order completeness ──────────────────────────────────────────────
 
 def test_execution_order_completeness_warns_on_dropped_call():
-    subs = {
-        "seq": {
-            "subworkflow_calls": [
-                {"id": "c1", "subworkflow_name": "a"},
-                {"id": "c2", "subworkflow_name": "b"},  # in calls, absent from order
-            ],
-            "execution_order": ["c1"],
-        }
-    }
+    subs = {"seq": {
+        "subworkflow_calls": [
+            {"id": "c1", "subworkflow_name": "a"},
+            {"id": "c2", "subworkflow_name": "b"},  # in calls, absent from order
+        ],
+        "execution_order": ["c1"],
+    }}
     warnings = []
     vw.check_execution_order_complete(subs, warnings)
     assert any("execution_order omits" in w and "c2" in w for w in warnings)
 
 
 def test_execution_order_empty_is_not_flagged():
-    # A fully empty order uses the engine's definition-order fallback -> not flagged.
     subs = {"seq": {"subworkflow_calls": [{"id": "c1", "subworkflow_name": "a"}], "execution_order": []}}
     warnings = []
     vw.check_execution_order_complete(subs, warnings)
@@ -216,15 +182,13 @@ def test_execution_order_empty_is_not_flagged():
 
 
 def test_execution_order_ignores_disabled_nodes():
-    subs = {
-        "seq": {
-            "subworkflow_calls": [
-                {"id": "c1", "subworkflow_name": "a"},
-                {"id": "c2", "subworkflow_name": "b", "enabled": False},  # wouldn't run anyway
-            ],
-            "execution_order": ["c1"],
-        }
-    }
+    subs = {"seq": {
+        "subworkflow_calls": [
+            {"id": "c1", "subworkflow_name": "a"},
+            {"id": "c2", "subworkflow_name": "b", "enabled": False},  # wouldn't run anyway
+        ],
+        "execution_order": ["c1"],
+    }}
     warnings = []
     vw.check_execution_order_complete(subs, warnings)
     assert warnings == []

@@ -104,10 +104,9 @@ For each agent kind:
 - states / phenotypes / fate field:
 - initial count + placement (CSV file / random / cluster):
 - CREATION (collective, runs ONCE — the agent kind's Creation canvas in the Agents
-  tab; placement, populate, wrap into the ABM population; `for cell in env.cells` /
-  populate, `env.agent` is None):
-- per-agent INIT behaviours (run ONCE PER AGENT via for_each, after creation — act on
-  `env.agent`/`env.cell`, no cell loop; OMIT if the setup is order-dependent-collective):
+  tab; placement, populate, wrap into the ABM population, and any once-only per-cell
+  setup like building each cell's network; `for cell in env.cells` / populate,
+  `env.agent` is None):
 - per-agent STEP behaviours, in order (run ONCE PER AGENT each tick via for_each):
 - division / death rules:
 - intracellular model — gene/Boolean network? which .bnd/.cfg or logic?   [family: gene-network]
@@ -190,9 +189,9 @@ Now the spec and structure are locked, so this is a near-mechanical translation:
 3. The workflow already references these functions by name, so no re-wiring is needed.
 4. **Validate:** run `python scripts/validate_workflow.py <workflow.json>` (from
    `opencellcomms_engine/`) and fix anything it flags — orphans, inlined dicts, and
-   the agent-creation structure errors (creation scheduled with `for_each`, per-agent
-   init without `for_each`, creation after init, or a kind with an init but no
-   `create_subworkflow`). These are hard errors: the model won't be considered valid
+   the agent-creation structure errors (creation scheduled with `for_each`, or a
+   leftover per-agent init — that phase was removed, so fold per-cell setup into
+   creation). These are hard errors: the model won't be considered valid
    until they're gone.
 
 ## Step 6 — Verify against the intake

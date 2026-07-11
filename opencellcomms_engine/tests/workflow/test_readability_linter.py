@@ -17,12 +17,12 @@ import validate_workflow as vw  # noqa: E402
 
 
 def _abm_gui():
-    """A minimal, clean ABM metadata.gui: one agent kind with an init + step."""
+    """A minimal, clean ABM metadata.gui: one agent kind with a creation + step."""
     return {
         "agent_kinds": [
             {
                 "name": "cell",
-                "init_subworkflow": "cell_init",
+                "create_subworkflow": "cell_create",
                 "behavior_subworkflows": ["cell_step"],
             }
         ],
@@ -45,7 +45,7 @@ def _abm_subs(scheduler_calls):
         "__init_sequence__": {
             "subworkflow_calls": [
                 {"subworkflow_name": "__world__"},
-                {"subworkflow_name": "cell_init"},
+                {"subworkflow_name": "cell_create"},
             ]
         },
         "__scheduler__": {
@@ -54,7 +54,7 @@ def _abm_subs(scheduler_calls):
             ]
         },
         "__world__": {"functions": []},
-        "cell_init": {"functions": []},
+        "cell_create": {"functions": []},
         "cell_step": {"functions": []},
     }
 

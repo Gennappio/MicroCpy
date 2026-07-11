@@ -346,8 +346,8 @@ export const createWorkflowIOSlice = (set, get) => ({
 
     // Phase 14C: Initialization sequence. If the workflow lacks an
     // `__init_sequence__` subworkflow (or it's empty), auto-populate it from
-    // world.subworkflow + each agent_kinds[i].init_subworkflow in
-    // array order. This is a one-shot bootstrap that keeps Phase-13-era
+    // world.subworkflow + resource setups + each agent_kinds[i].create_subworkflow
+    // in array order. This is a one-shot bootstrap that keeps Phase-13-era
     // workflows running without manual edits — user-reordering after this
     // never re-fires the auto-populate because the seq won't be empty.
     const initSeqMeta = guiMeta.init_sequence || { subworkflow: INIT_SEQUENCE_NAME };
@@ -359,11 +359,9 @@ export const createWorkflowIOSlice = (set, get) => ({
       const autoOrder = [];
       if (world.subworkflow) autoOrder.push(world.subworkflow);
       resourceKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
-      // Creation must run before per-agent init (agents must exist before their
-      // per-agent init runs), so push create_subworkflow ahead of init_subworkflow.
+      // Include each agent kind's collective creation (runs once, before the loop).
       agentKinds.forEach((k) => {
         if (k.create_subworkflow) autoOrder.push(k.create_subworkflow);
-        if (k.init_subworkflow) autoOrder.push(k.init_subworkflow);
       });
 
       const newCalls = autoOrder.map((name, i) => ({
@@ -1195,17 +1193,16 @@ export const createWorkflowIOSlice = (set, get) => ({
         };
       }
 
-      // Agent behavior / agent init — needs a target agent kind. If the caller
-      // did not specify one, attach to the first existing kind, or skip silently
-      // (the user can attach manually from the Agents tab).
-      if (kind === 'agent_behavior' || kind === 'agent_init') {
+      // Agent behavior — needs a target agent kind. If the caller did not specify
+      // one, attach to the first existing kind, or skip silently (the user can
+      // attach manually from the Agents tab).
+      if (kind === 'agent_behavior') {
         const kinds = gui.agent_kinds || [];
         if (kinds.length === 0) return state;
 
         const targetName = targetAgentKind || kinds[0].name;
         const newKinds = kinds.map((k) => {
           if (k.name !== targetName) return k;
-          if (kind === 'agent_init') return { ...k, init_subworkflow: name };
           if (k.behavior_subworkflows.includes(name)) return k;
           return { ...k, behavior_subworkflows: [...k.behavior_subworkflows, name] };
         });

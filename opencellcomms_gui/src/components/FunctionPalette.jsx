@@ -12,7 +12,7 @@ import './FunctionPalette.css';
 
 const DEFAULT_FUNCTIONS_BY_KIND = {
   [KINDS.WORLD]: ['setup_world', 'plot_world'],
-  [KINDS.AGENT_INIT]: ['plot_agents'],
+  [KINDS.AGENT_CREATE]: ['plot_agents'],
   [KINDS.RESOURCE_INIT]: ['plot_resources'],
 };
 
