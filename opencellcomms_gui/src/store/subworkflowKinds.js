@@ -158,7 +158,6 @@ export const KIND_TO_CATEGORY = ROLE_TO_COMPATIBILITY_CATEGORY;
 export const variantForKind = (kind) => {
   switch (kind) {
     case KINDS.AGENT_BEHAVIOR:
-    case KINDS.AGENT_CREATE:
       return 'cyan';
     case KINDS.RESOURCE_BEHAVIOR:
     case KINDS.RESOURCE_INIT:
@@ -168,6 +167,8 @@ export const variantForKind = (kind) => {
       return 'purple';
     case KINDS.COMPOSER:
       return 'orange';
+    // Agent creation is authored in the World tab, so it wears the World color.
+    case KINDS.AGENT_CREATE:
     case KINDS.WORLD:
     case KINDS.WORLD_BEHAVIOR:
       return 'green';

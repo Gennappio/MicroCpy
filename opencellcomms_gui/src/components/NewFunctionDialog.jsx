@@ -71,16 +71,14 @@ const isValidIdent = (s) => /^[a-zA-Z][a-zA-Z0-9_]*$/.test((s || '').trim());
 const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContract = null, onCreate, onCancel }) => {
   const [name, setName] = useState('');
   const [parameters, setParameters] = useState([]);
-  // The function's "role" is the v2 canvas kind (Agent / Resource / Processing),
-  // and it is DERIVED from the canvas you're on — not a free choice. The old
-  // dropdown let you pick any of the seven roles from any canvas (so on the
-  // Agents canvas you could wrongly pick "Resource"), which confused more than it
-  // helped: the role is fully determined by which entity canvas you're editing.
-  // It falls back to a sensible default only when opened off a role canvas.
+  // The function's "role" is the v2 canvas kind (agent creation / agent behavior /
+  // resource / world / processing), DERIVED from the canvas you're on. It is NOT
+  // shown or chosen in this dialog — it only drives the generated file's folder,
+  // its legacy compatibility category, and which typed-env starter stub is written.
+  // Falls back to a sensible default when opened off a role canvas.
   const role = FUNCTION_ROLE_OPTIONS.some((o) => o.kind === currentKind)
     ? currentKind
     : DEFAULT_ROLE;
-  const roleLabel = FUNCTION_ROLE_OPTIONS.find((o) => o.kind === role)?.label || role;
   const [requires, setRequires] = useState([]);
   // Setup functions (create population / load cells) keep the raw context dict.
   const [typedEnvExempt, setTypedEnvExempt] = useState(false);
@@ -200,16 +198,6 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContrac
         </div>
 
         <div className="nf-row">
-          <label>Role (set by this canvas)</label>
-          <input
-            className="dialog-input"
-            value={roleLabel}
-            disabled
-            title="The role follows the canvas you're on. To create a function with a different role, open that entity's canvas and create it there."
-          />
-        </div>
-
-        <div className="nf-row">
           <label>Plugin (where this function lives)</label>
           {creatingNewPlugin ? (
             <div className="nf-path-row">
@@ -325,7 +313,7 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContrac
 
             {!typedEnvExempt && ABM_ROLE_HINTS[role] && (
               <div className="nf-caps-list">
-                <div className="nf-caps-title">This {roleLabel} uses the ABM <code>env</code> API</div>
+                <div className="nf-caps-title">This function uses the ABM <code>env</code> API</div>
                 <div className="nf-caps-subtitle">
                   Available directly on <code>env</code> — no capabilities to tick:
                 </div>
