@@ -1230,6 +1230,12 @@ from src.workflow.decorators import register_function
                 "    # field.values() / field.total()    -> read the whole field\n"
                 "    # field.apply_sources(...)          -> deposit/produce\n"
             ),
+            'world': (
+                "    # World setup runs ONCE, before agents act -- build the space here.\n"
+                "    # env.world       -> the spatial world (bounds, topology, occupancy)\n"
+                "    # env.domain      -> the resource domain to attach fields to\n"
+                "    # env.population  -> the collective the agents will live in\n"
+            ),
             'world_behavior': (
                 "    # env.world       -> the spatial world (bounds, neighbors, occupancy)\n"
                 "    # env.population  -> the collective (count, census, agents_of_kind)\n"

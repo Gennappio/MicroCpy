@@ -73,6 +73,7 @@ export const FUNCTION_ROLE_OPTIONS = [
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
   { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behavior' },
+  { kind: KINDS.WORLD, label: 'World · setup' },
   { kind: KINDS.WORLD_BEHAVIOR, label: 'World · behavior (per-step)' },
   { kind: KINDS.PROCESSING_BEHAVIOR, label: 'Reporting' },
 ];
