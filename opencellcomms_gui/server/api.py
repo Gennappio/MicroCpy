@@ -1211,11 +1211,6 @@ from src.workflow.decorators import register_function
                 "    # env.population.populate('kind', count, trait=lambda rng: ...) -> create agents\n"
                 "    # for cell in env.cells: ...   -> operate on the whole population\n"
             ),
-            'agent_init': (
-                "    # agent.set('key', value) / agent.get('key')  -> this agent's state\n"
-                "    # agent.position / agent.cell                 -> where it is\n"
-                "    # (runs once per agent; do NOT loop env.cells here)\n"
-            ),
             'agent_behavior': (
                 "    # env.agent             -> the current agent (bound per-ask)\n"
                 "    # env.agent.neighbors() -> neighbouring agents\n"
@@ -1223,6 +1218,13 @@ from src.workflow.decorators import register_function
                 "    # env.resource('sugar')         -> a resource field (.at(pos), .total())\n"
                 "    # env.request_move(agent, pos)  -> deferred move intent\n"
                 "    # env.request_consume_resource(agent, name, amount) -> deferred uptake\n"
+            ),
+            'resource_init': (
+                "    # Resource setup runs ONCE at init -- seed this field here.\n"
+                "    # env.resource(name)    -> this resource field\n"
+                "    # field.values()[:] = ...          -> set the initial concentration grid\n"
+                "    # field.capacity = ...             -> set a carrying-capacity landscape\n"
+                "    # env.world.nx / env.world.ny      -> grid dimensions for the pattern\n"
             ),
             'resource_behavior': (
                 "    # env.resource(name)    -> this resource field\n"
@@ -1240,6 +1242,13 @@ from src.workflow.decorators import register_function
                 "    # env.world       -> the spatial world (bounds, neighbors, occupancy)\n"
                 "    # env.population  -> the collective (count, census, agents_of_kind)\n"
                 "    # env.domain      -> all resources; env.population.census() -> snapshot\n"
+            ),
+            'processing_behavior': (
+                "    # Post-loop reporting: read final state, emit plots/summaries.\n"
+                "    # env.population.census()  -> counts by kind/phenotype\n"
+                "    # env.domain.resources()   -> each resource field (.name, .total())\n"
+                "    # env.record(key, value)   -> persist a metric; env.results -> the dict\n"
+                "    # env.plots_dir            -> directory to write figures into\n"
             ),
         }
         _LEGACY_HINTS = (
@@ -1343,8 +1352,8 @@ from src.workflow.decorators import register_function
                         f"    # TODO: bring this kind's agents into existence (env.agent is None here)\n"
                         f'    return True\n'
                     )
-                elif _role in ('agent_init', 'agent_behavior'):
-                    # Per-agent: runs once per agent via the scheduler/init for_each ask.
+                elif _role == 'agent_behavior':
+                    # Per-agent: runs once per agent via the scheduler's for_each ask.
                     body = (
                         f'    """TODO: implement {fn_name} (runs once per agent)."""\n'
                         f'    agent = env.agent  # the single bound agent; never loop env.cells here\n'
@@ -1427,8 +1436,9 @@ from src.workflow.decorators import register_function
                 # home for each kind of function up front. Existing plugins are
                 # left untouched.
                 ROLE_FOLDERS = [
-                    'agent_create', 'agent_init', 'agent_behavior',
-                    'env_init', 'env_behavior',
+                    'agent_create', 'agent_behavior',
+                    'resource_init', 'resource_behavior',
+                    'world', 'world_behavior',
                     'processing_behavior',
                 ]
                 functions_root = adapter_dir / 'functions'
