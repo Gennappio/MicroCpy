@@ -7,6 +7,7 @@
  */
 
 import { validateWorkflow } from '../../utils/workflowValidation';
+import { wireChain } from '../../utils/executionEdges';
 import pathUtils from '../pathUtils';
 import { computeSubworkflowKinds } from '../computeSubworkflowKinds';
 import { INIT_SEQUENCE_NAME, controllerLabel } from '../subworkflowKinds';
@@ -297,43 +298,7 @@ export const createWorkflowIOSlice = (set, get) => ({
 
       // Create execution flow edges based on execution order
       if (controllerNode && executionOrder.length > 0) {
-        allEdges.push({
-          id: `e-${controllerNode.id}-${executionOrder[0]}`,
-          source: controllerNode.id,
-          sourceHandle: 'func-out',
-          target: executionOrder[0],
-          targetHandle: 'func-in',
-          type: 'default',
-          animated: true,
-          markerEnd: {
-            type: 'arrowclosed',
-            width: 10,
-            height: 10
-          },
-          style: {
-            strokeWidth: 6
-          }
-        });
-
-        for (let i = 0; i < executionOrder.length - 1; i++) {
-          allEdges.push({
-            id: `e-${executionOrder[i]}-${executionOrder[i + 1]}`,
-            source: executionOrder[i],
-            sourceHandle: 'func-out',
-            target: executionOrder[i + 1],
-            targetHandle: 'func-in',
-            type: 'default',
-            animated: true,
-            markerEnd: {
-              type: 'arrowclosed',
-              width: 10,
-              height: 10
-            },
-            style: {
-              strokeWidth: 6
-            }
-          });
-        }
+        allEdges.push(...wireChain(controllerNode.id, executionOrder));
       }
 
       // Collect all nodes
@@ -458,33 +423,7 @@ export const createWorkflowIOSlice = (set, get) => ({
         })),
       ];
 
-      const seqEdges = [];
-      if (newCalls.length > 0) {
-        seqEdges.push({
-          id: `e-${controllerId}-${newCalls[0].id}`,
-          source: controllerId,
-          sourceHandle: 'func-out',
-          target: newCalls[0].id,
-          targetHandle: 'func-in',
-          type: 'default',
-          animated: true,
-          markerEnd: { type: 'arrowclosed', width: 10, height: 10 },
-          style: { strokeWidth: 6 },
-        });
-        for (let i = 0; i < newCalls.length - 1; i++) {
-          seqEdges.push({
-            id: `e-${newCalls[i].id}-${newCalls[i + 1].id}`,
-            source: newCalls[i].id,
-            sourceHandle: 'func-out',
-            target: newCalls[i + 1].id,
-            targetHandle: 'func-in',
-            type: 'default',
-            animated: true,
-            markerEnd: { type: 'arrowclosed', width: 10, height: 10 },
-            style: { strokeWidth: 6 },
-          });
-        }
-      }
+      const seqEdges = wireChain(controllerId, newCalls.map((c) => c.id));
       newStageNodes[initSeqName] = seqNodes;
       newStageEdges[initSeqName] = seqEdges;
     }
@@ -945,28 +884,12 @@ export const createWorkflowIOSlice = (set, get) => ({
       nodes.push(nodeData);
     });
 
-    // Build edges from execution_order
-    const edges = [];
+    // Build edges from execution_order (canonical func-out/func-in shape so the
+    // exporter's findReachableNodes can traverse them — the old smoothstep/no-handle
+    // edges were invisible to it, dropping every imported call from execution_order).
     const execution_order = swData.execution_order || [];
     const controllerId = nodes.find(n => n.type === 'initNode')?.id;
-
-    if (controllerId && execution_order.length > 0) {
-      edges.push({
-        id: `edge-${controllerId}-${execution_order[0]}`,
-        source: controllerId,
-        target: execution_order[0],
-        type: 'smoothstep'
-      });
-
-      for (let i = 0; i < execution_order.length - 1; i++) {
-        edges.push({
-          id: `edge-${execution_order[i]}-${execution_order[i + 1]}`,
-          source: execution_order[i],
-          target: execution_order[i + 1],
-          type: 'smoothstep'
-        });
-      }
-    }
+    const edges = controllerId ? wireChain(controllerId, execution_order) : [];
 
     // Update state
     set((state) => ({

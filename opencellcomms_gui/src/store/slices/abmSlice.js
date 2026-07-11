@@ -7,6 +7,7 @@ import {
   controllerLabel,
 } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
+import { execEdge } from '../../utils/executionEdges';
 
 const makeSubworkflow = (name, description, kind, contract = null) => ({
   description,
@@ -523,6 +524,9 @@ export const createAbmSlice = (set, get) => ({
 
       const existingNodes = state.stageNodes[SCHEDULER_NAME] || [];
       const existingOrder = scheduler.execution_order || [];
+      // Wire the new call into the execution chain so it survives export — run
+      // order is derived from edges (findReachableNodes), not the cached order.
+      const tailId = existingOrder.length ? existingOrder[existingOrder.length - 1] : `controller-${SCHEDULER_NAME}`;
 
       return {
         workflow: {
@@ -540,6 +544,10 @@ export const createAbmSlice = (set, get) => ({
           ...state.stageNodes,
           [SCHEDULER_NAME]: [...existingNodes, newCallNode],
         },
+        stageEdges: {
+          ...state.stageEdges,
+          [SCHEDULER_NAME]: [...(state.stageEdges[SCHEDULER_NAME] || []), execEdge(tailId, callId)],
+        },
       };
     });
   },
@@ -547,6 +555,12 @@ export const createAbmSlice = (set, get) => ({
   removeFromScheduler: (nodeId) => {
     set((state) => {
       const scheduler = state.workflow.subworkflows[SCHEDULER_NAME];
+      const edges = state.stageEdges[SCHEDULER_NAME] || [];
+      const inEdge = edges.find((e) => e.target === nodeId);
+      const outEdge = edges.find((e) => e.source === nodeId);
+      let newEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+      // Stitch predecessor -> successor so the execution chain stays connected.
+      if (inEdge && outEdge) newEdges = [...newEdges, execEdge(inEdge.source, outEdge.target)];
       return {
         workflow: {
           ...state.workflow,
@@ -563,6 +577,7 @@ export const createAbmSlice = (set, get) => ({
           ...state.stageNodes,
           [SCHEDULER_NAME]: (state.stageNodes[SCHEDULER_NAME] || []).filter((n) => n.id !== nodeId),
         },
+        stageEdges: { ...state.stageEdges, [SCHEDULER_NAME]: newEdges },
       };
     });
   },
@@ -667,6 +682,9 @@ export const createAbmSlice = (set, get) => ({
 
       const existingNodes = state.stageNodes[INIT_SEQUENCE_NAME] || [];
       const existingOrder = seq.execution_order || [];
+      // Wire the new call into the execution chain so it survives export — run
+      // order is derived from edges (findReachableNodes), not the cached order.
+      const tailId = existingOrder.length ? existingOrder[existingOrder.length - 1] : `controller-${INIT_SEQUENCE_NAME}`;
 
       return {
         workflow: {
@@ -684,6 +702,10 @@ export const createAbmSlice = (set, get) => ({
           ...state.stageNodes,
           [INIT_SEQUENCE_NAME]: [...existingNodes, newCallNode],
         },
+        stageEdges: {
+          ...state.stageEdges,
+          [INIT_SEQUENCE_NAME]: [...(state.stageEdges[INIT_SEQUENCE_NAME] || []), execEdge(tailId, callId)],
+        },
       };
     });
   },
@@ -692,6 +714,12 @@ export const createAbmSlice = (set, get) => ({
     set((state) => {
       const seq = state.workflow.subworkflows[INIT_SEQUENCE_NAME];
       if (!seq) return state;
+      const edges = state.stageEdges[INIT_SEQUENCE_NAME] || [];
+      const inEdge = edges.find((e) => e.target === nodeId);
+      const outEdge = edges.find((e) => e.source === nodeId);
+      let newEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+      // Stitch predecessor -> successor so the execution chain stays connected.
+      if (inEdge && outEdge) newEdges = [...newEdges, execEdge(inEdge.source, outEdge.target)];
       return {
         workflow: {
           ...state.workflow,
@@ -708,6 +736,7 @@ export const createAbmSlice = (set, get) => ({
           ...state.stageNodes,
           [INIT_SEQUENCE_NAME]: (state.stageNodes[INIT_SEQUENCE_NAME] || []).filter((n) => n.id !== nodeId),
         },
+        stageEdges: { ...state.stageEdges, [INIT_SEQUENCE_NAME]: newEdges },
       };
     });
   },
