@@ -17,6 +17,14 @@ Algorithm (Picard iteration with reaction-term under-relaxation):
 Under-relaxation (0 < α < 1) is applied to source/reaction terms rather than
 concentrations. This is the standard Picard fix for oscillatory instability
 in coupled PDE-ODE systems.
+
+Homing note (why this is NOT a per-resource behavior): a single coupled solve
+advances ALL registered substance fields together, so it cannot be attributed to
+one resource kind. A workflow using it therefore homes it as a collective,
+world-level behavior (e.g. MicroC's ``diffusion_step`` under
+``world.behavior_subworkflows``), and the substances' own ``resource_kinds`` carry
+empty per-tick behaviors by design. This is the intended exception to the usual
+"a substance's dynamics live under its resource kind" rule.
 """
 
 from typing import Dict, Any, Tuple, Optional

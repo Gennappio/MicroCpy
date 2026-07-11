@@ -1,14 +1,14 @@
 {
   "format": "subworkflow",
   "version": "1.0",
-  "name": "tumor_cell_init",
+  "name": "tumor_cell_create",
   "kind": "agent_init",
-  "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+  "description": "MicroC: tumor_cell_create (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
   "exported_from": "MicroC",
   "subworkflow": {
-    "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+    "description": "MicroC: tumor_cell_create (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
     "controller": {
-      "id": "controller-tumor_cell_init",
+      "id": "controller-tumor_cell_create",
       "type": "controller",
       "label": "TUMOR_CELL_INIT CONTROLLER",
       "position": {

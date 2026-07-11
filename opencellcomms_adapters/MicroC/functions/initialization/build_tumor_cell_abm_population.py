@@ -1,7 +1,7 @@
 """Wrap MicroC's cells in an abm_population so the model runs on the new ABM motor.
 
 MicroC builds a legacy CellPopulation (``context['population']``) filled from the
-CSV. This node — the last step of ``tumor_cell_init``, after the cells exist —
+CSV. This node — the last step of ``tumor_cell_create``, after the cells exist —
 builds an ``abm.Population`` that shares the SAME CellPopulation object, so:
 
   * ``gene_update`` / ``fate_update`` route through the per-agent ask

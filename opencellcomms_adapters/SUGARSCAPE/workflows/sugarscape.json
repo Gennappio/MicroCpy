@@ -11,7 +11,7 @@
       "agent_kinds": [
         {
           "name": "forager",
-          "create_subworkflow": "forager_init",
+          "create_subworkflow": "forager_create",
           "behavior_subworkflows": [
             "forager_step"
           ]
@@ -328,12 +328,12 @@
         "emits": []
       }
     },
-    "forager_init": {
+    "forager_create": {
       "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
       "enabled": true,
       "deletable": true,
       "controller": {
-        "id": "controller-forager_init",
+        "id": "controller-forager_create",
         "type": "initNode",
         "label": "FORAGER INIT",
         "position": {
@@ -464,7 +464,7 @@
         {
           "id": "init-call-forager",
           "type": "subworkflow_call",
-          "subworkflow_name": "forager_init",
+          "subworkflow_name": "forager_create",
           "iterations": 1,
           "parameters": {},
           "enabled": true,

@@ -10,7 +10,7 @@
       "agent_kinds": [
         {
           "name": "tumor_cell",
-          "create_subworkflow": "tumor_cell_init",
+          "create_subworkflow": "tumor_cell_create",
           "behavior_subworkflows": [
             "gene_update",
             "fate_update"
@@ -735,10 +735,10 @@
         "emits": []
       }
     },
-    "tumor_cell_init": {
-      "description": "MicroC: tumor_cell_init (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+    "tumor_cell_create": {
+      "description": "MicroC: tumor_cell_create (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
       "controller": {
-        "id": "controller-tumor_cell_init",
+        "id": "controller-tumor_cell_create",
         "type": "controller",
         "label": "TUMOR_CELL_INIT CONTROLLER",
         "position": {
@@ -852,7 +852,7 @@
       }
     },
     "diffusion_step": {
-      "description": "MicroC: diffusion_step",
+      "description": "MicroC coupled diffusion (SPECIAL CASE): one Picard-coupled PDE solves ALL substance fields (Oxygen, Glucose, Lactate, H, TGFA, FGF, HGF, GI) together, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors.",
       "controller": {
         "id": "controller-diffusion_step",
         "type": "controller",
@@ -1819,14 +1819,14 @@
           "parameter_nodes": []
         },
         {
-          "id": "init-call-tumor_cell_init",
+          "id": "init-call-tumor_cell_create",
           "type": "subworkflow_call",
-          "subworkflow_name": "tumor_cell_init",
+          "subworkflow_name": "tumor_cell_create",
           "position": {
             "x": 400,
             "y": 220
           },
-          "description": "tumor_cell_init",
+          "description": "tumor_cell_create",
           "iterations": 1,
           "parameters": {},
           "enabled": true,
@@ -1843,7 +1843,7 @@
         "init-call-fgf_init",
         "init-call-hgf_init",
         "init-call-gi_init",
-        "init-call-tumor_cell_init"
+        "init-call-tumor_cell_create"
       ]
     }
   }

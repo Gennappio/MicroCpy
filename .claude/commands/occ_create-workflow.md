@@ -130,10 +130,10 @@ no tab, invisible to the scientist. This is the rule in CLAUDE.md
 `processes` classifies every behavior canvas by **phase** (a coupling is still a
 coupling); this is orthogonal to the **tab ownership** above (which object's tab it
 appears under), and both must be filled. Keep `processes` consistent with the
-scheduler order and the contracts. **Note:** the reference workflows
-`sugarscape.json` / `microc.json` still use the old `environment.behavior_subworkflows`
-pattern and are being migrated — mirror their *structure*, but apply the homing rule
-above for category placement, not their `environment` lists. Set the top-level
+scheduler order and the contracts. The reference workflows `sugarscape.json` /
+`microc.json` now home every behavior under an owning `agent_kinds` /
+`resource_kinds` / `world` / `processing` category (no `environment` block) — mirror
+them directly. Set the top-level
 workflow `"version": "2.0"`,
 `"name"`, `"description"`, `"kernel"` (e.g. `"biophysics"`), and
 `metadata.author` / `metadata.created`.

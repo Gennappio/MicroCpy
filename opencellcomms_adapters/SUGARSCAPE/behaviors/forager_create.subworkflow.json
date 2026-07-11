@@ -1,7 +1,7 @@
 {
   "format": "subworkflow",
   "version": "1.0",
-  "name": "forager_init",
+  "name": "forager_create",
   "kind": "agent_init",
   "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
   "exported_from": "Sugarscape",
@@ -10,7 +10,7 @@
     "enabled": true,
     "deletable": true,
     "controller": {
-      "id": "controller-forager_init",
+      "id": "controller-forager_create",
       "type": "initNode",
       "label": "FORAGER INIT",
       "position": {
