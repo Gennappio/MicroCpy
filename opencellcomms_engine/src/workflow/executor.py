@@ -674,13 +674,23 @@ class WorkflowExecutor:
             try:
                 resources = [domain.resource(kind)] if kind else domain.resources()
             except KeyError:
-                # The kind isn't a registered ABM domain resource -- e.g. a
-                # FiPy-solved field (CCL21, MicroC substances) registered on the
-                # simulator/mesh, whose "behaviour" is a COLLECTIVE field solve,
-                # not a per-instance op. Run it ONCE, binding the kind name for
-                # functions that take a `resource` default. (The CLI-authored
-                # workflow omits for_each here; the GUI re-adds it from the resource
-                # kind, so tolerate both.)
+                # The kind isn't a registered ABM domain resource. Tolerate this
+                # ONLY when it's a real FiPy-solved field (CCL21, MicroC substances)
+                # living on the simulator -- whose "behaviour" is a COLLECTIVE field
+                # solve, not a per-instance op. Run it ONCE, binding the kind name for
+                # functions that take a `resource` default. (The CLI-authored workflow
+                # omits for_each here; the GUI re-adds it from the resource kind, so
+                # tolerate both.) Otherwise `kind` is a misspelling -- fail loudly
+                # rather than silently running once with a bogus resource name.
+                simulator = context.get('simulator')
+                substances = getattr(getattr(simulator, 'state', None), 'substances', {}) or {}
+                if kind not in substances:
+                    valid_resources = sorted(r.name for r in domain.resources())
+                    raise KeyError(
+                        f"for_each resource kind '{kind}' is not a registered ABM "
+                        f"resource (have: {valid_resources}) or diffusing substance "
+                        f"(have: {sorted(substances)})"
+                    )
                 prev_kind = context.get('_current_resource_kind')
                 context['_current_resource_kind'] = kind
                 try:
