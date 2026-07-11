@@ -214,8 +214,11 @@ After showing the code and getting approval (or "go ahead"):
   ```
 - Sanity-check the function with `python scripts/validate_functions.py` (signature
   vs. decorator, parameter types). If you also placed it into a workflow, run
-  `python scripts/validate_workflow.py <workflow.json>` and fix any orphan or
-  inlined dict/list it reports.
+  `python scripts/validate_workflow.py <workflow.json>` and fix everything it
+  reports — orphans, inlined dict/list, and the agent-creation structure errors
+  (a `create_subworkflow` scheduled with `for_each`, a per-agent `init_subworkflow`
+  scheduled without `for_each`, a creation scheduled after its init, or a kind with
+  an `init_subworkflow` but no `create_subworkflow`).
 - Next steps:
   - Add it to a workflow canvas: `/occ_add-to-workflow`
   - Build a fresh workflow from this plugin's behaviors: `/occ_create-workflow`

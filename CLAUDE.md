@@ -309,6 +309,20 @@ each cell, order-independent). The two classic mistakes are symmetric: `for_each
 collective creation call (re-creates everything once per agent), and an internal
 `for cell` loop inside a per-agent function (double-iterates).
 
+**These structural rules are enforced, not just documented.**
+`scripts/validate_workflow.py` (run by the CLI, the pre-commit hook, and the
+`/occ_new-*` skills) **hard-errors**: a `create_subworkflow` scheduled with
+`for_each` (creation is collective), a per-agent `init_subworkflow` scheduled
+*without* `for_each` (the canonical mislabeled-init bug), a creation scheduled at or
+after its kind's per-agent init, and a kind that declares an `init_subworkflow` but
+no `create_subworkflow` (the legacy shape — its agents are never created). It
+**warns** when agent kinds exist but no creation is scheduled anywhere. The GUI
+mirrors these on the **Overview** tab and blocks **Export** on the same errors, so a
+structurally-invalid ABM is caught before it can run. A kind created collectively
+inside *another* kind's creation canvas (it has neither its own `create_subworkflow`
+nor `init_subworkflow`, e.g. TCELL_CORRAL's `dendritic_cell`) is intentionally not
+errored — that is the warn case, not a hard failure.
+
 When building for the class layer: write **atomic node-functions** that use the
 typed `env` API, place them on the entity canvases, and order them in the World
 (init) and Scheduler (loop) canvases. Do **not** build forms and do **not** collapse

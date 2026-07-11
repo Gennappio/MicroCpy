@@ -182,7 +182,11 @@ Now the spec and structure are locked, so this is a near-mechanical translation:
    there is little left to guess. Write the file, register it.
 3. The workflow already references these functions by name, so no re-wiring is needed.
 4. **Validate:** run `python scripts/validate_workflow.py <workflow.json>` (from
-   `opencellcomms_engine/`) and fix anything it flags (orphans, inlined dicts).
+   `opencellcomms_engine/`) and fix anything it flags — orphans, inlined dicts, and
+   the agent-creation structure errors (creation scheduled with `for_each`, per-agent
+   init without `for_each`, creation after init, or a kind with an init but no
+   `create_subworkflow`). These are hard errors: the model won't be considered valid
+   until they're gone.
 
 ## Step 6 — Verify against the intake
 
