@@ -8,6 +8,12 @@ import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
 import './AgentsView.css';
 
+// The Agents-tab canvas to land on for a kind: its per-agent init if it has one,
+// else its first Step behavior, else null (a create-only kind with no behaviors
+// yet — its creation canvas lives in the World tab).
+const landingStageFor = (kind) =>
+  kind?.init_subworkflow || kind?.behavior_subworkflows?.[0] || null;
+
 const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
   const {
     workflow,
@@ -35,7 +41,10 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
     addAgentKind(name);
     setSelectedKind(name);
-    setCurrentStage(`${name}_init`);
+    // Create-only new kind: its creation canvas lives in World and it has no Step
+    // behaviors yet, so there's no Agents-tab canvas to land on — clear the stage
+    // and let the empty-state hint show.
+    setCurrentStage(null);
     setNewKindName('');
     setShowAddKind(false);
   };
@@ -46,9 +55,9 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
   // currentStage='__scheduler__' and disables "New Function".
   useEffect(() => {
     if (!activeKind) return;
-    const validNames = [activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])];
+    const validNames = [activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])].filter(Boolean);
     if (!validNames.includes(currentStage)) {
-      setCurrentStage(activeKind.init_subworkflow);
+      setCurrentStage(landingStageFor(activeKind));
     }
   }, [activeKind?.name]);
 
@@ -67,15 +76,18 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     if (!window.confirm(`Delete behavior "${behaviorName}"?`)) return;
     removeAgentBehavior(activeKind.name, behaviorName);
     if (currentStage === behaviorName) {
-      setCurrentStage(activeKind.init_subworkflow);
+      const remaining = (activeKind.behavior_subworkflows || []).filter((b) => b !== behaviorName);
+      setCurrentStage(activeKind.init_subworkflow || remaining[0] || null);
     }
   };
 
   const buildTabs = (kind) => {
     if (!kind) return [];
-    const tabs = [
-      { name: kind.init_subworkflow, label: 'Init', deletable: false },
-    ];
+    const tabs = [];
+    // Create-only kinds (MicroC/SUGARSCAPE) have no per-agent init canvas — no Init tab.
+    if (kind.init_subworkflow) {
+      tabs.push({ name: kind.init_subworkflow, label: 'Init', deletable: false });
+    }
     (kind.behavior_subworkflows || []).forEach((b) => {
       tabs.push({ name: b, label: b, deletable: true });
     });
@@ -101,7 +113,7 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
             className={`agent-kind-chip ${selectedKind === k.name ? 'active' : ''}`}
             onClick={() => {
               setSelectedKind(k.name);
-              setCurrentStage(k.init_subworkflow);
+              setCurrentStage(landingStageFor(k));
             }}
           >
             <span className="agent-kind-name">{k.name}</span>
@@ -129,7 +141,7 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
       <div className="agents-main">
         {activeKind ? (
           <>
-            {/* Secondary tab bar: Init + behaviors */}
+            {/* Secondary tab bar: Init (only if the kind has a per-agent init) + behaviors */}
             <BehaviorTabsBar
               tabs={buildTabs(activeKind)}
               activeTab={currentStage}
@@ -141,23 +153,38 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
               addLabel="New Behavior"
             />
 
-            {/* Canvas + palette */}
-            <div className={`workflow-grid ${inspectorOpen ? 'with-inspector' : ''}`} style={gridStyle}>
-              <div className="grid-palette">
-                <FunctionPalette currentStage={currentStage} />
-                <div className="resize-handle resize-handle-right" onMouseDown={onMouseDownPalette} />
-              </div>
-              <div className="grid-canvas">
-                <ExportBehaviorButton />
-                <WorkflowCanvas key={currentStage} stage={currentStage} />
-              </div>
-              {inspectorOpen && (
-                <div className="grid-inspector">
-                  <div className="resize-handle resize-handle-left" onMouseDown={onMouseDownInspector} />
-                  <NodeInspector />
+            {landingStageFor(activeKind) ? (
+              /* Canvas + palette */
+              <div className={`workflow-grid ${inspectorOpen ? 'with-inspector' : ''}`} style={gridStyle}>
+                <div className="grid-palette">
+                  <FunctionPalette currentStage={currentStage} />
+                  <div className="resize-handle resize-handle-right" onMouseDown={onMouseDownPalette} />
                 </div>
-              )}
-            </div>
+                <div className="grid-canvas">
+                  <ExportBehaviorButton />
+                  <WorkflowCanvas key={currentStage} stage={currentStage} />
+                </div>
+                {inspectorOpen && (
+                  <div className="grid-inspector">
+                    <div className="resize-handle resize-handle-left" onMouseDown={onMouseDownInspector} />
+                    <NodeInspector />
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Create-only kind with no Step behaviors yet: creation lives in World. */
+              <div className="agents-empty">
+                <Users size={48} opacity={0.3} />
+                <p>
+                  Agents of kind <strong>{activeKind.name}</strong> are created in the{' '}
+                  <strong>World</strong> tab
+                  {activeKind.create_subworkflow ? (
+                    <> (canvas <code>{activeKind.create_subworkflow}</code>)</>
+                  ) : null}.
+                </p>
+                <p>Add per-step behaviors here with <strong>New Behavior</strong>.</p>
+              </div>
+            )}
           </>
         ) : (
           <div className="agents-empty">

@@ -65,14 +65,17 @@ export const createAbmSlice = (set, get) => ({
   // ── Agent kinds ──────────────────────────────────────────────────────────
 
   addAgentKind: (name) => {
-    const initName = `${name}_init`;
+    // New kinds are create-only: a collective creation canvas (authored in World)
+    // brings the agents into existence. A per-agent init_subworkflow is opt-in and
+    // added later, not scaffolded here (matches MicroC/SUGARSCAPE).
+    const createName = `${name}_create`;
     set((state) => {
       if (state.workflow.metadata.gui.agent_kinds.find((k) => k.name === name)) return state;
-      const initSw = makeSubworkflow(
-        initName,
-        `Initialization for ${name}`,
-        KINDS.AGENT_INIT,
-        defaultContractForKind(KINDS.AGENT_INIT, { kindName: name }),
+      const createSw = makeSubworkflow(
+        createName,
+        `Creation for ${name} — bring agents into existence (authored in World)`,
+        KINDS.AGENT_CREATE,
+        defaultContractForKind(KINDS.AGENT_CREATE, { kindName: name }),
       );
       const newWorkflow = {
         ...state.workflow,
@@ -82,19 +85,19 @@ export const createAbmSlice = (set, get) => ({
             ...state.workflow.metadata.gui,
             agent_kinds: [
               ...state.workflow.metadata.gui.agent_kinds,
-              { name, init_subworkflow: initName, behavior_subworkflows: [] },
+              { name, create_subworkflow: createName, behavior_subworkflows: [] },
             ],
           },
         },
         subworkflows: {
           ...state.workflow.subworkflows,
-          [initName]: initSw,
+          [createName]: createSw,
         },
       };
       return {
         workflow: withDerivedKinds(newWorkflow),
-        stageNodes: { ...state.stageNodes, [initName]: [makeControllerNode(initName)] },
-        stageEdges: { ...state.stageEdges, [initName]: [] },
+        stageNodes: { ...state.stageNodes, [createName]: [makeControllerNode(createName)] },
+        stageEdges: { ...state.stageEdges, [createName]: [] },
       };
     });
   },
@@ -104,7 +107,9 @@ export const createAbmSlice = (set, get) => ({
       const kind = state.workflow.metadata.gui.agent_kinds.find((k) => k.name === name);
       if (!kind) return state;
 
-      const toRemove = new Set([kind.init_subworkflow, ...kind.behavior_subworkflows]);
+      const toRemove = new Set(
+        [kind.create_subworkflow, kind.init_subworkflow, ...(kind.behavior_subworkflows || [])].filter(Boolean),
+      );
       const newSubworkflows = { ...state.workflow.subworkflows };
       const newNodes = { ...state.stageNodes };
       const newEdges = { ...state.stageEdges };

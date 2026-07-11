@@ -72,6 +72,7 @@ export const FUNCTION_HOSTING_KINDS = new Set([
 // the old v1 execution stages. The chosen role becomes the function's folder
 // (functions/<role>/) so placement is self-describing.
 export const FUNCTION_ROLE_OPTIONS = [
+  { kind: KINDS.AGENT_CREATE, label: 'Agent · creation (in World)' },
   { kind: KINDS.AGENT_INIT, label: 'Agent · initialization' },
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
@@ -86,6 +87,15 @@ export const defaultContractForKind = (kind, options = {}) => {
   const ownerKind = options.kindName;
 
   switch (kind) {
+    case KINDS.AGENT_CREATE:
+      // Collective creation: brings agents into existence (placement + wrap into
+      // the population). Runs once, so it writes the whole agent collection.
+      return {
+        owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
+        reads: ['world.self', 'resource.collection'],
+        writes: ['agent.collection'],
+        emits: [],
+      };
     case KINDS.AGENT_INIT:
       return {
         owner: { type: 'agent', ...(ownerKind ? { kind: ownerKind } : {}) },
@@ -143,6 +153,7 @@ export const defaultContractForKind = (kind, options = {}) => {
 // execution (the workflow graph does); it only satisfies the historical
 // @register_function enum while older registry consumers still expect it.
 export const ROLE_TO_COMPATIBILITY_CATEGORY = {
+  [KINDS.AGENT_CREATE]: 'INITIALIZATION',
   [KINDS.AGENT_INIT]: 'INITIALIZATION',
   [KINDS.RESOURCE_INIT]: 'INITIALIZATION',
   [KINDS.WORLD]: 'INITIALIZATION',

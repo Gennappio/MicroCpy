@@ -394,7 +394,12 @@ export const createWorkflowIOSlice = (set, get) => ({
       const autoOrder = [];
       if (world.subworkflow) autoOrder.push(world.subworkflow);
       resourceKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
-      agentKinds.forEach((k) => { if (k.init_subworkflow) autoOrder.push(k.init_subworkflow); });
+      // Creation must run before per-agent init (agents must exist before their
+      // per-agent init runs), so push create_subworkflow ahead of init_subworkflow.
+      agentKinds.forEach((k) => {
+        if (k.create_subworkflow) autoOrder.push(k.create_subworkflow);
+        if (k.init_subworkflow) autoOrder.push(k.init_subworkflow);
+      });
 
       const newCalls = autoOrder.map((name, i) => ({
         id: `init-call-${name}-${i}`,
