@@ -7,7 +7,7 @@ import {
   controllerLabel,
 } from '../subworkflowKinds';
 import { withDerivedKinds } from '../computeSubworkflowKinds';
-import { execEdge } from '../../utils/executionEdges';
+import { execEdge, isExecEdge } from '../../utils/executionEdges';
 
 const makeSubworkflow = (name, description, kind, contract = null) => ({
   description,
@@ -556,8 +556,10 @@ export const createAbmSlice = (set, get) => ({
     set((state) => {
       const scheduler = state.workflow.subworkflows[SCHEDULER_NAME];
       const edges = state.stageEdges[SCHEDULER_NAME] || [];
-      const inEdge = edges.find((e) => e.target === nodeId);
-      const outEdge = edges.find((e) => e.source === nodeId);
+      // Only execution edges define the chain — never mistake a parameter edge for
+      // a chain neighbour when stitching.
+      const inEdge = edges.find((e) => e.target === nodeId && isExecEdge(e));
+      const outEdge = edges.find((e) => e.source === nodeId && isExecEdge(e));
       let newEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
       // Stitch predecessor -> successor so the execution chain stays connected.
       if (inEdge && outEdge) newEdges = [...newEdges, execEdge(inEdge.source, outEdge.target)];
@@ -715,8 +717,10 @@ export const createAbmSlice = (set, get) => ({
       const seq = state.workflow.subworkflows[INIT_SEQUENCE_NAME];
       if (!seq) return state;
       const edges = state.stageEdges[INIT_SEQUENCE_NAME] || [];
-      const inEdge = edges.find((e) => e.target === nodeId);
-      const outEdge = edges.find((e) => e.source === nodeId);
+      // Only execution edges define the chain — never mistake a parameter edge for
+      // a chain neighbour when stitching.
+      const inEdge = edges.find((e) => e.target === nodeId && isExecEdge(e));
+      const outEdge = edges.find((e) => e.source === nodeId && isExecEdge(e));
       let newEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
       // Stitch predecessor -> successor so the execution chain stays connected.
       if (inEdge && outEdge) newEdges = [...newEdges, execEdge(inEdge.source, outEdge.target)];

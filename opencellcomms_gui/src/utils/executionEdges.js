@@ -12,6 +12,15 @@
  * in `workflowIOSlice.js`.
  */
 
+/**
+ * True for an execution-flow edge — one that `findReachableNodes` traverses — as
+ * opposed to a parameter edge (parameterNode -> a call's `params-*` handle). Use this
+ * when picking chain neighbours so a parameter edge is never mistaken for an
+ * execution edge (which would stitch a bogus edge into the run order).
+ */
+export const isExecEdge = (edge) =>
+  edge.sourceHandle === 'func-out' || edge.sourceHandle === 'init-out';
+
 export const execEdge = (sourceId, targetId) => ({
   id: `e-${sourceId}-${targetId}`,
   source: sourceId,
