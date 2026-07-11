@@ -44,8 +44,14 @@ Ask, in one message:
 1. **Which existing plugin is this closest to?** List `opencellcomms_adapters/*`
    (e.g. `TCELL_CORRAL`, `MicroC`, `SUGARSCAPE`, `PhysiBoSS`). "Diff from the nearest
    model" is usually a better spec than "describe from scratch." Read that plugin's
-   `MODEL.md` and its `workflows/*.json` to pre-load the family's slots (its world
-   shape, its agent/resource kinds, its scheduler order).
+   `MODEL.md` and its **canonical** workflow — `MicroC/workflows/microc.json`,
+   `TCELL_CORRAL/workflows/tcell_corral.json`, `SUGARSCAPE/workflows/sugarscape.json`
+   — to pre-load the family's slots (its world shape, its agent/resource kinds, its
+   scheduler order). **Never** copy from a workflow carrying
+   `metadata.validation.skip: true` (archived pre-migration checkpoints / stress
+   fixtures — `gene_network_update_test*`, `tcell_corral_ccl21/_intracellular/_spatial`,
+   `test_gui`): they are deliberately un-migrated and will lead you into the old
+   structure.
 2. **What are the sources?** A paper / DOI, a reference implementation path (a
    PhysiCell project, an `.nlogo` file, a config), or an existing code folder. You
    will extract slot values from these and **cite each one** (`📄 sourced: <path/DOI>`).

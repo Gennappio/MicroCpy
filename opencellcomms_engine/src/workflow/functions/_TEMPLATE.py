@@ -100,21 +100,23 @@ def my_function_name(
         return False
     
     # =========================================================================
-    # FUNCTION LOGIC
+    # FUNCTION LOGIC — pick the shape that matches THIS function's canvas.
+    # (The role-aware GUI scaffold / occ_new-function writes the right shape for
+    # you automatically; this template is only a hand-authoring reference.)
     # =========================================================================
     print(f"[MY_FUNCTION] Starting with mode={mode}, my_param={my_param}")
 
-    num_cells = len(env.cells)
-
-    # Example: process each cell through the typed API
-    processed_count = 0
-    for cell in env.cells:
-        # e.g. read the local environment and mark a phenotype:
-        #   if env.concentration('oxygen', cell) < my_param:
-        #       cell.mark_necrotic()
-        processed_count += 1
-
-    print(f"[MY_FUNCTION] Processed {processed_count}/{num_cells} cells")
+    # PER-AGENT (agent Step / per-agent init) — runs once per agent via for_each:
+    #   agent = env.agent            # the single bound agent (None if the ask is empty)
+    #   if agent is None:
+    #       return True
+    #   agent.set('key', agent.get('key', 0) + 1)   # act on this ONE agent
+    #
+    # COLLECTIVE (creation / reporting) — runs once over the whole population:
+    #   for cell in env.cells:
+    #       if env.concentration('oxygen', cell) < my_param:
+    #           cell.mark_necrotic()
+    #   # ...or create agents: env.population.populate('kind', count, trait=lambda rng: ...)
 
     # =========================================================================
     # STORE RESULTS (if needed)
@@ -137,7 +139,8 @@ def my_function_name(
 # [ ] compatible_kernels is specified
 # [ ] requires lists the capability tokens this function needs (or [] if none)
 # [ ] Function signature is (env: BiologicalContext, ...parameters)
-# [ ] Uses the typed env API (env.cells, cell.mark_*) — no manual None-checks needed
+# [ ] Uses the typed env API in the shape the canvas needs — per-agent (env.agent) OR
+#     collective (env.cells / env.population.populate); no manual None-checks needed
 # [ ] Error messages include function name for easy debugging
 # [ ] Function is imported in src/workflow/registry.py
 # [ ] Function has been tested with a workflow JSON

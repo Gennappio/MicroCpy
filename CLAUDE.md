@@ -323,6 +323,13 @@ inside *another* kind's creation canvas (it has neither its own `create_subworkf
 nor `init_subworkflow`, e.g. TCELL_CORRAL's `dendritic_cell`) is intentionally not
 errored — that is the warn case, not a hard failure.
 
+**Copy examples only from canonical workflows** — `MicroC/workflows/microc.json`,
+`TCELL_CORRAL/workflows/tcell_corral.json`, `SUGARSCAPE/workflows/sugarscape.json`.
+**Never** copy from a workflow carrying `metadata.validation.skip: true` (archived
+pre-migration checkpoints / stress fixtures like `gene_network_update_test*`,
+`tcell_corral_ccl21/_intracellular/_spatial`, `test_gui`) — they are deliberately
+un-migrated and encode the old structure.
+
 When building for the class layer: write **atomic node-functions** that use the
 typed `env` API, place them on the entity canvases, and order them in the World
 (init) and Scheduler (loop) canvases. Do **not** build forms and do **not** collapse
