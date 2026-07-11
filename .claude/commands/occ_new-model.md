@@ -103,8 +103,9 @@ For each agent kind:
 - name:
 - states / phenotypes / fate field:
 - initial count + placement (CSV file / random / cluster):
-- CREATION (collective, runs ONCE in World/Init — placement, populate, wrap into the
-  ABM population; `for cell in env.cells` / populate, `env.agent` is None):
+- CREATION (collective, runs ONCE — the agent kind's Creation canvas in the Agents
+  tab; placement, populate, wrap into the ABM population; `for cell in env.cells` /
+  populate, `env.agent` is None):
 - per-agent INIT behaviours (run ONCE PER AGENT via for_each, after creation — act on
   `env.agent`/`env.cell`, no cell loop; OMIT if the setup is order-dependent-collective):
 - per-agent STEP behaviours, in order (run ONCE PER AGENT each tick via for_each):

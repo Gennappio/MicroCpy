@@ -78,7 +78,8 @@ Biological functions take a typed `env`, **not** the raw `context` dict.
 
 **First decide: does this run once (collective), or once per agent? The canvas decides
 — not which entity it sits under.** An agent kind has up to three canvases:
-- **Creation** (`create_subworkflow`, authored in the World tab) runs **once**,
+- **Creation** (`create_subworkflow`, the agent kind's **Creation** canvas in the
+  Agents tab — mirroring a resource's **Setup**) runs **once**,
   collectively, no `for_each`. Brings agents into existence — placement,
   `env.population.populate(...)`, wrapping into the ABM population — plus any parse-once
   shared setup. `env.agent` is `None`; work on `for cell in env.cells:`.

@@ -280,13 +280,14 @@ of that kind, binding the current agent so each inner node sees `env.agent`.
 
 **An agent kind has up to three canvases; know which run collectively and which run
 per-agent — don't confuse them just because they live "under the agent kind":**
-- **Creation** (`create_subworkflow`, authored in the **World** tab, e.g.
-  `tcell_create`) runs **once**, collectively, with **no `for_each`**. This is where
-  agents are brought into existence — placement, wrapping into the ABM population, and
-  any parse-once shared setup. `env.agent` is `None`; work on the whole population
-  (`for cell in env.cells:` or `env.population.populate(...)`). You cannot iterate
-  agents before they exist, so creation is collective by definition, and it lives in
-  World/Init.
+- **Creation** (`create_subworkflow`, authored under its **agent kind** in the
+  **Agents** tab — the collective *Creation* canvas, mirroring a resource's *Setup*;
+  e.g. `tcell_create`) runs **once**, collectively, with **no `for_each`**. This is
+  where agents are brought into existence — placement, wrapping into the ABM
+  population, and any parse-once shared setup. `env.agent` is `None`; work on the whole
+  population (`for cell in env.cells:` or `env.population.populate(...)`). You cannot
+  iterate agents before they exist, so creation is collective by definition, and runs
+  once during Init (ordered in the Initialization tab).
 - **Per-agent init** (`init_subworkflow`, e.g. `tcell_init`) runs **once per agent**,
   called with `for_each` in the init sequence **after** creation. It initializes the
   single bound agent via `env.agent` / `env.cell` (e.g. assign this cell's gene
@@ -295,15 +296,16 @@ per-agent — don't confuse them just because they live "under the agent kind":*
   agent** each tick via the scheduler's `for_each` ask. Same `env.agent`, no cell loop.
 
 **The tell:** `for cell in env.cells:` (or `populate`) → a once-run **collective
-creation** function (World/Init). `env.agent` / `env.cell` → a **per-agent** init or
-step function. Being nested under an agent kind does not make a function per-agent —
-check its canvas.
+creation** function (the kind's Creation canvas). `env.agent` / `env.cell` → a
+**per-agent** init or step function. The *canvas* decides how it runs (Creation =
+collective, Init/Step = per-agent) — check which canvas a function sits on.
 
 **Not every agent kind has a per-agent init.** If a kind's setup is inherently
 collective (e.g. MicroC/SUGARSCAPE build all cell networks or place all agents in one
 order-dependent pass, where per-agent iteration would change results), the whole thing
-is **Creation** — there is no `init_subworkflow`, and the Agent tab holds only the
-per-agent Step. Only split out a per-agent `init_subworkflow` when the per-agent work
+is **Creation** — there is no `init_subworkflow`, and the Agents tab holds the
+Creation canvas plus the per-agent Step. Only split out a per-agent `init_subworkflow`
+when the per-agent work
 is genuinely **independent per cell** (e.g. TCELL copies a shared network template onto
 each cell, order-independent). The two classic mistakes are symmetric: `for_each` on a
 collective creation call (re-creates everything once per agent), and an internal

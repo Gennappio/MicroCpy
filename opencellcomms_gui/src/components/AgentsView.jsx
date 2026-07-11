@@ -8,11 +8,11 @@ import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
 import './AgentsView.css';
 
-// The Agents-tab canvas to land on for a kind: its per-agent init if it has one,
-// else its first Step behavior, else null (a create-only kind with no behaviors
-// yet — its creation canvas lives in the World tab).
+// The Agents-tab canvas to land on for a kind: its collective Creation canvas if it
+// has one, else its per-agent init, else its first Step behavior, else null (a kind
+// created collectively inside another kind's canvas, with no canvases of its own).
 const landingStageFor = (kind) =>
-  kind?.init_subworkflow || kind?.behavior_subworkflows?.[0] || null;
+  kind?.create_subworkflow || kind?.init_subworkflow || kind?.behavior_subworkflows?.[0] || null;
 
 const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
   const {
@@ -41,21 +41,19 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
     addAgentKind(name);
     setSelectedKind(name);
-    // Create-only new kind: its creation canvas lives in World and it has no Step
-    // behaviors yet, so there's no Agents-tab canvas to land on — clear the stage
-    // and let the empty-state hint show.
-    setCurrentStage(null);
+    // A new kind gets a collective Creation canvas — land on it.
+    setCurrentStage(`${name}_create`);
     setNewKindName('');
     setShowAddKind(false);
   };
 
   // Keep currentStage in sync with the active kind: if the user lands on this
   // view (or the selected kind changes) and currentStage doesn't belong to
-  // this kind, jump to the init canvas. Otherwise the FunctionPalette sees
-  // currentStage='__scheduler__' and disables "New Function".
+  // this kind, jump to its first canvas (Creation). Otherwise the FunctionPalette
+  // sees currentStage='__scheduler__' and disables "New Function".
   useEffect(() => {
     if (!activeKind) return;
-    const validNames = [activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])].filter(Boolean);
+    const validNames = [activeKind.create_subworkflow, activeKind.init_subworkflow, ...(activeKind.behavior_subworkflows || [])].filter(Boolean);
     if (!validNames.includes(currentStage)) {
       setCurrentStage(landingStageFor(activeKind));
     }
@@ -77,14 +75,18 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     removeAgentBehavior(activeKind.name, behaviorName);
     if (currentStage === behaviorName) {
       const remaining = (activeKind.behavior_subworkflows || []).filter((b) => b !== behaviorName);
-      setCurrentStage(activeKind.init_subworkflow || remaining[0] || null);
+      setCurrentStage(activeKind.create_subworkflow || activeKind.init_subworkflow || remaining[0] || null);
     }
   };
 
   const buildTabs = (kind) => {
     if (!kind) return [];
     const tabs = [];
-    // Create-only kinds (MicroC/SUGARSCAPE) have no per-agent init canvas — no Init tab.
+    // Collective Creation canvas (runs once, env.agent is None) — first, if present.
+    if (kind.create_subworkflow) {
+      tabs.push({ name: kind.create_subworkflow, label: 'Creation', deletable: false });
+    }
+    // Per-agent Init canvas (for_each) — only kinds that have one (e.g. TCELL).
     if (kind.init_subworkflow) {
       tabs.push({ name: kind.init_subworkflow, label: 'Init', deletable: false });
     }
@@ -172,17 +174,16 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
                 )}
               </div>
             ) : (
-              /* Create-only kind with no Step behaviors yet: creation lives in World. */
+              /* A kind with no canvas of its own — created collectively inside another
+                 kind's Creation (e.g. one CSV places several kinds). */
               <div className="agents-empty">
                 <Users size={48} opacity={0.3} />
                 <p>
-                  Agents of kind <strong>{activeKind.name}</strong> are created in the{' '}
-                  <strong>World</strong> tab
-                  {activeKind.create_subworkflow ? (
-                    <> (canvas <code>{activeKind.create_subworkflow}</code>)</>
-                  ) : null}.
+                  Agents of kind <strong>{activeKind.name}</strong> have no canvas of their
+                  own — they're created collectively (e.g. inside another kind's Creation)
+                  and take no per-step behaviour.
                 </p>
-                <p>Add per-step behaviors here with <strong>New Behavior</strong>.</p>
+                <p>Add one with <strong>New Behavior</strong> if they should act each step.</p>
               </div>
             )}
           </>
