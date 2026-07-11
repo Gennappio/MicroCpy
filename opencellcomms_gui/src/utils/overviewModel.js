@@ -16,26 +16,12 @@
  */
 
 import { computeSubworkflowKinds } from '../store/computeSubworkflowKinds';
-import { variantForKind } from '../store/subworkflowKinds';
+import { variantForKind, KIND_TO_TAB } from '../store/subworkflowKinds';
 import {
   RECONCILIATION_STEPS,
   RECONCILIATION_FUNCTION,
   RECONCILIATION_SOURCE,
 } from './reconciliationSteps';
-
-// Which authoring tab owns a given subworkflow kind (mirrors the deep-link map
-// already used by SubWorkflowCallNode).
-const KIND_TO_TAB = {
-  agent_create: 'world',
-  agent_behavior: 'agents',
-  resource_init: 'resources',
-  resource_behavior: 'resources',
-  world: 'world',
-  world_behavior: 'world',
-  processing_behavior: 'processing',
-  scheduler: 'scheduler',
-  init_sequence: 'initialization',
-};
 
 const COL_X = 240;       // main spine
 const STEP_X = 320;      // indented reconciliation steps

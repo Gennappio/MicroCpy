@@ -6,13 +6,27 @@ import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
 import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
+import { KIND_TO_TAB, KINDS } from '../store/subworkflowKinds';
 import './AgentsView.css';
 
-// The Agents-tab canvas to land on for a kind: its first per-agent Step behavior,
-// else null. Collective Creation (create_subworkflow) is authored in the World tab —
-// the Agents tab holds per-agent Steps only (all agent nodes run per-agent).
-const landingStageFor = (kind) =>
-  kind?.behavior_subworkflows?.[0] || null;
+// The canvases the Agents tab shows for a kind, DERIVED from the single
+// KIND_TO_TAB ownership map: its per-agent Steps, plus the collective Creation
+// canvas only IF the map assigns agent_create to the Agents tab. It doesn't —
+// creation is World-owned — so in practice this is Steps only. Because this and
+// WorldView both read the same map, they can never disagree about where creation
+// is authored (the mistake this guards against).
+const buildTabs = (kind) => {
+  if (!kind) return [];
+  const tabs = [];
+  if (kind.create_subworkflow && KIND_TO_TAB[KINDS.AGENT_CREATE] === 'agents') {
+    tabs.push({ name: kind.create_subworkflow, label: 'Creation', deletable: false });
+  }
+  (kind.behavior_subworkflows || []).forEach((b) => tabs.push({ name: b, label: b, deletable: true }));
+  return tabs;
+};
+
+// The Agents-tab canvas to land on for a kind: its first owned canvas, else null.
+const landingStageFor = (kind) => buildTabs(kind)[0]?.name || null;
 
 const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDownInspector }) => {
   const {
@@ -54,7 +68,7 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
   // sees currentStage='__scheduler__' and disables "New Function".
   useEffect(() => {
     if (!activeKind) return;
-    const validNames = [...(activeKind.behavior_subworkflows || [])].filter(Boolean);
+    const validNames = buildTabs(activeKind).map((t) => t.name);
     if (!validNames.includes(currentStage)) {
       setCurrentStage(landingStageFor(activeKind));
     }
@@ -75,15 +89,9 @@ const AgentsView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseD
     if (!window.confirm(`Delete behavior "${behaviorName}"?`)) return;
     removeAgentBehavior(activeKind.name, behaviorName);
     if (currentStage === behaviorName) {
-      const remaining = (activeKind.behavior_subworkflows || []).filter((b) => b !== behaviorName);
+      const remaining = buildTabs(activeKind).map((t) => t.name).filter((n) => n !== behaviorName);
       setCurrentStage(remaining[0] || null);
     }
-  };
-
-  const buildTabs = (kind) => {
-    if (!kind) return [];
-    // Per-agent Step behaviors only. Collective Creation is authored in the World tab.
-    return (kind.behavior_subworkflows || []).map((b) => ({ name: b, label: b, deletable: true }));
   };
 
   const inspectorOpen = inspector.isOpen;

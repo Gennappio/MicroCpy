@@ -6,6 +6,7 @@ import NodeInspector from './NodeInspector';
 import BehaviorTabsBar from './BehaviorTabsBar';
 import ExportBehaviorButton from './ExportBehaviorButton';
 import useWorkflowStore from '../store/workflowStore';
+import { KIND_TO_TAB, KINDS } from '../store/subworkflowKinds';
 import './AgentsView.css';
 
 /**
@@ -37,10 +38,11 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   const behaviors = worldMeta.behavior_subworkflows || [];
   // Agent kinds are brought into existence here: each kind's collective Creation
   // canvas (create_subworkflow — runs once, env.agent is None) surfaces as a World
-  // tab. The Agents tab holds only their per-agent Steps.
-  const agentCreates = (workflow.metadata?.gui?.agent_kinds || [])
-    .map((k) => k.create_subworkflow)
-    .filter(Boolean);
+  // tab. Guarded on the single KIND_TO_TAB source of truth, so this and the Agents
+  // tab can never disagree about where creation is authored.
+  const agentCreates = KIND_TO_TAB[KINDS.AGENT_CREATE] === 'world'
+    ? (workflow.metadata?.gui?.agent_kinds || []).map((k) => k.create_subworkflow).filter(Boolean)
+    : [];
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');

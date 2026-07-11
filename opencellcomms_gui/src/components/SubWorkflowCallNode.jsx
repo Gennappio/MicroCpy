@@ -2,7 +2,7 @@ import { Handle, Position, useEdges, useNodes } from 'reactflow';
 import { Settings, Play, Pause, Zap, ExternalLink, MessageSquare } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import NodeBadge from './NodeBadge';
-import { variantForKind } from '../store/subworkflowKinds';
+import { variantForKind, KIND_TO_TAB } from '../store/subworkflowKinds';
 import './SubWorkflowCallNode.css';
 
 /**
@@ -104,18 +104,8 @@ const SubWorkflowCallNode = ({ id, data, selected }) => {
           className="node-goto-btn"
           onClick={(e) => {
             e.stopPropagation();
-            // Navigate to the owning tab based on target kind
-            const tabMap = {
-              agent_create: 'world', agent_behavior: 'agents',
-              resource_init: 'resources', resource_behavior: 'resources',
-              world: 'world', world_behavior: 'world',
-              processing_behavior: 'processing',
-              scheduler: 'scheduler',
-              init_sequence: 'initialization',
-              composer: 'agents',
-              subworkflow: 'agents',
-            };
-            setCurrentMainTab(tabMap[targetKind] || 'agents');
+            // Navigate to the owning tab (single source of truth: KIND_TO_TAB).
+            setCurrentMainTab(KIND_TO_TAB[targetKind] || 'agents');
             setCurrentStage(subworkflowName);
           }}
           title={`Go to ${subworkflowName}`}

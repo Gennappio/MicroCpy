@@ -180,3 +180,31 @@ export const variantForKind = (kind) => {
       return 'purple';
   }
 };
+
+// ---------------------------------------------------------------------------
+// SINGLE SOURCE OF TRUTH: which navigable GUI tab OWNS (authors/edits) a canvas
+// of each subworkflow kind. Every consumer derives from this one map — the
+// call-node "go to canvas" link (SubWorkflowCallNode), the Overview deep links
+// (overviewModel), the Parameters dashboard, and the Agents/World tab canvas
+// lists (AgentsView/WorldView). Change where a kind is authored HERE, once; the
+// whole GUI follows and cannot disagree with itself.
+//
+// Tabs are the buttons in MainTabSelector (Overview · Agents · Resources ·
+// World · Initialization · Scheduler · Planner · Processing · Results). `null`
+// = no owning entity tab (main/composer, generic subworkflows).
+//
+// IMPORTANT: agent CREATION is authored in World, not Agents. The Agents tab
+// holds per-agent Steps only — every agent node runs per-agent.
+export const KIND_TO_TAB = {
+  [KINDS.AGENT_CREATE]: 'world',
+  [KINDS.AGENT_BEHAVIOR]: 'agents',
+  [KINDS.RESOURCE_INIT]: 'resources',
+  [KINDS.RESOURCE_BEHAVIOR]: 'resources',
+  [KINDS.WORLD]: 'world',
+  [KINDS.WORLD_BEHAVIOR]: 'world',
+  [KINDS.PROCESSING_BEHAVIOR]: 'processing',
+  [KINDS.INIT_SEQUENCE]: 'initialization',
+  [KINDS.SCHEDULER]: 'scheduler',
+  [KINDS.COMPOSER]: null,
+  [KINDS.SUBWORKFLOW]: null,
+};

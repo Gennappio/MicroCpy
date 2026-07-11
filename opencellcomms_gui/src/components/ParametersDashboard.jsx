@@ -14,23 +14,25 @@ import {
   Trash2,
 } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import { KIND_TO_TAB } from '../store/subworkflowKinds';
 import './ParametersDashboard.css';
 
 const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictParameterNode']);
 
-// One entry per subworkflow kind: the section label, accent color, icon, and
-// the main tab its "Go to canvas" link should open. Kinds are rendered in this
-// order; only kinds that actually carry connected params show up.
+// One entry per subworkflow kind: the section label, accent color, and icon.
+// The owning tab for the "Go to canvas" link comes from KIND_TO_TAB (the single
+// source of truth), not from here. Kinds are rendered in KIND_ORDER; only kinds
+// that actually carry connected params show up.
 const KIND_META = {
-  agent_create: { label: 'Agent Creation', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
-  agent_behavior: { label: 'Agent Behaviors', accent: '#06b6d4', tab: 'agents', icon: <Users size={16} /> },
-  world: { label: 'World Setup', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
-  world_behavior: { label: 'World Behaviors', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
-  init_sequence: { label: 'Initialization', accent: '#94a3b8', tab: 'initialization', icon: <PlayCircle size={16} /> },
-  scheduler: { label: 'Scheduler', accent: '#94a3b8', tab: 'scheduler', icon: <Layers size={16} /> },
-  processing_behavior: { label: 'Processing', accent: '#a855f7', tab: 'processing', icon: <Sparkles size={16} /> },
-  composer: { label: 'Composer (main)', accent: '#f59e0b', tab: null, icon: <Layers size={16} /> },
-  subworkflow: { label: 'Sub-workflows', accent: '#8b5cf6', tab: null, icon: <Workflow size={16} /> },
+  agent_create: { label: 'Agent Creation', accent: '#10b981', icon: <Globe size={16} /> },
+  agent_behavior: { label: 'Agent Behaviors', accent: '#06b6d4', icon: <Users size={16} /> },
+  world: { label: 'World Setup', accent: '#10b981', icon: <Globe size={16} /> },
+  world_behavior: { label: 'World Behaviors', accent: '#10b981', icon: <Globe size={16} /> },
+  init_sequence: { label: 'Initialization', accent: '#94a3b8', icon: <PlayCircle size={16} /> },
+  scheduler: { label: 'Scheduler', accent: '#94a3b8', icon: <Layers size={16} /> },
+  processing_behavior: { label: 'Processing', accent: '#a855f7', icon: <Sparkles size={16} /> },
+  composer: { label: 'Composer (main)', accent: '#f59e0b', icon: <Layers size={16} /> },
+  subworkflow: { label: 'Sub-workflows', accent: '#8b5cf6', icon: <Workflow size={16} /> },
 };
 
 const KIND_ORDER = [
@@ -170,7 +172,7 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
   // Navigate to the tab that owns this kind, then select the subworkflow stage.
   const goToCanvas = useCallback(
     (kind, stageName) => {
-      const tab = KIND_META[kind]?.tab;
+      const tab = KIND_TO_TAB[kind];
       if (!tab) return; // synthesized main / orphan kinds have no editable tab
       setCurrentMainTab(tab);
       setCurrentStage(stageName);
@@ -535,7 +537,7 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
   // Render every kind that actually carries connected params, in tab order.
   const kindEntries = KIND_ORDER.filter(
     (k) => groupedParams[k] && Object.keys(groupedParams[k]).length > 0
-  ).map((k) => ({ key: k, ...KIND_META[k] }));
+  ).map((k) => ({ key: k, ...KIND_META[k], tab: KIND_TO_TAB[k] }));
 
   return (
     <div className="parameters-dashboard">
@@ -580,7 +582,7 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
                           <ChevronDown size={14} />
                         )}
                         <span className="param-stage-name">{stageName}</span>
-                        {KIND_META[kindKey]?.tab && (
+                        {KIND_TO_TAB[kindKey] && (
                           <button
                             className="param-goto-btn"
                             onClick={(e) => {
