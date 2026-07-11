@@ -5,6 +5,7 @@
   "kernel": "biophysics",
   "seed": 42,
   "metadata": {
+    "validation": { "skip": true, "reason": "pre-migration TCELL_CORRAL build checkpoint (Increment 2); superseded by tcell_corral.json (tcell_create + per-agent tcell_init)." },
     "author": "TCELL_CORRAL builder",
     "created": "2026-07-03",
     "gui": {

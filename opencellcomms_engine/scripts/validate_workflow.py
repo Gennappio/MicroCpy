@@ -226,12 +226,22 @@ def check_agent_init_per_agent(gui, subworkflows, warnings):
 
 
 def check_workflow(path, registry):
-    """Returns (errors, warnings) for one workflow file."""
+    """Returns (errors, warnings, skip_reason) for one workflow file.
+
+    A file carrying `metadata.validation.skip: true` is a deliberately archived
+    fixture (a pre-migration checkpoint or a generated stress test whose canonical
+    successor is validated separately). It is reported as SKIPPED and excluded from
+    the tallies, so `--all` stays green-or-explained instead of accumulating stale
+    warnings that train people to ignore the validator."""
     errors, warnings = [], []
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return [f"could not read/parse {path}: {exc}"], []
+        return [f"could not read/parse {path}: {exc}"], [], None
+
+    validation = (data.get("metadata") or {}).get("validation") or {}
+    if validation.get("skip"):
+        return [], [], validation.get("reason") or "archived fixture"
 
     gui = (data.get("metadata") or {}).get("gui") or {}
     subworkflows = data.get("subworkflows") or {}
@@ -239,7 +249,7 @@ def check_workflow(path, registry):
     check_orphans(gui, subworkflows, errors)
     check_inlined_params(subworkflows, registry, errors, warnings)
     check_agent_init_per_agent(gui, subworkflows, warnings)
-    return errors, warnings
+    return errors, warnings, None
 
 
 def resolve_paths(argv):
@@ -267,7 +277,10 @@ def main():
     total_errors = 0
     total_warnings = 0
     for path in paths:
-        errors, warnings = check_workflow(path, registry)
+        errors, warnings, skip_reason = check_workflow(path, registry)
+        if skip_reason:
+            print(f"{path}: SKIPPED ({skip_reason})")
+            continue
         total_errors += len(errors)
         total_warnings += len(warnings)
         if errors or warnings:

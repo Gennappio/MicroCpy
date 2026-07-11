@@ -3,6 +3,10 @@
   "name": "Test_GUI",
   "description": "Stress-test workflow: 3 agent kinds, mixed scheduler, planner runs, processing.",
   "metadata": {
+    "validation": {
+      "skip": true,
+      "reason": "generated Test_GUI stress fixture (print-only, no real biology); exercises the GUI, not the per-agent-init model."
+    },
     "author": "Test_GUI generator",
     "created": "2026-05-26",
     "gui": {

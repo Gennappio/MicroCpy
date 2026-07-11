@@ -422,6 +422,14 @@ def build_workflow():
         'name': 'Test_GUI',
         'description': 'Stress-test workflow: 3 agent kinds, mixed scheduler, planner runs, processing.',
         'metadata': {
+            # Quarantine marker: this is a print-only GUI stress fixture, not a
+            # science model, so validate_workflow.py skips it (green-or-explained)
+            # instead of warning on its pre-migration agent-init shape.
+            'validation': {
+                'skip': True,
+                'reason': 'generated Test_GUI stress fixture (print-only, no real '
+                          'biology); exercises the GUI, not the per-agent-init model.',
+            },
             'author': 'Test_GUI generator',
             'created': time.strftime('%Y-%m-%d'),
             'gui': {

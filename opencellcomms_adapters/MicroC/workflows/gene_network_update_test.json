@@ -4,6 +4,7 @@
   "description": "MicroC test workflow that initializes the model, runs the exact existing gene_update node, then marks fates and plots each iteration.",
   "kernel": "biophysics",
   "metadata": {
+    "validation": { "skip": true, "reason": "pre-migration MicroC test; superseded by microc.json (create-only tumor_cell). Kept as the negative example cited in CLAUDE.md." },
     "author": "MicroC builder",
     "created": "2026-06-19",
     "gui": {
