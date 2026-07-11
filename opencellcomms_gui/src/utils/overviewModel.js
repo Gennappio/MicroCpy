@@ -26,7 +26,7 @@ import {
 // Which authoring tab owns a given subworkflow kind (mirrors the deep-link map
 // already used by SubWorkflowCallNode).
 const KIND_TO_TAB = {
-  agent_create: 'agents',
+  agent_create: 'world',
   agent_behavior: 'agents',
   resource_init: 'resources',
   resource_behavior: 'resources',

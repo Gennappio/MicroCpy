@@ -103,11 +103,12 @@ For each agent kind:
 - name:
 - states / phenotypes / fate field:
 - initial count + placement (CSV file / random / cluster):
-- CREATION (collective, runs ONCE — the agent kind's Creation canvas in the Agents
-  tab; placement, populate, wrap into the ABM population, and any once-only per-cell
-  setup like building each cell's network; `for cell in env.cells` / populate,
+- CREATION (collective, runs ONCE — the agent kind's Creation canvas, authored in the
+  World tab; placement, populate, wrap into the ABM population, and any once-only
+  per-cell setup like building each cell's network; `for cell in env.cells` / populate,
   `env.agent` is None):
-- per-agent STEP behaviours, in order (run ONCE PER AGENT each tick via for_each):
+- per-agent STEP behaviours, in order (run ONCE PER AGENT each tick via for_each — the
+  Agents tab holds these Steps only):
 - division / death rules:
 - intracellular model — gene/Boolean network? which .bnd/.cfg or logic?   [family: gene-network]
 

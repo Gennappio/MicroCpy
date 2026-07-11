@@ -69,7 +69,7 @@ export const FUNCTION_HOSTING_KINDS = new Set([
 // the old v1 execution stages. The chosen role becomes the function's folder
 // (functions/<role>/) so placement is self-describing.
 export const FUNCTION_ROLE_OPTIONS = [
-  { kind: KINDS.AGENT_CREATE, label: 'Agent · creation' },
+  { kind: KINDS.AGENT_CREATE, label: 'Agent · creation (in World)' },
   { kind: KINDS.AGENT_BEHAVIOR, label: 'Agent · behavior' },
   { kind: KINDS.RESOURCE_INIT, label: 'Resource · initialization' },
   { kind: KINDS.RESOURCE_BEHAVIOR, label: 'Resource · behavior' },

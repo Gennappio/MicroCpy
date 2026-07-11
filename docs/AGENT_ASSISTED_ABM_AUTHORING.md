@@ -111,7 +111,7 @@ agent.
 Agent creation is collective:
 
 - it lives in `create_subworkflow`;
-- it is authored under its agent kind (the Creation canvas), ordered in Init;
+- it is authored in the World tab (the Creation canvas), ordered in Init;
 - it runs once;
 - it has no `for_each`;
 - `env.agent` is `None`;
@@ -168,10 +168,11 @@ with a cell loop.
 
 The GUI mirrors the same ontology:
 
-- Agents tab: agent kinds, their collective creation canvas, and their per-agent
-  step behaviors;
+- Agents tab: agent kinds and their per-agent step behaviors only (every agent node
+  runs per-agent);
 - Resources tab: resource fields and their init/step behavior;
-- World tab: world setup and collective/world-level setup or behavior;
+- World tab: world setup, each agent kind's collective creation canvas (runs once),
+  and collective/world-level setup or behavior;
 - Initialization tab: ordering of setup calls;
 - Scheduler tab: ordering of repeated step calls;
 - Overview tab: assembled view and validation feedback.

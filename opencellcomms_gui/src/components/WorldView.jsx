@@ -9,7 +9,8 @@ import useWorkflowStore from '../store/workflowStore';
 import './AgentsView.css';
 
 /**
- * World tab — the world setup canvas plus per-step collective behaviours.
+ * World tab — the world setup canvas, agent creation canvases, plus per-step
+ * collective behaviours.
  *
  * Setup (`world.subworkflow`) builds the grid + Domain + Population; drop
  * `setup_world` or a custom grid-builder. It is ordered first in the
@@ -34,6 +35,12 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   const worldMeta = workflow.metadata?.gui?.world || {};
   const worldSub = worldMeta.subworkflow;
   const behaviors = worldMeta.behavior_subworkflows || [];
+  // Agent kinds are brought into existence here: each kind's collective Creation
+  // canvas (create_subworkflow — runs once, env.agent is None) surfaces as a World
+  // tab. The Agents tab holds only their per-agent Steps.
+  const agentCreates = (workflow.metadata?.gui?.agent_kinds || [])
+    .map((k) => k.create_subworkflow)
+    .filter(Boolean);
 
   const [showAddBehavior, setShowAddBehavior] = useState(false);
   const [newBehaviorName, setNewBehaviorName] = useState('');
@@ -46,11 +53,11 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
   // Keep currentStage in sync with this tab's canvases (setup + behaviors);
   // otherwise the FunctionPalette sees '__scheduler__' and disables "New Function".
   useEffect(() => {
-    const valid = [worldSub, ...behaviors].filter(Boolean);
+    const valid = [worldSub, ...agentCreates, ...behaviors].filter(Boolean);
     if (worldSub && !valid.includes(currentStage)) {
       setCurrentStage(worldSub);
     }
-  }, [worldSub, behaviors.join(','), currentStage]);
+  }, [worldSub, agentCreates.join(','), behaviors.join(','), currentStage]);
 
   const handleCreateBehavior = () => {
     const name = newBehaviorName.trim();
@@ -71,6 +78,7 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
 
   const tabs = [
     ...(worldSub ? [{ name: worldSub, label: 'Init', deletable: false }] : []),
+    ...agentCreates.map((c) => ({ name: c, label: c, deletable: false })),
     ...behaviors.map((b) => ({ name: b, label: b, deletable: true })),
   ];
 
@@ -85,7 +93,8 @@ const WorldView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMouseDo
         <div style={{ padding: '8px 14px', fontSize: '0.82rem', color: '#6b7280' }}>
           <Globe size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />
           <strong>World.</strong> Build the world grid in <em>Init</em> (drop <code>setup_world</code>),
-          and add per-step collective behaviours (e.g. diffusion) that run once each step.
+          bring agent kinds into existence in their <em>Creation</em> canvases, and add per-step
+          collective behaviours (e.g. diffusion) that run once each step.
         </div>
 
         <BehaviorTabsBar

@@ -22,7 +22,7 @@ const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictPar
 // the main tab its "Go to canvas" link should open. Kinds are rendered in this
 // order; only kinds that actually carry connected params show up.
 const KIND_META = {
-  agent_create: { label: 'Agent Creation', accent: '#06b6d4', tab: 'agents', icon: <Users size={16} /> },
+  agent_create: { label: 'Agent Creation', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
   agent_behavior: { label: 'Agent Behaviors', accent: '#06b6d4', tab: 'agents', icon: <Users size={16} /> },
   world: { label: 'World Setup', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },
   world_behavior: { label: 'World Behaviors', accent: '#10b981', tab: 'world', icon: <Globe size={16} /> },

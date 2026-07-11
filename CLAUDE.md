@@ -280,18 +280,19 @@ of that kind, binding the current agent so each inner node sees `env.agent`.
 
 **An agent kind has exactly two canvases; know which runs collectively and which runs
 per-agent — don't confuse them just because they live "under the agent kind":**
-- **Creation** (`create_subworkflow`, authored under its **agent kind** in the
-  **Agents** tab — the collective *Creation* canvas, mirroring a resource's *Setup*;
-  e.g. `tcell_create`) runs **once**, collectively, with **no `for_each`**. This is
-  where agents are brought into existence — placement, wrapping into the ABM
-  population, **any once-only per-cell setup** (assign each cell's gene network, clamp
-  its nodes), and any parse-once shared setup. `env.agent` is `None`; work on the whole
-  population (`for cell in env.cells:` or `env.population.populate(...)`). You cannot
-  iterate agents before they exist, so creation is collective by definition, and runs
-  once during Init (ordered in the Initialization tab).
-- **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) runs **once per
-  agent** each tick via the scheduler's `for_each` ask. `env.agent`/`env.cell` is the
-  bound agent; no cell loop.
+- **Creation** (`create_subworkflow`, authored in the **World** tab — the collective
+  *Creation* canvas; e.g. `tcell_create`) runs **once**, collectively, with **no
+  `for_each`**. This is where agents are brought into existence — placement, wrapping
+  into the ABM population, **any once-only per-cell setup** (assign each cell's gene
+  network, clamp its nodes), and any parse-once shared setup. `env.agent` is `None`;
+  work on the whole population (`for cell in env.cells:` or
+  `env.population.populate(...)`). You cannot iterate agents before they exist, so
+  creation is collective by definition, and it lives in World/Init (ordered in the
+  Initialization tab).
+- **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) is the **only**
+  canvas in the **Agents** tab — it runs **once per agent** each tick via the
+  scheduler's `for_each` ask (every agent node runs per-agent). `env.agent`/`env.cell`
+  is the bound agent; no cell loop.
 
 There is **no separate per-agent init phase**: once-only per-cell setup is done
 collectively in the Creation canvas (`for cell in env.cells:`), not a `for_each` pass.

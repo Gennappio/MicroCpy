@@ -78,14 +78,14 @@ Biological functions take a typed `env`, **not** the raw `context` dict.
 
 **First decide: does this run once (collective), or once per agent? The canvas decides
 — not which entity it sits under.** An agent kind has two canvases:
-- **Creation** (`create_subworkflow`, the agent kind's **Creation** canvas in the
-  Agents tab — mirroring a resource's **Setup**) runs **once**, collectively, no
-  `for_each`. Brings agents into existence — placement, `env.population.populate(...)`,
-  wrapping into the ABM population, and **any once-only per-cell setup** (assign each
-  cell's network, clamp it) done via `for cell in env.cells:`. `env.agent` is `None`.
-- **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) runs **once per
-  agent** each tick via the scheduler's `for_each` ask — binds `env.agent`/`env.cell`,
-  no cell loop.
+- **Creation** (`create_subworkflow`, the agent kind's **Creation** canvas, authored in
+  the **World** tab) runs **once**, collectively, no `for_each`. Brings agents into
+  existence — placement, `env.population.populate(...)`, wrapping into the ABM
+  population, and **any once-only per-cell setup** (assign each cell's network, clamp
+  it) done via `for cell in env.cells:`. `env.agent` is `None`.
+- **Per-agent step** (`behavior_subworkflows`, e.g. `tcell_step`) is the only canvas in
+  the **Agents** tab — it runs **once per agent** each tick via the scheduler's
+  `for_each` ask — binds `env.agent`/`env.cell`, no cell loop.
 
 This is the #1 structural error, in both directions: a `for cell in env.cells` loop
 inside a per-agent Step **double-iterates**, and an `env.agent`-based function on the
