@@ -271,5 +271,46 @@ export const buildOverviewModel = (workflow, options = {}) => {
     processingCalls.forEach((call) => pushBehavior('proc', call));
   }
 
-  return { nodes, edges, empty: nodes.length === 0, loopCount };
+  // ── STRUCTURAL ISSUES (creation-in-World model) ───────────────────────────
+  // Derived from the ASSEMBLED init sequence (for_each materialized, order
+  // authoritative), so it mirrors exactly what would export / what the CLI
+  // validator (scripts/validate_workflow.py) reports. Surfaced read-only in the
+  // Overview banner; the export path blocks on the same errors.
+  const structuralIssues = [];
+  const agentKinds = gui.agent_kinds || [];
+  if (schedulerName && agentKinds.length) {
+    const idxOf = {};
+    initCalls.forEach((c, i) => {
+      const nm = c.subworkflow_name;
+      if (nm && !(nm in idxOf)) idxOf[nm] = i;
+    });
+    let anyCreation = false;
+    agentKinds.forEach((k) => {
+      const create = k.create_subworkflow;
+      const init = k.init_subworkflow;
+      if (create && create in idxOf) {
+        anyCreation = true;
+        if (init && init in idxOf && idxOf[create] >= idxOf[init]) {
+          structuralIssues.push({
+            severity: 'error',
+            message: `${k.name}: creation "${create}" is scheduled after its per-agent init "${init}" — agents must be created first.`,
+          });
+        }
+      }
+      if (init && !create) {
+        structuralIssues.push({
+          severity: 'error',
+          message: `${k.name}: has a per-agent init "${init}" but no creation canvas — its agents are never created.`,
+        });
+      }
+    });
+    if (!anyCreation) {
+      structuralIssues.push({
+        severity: 'warn',
+        message: `Agent kinds are defined but no creation canvas is scheduled — no agents will be created (unless created collectively inside another kind's creation canvas).`,
+      });
+    }
+  }
+
+  return { nodes, edges, empty: nodes.length === 0, loopCount, structuralIssues };
 };

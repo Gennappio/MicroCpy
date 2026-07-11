@@ -8,7 +8,7 @@ import ReactFlow, {
   useEdgesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Network, Lock } from 'lucide-react';
+import { Network, Lock, AlertTriangle } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import { buildOverviewModel } from '../utils/overviewModel';
 import { assembleLiveWorkflow } from '../utils/assembleWorkflow';
@@ -73,6 +73,30 @@ const OverviewView = () => {
           <span className="legend-item"><Lock size={11} /> System (locked)</span>
         </div>
       </div>
+
+      {(model.structuralIssues?.length > 0) && (
+        <div className="overview-structural-issues">
+          {model.structuralIssues.map((issue, i) => (
+            <div
+              key={i}
+              className="overview-issue"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', fontSize: '0.82rem',
+                color: issue.severity === 'error' ? '#b91c1c' : '#92400e',
+                background: issue.severity === 'error' ? '#fef2f2' : '#fffbeb',
+                borderTop: `1px solid ${issue.severity === 'error' ? '#fecaca' : '#fde68a'}`,
+              }}
+            >
+              <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+              <span>
+                <strong>{issue.severity === 'error' ? 'Invalid structure:' : 'Check:'}</strong>{' '}
+                {issue.message}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="overview-canvas">
         {model.empty ? (

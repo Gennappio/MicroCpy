@@ -65,6 +65,7 @@ export const createAbmSlice = (set, get) => ({
   // ── Agent kinds ──────────────────────────────────────────────────────────
 
   addAgentKind: (name) => {
+    if (get().workflow.metadata.gui.agent_kinds.find((k) => k.name === name)) return;
     // New kinds are create-only: a collective creation canvas (authored in World)
     // brings the agents into existence. A per-agent init_subworkflow is opt-in and
     // added later, not scaffolded here (matches MicroC/SUGARSCAPE).
@@ -100,6 +101,11 @@ export const createAbmSlice = (set, get) => ({
         stageEdges: { ...state.stageEdges, [createName]: [] },
       };
     });
+    // Schedule the creation so a new kind's agents are created by default -- the
+    // right structure is the default, not a state you must repair. This completes
+    // the in-session create action; it is not a silent rewrite of a loaded file.
+    get().ensureInitSequence();
+    get().addToInitSequence(createName);
   },
 
   removeAgentKind: (name) => {

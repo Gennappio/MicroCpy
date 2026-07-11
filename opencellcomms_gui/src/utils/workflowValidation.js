@@ -227,6 +227,62 @@ export function validateContracts(workflow, stageNodes = {}) {
 }
 
 /**
+ * ABM creation-structure checks — the GUI mirror of
+ * scripts/validate_workflow.py's check_agent_creation_structure. Blocks export of a
+ * structurally-invalid ABM so the GUI can't produce what the CLI/pre-commit rejects.
+ *
+ * Note: `for_each` is ownership-derived at assembly (deriveForEachForBehavior), so a
+ * create_subworkflow always exports collective and an init_subworkflow always exports
+ * per-agent — INV2/INV4 cannot be violated via the GUI and are not re-checked here.
+ * The GUI-reachable failures are INV5 (a per-agent init with no creation canvas),
+ * INV3 (creation scheduled after init), and INV1 (no creation scheduled — a warning).
+ */
+export function validateAbmCreationStructure(workflow, stageNodes) {
+  const errors = [];
+  const warnings = [];
+  const gui = workflow?.metadata?.gui || {};
+  const scheduler = gui.scheduler?.subworkflow;
+  const agentKinds = gui.agent_kinds || [];
+  if (!scheduler || agentKinds.length === 0) return { errors, warnings };
+
+  const initSeqName = gui.init_sequence?.subworkflow || '__init_sequence__';
+  const seqNodes = (stageNodes?.[initSeqName] || []).filter((n) => n.type === 'subworkflowCall');
+  const scheduledNames = new Set();
+  const nameToId = {};
+  seqNodes.forEach((n) => {
+    const nm = n.data?.subworkflowName;
+    if (nm) { scheduledNames.add(nm); if (!(nm in nameToId)) nameToId[nm] = n.id; }
+  });
+  // Best-effort order from the (pruned) execution_order cache; only used when both
+  // ids resolve, so an ambiguous order never false-blocks (the CLI is authoritative).
+  const order = workflow.subworkflows?.[initSeqName]?.execution_order || seqNodes.map((n) => n.id);
+  const orderIndex = (nm) => { const id = nameToId[nm]; return id ? order.indexOf(id) : -1; };
+
+  let anyCreationScheduled = false;
+  agentKinds.forEach((k) => {
+    const create = k.create_subworkflow;
+    const init = k.init_subworkflow;
+    if (create && scheduledNames.has(create)) {
+      anyCreationScheduled = true;
+      if (init && scheduledNames.has(init)) {
+        const ci = orderIndex(create);
+        const ii = orderIndex(init);
+        if (ci >= 0 && ii >= 0 && ci >= ii) {
+          errors.push(`Agent kind '${k.name}': creation '${create}' is scheduled at or after its per-agent init '${init}'. Agents must be created before their per-agent init runs — reorder creation first in Initialization.`);
+        }
+      }
+    }
+    if (init && !create) {
+      errors.push(`Agent kind '${k.name}' has a per-agent init '${init}' but no creation canvas: its agents are never created. Add a creation canvas in the World tab (or, if '${init}' is the collective creation, make it the creation canvas).`);
+    }
+  });
+  if (!anyCreationScheduled) {
+    warnings.push(`Agent kinds are defined but no creation canvas is scheduled in Initialization — no agents will be created (unless they are created collectively inside another kind's creation canvas).`);
+  }
+  return { errors, warnings };
+}
+
+/**
  * Comprehensive workflow validation
  * Returns { valid: boolean, errors: string[], warnings: string[] }
  */
@@ -292,6 +348,11 @@ export function validateWorkflow(workflow, stageNodes) {
   }
 
   warnings.push(...validateContracts(workflow, stageNodes));
+
+  // 5. ABM creation-structure (blocks export of a create-less / mis-ordered model)
+  const abm = validateAbmCreationStructure(workflow, stageNodes);
+  errors.push(...abm.errors);
+  warnings.push(...abm.warnings);
 
   return {
     valid: errors.length === 0,
