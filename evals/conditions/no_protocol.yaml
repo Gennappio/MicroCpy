@@ -1,0 +1,15 @@
+# no_protocol — the /occ_* prompt protocols withheld, everything else kept. The
+# agent still has CLAUDE.md, the validator, and canonical examples, but no intake
+# discipline / preview gate / role-aware scaffold flow. Isolates what the protocol
+# adds on top of rules-plus-validation.
+id: no_protocol
+description: full scaffold minus the /occ_* authoring protocols
+scaffold:
+  claude_md: true
+  occ_protocols: false       # .claude/commands/occ_*.md withheld; no staged intake/preview
+  validator: true
+  canonical_examples: true
+entry: freeform              # "build this model from its MODEL.md" with no protocol
+generation:
+  model: claude-fable-5
+  effort: high

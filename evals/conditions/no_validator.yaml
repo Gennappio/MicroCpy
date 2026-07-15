@@ -1,0 +1,14 @@
+# no_validator — everything except static validation. Isolates what the validator
+# catches: defects that survive here but not in `full` are exactly the ones the
+# validator earns its keep on.
+id: no_validator
+description: full scaffold minus the static validator
+scaffold:
+  claude_md: true
+  occ_protocols: true
+  validator: false           # validate_workflow.py withheld; no self-correction feedback
+  canonical_examples: true
+entry: occ_new-model
+generation:
+  model: claude-fable-5
+  effort: high

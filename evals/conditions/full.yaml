@@ -1,0 +1,18 @@
+# full — the system exactly as shipped. The headline arm; `full` vs `naked` is
+# the paper's central delta.
+id: full
+description: the constrained authoring environment, as shipped
+scaffold:
+  claude_md: true            # CLAUDE.md behavioural rules present in the workspace
+  occ_protocols: true        # .claude/commands/occ_*.md available; agent runs /occ_new-model
+  validator: true            # agent may run validate_workflow.py; harness also feeds its
+                             #   errors back for self-correction before scoring
+  canonical_examples: true   # other plugins' canonical workflows kept as examples
+                             #   (the TARGET's own workflow is always quarantined out)
+entry: occ_new-model         # the protocol the agent is told to follow
+
+# Pinned for reproducibility. The generation model is the independent knob of the
+# whole benchmark; change it deliberately, not incidentally.
+generation:
+  model: claude-fable-5
+  effort: high

@@ -1,0 +1,6 @@
+# Generation outputs and quarantined workspaces are large and reproducible.
+runs/
+workspaces/
+__pycache__/
+*.pyc
+.pytest_cache/

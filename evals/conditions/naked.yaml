@@ -1,0 +1,15 @@
+# naked — a generic coding agent with none of the scaffold: no CLAUDE.md rules, no
+# /occ_* protocols, no validator, no canonical examples. This is the baseline the
+# paper argues against ("a coding agent handed a vague request fills the gaps with
+# plausible guesses"). `full` vs `naked` is the headline result.
+id: naked
+description: generic coding agent, no scaffold at all
+scaffold:
+  claude_md: false           # CLAUDE.md removed from the workspace
+  occ_protocols: false       # no /occ_* commands
+  validator: false           # no validate_workflow.py, no feedback
+  canonical_examples: false  # ALL adapter workflows quarantined out — no examples to copy
+entry: freeform
+generation:
+  model: claude-fable-5
+  effort: high

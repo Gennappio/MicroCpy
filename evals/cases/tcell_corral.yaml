@@ -1,0 +1,24 @@
+# TCELL_CORRAL — mid-complexity: immune-cell behaviour, a diffusing chemokine
+# (CCL21), MaBoSS intracellular networks, contact signalling, planner perturbation
+# tabs. The only benchmark that ships a MODEL.md today (prose format; Phase 0
+# rewrites it into the layered format, keeping the prose as an appendix).
+name: tcell_corral
+plugin: opencellcomms_adapters/TCELL_CORRAL
+benchmark_workflow: opencellcomms_adapters/TCELL_CORRAL/workflows/tcell_corral.json
+model_md: opencellcomms_adapters/TCELL_CORRAL/MODEL.md
+
+quarantine:
+  strip: [functions, workflows, behaviors, register.py,
+          README.md, VALIDATION.md, __pycache__]
+  keep:  [MODEL.md, plugin.toml, __init__.py, data]   # data/: .bnd/.cfg/cells.csv are model INPUTS
+
+reference_rewrite:
+  allowed_examples: [SUGARSCAPE, MicroC]
+
+run:
+  seed: 42               # matches the benchmark's declared seed
+  steps: 5               # MaBoSS + diffusion is slow; keep comparison shallow
+
+tiers:
+  spec2code: {input: full_model_md}
+  bio2code:  {input: biology_brief}

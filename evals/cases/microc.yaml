@@ -1,0 +1,31 @@
+# MicroC — most complex: multi-scale coupling of a NetLogo-faithful gene network,
+# 8 diffusing substances solved as ONE coupled FiPy PDE, and fate transitions.
+# Note the legitimate structural degree of freedom the fidelity comparator must
+# respect: MicroC homes its coupled multi-substance solve under World
+# (diffusion_step) rather than per-resource — the sanctioned "coupled World/Domain
+# operation" exception (CLAUDE.md). A regenerated MicroC may home diffusion either
+# way; do not score per-resource homing as wrong.
+name: microc
+plugin: opencellcomms_adapters/MicroC
+benchmark_workflow: opencellcomms_adapters/MicroC/workflows/microc.json
+model_md: opencellcomms_adapters/MicroC/MODEL.md      # authored in Phase 0 (needs sign-off)
+
+quarantine:
+  strip: [functions, workflows, behaviors, register.py, custom_functions,
+          README.md, __pycache__]
+  keep:  [MODEL.md, plugin.toml, __init__.py, data]   # data/: initial_cells CSV + jaya.bnd are INPUTS
+
+reference_rewrite:
+  allowed_examples: [SUGARSCAPE, TCELL_CORRAL]
+
+run:
+  seed: 123               # matches tools/migration/microc_golden.py capture
+  steps: 3                # FiPy Picard loop is expensive; the golden uses 3
+
+# There is a frozen golden for MicroC already (tools/migration/golden/) — the
+# results comparator can regress a regenerated MicroC against it directly.
+golden_reference: opencellcomms_engine/tools/migration/golden
+
+tiers:
+  spec2code: {input: full_model_md}
+  bio2code:  {input: biology_brief}

@@ -1,0 +1,27 @@
+# SUGARSCAPE — the smoke case: simplest ABM (agents + one discrete resource),
+# no FiPy, no MaBoSS. Largest expected full-vs-naked delta, cheapest to run.
+name: sugarscape
+plugin: opencellcomms_adapters/SUGARSCAPE
+benchmark_workflow: opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json
+model_md: opencellcomms_adapters/SUGARSCAPE/MODEL.md   # authored in Phase 0 (needs sign-off)
+
+# What the agent must regenerate vs. what is a given input (cited in MODEL.md).
+quarantine:
+  strip: [functions, workflows, behaviors, register.py, custom_functions,
+          README.md, VALIDATION.md, __pycache__]
+  keep:  [MODEL.md, plugin.toml, __init__.py, data]
+
+# Contamination control: for THIS target, the canonical-examples lists in CLAUDE.md
+# and .claude/commands/*.md are rewritten to name only these OTHER plugins.
+# Cross-model priming is the intended protocol; self-priming measures nothing.
+reference_rewrite:
+  allowed_examples: [TCELL_CORRAL, MicroC]
+
+run:
+  seed: 123
+  steps: 10            # smoke depth; the matrix may raise this
+
+# Two tiers share this one file (plan decision): Tier 2 sees only the biology brief.
+tiers:
+  spec2code: {input: full_model_md}
+  bio2code:  {input: biology_brief}   # Provenance + Biology + Observables sections only
