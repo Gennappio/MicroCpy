@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Database, List, Braces, Plus, FolderOpen, Fi
 import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
-import { FUNCTION_HOSTING_KINDS, KINDS } from '../store/subworkflowKinds';
+import { FUNCTION_HOSTING_KINDS, KINDS, KIND_TO_ENTITY } from '../store/subworkflowKinds';
 import {
   contractForFunction,
   contractForSubworkflow,
@@ -34,7 +34,17 @@ const FunctionPalette = ({ currentStage }) => {
   const [plugins, setPlugins] = useState([]);
   const [pluginMenuOpen, setPluginMenuOpen] = useState(false);
   const [loadingPlugins, setLoadingPlugins] = useState(false);
+  const [loadNotice, setLoadNotice] = useState(null);
   const workflowFileRef = useRef(null);
+  const loadNoticeTimer = useRef(null);
+
+  // Non-blocking, auto-dismissing inline notice (the app has no toast system and
+  // alert/confirm are themselves blocking).
+  const showLoadNotice = (msg) => {
+    setLoadNotice(msg);
+    if (loadNoticeTimer.current) clearTimeout(loadNoticeTimer.current);
+    loadNoticeTimer.current = setTimeout(() => setLoadNotice(null), 6000);
+  };
 
   const currentKind = workflow.metadata?.gui?.subworkflow_kinds?.[currentStage];
   const currentSubworkflow = workflow.subworkflows?.[currentStage];
@@ -97,71 +107,51 @@ const FunctionPalette = ({ currentStage }) => {
   const handleWorkflowFileSelected = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Behaviour-only: this button loads a standalone .subworkflow.json behaviour
+    // (written by "Export Behavior", format: 'subworkflow'). Full workflows open
+    // via the header's "Import Project"; plugin functions via the "Plugin" button.
+    // `.subworkflow.json` is a compound extension the OS picker can't target, so
+    // the filename is the real gate.
+    if (!file.name.toLowerCase().endsWith('.subworkflow.json')) {
+      alert('Please choose a behaviour file (.subworkflow.json).');
+      e.target.value = '';
+      return;
+    }
+
     try {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      // ── Standalone behavior file (.subworkflow.json) ──────────────────
-      // These are written by "Export Behavior" (format: 'subworkflow'). Import
-      // the whole behavior as its own canvas, rather than treating it like a
-      // function library.
-      if (data.format === 'subworkflow') {
-        const swName =
-          data.name || file.name.replace(/\.subworkflow\.json$/i, '').replace(/\.json$/i, '');
-        const swKind = data.kind;
-
-        // Warn (non-blocking) if the behavior's role doesn't match the canvas
-        // the user is currently on — e.g. loading a world_behavior while viewing
-        // an agent canvas.
-        if (currentKind && swKind && swKind !== currentKind) {
-          const ok = window.confirm(
-            `This behavior is a "${swKind}", but you're on a "${currentKind}" canvas.\n\n` +
-            `Import it anyway as a new "${swKind}" behavior?`
-          );
-          if (!ok) {
-            e.target.value = '';
-            return;
-          }
-        }
-
-        const ok = importSubworkflow(swName, data, swKind);
-        if (!ok) {
-          alert(
-            `Could not import behavior "${swName}" — a behavior with that name already exists in this project.`
-          );
-        } else {
-          await ensureRegistry();
-        }
+      if (data.format !== 'subworkflow') {
+        alert(
+          'This .subworkflow.json is not a valid behaviour file (missing "format": "subworkflow").'
+        );
         e.target.value = '';
         return;
       }
 
-      // ── Full workflow file ────────────────────────────────────────────
-      // Extract function names from all subworkflows
-      const fnNames = new Set();
-      Object.values(data.subworkflows || {}).forEach((sw) => {
-        (sw.functions || []).forEach((f) => {
-          if (f.function_name) fnNames.add(f.function_name);
-        });
-      });
+      const swName = data.name || file.name.replace(/\.subworkflow\.json$/i, '');
+      const swKind = data.kind;
 
-      if (fnNames.size === 0) {
-        // Tell the user *why* it's empty rather than blaming "no functions".
-        if (!data.subworkflows) {
-          alert(
-            'This file is not a workflow or behavior file (no "subworkflows" and no behavior found).'
+      const ok = importSubworkflow(swName, data, swKind);
+      if (!ok) {
+        alert(
+          `Could not import behavior "${swName}" — a behavior with that name already exists in this project.`
+        );
+      } else {
+        // Non-blocking heads-up if the behaviour's entity family (Agent/Resource/
+        // World) differs from the canvas the user is on — e.g. a World behaviour
+        // loaded while on an Agents canvas. The import proceeds regardless.
+        const swFamily = KIND_TO_ENTITY[swKind];
+        const curFamily = KIND_TO_ENTITY[currentKind];
+        if (swFamily && curFamily && swFamily !== curFamily) {
+          showLoadNotice(
+            `Loaded a ${swFamily} behaviour while the ${curFamily} tab is active — imported anyway. Open the ${swFamily} tab to file it under an owner.`
           );
-        } else {
-          alert('No functions found in this workflow file.');
         }
-        e.target.value = '';
-        return;
+        await ensureRegistry();
       }
-
-      const path = file.path || file.name;
-      addWorkflowLibrary(data.name || file.name, path, Array.from(fnNames));
-      // Make sure registry is loaded so we can show metadata
-      await ensureRegistry();
     } catch (err) {
       alert('Failed to load file: ' + err.message);
     }
@@ -306,10 +296,10 @@ const FunctionPalette = ({ currentStage }) => {
         <button
           className="palette-pri-btn"
           onClick={handleLoadWorkflow}
-          title="Load functions from a workflow or behavior (.json / .subworkflow.json) file"
+          title="Load a behaviour (.subworkflow.json) file"
         >
           <FolderOpen size={14} />
-          Load File
+          Load Behaviour
         </button>
         <div className="palette-plugin-wrap">
           <button
@@ -358,6 +348,19 @@ const FunctionPalette = ({ currentStage }) => {
           onChange={handleWorkflowFileSelected}
         />
       </div>
+
+      {loadNotice && (
+        <div className="palette-load-notice" role="status">
+          <span>{loadNotice}</span>
+          <button
+            className="palette-load-notice-dismiss"
+            onClick={() => setLoadNotice(null)}
+            title="Dismiss"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       <div className="palette-content">
 

@@ -208,3 +208,22 @@ export const KIND_TO_TAB = {
   [KINDS.COMPOSER]: null,
   [KINDS.SUBWORKFLOW]: null,
 };
+
+// User-facing entity family for a subworkflow kind. Used only for the
+// human-readable "Load Behaviour" mismatch notice (Agent / Resource / World /
+// Processing). The internal sub-kinds (create/init vs behavior) are unchanged —
+// this is a label-only collapse. Kinds with no entity family (composer,
+// subworkflow, scheduler, init_sequence) are intentionally absent → no notice.
+export const KIND_TO_ENTITY = {
+  [KINDS.AGENT_CREATE]: 'Agent',
+  [KINDS.AGENT_BEHAVIOR]: 'Agent',
+  [KINDS.RESOURCE_INIT]: 'Resource',
+  [KINDS.RESOURCE_BEHAVIOR]: 'Resource',
+  [KINDS.WORLD]: 'World',
+  [KINDS.WORLD_BEHAVIOR]: 'World',
+  [KINDS.PROCESSING_BEHAVIOR]: 'Processing',
+  // Legacy alias: pre-migration exports tag agent creation as 'agent_init'
+  // (now 'agent_create'). Same entity family — keep the load notice accurate
+  // for those existing .subworkflow.json files.
+  agent_init: 'Agent',
+};

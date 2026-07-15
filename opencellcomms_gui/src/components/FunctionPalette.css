@@ -444,6 +444,46 @@
   border-bottom: 1px solid #1e293b;
 }
 
+/* Non-blocking, auto-dismissing notice for the Load Behaviour flow (e.g. a
+   behaviour loaded on a tab of a different entity family). */
+.palette-load-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 12px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  color: #92400e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.palette-load-notice span {
+  flex: 1;
+}
+
+.palette-load-notice-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: #92400e;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.palette-load-notice-dismiss:hover {
+  opacity: 1;
+  background: rgba(146, 64, 14, 0.1);
+}
+
 .process-role-card {
   margin: 10px 12px 8px;
   padding: 10px;
