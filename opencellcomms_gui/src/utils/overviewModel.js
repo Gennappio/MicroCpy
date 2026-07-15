@@ -23,11 +23,18 @@ import {
   RECONCILIATION_SOURCE,
 } from './reconciliationSteps';
 
-const COL_X = 240;       // main spine
-const STEP_X = 320;      // indented reconciliation steps
-const Y_HEADER = 96;     // gap consumed by a phase header
-const Y_NODE = 132;      // gap consumed by a behaviour node
-const Y_STEP = 92;       // gap consumed by a locked system step
+// Overview is laid out as three side-by-side columns — Initialization, Main
+// loop, Processing — each stacking its own nodes from the top down. The
+// behaviour chain (see `connect`) still runs through in execution order, so the
+// flow reads left-to-right across columns and top-to-bottom within each.
+const COL_INIT_X = 40;    // Initialization column
+const COL_LOOP_X = 580;   // Main-loop column
+const COL_PROC_X = 1120;  // Processing column
+const STEP_INDENT = 80;   // reconciliation steps, indented within their column
+const Y_TOP = 24;         // top of every column
+const Y_HEADER = 96;      // gap consumed by a phase header
+const Y_NODE = 132;       // gap consumed by a behaviour node
+const Y_STEP = 92;        // gap consumed by a locked system step
 
 /** Resolve a subworkflow's ordered subworkflow_calls (execution_order first). */
 const orderedCalls = (sw) => {
@@ -72,16 +79,32 @@ export const buildOverviewModel = (workflow, options = {}) => {
 
   const nodes = [];
   const edges = [];
-  let y = 24;
+  let colX = COL_INIT_X;    // base X of the column being filled
+  let y = Y_TOP;
   let prevId = null;
+  let columnStart = false;  // next connect crosses into a new column
+
+  // Begin a new column: nodes stack from the top under this X. prevId is kept on
+  // purpose — the last node of one column chains to the first of the next, so the
+  // flow carries across columns (that crossing edge is routed side-to-side below).
+  const startColumn = (x) => {
+    colX = x;
+    y = Y_TOP;
+    columnStart = true;
+  };
 
   const connect = (toId, opts = {}) => {
+    const crossing = columnStart;
+    columnStart = false;
     if (prevId) {
       edges.push({
         id: `e-${prevId}-${toId}`,
         source: prevId,
         target: toId,
         type: 'smoothstep',
+        // A column crossing exits the right of the previous column and enters the
+        // left of the new one, so the arrow reads across rather than doubling back.
+        ...(crossing ? { sourceHandle: 'right', targetHandle: 'left' } : {}),
         ...opts,
       });
     }
@@ -92,7 +115,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
     nodes.push({
       id,
       type: 'overviewHeader',
-      position: { x: COL_X - 8, y },
+      position: { x: colX - 8, y },
       data: { label, sublabel, tone },
       draggable: false,
       selectable: false,
@@ -110,7 +133,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
     nodes.push({
       id,
       type: 'overviewNode',
-      position: { x: COL_X, y },
+      position: { x: colX, y },
       data: {
         title: name,
         variant: variantForKind(kind),
@@ -144,7 +167,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
     nodes.push({
       id: summaryId,
       type: 'overviewNode',
-      position: { x: COL_X, y },
+      position: { x: colX, y },
       data: {
         title: 'apply_reconciliation',
         variant: 'slate',
@@ -175,7 +198,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
       nodes.push({
         id,
         type: 'overviewNode',
-        position: { x: STEP_X, y },
+        position: { x: colX + STEP_INDENT, y },
         data: {
           title: step.label,
           variant: 'slate',
@@ -199,6 +222,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
   const mainCalls = orderedCalls(subs.main);
 
   const initCalls = orderedCalls(subs[initSeqName]);
+  startColumn(COL_INIT_X);
   if (initCalls.length) {
     pushHeader('hdr:init', 'Initialization', 'runs once at t = 0', 'init');
     initCalls.forEach((call) => pushBehavior('init', call));
@@ -214,6 +238,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
 
   let firstLoopId = null;
   let lastLoopId = null;
+  startColumn(COL_LOOP_X);
   if (loopCalls.length) {
     pushHeader(
       'hdr:loop',
@@ -251,6 +276,7 @@ export const buildOverviewModel = (workflow, options = {}) => {
     (c) =>
       c.subworkflow_name !== initSeqName && c.subworkflow_name !== schedulerName,
   );
+  startColumn(COL_PROC_X);
   if (processingCalls.length) {
     pushHeader('hdr:proc', 'Processing', 'runs once at the end', 'processing');
     processingCalls.forEach((call) => pushBehavior('proc', call));

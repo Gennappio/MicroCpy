@@ -18,10 +18,12 @@ export const OverviewHeader = ({ data }) => {
   return (
     <div className={`ov-header tone-${data.tone || 'init'}`}>
       <Handle type="target" position={Position.Top} style={HIDDEN_HANDLE} isConnectable={false} />
+      <Handle type="target" id="left" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Icon size={15} className="ov-header-icon" />
       <span className="ov-header-label">{data.label}</span>
       {data.sublabel && <span className="ov-header-sub">{data.sublabel}</span>}
       <Handle type="source" position={Position.Bottom} style={HIDDEN_HANDLE} isConnectable={false} />
+      <Handle type="source" id="right" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
     </div>
   );
 };
@@ -65,6 +67,7 @@ export const OverviewNode = ({ data, selected }) => {
       }
     >
       <Handle type="target" position={Position.Top} style={HIDDEN_HANDLE} isConnectable={false} />
+      <Handle type="target" id="left" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
 
       <div className="ov-node-head">
         {isReconToggle && <Chevron size={13} className="ov-recon-chevron" />}
@@ -95,6 +98,7 @@ export const OverviewNode = ({ data, selected }) => {
       )}
 
       <Handle type="source" position={Position.Bottom} style={HIDDEN_HANDLE} isConnectable={false} />
+      <Handle type="source" id="right" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
     </div>
   );
 };
