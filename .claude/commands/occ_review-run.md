@@ -16,8 +16,8 @@ To run it, from `opencellcomms_engine/`:
 python run_workflow.py --workflow <path_to_workflow.json>
 ```
 This streams progress and may take a while. When it finishes, note the **output
-directory** it reports (the CLI writes under `results/`; a GUI run writes under
-`opencellcomms_gui/GUI_results/`).
+directory** it reports (both CLI and GUI runs write under `runs/<label>/`, where
+`<label>` is the run name or, by default, the workflow name).
 
 ## Step 2 — Make sure a run_summary.json was produced
 

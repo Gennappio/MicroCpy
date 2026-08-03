@@ -203,6 +203,7 @@ results/
 opencellcomms_engine/results/
 opencellcomms_gui/results/
 opencellcomms_gui/GUI_results/
+/runs/
 
 # Legacy/duplicate directories (if present)
 microc-2.0/

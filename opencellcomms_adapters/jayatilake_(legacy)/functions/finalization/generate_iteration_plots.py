@@ -130,20 +130,12 @@ def generate_iteration_plots(
         return False
 
     # --- resolve output directory -----------------------------------------
-    # When redirect_to_subworkflow is set, compute the target subworkflow's
-    # plots_dir by replacing the current subworkflow name in the path.
-    # Executor sets paths differently for GUI vs CLI:
-    #   GUI: plots_dir = .../subworkflows/<name>          (no /plots suffix)
-    #   CLI: plots_dir = .../subworkflows/<name>/plots    (has /plots suffix)
+    # When redirect_to_subworkflow is set, write into a sibling subworkflow's
+    # folder under the same run. GUI and CLI now share one path shape
+    # (runs/<label>/<subworkflow>), so the redirect is just a sibling swap.
     if redirect_to_subworkflow and 'plots_dir' in context:
         current_plots = Path(context['plots_dir'])
-        running_from_gui = context.get('running_from_gui', False)
-        if running_from_gui:
-            # GUI: replace the last path component (subworkflow name)
-            output_path = current_plots.parent / redirect_to_subworkflow
-        else:
-            # CLI: replace second-to-last component, keep 'plots' leaf
-            output_path = current_plots.parent.parent / redirect_to_subworkflow / current_plots.name
+        output_path = current_plots.parent / redirect_to_subworkflow
     elif 'plots_dir' in context:
         output_path = Path(context['plots_dir'])
     else:

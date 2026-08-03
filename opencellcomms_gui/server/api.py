@@ -7,6 +7,7 @@ Provides endpoints for running simulations and streaming logs in real-time
 import os
 import sys
 import json
+import re
 import signal
 import subprocess
 import threading
@@ -52,6 +53,17 @@ is_running = False
 # PID file for cross-refresh / cross-restart recovery
 PID_FILE = Path(__file__).parent / ".current_process.pid"
 
+# Base directory for all simulation outputs: <repo-root>/runs/<label>/<subworkflow>/
+# One place, shared by GUI and CLI (the engine writes here via --gui-results-dir).
+# parents[0]=server, [1]=opencellcomms_gui, [2]=repo root.
+RUNS_DIR = Path(__file__).resolve().parents[2] / "runs"
+
+
+def safe_run_label(value):
+    """Return a non-traversing directory name for a user-visible run label."""
+    normalized = re.sub(r'[^\w.-]+', '_', str(value or ''), flags=re.UNICODE)
+    return normalized.strip('._') or 'default'
+
 
 def get_engine_path():
     """Get the path to OpenCellComms run_workflow.py"""
@@ -59,30 +71,6 @@ def get_engine_path():
     server_dir = Path(__file__).parent
     engine_path = server_dir.parent.parent / "opencellcomms_engine" / "run_workflow.py"
     return engine_path
-
-
-def setup_results_directories(workflow_data, gui_dir):
-    """
-    Setup GUI_results directory for simulation output.
-
-    Clears ALL existing results to implement overwrite semantics.
-    Images placed in GUI_results/ will be automatically visible in the Results tab.
-
-    Args:
-        workflow_data: Workflow JSON dict
-        gui_dir: Path to opencellcomms_gui directory
-    """
-    results_dir = gui_dir / "GUI_results"
-
-    # Clear the entire results directory (fresh start for each run)
-    if results_dir.exists():
-        shutil.rmtree(results_dir)
-        log_queue.put("[INFO] Cleared existing GUI_results directory\n")
-
-    # Create the base results directory
-    results_dir.mkdir(parents=True, exist_ok=True)
-
-    log_queue.put(f"[INFO] GUI_results directory ready\n")
 
 
 def stream_output(process, log_queue):
@@ -158,20 +146,16 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             is_running = False
             return
 
-        # === CLEAN ARCHITECTURE: Pass GUI results directory to engine ===
-        # The engine will set context['gui_results_dir'] and context['running_from_gui']
-        if gui_results_dir is None:
-            gui_dir = Path(__file__).parent.parent
-            gui_results_dir = gui_dir / "GUI_results"
-
+        # === Pass this run's output dir to the engine (it appends the subworkflow).
+        # If omitted, the engine auto-derives runs/<workflow-stem>.
         cmd = [
             sys.executable,
             str(engine_path),
             "--workflow",
             workflow_path,
-            "--gui-results-dir",
-            str(Path(gui_results_dir).absolute()),
         ]
+        if gui_results_dir:
+            cmd += ["--gui-results-dir", str(Path(gui_results_dir).absolute())]
 
         # Add entry_subworkflow parameter if specified (Section 9.2).
         # 'main' is the GUI-synthesized top-level composer — internal plumbing,
@@ -319,46 +303,41 @@ def run_simulation():
 
         log_queue.put(f"[INFO] Entry subworkflow: {entry_subworkflow} (composer)\n")
 
-    # Setup GUI_results directory for simulation output
-    # Results are stored in opencellcomms_gui/GUI_results/
+    # Set up this run's output directory: runs/<label>/, overwrite same label.
+    # Planner runs pass run_label (WT, KO, ...); standard runs default to the
+    # workflow name. Both write into the same top-level runs/ tree.
     try:
-        gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
-        if run_label:
-            results_root = gui_dir / "GUI_results"
-            # Planner multi-run: create labeled subdirectory, only clear that subdir
-            results_dir = results_root / run_label
-            if results_dir.exists():
-                shutil.rmtree(results_dir)
-                log_queue.put(f"[INFO] Cleared GUI_results/{run_label} directory\n")
-            results_dir.mkdir(parents=True, exist_ok=True)
-            log_queue.put(f"[INFO] GUI_results/{run_label} directory ready\n")
-            # Prune orphan label folders left behind by removed/renamed planner
-            # tabs so the Results tab mirrors the current planner tabs. The GUI
-            # sends keep_labels = the names of all current planner tabs.
-            keep_labels = data.get('keep_labels')
-            if keep_labels is not None:
-                keep = set(keep_labels) | {run_label}
-                for item in results_root.iterdir():
-                    if item.is_dir() and not item.name.startswith('.') and item.name not in keep:
-                        shutil.rmtree(item, ignore_errors=True)
-                        log_queue.put(f"[INFO] Removed stale results folder '{item.name}'\n")
-        else:
-            setup_results_directories(workflow_data, gui_dir)
+        label = run_label or getattr(workflow_obj, 'name', None) or 'default'
+        safe_label = safe_run_label(label)
+        run_dir = RUNS_DIR / safe_label
+        if run_dir.exists():
+            shutil.rmtree(run_dir)
+            log_queue.put(f"[INFO] Cleared runs/{safe_label} directory\n")
+        run_dir.mkdir(parents=True, exist_ok=True)
+        log_queue.put(f"[INFO] runs/{safe_label} directory ready\n")
+
+        # Planner multi-run: the GUI sends keep_labels = all current planner tabs.
+        # Prune run folders for tabs that were removed/renamed so the Results tab
+        # mirrors the planner. Only runs when keep_labels is provided.
+        keep_labels = data.get('keep_labels')
+        if keep_labels is not None:
+            keep = {
+                safe_run_label(l)
+                for l in keep_labels
+            } | {safe_label}
+            for item in RUNS_DIR.iterdir():
+                if item.is_dir() and not item.name.startswith('.') and item.name not in keep:
+                    shutil.rmtree(item, ignore_errors=True)
+                    log_queue.put(f"[INFO] Removed stale results folder '{item.name}'\n")
     except Exception as e:
         error_msg = f'Failed to setup results directories: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 500
 
-    # Inject run_label into workflow metadata so the engine can use it for output paths
-    if run_label:
-        if 'metadata' not in workflow_data:
-            workflow_data['metadata'] = {}
-        workflow_data['metadata']['run_label'] = run_label
-        log_queue.put(f"[INFO] Run label: {run_label}\n")
-
-    # Save workflow to temporary file
-    safe_label = run_label.replace(' ', '_').replace('/', '_') if run_label else ''
-    workflow_path = str(Path(tempfile.gettempdir()) / (f"opencellcomms_workflow_{safe_label}.json" if run_label else "opencellcomms_workflow.json"))
+    # Save workflow to a temp file (planner runs get a per-label temp file so
+    # concurrent conditions don't collide).
+    temp_label = safe_run_label(run_label) if run_label else ''
+    workflow_path = str(Path(tempfile.gettempdir()) / (f"opencellcomms_workflow_{temp_label}.json" if run_label else "opencellcomms_workflow.json"))
     try:
         with open(workflow_path, 'w') as f:
             json.dump(workflow_data, f, indent=2)
@@ -369,11 +348,8 @@ def run_simulation():
     while not log_queue.empty():
         log_queue.get()
 
-    # Determine results directory (labeled subdirectory for planner runs)
-    gui_results_dir_for_run = None
-    if run_label:
-        gui_dir_for_run = Path(__file__).parent.parent
-        gui_results_dir_for_run = str(gui_dir_for_run / "GUI_results" / run_label)
+    # Hand the engine this run's output dir so GUI and CLI agree on the location.
+    gui_results_dir_for_run = str(run_dir)
 
     # Start simulation in background thread
     is_running = True
@@ -519,7 +495,6 @@ def cli_info():
     temp file the GUI writes the current workflow to before each run).
     """
     engine_path = get_engine_path()
-    gui_dir = Path(__file__).parent.parent
     return jsonify({
         'python': sys.executable,
         'engine_dir': str(engine_path.parent),
@@ -527,7 +502,9 @@ def cli_info():
         # Path the GUI writes the current workflow to on every (unlabeled) run.
         # Must match the path built in run_simulation().
         'gui_temp_workflow': str(Path(tempfile.gettempdir()) / "opencellcomms_workflow.json"),
-        'gui_results_dir': str((gui_dir / "GUI_results").absolute()),
+        # A concrete runs/<label> dir so the 'run from terminal' command reproduces
+        # a labeled run (the engine appends the subworkflow name).
+        'gui_results_dir': str((RUNS_DIR / 'default').absolute()),
     })
 
 
@@ -1661,25 +1638,24 @@ def upload_function_file():
 @app.route('/api/results/list', methods=['GET'])
 def list_results():
     """
-    List all results from GUI_results/ directory.
+    List all results from the top-level runs/ directory.
 
-    Scans GUI_results/ for images. Top-level subdirectories become result groups.
-    Within each group, further subdirectories become categories.
-    Images placed directly in GUI_results/ go into a 'root' group.
+    Scans runs/ for images. Each runs/<label>/ becomes a result group; within a
+    group, each subworkflow subdirectory becomes a category. Images placed
+    directly in a group go into a 'general' category.
 
     Returns:
         {success: true, results: [{name, timestamp, plots: [{name, path, category}]}]}
     """
     try:
-        gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
-        results_dir = gui_dir / "GUI_results"
+        results_dir = RUNS_DIR
 
         if not results_dir.exists():
             return jsonify({'success': True, 'results': []})
 
         IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp'}
 
-        def scan_for_plots(directory, gui_dir_ref):
+        def scan_for_plots(directory, base_ref):
             """Recursively scan directory for image files, categorizing by subdirectory."""
             plots = []
             if not directory.exists():
@@ -1691,13 +1667,13 @@ def list_results():
                         if img_file.is_file() and img_file.suffix.lower() in IMAGE_EXTENSIONS:
                             plots.append({
                                 'name': img_file.name,
-                                'path': str(img_file.relative_to(gui_dir_ref)),
+                                'path': str(img_file.relative_to(base_ref)),
                                 'category': item.name
                             })
                 elif item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
                     plots.append({
                         'name': item.name,
-                        'path': str(item.relative_to(gui_dir_ref)),
+                        'path': str(item.relative_to(base_ref)),
                         'category': 'general'
                     })
             return plots
@@ -1711,7 +1687,7 @@ def list_results():
         if has_subdirs:
             for item in sorted(results_dir.iterdir()):
                 if item.is_dir() and not item.name.startswith('.'):
-                    plots = scan_for_plots(item, gui_dir)
+                    plots = scan_for_plots(item, RUNS_DIR)
                     if plots:
                         # Try to extract timestamp from directory name
                         timestamp = item.name if item.name[:8].isdigit() else ''
@@ -1721,13 +1697,13 @@ def list_results():
                             'plots': plots
                         })
 
-        # Also collect any images directly in GUI_results/
+        # Also collect any images directly in runs/
         root_plots = []
         for item in sorted(results_dir.iterdir()):
             if item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
                 root_plots.append({
                     'name': item.name,
-                    'path': str(item.relative_to(gui_dir)),
+                    'path': str(item.relative_to(RUNS_DIR)),
                     'category': 'general'
                 })
         if root_plots:
@@ -1750,10 +1726,13 @@ def list_results():
 def get_plot(plot_path):
     """Serve a plot image file with cache-busting headers."""
     try:
-        gui_dir = Path(__file__).parent.parent  # opencellcomms_gui directory
-        full_path = gui_dir / plot_path
+        # Resolve under runs/ and reject anything that escapes it (traversal guard).
+        runs_root = RUNS_DIR.resolve()
+        full_path = (RUNS_DIR / plot_path).resolve()
+        if full_path != runs_root and runs_root not in full_path.parents:
+            return jsonify({'success': False, 'error': 'Invalid path'}), 403
 
-        if not full_path.exists():
+        if not full_path.is_file():
             return jsonify({'success': False, 'error': 'Plot not found'}), 404
 
         MIME_TYPES = {

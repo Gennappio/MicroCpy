@@ -117,14 +117,8 @@ def generate_atp_plots(
         print("[ERROR] [generate_atp_plots] No population in context")
         return False
     
-    # PRIORITY 1: Use GUI results directory if available
-    workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
-    gui_results_dir = os.path.join(workspace_root, 'opencellcomms_gui', 'GUI_results')
-    
-    if os.path.exists(gui_results_dir):
-        output_dir = gui_results_dir
-        print(f"[ATP_PLOTS] Using GUI results directory: {output_dir}")
-    elif 'plots_dir' in context:
+    # PRIORITY 1: the per-subworkflow output dir the executor set (runs/<label>/<name>).
+    if 'plots_dir' in context:
         output_dir = context['plots_dir']
         print(f"[ATP_PLOTS] Using plots_dir from context: {output_dir}")
     else:

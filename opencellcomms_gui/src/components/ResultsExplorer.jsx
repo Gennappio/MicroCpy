@@ -65,6 +65,13 @@ function ResultsExplorer() {
     return grouped;
   };
 
+  // A plot's "category" is just the engine's output-folder name (e.g.
+  // "subworkflows"), so it only tells the user anything when a run wrote more
+  // than one. With a single category it merely repeats itself — hide the
+  // category header and the viewer badge in that case.
+  const hasMultipleCategories = (plots) =>
+    new Set(plots.map(plot => plot.category)).size > 1;
+
   const getCategoryIcon = (category) => {
     return <Image size={14} />;
   };
@@ -84,6 +91,11 @@ function ResultsExplorer() {
     }
     return timestamp;
   };
+
+  const selectedResult = selectedPlot
+    ? results.find(result => result.plots.some(plot => plot.path === selectedPlot.path))
+    : null;
+  const showCategoryBadge = !!selectedResult && hasMultipleCategories(selectedResult.plots);
 
   return (
     <div className="results-explorer">
@@ -118,6 +130,7 @@ function ResultsExplorer() {
             {results.map(result => {
               const isExpanded = expandedResults.has(result.name);
               const groupedPlots = groupPlotsByCategory(result.plots);
+              const multiCategory = hasMultipleCategories(result.plots);
               
               return (
                 <div key={result.name} className="result-item">
@@ -138,10 +151,12 @@ function ResultsExplorer() {
                     <div className="result-plots">
                       {Object.entries(groupedPlots).map(([category, plots]) => (
                         <div key={category} className="plot-category">
-                          <div className="category-header">
-                            {getCategoryIcon(category)}
-                            <span>{category}</span>
-                          </div>
+                          {multiCategory && (
+                            <div className="category-header">
+                              {getCategoryIcon(category)}
+                              <span>{category}</span>
+                            </div>
+                          )}
                           <div className="category-plots">
                             {plots.map(plot => (
                               <div
@@ -170,7 +185,9 @@ function ResultsExplorer() {
           <>
             <div className="viewer-header">
               <h3>{selectedPlot.name}</h3>
-              <span className="plot-category-badge">{selectedPlot.category}</span>
+              {showCategoryBadge && (
+                <span className="plot-category-badge">{selectedPlot.category}</span>
+              )}
             </div>
             <div className="viewer-content">
               <img

@@ -58,7 +58,7 @@ docker compose up --build
 Then open **http://localhost:3000** (the backend API runs on
 http://localhost:5001). Source is bind-mounted, so edits to engine/adapter/GUI
 code are picked up live, and simulation results written to
-`opencellcomms_gui/GUI_results/` appear on your host machine.
+`runs/` appear on your host machine.
 
 Stop the stack with `Ctrl+C`, or from another terminal:
 

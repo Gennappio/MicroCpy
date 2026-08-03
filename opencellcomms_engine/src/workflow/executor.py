@@ -274,6 +274,13 @@ class WorkflowExecutor:
         to calculate paths themselves. Functions should use these context keys
         instead of hardcoding paths or extracting from config.
 
+        Output lands in a single top-level runs/ tree shared by GUI and CLI:
+            <project_root>/runs/<label>/<subworkflow_name>/
+        The GUI passes the already-labeled base (<project_root>/runs/<label>) via
+        --gui-results-dir; a pure-CLI run derives <label> from the workflow file
+        stem. Directories are created lazily by the writers themselves, so a
+        subworkflow that emits nothing leaves no folder behind.
+
         Context keys set:
             - engine_root: Absolute path to opencellcomms_engine/
             - project_root: Absolute path to OpenCellComms/
@@ -281,15 +288,11 @@ class WorkflowExecutor:
             - workflow_dir: Directory containing workflow JSON
             - resolve_path: Callable to resolve relative file paths
             - running_from_gui: Boolean indicating if running from GUI
-            - gui_root: Absolute path to opencellcomms_gui/ (if running from GUI)
-            - gui_results_dir: Absolute path to GUI results for current subworkflow
+            - gui_root: Base of the runs/ tree (if running from GUI)
+            - gui_results_dir: This subworkflow's output dir (if running from GUI)
             - output_dir: Absolute path for output files (data, exports)
             - plots_dir: Absolute path for plot files
-            - data_dir: Absolute path for raw data files (.npy, etc.)
         """
-        subworkflow_kind = self._get_subworkflow_kind(subworkflow_name)
-        kind_plural = 'composers' if subworkflow_kind == 'composer' else 'subworkflows'
-
         # === INFRASTRUCTURE PATHS ===
         context['engine_root'] = self._engine_root
         context['project_root'] = self._project_root
@@ -302,32 +305,27 @@ class WorkflowExecutor:
         # === GUI INTEGRATION ===
         context['running_from_gui'] = self._running_from_gui
 
-        if self._running_from_gui and self._gui_results_dir:
-            # GUI mode: use GUI results directory structure
-            # self._gui_results_dir is the base GUI results directory (e.g., opencellcomms_gui/results)
-            # We need to create subworkflow-specific subdirectories
-            context['gui_root'] = self._gui_results_dir.parent  # opencellcomms_gui/
-            # Set subworkflow-specific GUI results directory
-            subworkflow_results = self._gui_results_dir / kind_plural / subworkflow_name
-            context['gui_results_dir'] = subworkflow_results
-            # Primary output dirs point to GUI results
-            context['output_dir'] = subworkflow_results
-            context['plots_dir'] = subworkflow_results
-            context['data_dir'] = subworkflow_results / 'data'
+        # === UNIFIED RUN OUTPUT ROOT: <project_root>/runs/<label>/<subworkflow> ===
+        # The GUI passes the resolved, already-labeled base (<root>/runs/<label>).
+        # A pure-CLI run passes nothing, so derive a default label from the
+        # workflow file stem (fallback 'default').
+        if self._gui_results_dir is not None:
+            run_base = self._gui_results_dir
         else:
-            # CLI mode: use engine results directory
-            context['gui_root'] = None
-            context['gui_results_dir'] = None
-            # Primary output dirs point to engine results
-            base_results = self._engine_root / 'results' / kind_plural / subworkflow_name
-            context['output_dir'] = base_results
-            context['plots_dir'] = base_results / 'plots'
-            context['data_dir'] = base_results / 'data'
+            label = self._workflow_file.stem if self._workflow_file else 'default'
+            label = label.replace(' ', '_').replace('/', '_').replace('\\', '_') or 'default'
+            run_base = self._project_root / 'runs' / label
 
-        # Ensure output directories exist
-        context['output_dir'].mkdir(parents=True, exist_ok=True)
-        context['plots_dir'].mkdir(parents=True, exist_ok=True)
-        context['data_dir'].mkdir(parents=True, exist_ok=True)
+        subworkflow_dir = run_base / subworkflow_name
+
+        context['gui_root'] = self._gui_results_dir.parent if self._gui_results_dir else None
+        context['gui_results_dir'] = subworkflow_dir if self._running_from_gui else None
+
+        # Primary output dirs. Not created here — the writers (plot helpers,
+        # exporters) mkdir(parents=True) on first write, so subworkflows that
+        # produce nothing leave no empty folder.
+        context['output_dir'] = subworkflow_dir
+        context['plots_dir'] = subworkflow_dir
 
     def _load_function_from_file(self, function_file: str, function_name: str) -> Optional[Callable]:
         """
