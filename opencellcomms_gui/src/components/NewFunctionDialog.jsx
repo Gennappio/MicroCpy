@@ -5,6 +5,7 @@ import {
   ROLE_TO_COMPATIBILITY_CATEGORY,
   defaultContractForKind,
 } from '../store/subworkflowKinds';
+import { API_BASE_URL } from '../apiConfig';
 import './NewFunctionDialog.css';
 
 const PARAM_TYPES = ['INT', 'FLOAT', 'BOOL', 'STRING', 'DICT'];
@@ -99,7 +100,7 @@ const NewFunctionDialog = ({ behaviorName = '', currentKind = '', currentContrac
   // experiment-specific functions, so it's excluded from the picker.
   useEffect(() => {
     let active = true;
-    fetch('http://localhost:5001/api/plugins')
+    fetch(`${API_BASE_URL}/api/plugins`)
       .then((r) => r.json())
       .then((d) => {
         if (!active || !d.success) return;

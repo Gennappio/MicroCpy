@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Database, List, Braces, Plus, FolderOpen, Fi
 import { fetchRegistry } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import NewFunctionDialog from './NewFunctionDialog';
+import { API_BASE_URL } from '../apiConfig';
 import { FUNCTION_HOSTING_KINDS, KINDS, KIND_TO_ENTITY } from '../store/subworkflowKinds';
 import {
   contractForFunction,
@@ -59,14 +60,19 @@ const FunctionPalette = ({ currentStage }) => {
   // Lazy registry fetch (cached) for parameter metadata lookups
   const ensureRegistry = async () => {
     if (Object.keys(registryCache).length > 0) return registryCache;
-    const reg = await fetchRegistry();
-    setRegistryCache(reg || {});
-    return reg || {};
+    try {
+      const reg = await fetchRegistry();
+      setRegistryCache(reg);
+      return reg;
+    } catch (error) {
+      showLoadNotice(`Backend registry unavailable: ${error.message}`);
+      throw error;
+    }
   };
 
   useEffect(() => {
     if (defaultFunctions.length > 0) {
-      ensureRegistry();
+      ensureRegistry().catch(() => {});
     }
   }, [currentKind]);
 
@@ -168,7 +174,7 @@ const FunctionPalette = ({ currentStage }) => {
     if (!pluginMenuOpen) {
       setLoadingPlugins(true);
       try {
-        const res = await fetch('http://localhost:5001/api/plugins');
+        const res = await fetch(`${API_BASE_URL}/api/plugins`);
         const data = await res.json();
         // `common` is shared infrastructure, not an experiment plugin.
         if (data.success) setPlugins((data.plugins || []).filter((p) => p.name !== 'common'));

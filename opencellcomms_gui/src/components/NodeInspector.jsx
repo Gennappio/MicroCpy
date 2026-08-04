@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Pin, PinOff, Info, Settings, Database, FileText, Image, Clock, CheckCircle, AlertCircle, AlertTriangle, Loader } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import { formatContractList } from '../utils/contractUtils';
+import { API_BASE_URL } from '../apiConfig';
 import './NodeInspector.css';
-
-const API_BASE_URL = 'http://localhost:5001';
 
 /**
  * NodeInspector - Right panel for inspecting node execution details

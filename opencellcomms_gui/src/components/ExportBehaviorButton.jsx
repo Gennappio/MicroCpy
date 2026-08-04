@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import { FUNCTION_HOSTING_KINDS } from '../store/subworkflowKinds';
 import { fetchRegistry } from '../data/functionRegistry';
+import { API_BASE_URL } from '../apiConfig';
 import './ExportBehaviorButton.css';
 
 /**
@@ -88,7 +89,7 @@ const ExportBehaviorButton = () => {
         }
 
         for (const [filePath, fns] of byFile.entries()) {
-          const res = await fetch('http://localhost:5001/api/function/scaffold', {
+          const res = await fetch(`${API_BASE_URL}/api/function/scaffold`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ file_path: filePath, functions: fns }),
@@ -112,7 +113,7 @@ const ExportBehaviorButton = () => {
       const defaultJsonPath = anchorPath
         ? derivePairedJsonPath(anchorPath, currentStage)
         : `opencellcomms_engine/exports/${currentStage}.subworkflow.json`;
-      const dialogRes = await fetch('http://localhost:5001/api/filesystem/save-dialog', {
+      const dialogRes = await fetch(`${API_BASE_URL}/api/filesystem/save-dialog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ default_path: defaultJsonPath }),
@@ -137,7 +138,7 @@ const ExportBehaviorButton = () => {
       }
       const jsonContent = JSON.stringify(exportData, null, 2);
 
-      const writeRes = await fetch('http://localhost:5001/api/filesystem/write-file', {
+      const writeRes = await fetch(`${API_BASE_URL}/api/filesystem/write-file`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_path: jsonTargetPath, content: jsonContent }),

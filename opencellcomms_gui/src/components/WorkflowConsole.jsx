@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Square, Terminal, AlertCircle, CheckCircle, Loader, RefreshCw, Zap, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
+import { API_ROOT_URL } from '../apiConfig';
 import './WorkflowConsole.css';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = API_ROOT_URL;
 
 /**
  * WorkflowConsole - Per-workflow console with integrated Run/Stop button
@@ -617,4 +618,3 @@ const WorkflowConsole = ({ workflowName }) => {
 };
 
 export default WorkflowConsole;
-

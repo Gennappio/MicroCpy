@@ -22,13 +22,14 @@ WORKDIR /app
 # you commit from the host, not the container (there is no .git at /app).
 # flask/flask-cors/anthropic power the API + in-GUI agent; fipy is the diffusion solver.
 COPY opencellcomms_engine/ /app/opencellcomms_engine/
-RUN pip install -e "/app/opencellcomms_engine[dev]" \
-    && pip install flask flask-cors anthropic fipy
+RUN pip install -e "/app/opencellcomms_engine[dev,diffusion,maboss]" \
+    && pip install flask flask-cors anthropic
 
-# Adapters and their extra requirements (e.g. fipy via the legacy adapter).
+# Enabled, manifested adapters may declare extra requirements.
 COPY opencellcomms_adapters/ /app/opencellcomms_adapters/
 RUN for req in /app/opencellcomms_adapters/*/requirements.txt; do \
-        if [ -f "$req" ]; then pip install -r "$req" || true; fi; \
+        plugin_dir="$(dirname "$req")"; \
+        if [ -f "$req" ] && [ -f "$plugin_dir/plugin.toml" ]; then pip install -r "$req" || true; fi; \
     done
 
 # GUI server (Flask app + the in-GUI agent module).
@@ -36,5 +37,7 @@ COPY opencellcomms_gui/ /app/opencellcomms_gui/
 
 WORKDIR /app/opencellcomms_gui/server
 EXPOSE 5001
-# api.py already binds host=0.0.0.0 and disables the Werkzeug reloader.
+# Docker needs an all-interface bind inside its private network. docker-compose
+# publishes that port on host loopback only, preserving the local-only boundary.
+ENV OPENCELLCOMMS_API_HOST=0.0.0.0
 CMD ["python", "api.py"]

@@ -17,6 +17,7 @@ import shutil
 import ast
 import inspect
 import tempfile
+import tomllib
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
@@ -24,7 +25,13 @@ from flask_cors import CORS
 import agent  # In-GUI Claude coding agent (config + code generation)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for React frontend
+BACKEND_HOST = os.environ.get("OPENCELLCOMMS_API_HOST", "127.0.0.1")
+BACKEND_PORT = 5001
+LOCAL_GUI_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+)
+CORS(app, resources={r"/api/*": {"origins": LOCAL_GUI_ORIGINS}})
 
 IS_WINDOWS = sys.platform == 'win32'
 
@@ -49,6 +56,8 @@ simulation_process = None
 simulation_thread = None
 log_queue = queue.Queue()
 is_running = False
+last_run_status = "idle"
+last_exit_code = None
 
 # PID file for cross-refresh / cross-restart recovery
 PID_FILE = Path(__file__).parent / ".current_process.pid"
@@ -57,6 +66,88 @@ PID_FILE = Path(__file__).parent / ".current_process.pid"
 # One place, shared by GUI and CLI (the engine writes here via --gui-results-dir).
 # parents[0]=server, [1]=opencellcomms_gui, [2]=repo root.
 RUNS_DIR = Path(__file__).resolve().parents[2] / "runs"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ENGINE_DIR = REPO_ROOT / "opencellcomms_engine"
+ENGINE_SOURCE_DIR = ENGINE_DIR / "src"
+ADAPTERS_DIR = REPO_ROOT / "opencellcomms_adapters"
+EXPORTS_DIR = ENGINE_DIR / "exports"
+
+
+class PathPolicyError(ValueError):
+    """A client-supplied path violates an API filesystem boundary."""
+
+
+def _resolve_allowed_path(
+    raw_path,
+    *,
+    roots,
+    bases=None,
+    suffixes=None,
+    must_exist=False,
+    require_file=False,
+    allow_absolute=False,
+):
+    """Resolve a path and prove that it remains under an allowed root.
+
+    Resolution happens before containment checking, so ``..`` components and
+    symlinks cannot escape by string-prefix tricks. Client-facing endpoints
+    reject absolute paths; server-owned registry paths may opt in explicitly.
+    """
+    if raw_path is None or str(raw_path).strip() == "":
+        raise PathPolicyError("A non-empty path is required")
+
+    supplied = Path(str(raw_path))
+    if supplied.is_absolute() and not allow_absolute:
+        raise PathPolicyError("Absolute paths are not accepted")
+
+    resolved_roots = tuple(Path(root).resolve() for root in roots)
+    candidate_bases = tuple(Path(base).resolve() for base in (bases or (REPO_ROOT,)))
+    candidates = (
+        (supplied.resolve(),)
+        if supplied.is_absolute()
+        else tuple((base / supplied).resolve() for base in candidate_bases)
+    )
+
+    target = next(
+        (
+            candidate
+            for candidate in candidates
+            if any(candidate == root or candidate.is_relative_to(root) for root in resolved_roots)
+        ),
+        None,
+    )
+    if target is None:
+        raise PathPolicyError("Path is outside the allowed project roots")
+
+    if suffixes is not None and target.suffix.lower() not in {
+        suffix.lower() for suffix in suffixes
+    }:
+        raise PathPolicyError(
+            f"File type {target.suffix or '(none)'} is not allowed"
+        )
+    if must_exist and not target.exists():
+        raise FileNotFoundError(target)
+    if require_file and target.exists() and not target.is_file():
+        raise PathPolicyError("Path must identify a file")
+    return target
+
+
+def _enabled_code_roots():
+    """Engine source plus adapter directories enabled for discovery."""
+    roots = [ENGINE_SOURCE_DIR]
+    try:
+        engine_dir = get_engine_path().parent
+        for path in (engine_dir, engine_dir.parent):
+            if str(path) not in sys.path:
+                sys.path.insert(0, str(path))
+        from src.workflow.registry import discover_adapter_names
+
+        roots.extend(ADAPTERS_DIR / name for name in discover_adapter_names(ADAPTERS_DIR))
+    except Exception:
+        # The engine tree is always safe and remains useful if plugin discovery
+        # itself is temporarily broken.
+        pass
+    return roots
 
 
 def safe_run_label(value):
@@ -75,6 +166,7 @@ def get_engine_path():
 
 def stream_output(process, log_queue):
     """Stream stdout and stderr from subprocess to queue"""
+    global is_running, last_run_status, last_exit_code
     def enqueue_output(pipe, queue, prefix):
         try:
             for line in iter(pipe.readline, ''):
@@ -117,17 +209,19 @@ def stream_output(process, log_queue):
     # Signal completion
     if process.returncode == 0:
         log_queue.put("[COMPLETE] Simulation completed successfully\n")
+        last_run_status = "completed"
     else:
         log_queue.put(f"[FAILED] Simulation failed with exit code {process.returncode}\n")
-    
-    global is_running
+        last_run_status = "failed"
+    last_exit_code = process.returncode
+
     is_running = False
     PID_FILE.unlink(missing_ok=True)
 
 
 def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=None):
     """Run OpenCellComms workflow in background thread (workflow-only mode)"""
-    global simulation_process, is_running
+    global simulation_process, is_running, last_run_status, last_exit_code
 
     try:
         engine_path = get_engine_path()
@@ -135,6 +229,8 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
         if not engine_path.exists():
             log_queue.put(f"[ERROR] OpenCellComms engine not found at: {engine_path}\n")
             is_running = False
+            last_run_status = "failed"
+            last_exit_code = None
             return
 
         # Get engine directory (working directory for simulation)
@@ -144,6 +240,8 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
         if not workflow_path:
             log_queue.put(f"[ERROR] Workflow path must be provided\n")
             is_running = False
+            last_run_status = "failed"
+            last_exit_code = None
             return
 
         # === Pass this run's output dir to the engine (it appends the subworkflow).
@@ -207,6 +305,8 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
     except Exception as e:
         log_queue.put(f"[ERROR] Failed to start simulation: {e}\n")
         is_running = False
+        last_run_status = "failed"
+        last_exit_code = None
 
 
 @app.route('/api/status', methods=['GET'])
@@ -214,14 +314,16 @@ def get_status():
     """Get current simulation status"""
     return jsonify({
         'running': is_running,
-        'pid': simulation_process.pid if simulation_process else None
+        'pid': simulation_process.pid if simulation_process else None,
+        'status': last_run_status,
+        'exit_code': last_exit_code,
     })
 
 
 @app.route('/api/run', methods=['POST'])
 def run_simulation():
     """Start a new simulation (Section 9.2: supports entry_subworkflow parameter)"""
-    global simulation_thread, is_running
+    global simulation_thread, is_running, last_run_status, last_exit_code
 
     # Check if the process is actually still alive; reset stale flag if not
     if is_running:
@@ -310,6 +412,13 @@ def run_simulation():
         label = run_label or getattr(workflow_obj, 'name', None) or 'default'
         safe_label = safe_run_label(label)
         run_dir = RUNS_DIR / safe_label
+        if run_dir.is_symlink():
+            raise PathPolicyError("Run directory may not be a symlink")
+        run_dir = _resolve_allowed_path(
+            run_dir,
+            roots=(RUNS_DIR,),
+            allow_absolute=True,
+        )
         if run_dir.exists():
             shutil.rmtree(run_dir)
             log_queue.put(f"[INFO] Cleared runs/{safe_label} directory\n")
@@ -326,9 +435,21 @@ def run_simulation():
                 for l in keep_labels
             } | {safe_label}
             for item in RUNS_DIR.iterdir():
-                if item.is_dir() and not item.name.startswith('.') and item.name not in keep:
-                    shutil.rmtree(item, ignore_errors=True)
+                if (
+                    item.is_dir()
+                    and not item.is_symlink()
+                    and not item.name.startswith('.')
+                    and item.name not in keep
+                ):
+                    stale_dir = _resolve_allowed_path(
+                        item,
+                        roots=(RUNS_DIR,),
+                        allow_absolute=True,
+                    )
+                    shutil.rmtree(stale_dir, ignore_errors=True)
                     log_queue.put(f"[INFO] Removed stale results folder '{item.name}'\n")
+    except PathPolicyError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         error_msg = f'Failed to setup results directories: {str(e)}'
         log_queue.put(f"[ERROR] {error_msg}\n")
@@ -353,6 +474,8 @@ def run_simulation():
 
     # Start simulation in background thread
     is_running = True
+    last_run_status = "running"
+    last_exit_code = None
     simulation_thread = threading.Thread(
         target=run_simulation_async,
         args=(workflow_path, entry_subworkflow, gui_results_dir_for_run)
@@ -370,7 +493,7 @@ def run_simulation():
 @app.route('/api/stop', methods=['POST'])
 def stop_simulation():
     """Stop the running simulation"""
-    global simulation_process, is_running
+    global is_running
 
     # Gate on process liveness, not is_running flag (survives page refresh)
     if simulation_process is None or simulation_process.poll() is not None:
@@ -401,7 +524,7 @@ def stop_simulation():
 @app.route('/api/force-kill', methods=['POST'])
 def force_kill():
     """Kill any running process — works even after page refresh or server restart"""
-    global is_running, simulation_process
+    global is_running
     pid = None
 
     # Try in-memory process first
@@ -550,33 +673,10 @@ def get_registry():
         registry = get_default_registry()
 
         # Convert to JSON-serializable format
-        functions_dict = {}
-        for name, metadata in registry.functions.items():
-            functions_dict[name] = {
-                'name': metadata.name,
-                'display_name': metadata.display_name,
-                'description': metadata.description,
-                'category': metadata.category.value,  # Convert enum to string
-                'parameters': [
-                    {
-                        'name': p.name,
-                        'type': p.type.value,  # Convert enum to string
-                        'description': p.description,
-                        'default': p.default,
-                        'required': p.required,
-                        'min_value': p.min_value,
-                        'max_value': p.max_value,
-                        'options': p.options
-                    }
-                    for p in metadata.parameters
-                ],
-                'inputs': metadata.inputs,
-                'outputs': metadata.outputs,
-                'cloneable': metadata.cloneable,
-                'module_path': metadata.module_path,
-                'source_file': metadata.source_file,
-                'contract': metadata.contract
-            }
+        functions_dict = {
+            name: metadata.to_dict()
+            for name, metadata in registry.functions.items()
+        }
 
         return jsonify({
             'success': True,
@@ -673,6 +773,7 @@ def get_function_source():
     try:
         function_name = request.args.get('name')
         source_file = request.args.get('file')
+        client_supplied_file = bool(source_file)
 
         if not function_name:
             return jsonify({'error': 'Missing required parameter: name'}), 400
@@ -700,13 +801,23 @@ def get_function_source():
             except Exception as e:
                 return jsonify({'error': f'Failed to load registry: {e}'}), 500
 
-        # Resolve file path
-        file_path = engine_dir / source_file
-
-        if not file_path.exists():
+        # Resolve only within engine source or enabled adapter trees. Registry
+        # paths are server-owned and may be absolute; client paths may not be.
+        try:
+            file_path = _resolve_allowed_path(
+                source_file,
+                roots=_enabled_code_roots(),
+                bases=(engine_dir, engine_dir.parent),
+                suffixes={'.py'},
+                must_exist=True,
+                require_file=True,
+                allow_absolute=not client_supplied_file,
+            )
+        except PathPolicyError as e:
+            return jsonify({'error': str(e)}), 400
+        except FileNotFoundError:
             return jsonify({
                 'error': f'Source file not found: {source_file}',
-                'file_path': str(file_path)
             }), 404
 
         # Read source code
@@ -719,7 +830,7 @@ def get_function_source():
         return jsonify({
             'success': True,
             'source': source_code,
-            'file_path': str(source_file),
+            'file_path': str(file_path.relative_to(REPO_ROOT)),
             'function_name': function_name
         })
 
@@ -757,6 +868,7 @@ def save_function_source():
         function_name = data.get('name') or data.get('function_name')
         source_code = data.get('source')
         source_file = data.get('file') or data.get('file_path')
+        client_supplied_file = bool(source_file)
 
         if not function_name or not source_code:
             return jsonify({'error': 'Missing required fields: name, source'}), 400
@@ -784,13 +896,21 @@ def save_function_source():
                 return jsonify({'error': f'Failed to load registry: {e}'}), 500
 
         # Resolve file path
-        file_path = engine_dir / source_file
-
-        # Validate that file exists (don't create new files)
-        if not file_path.exists():
+        try:
+            file_path = _resolve_allowed_path(
+                source_file,
+                roots=_enabled_code_roots(),
+                bases=(engine_dir, engine_dir.parent),
+                suffixes={'.py'},
+                must_exist=True,
+                require_file=True,
+                allow_absolute=not client_supplied_file,
+            )
+        except PathPolicyError as e:
+            return jsonify({'error': str(e)}), 400
+        except FileNotFoundError:
             return jsonify({
                 'error': f'Source file not found: {source_file}. Cannot create new files.',
-                'file_path': str(file_path)
             }), 404
 
         # Validate Python syntax before saving
@@ -804,7 +924,14 @@ def save_function_source():
             }), 400
 
         # Create backup of original file
-        backup_path = file_path.with_suffix('.py.bak')
+        try:
+            backup_path = _resolve_allowed_path(
+                file_path.with_suffix('.py.bak'),
+                roots=_enabled_code_roots(),
+                allow_absolute=True,
+            )
+        except PathPolicyError as e:
+            return jsonify({'error': str(e)}), 400
         try:
             import shutil
             shutil.copy2(file_path, backup_path)
@@ -825,7 +952,7 @@ def save_function_source():
 
         return jsonify({
             'success': True,
-            'file_path': str(source_file),
+            'file_path': str(file_path.relative_to(REPO_ROOT)),
             'message': f'Successfully saved {function_name}',
             'backup_path': str(backup_path.name)
         })
@@ -856,32 +983,29 @@ def write_file():
         if not raw_path or content is None:
             return jsonify({'error': 'file_path and content are required'}), 400
 
-        engine_dir = get_engine_path().parent  # opencellcomms_engine/
-        repo_root = engine_dir.parent
-        target = Path(raw_path)
-        if not target.is_absolute():
-            target = (repo_root / target).resolve()
-        else:
-            target = target.resolve()
-
-        # Safety: must be under the adapters tree or the engine source tree.
-        allowed_roots = [
-            (repo_root / 'opencellcomms_adapters').resolve(),
-            (engine_dir / 'src').resolve(),
-            (engine_dir / 'exports').resolve(),
-        ]
-        if not any(str(target).startswith(str(root) + os.sep) for root in allowed_roots):
-            return jsonify({
-                'error': f'Refused to write outside allowed roots. Target: {target}'
-            }), 400
+        repo_root = REPO_ROOT
+        try:
+            target = _resolve_allowed_path(
+                raw_path,
+                roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR, EXPORTS_DIR),
+                bases=(repo_root,),
+                suffixes={'.py', '.json'},
+            )
+        except PathPolicyError as e:
+            return jsonify({'error': str(e)}), 400
 
         target.parent.mkdir(parents=True, exist_ok=True)
 
         backup_path = None
         created = not target.exists()
         if not created:
-            backup_path = str(target.with_suffix(target.suffix + '.bak'))
-            shutil.copy2(target, backup_path)
+            backup_target = _resolve_allowed_path(
+                target.with_suffix(target.suffix + '.bak'),
+                roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR, EXPORTS_DIR),
+                allow_absolute=True,
+            )
+            shutil.copy2(target, backup_target)
+            backup_path = str(backup_target)
 
         target.write_text(content, encoding='utf-8')
 
@@ -891,6 +1015,8 @@ def write_file():
             'created': created,
             'backup_path': backup_path,
         })
+    except PathPolicyError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Write failed: {e}'}), 500
 
@@ -904,20 +1030,36 @@ def save_dialog():
     try:
         data = request.json or {}
         default_path = data.get('default_path', '')
-        engine_dir = get_engine_path().parent
-        repo_root = engine_dir.parent
-        initial_dir = data.get('initial_dir') or str(repo_root)
+        repo_root = REPO_ROOT
+        requested_initial_dir = data.get('initial_dir')
+        if requested_initial_dir:
+            try:
+                initial_dir = str(_resolve_allowed_path(
+                    requested_initial_dir,
+                    roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR, EXPORTS_DIR),
+                    bases=(repo_root,),
+                    allow_absolute=False,
+                ))
+            except PathPolicyError as exc:
+                return jsonify({'error': str(exc)}), 400
+        else:
+            initial_dir = str(repo_root)
 
         if default_path:
             default_path_obj = Path(default_path)
             initial_file = default_path_obj.name
             if default_path_obj.parent and str(default_path_obj.parent) != '.':
                 # If a parent directory was given, use it as the initial_dir
-                p = default_path_obj.parent
-                if not p.is_absolute():
-                    p = (repo_root / p).resolve()
-                if p.exists():
-                    initial_dir = str(p)
+                try:
+                    p = _resolve_allowed_path(
+                        default_path_obj.parent,
+                        roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR, EXPORTS_DIR),
+                        bases=(repo_root,),
+                    )
+                    if p.exists():
+                        initial_dir = str(p)
+                except PathPolicyError:
+                    initial_dir = str(repo_root)
         else:
             initial_file = ''
 
@@ -964,12 +1106,17 @@ def save_dialog():
         # The native dialog returns an absolute path. Most of the app expects a
         # repo-relative path (e.g. opencellcomms_adapters/...). Provide both so
         # callers can show the clean relative form when the pick is inside the repo.
-        relative_path = None
         try:
-            relative_path = str(Path(chosen).resolve().relative_to(repo_root))
-        except ValueError:
-            relative_path = None
-        return jsonify({'path': chosen, 'relative_path': relative_path})
+            chosen_path = _resolve_allowed_path(
+                chosen,
+                roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR, EXPORTS_DIR),
+                suffixes={'.py', '.json'},
+                allow_absolute=True,
+            )
+        except PathPolicyError as e:
+            return jsonify({'error': str(e)}), 400
+        relative_path = str(chosen_path.relative_to(repo_root))
+        return jsonify({'path': str(chosen_path), 'relative_path': relative_path})
 
     except Exception as e:
         return jsonify({'error': f'Save dialog failed: {e} — type the path manually'}), 500
@@ -1071,11 +1218,15 @@ def scaffold_behavior_code():
         # Resolve file_path: prefer explicit, fall back to legacy fields
         explicit_path = data.get('file_path')
         if explicit_path:
-            file_path = Path(explicit_path)
-            if not file_path.is_absolute():
-                file_path = (engine_dir.parent / file_path).resolve()
-            if file_path.suffix != '.py':
-                return jsonify({'error': 'file_path must end with .py'}), 400
+            try:
+                file_path = _resolve_allowed_path(
+                    explicit_path,
+                    roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR),
+                    bases=(REPO_ROOT,),
+                    suffixes={'.py'},
+                )
+            except PathPolicyError as e:
+                return jsonify({'error': str(e)}), 400
 
             module_name, register_path = _path_to_module_name(file_path, engine_dir)
             if module_name is None:
@@ -1102,6 +1253,15 @@ def scaffold_behavior_code():
                 file_path = adapters_dir / adapter / 'functions' / category / f'{behavior_name}.py'
             else:
                 file_path = engine_dir / 'src' / 'workflow' / 'functions' / category / f'{behavior_name}.py'
+            try:
+                file_path = _resolve_allowed_path(
+                    file_path,
+                    roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR),
+                    suffixes={'.py'},
+                    allow_absolute=True,
+                )
+            except PathPolicyError as e:
+                return jsonify({'error': str(e)}), 400
             module_name, register_path = _path_to_module_name(file_path, engine_dir)
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1138,7 +1298,12 @@ from src.workflow.decorators import register_function
             created = True
         else:
             # Make a backup before modifying
-            shutil.copy2(file_path, file_path.with_suffix('.py.bak'))
+            backup_path = _resolve_allowed_path(
+                file_path.with_suffix('.py.bak'),
+                roots=(ADAPTERS_DIR, ENGINE_SOURCE_DIR),
+                allow_absolute=True,
+            )
+            shutil.copy2(file_path, backup_path)
 
         # Read existing function names via ast
         existing_source = file_path.read_text(encoding='utf-8')
@@ -1382,6 +1547,12 @@ from src.workflow.decorators import register_function
         # register.py). For a brand-new adapter we scaffold the package skeleton
         # — __init__.py files + register.py — so the import actually resolves.
         if added and module_name and module_name.startswith('opencellcomms_adapters.') and register_path:
+            register_path = _resolve_allowed_path(
+                register_path,
+                roots=(ADAPTERS_DIR,),
+                suffixes={'.py'},
+                allow_absolute=True,
+            )
             adapter_dir = register_path.parent
 
             # Ensure __init__.py from the adapter root down to the function's
@@ -1389,6 +1560,12 @@ from src.workflow.decorators import register_function
             d = file_path.parent
             while True:
                 init_file = d / '__init__.py'
+                init_file = _resolve_allowed_path(
+                    init_file,
+                    roots=(adapter_dir,),
+                    suffixes={'.py'},
+                    allow_absolute=True,
+                )
                 if not init_file.exists():
                     init_file.write_text('', encoding='utf-8')
                 if d == adapter_dir:
@@ -1419,17 +1596,48 @@ from src.workflow.decorators import register_function
                     'processing_behavior',
                 ]
                 functions_root = adapter_dir / 'functions'
+                functions_root = _resolve_allowed_path(
+                    functions_root,
+                    roots=(adapter_dir,),
+                    allow_absolute=True,
+                )
                 functions_root.mkdir(parents=True, exist_ok=True)
-                (functions_root / '__init__.py').touch()
+                functions_init = _resolve_allowed_path(
+                    functions_root / '__init__.py',
+                    roots=(adapter_dir,),
+                    suffixes={'.py'},
+                    allow_absolute=True,
+                )
+                functions_init.touch()
                 for role_folder in ROLE_FOLDERS:
-                    role_dir = functions_root / role_folder
+                    role_dir = _resolve_allowed_path(
+                        functions_root / role_folder,
+                        roots=(adapter_dir,),
+                        allow_absolute=True,
+                    )
                     role_dir.mkdir(parents=True, exist_ok=True)
-                    (role_dir / '__init__.py').touch()
+                    role_init = _resolve_allowed_path(
+                        role_dir / '__init__.py',
+                        roots=(adapter_dir,),
+                        suffixes={'.py'},
+                        allow_absolute=True,
+                    )
+                    role_init.touch()
                 for extra in ('behaviors', 'workflows'):
-                    (adapter_dir / extra).mkdir(parents=True, exist_ok=True)
+                    extra_dir = _resolve_allowed_path(
+                        adapter_dir / extra,
+                        roots=(adapter_dir,),
+                        allow_absolute=True,
+                    )
+                    extra_dir.mkdir(parents=True, exist_ok=True)
 
             # Seed a plugin manifest so the new plugin has an identity.
-            manifest_path = adapter_dir / 'plugin.toml'
+            manifest_path = _resolve_allowed_path(
+                adapter_dir / 'plugin.toml',
+                roots=(adapter_dir,),
+                suffixes={'.toml'},
+                allow_absolute=True,
+            )
             if not manifest_path.exists():
                 manifest_path.write_text(
                     '# OpenCellComms plugin manifest. See docs/PLUGINS.md for the schema.\n'
@@ -1439,7 +1647,8 @@ from src.workflow.decorators import register_function
                     'description = ""\n'
                     'author = ""\n'
                     'engine_version = ">=0.0.0"\n'
-                    'compatible_kernels = ["biophysics"]\n',
+                    'compatible_kernels = ["biophysics"]\n'
+                    'enabled = true\n',
                     encoding='utf-8')
 
             reg_source = register_path.read_text(encoding='utf-8')
@@ -1450,7 +1659,12 @@ from src.workflow.decorators import register_function
                     lines_to_add.append(import_line)
             if lines_to_add:
                 if register_existed:
-                    shutil.copy2(register_path, register_path.with_suffix('.py.bak'))
+                    register_backup = _resolve_allowed_path(
+                        register_path.with_suffix('.py.bak'),
+                        roots=(adapter_dir,),
+                        allow_absolute=True,
+                    )
+                    shutil.copy2(register_path, register_backup)
                 register_path.write_text(reg_source.rstrip() + '\n' + '\n'.join(lines_to_add) + '\n',
                                           encoding='utf-8')
 
@@ -1473,6 +1687,8 @@ from src.workflow.decorators import register_function
             'reload_warning': reload_warning,
         })
 
+    except PathPolicyError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {e}'}), 500
 
@@ -1583,37 +1799,56 @@ def upload_function_file():
         engine_root = get_engine_path().parent
 
         if target_path:
-            # Use provided target path
-            target_file = engine_root / target_path
+            try:
+                target_file = _resolve_allowed_path(
+                    target_path,
+                    roots=_enabled_code_roots(),
+                    bases=(engine_root, REPO_ROOT),
+                    suffixes={'.py'},
+                    must_exist=True,
+                    require_file=True,
+                )
+            except PathPolicyError as e:
+                return jsonify({'error': str(e)}), 400
+            except FileNotFoundError:
+                return jsonify({'error': 'Target source file not found'}), 404
         else:
-            # Try to find the function in registry
-            registry_path = engine_root / "src" / "workflow" / "registry.py"
-
-            if not registry_path.exists():
-                return jsonify({'error': 'Registry file not found'}), 404
-
-            # Parse registry to find source_file
-            import re
-            registry_content = registry_path.read_text()
-
-            # Look for function metadata with source_file
-            pattern = rf"'{function_name}'.*?source_file\s*=\s*['\"]([^'\"]+)['\"]"
-            match = re.search(pattern, registry_content, re.DOTALL)
-
-            if not match:
+            sys.path.insert(0, str(engine_root))
+            sys.path.insert(0, str(REPO_ROOT))
+            from src.workflow.registry import get_default_registry
+            metadata = get_default_registry().get(function_name)
+            if metadata is None or not metadata.source_file:
                 return jsonify({'error': f'Function {function_name} not found in registry'}), 404
-
-            source_file_path = match.group(1)
-            target_file = engine_root / source_file_path
+            try:
+                target_file = _resolve_allowed_path(
+                    metadata.source_file,
+                    roots=_enabled_code_roots(),
+                    bases=(engine_root, REPO_ROOT),
+                    suffixes={'.py'},
+                    must_exist=True,
+                    require_file=True,
+                    allow_absolute=True,
+                )
+            except (PathPolicyError, FileNotFoundError) as e:
+                return jsonify({'error': f'Invalid registry source path: {e}'}), 400
 
         # Create backup of existing file
         if target_file.exists():
-            backup_dir = target_file.parent / "backups"
+            backup_dir = _resolve_allowed_path(
+                target_file.parent / "backups",
+                roots=_enabled_code_roots(),
+                allow_absolute=True,
+            )
             backup_dir.mkdir(exist_ok=True)
 
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             backup_filename = f"{target_file.stem}_backup_{timestamp}{target_file.suffix}"
-            backup_path = backup_dir / backup_filename
+            backup_path = _resolve_allowed_path(
+                backup_dir / backup_filename,
+                roots=_enabled_code_roots(),
+                suffixes={'.py'},
+                allow_absolute=True,
+            )
 
             # Copy existing file to backup
             backup_path.write_text(target_file.read_text())
@@ -1626,11 +1861,13 @@ def upload_function_file():
 
         return jsonify({
             'success': True,
-            'file_path': str(target_file.relative_to(engine_root)),
+            'file_path': str(target_file.relative_to(REPO_ROOT)),
             'message': f'Successfully uploaded {file.filename} for {function_name}',
             'backup_path': str(backup_path.name) if backup_path else None
         })
 
+    except PathPolicyError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Upload failed: {e}'}), 500
 
@@ -1660,11 +1897,36 @@ def list_results():
             plots = []
             if not directory.exists():
                 return plots
+            if directory.is_symlink():
+                return plots
+            try:
+                directory = _resolve_allowed_path(
+                    directory,
+                    roots=(RUNS_DIR,),
+                    allow_absolute=True,
+                )
+            except PathPolicyError:
+                return plots
             for item in sorted(directory.iterdir()):
+                if item.is_symlink():
+                    continue
                 if item.is_dir():
                     # Subdirectory becomes a category
                     for img_file in sorted(item.rglob('*')):
+                        if img_file.is_symlink():
+                            continue
                         if img_file.is_file() and img_file.suffix.lower() in IMAGE_EXTENSIONS:
+                            try:
+                                img_file = _resolve_allowed_path(
+                                    img_file,
+                                    roots=(RUNS_DIR,),
+                                    suffixes=IMAGE_EXTENSIONS,
+                                    must_exist=True,
+                                    require_file=True,
+                                    allow_absolute=True,
+                                )
+                            except (PathPolicyError, FileNotFoundError):
+                                continue
                             plots.append({
                                 'name': img_file.name,
                                 'path': str(img_file.relative_to(base_ref)),
@@ -1681,12 +1943,15 @@ def list_results():
         results = []
 
         # Check for top-level subdirectories (each becomes a result group)
-        has_subdirs = any(item.is_dir() for item in results_dir.iterdir()
-                         if not item.name.startswith('.'))
+        has_subdirs = any(
+            item.is_dir() and not item.is_symlink()
+            for item in results_dir.iterdir()
+            if not item.name.startswith('.')
+        )
 
         if has_subdirs:
             for item in sorted(results_dir.iterdir()):
-                if item.is_dir() and not item.name.startswith('.'):
+                if item.is_dir() and not item.is_symlink() and not item.name.startswith('.'):
                     plots = scan_for_plots(item, RUNS_DIR)
                     if plots:
                         # Try to extract timestamp from directory name
@@ -1700,7 +1965,11 @@ def list_results():
         # Also collect any images directly in runs/
         root_plots = []
         for item in sorted(results_dir.iterdir()):
-            if item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+            if (
+                item.is_file()
+                and not item.is_symlink()
+                and item.suffix.lower() in IMAGE_EXTENSIONS
+            ):
                 root_plots.append({
                     'name': item.name,
                     'path': str(item.relative_to(RUNS_DIR)),
@@ -1726,11 +1995,18 @@ def list_results():
 def get_plot(plot_path):
     """Serve a plot image file with cache-busting headers."""
     try:
-        # Resolve under runs/ and reject anything that escapes it (traversal guard).
-        runs_root = RUNS_DIR.resolve()
-        full_path = (RUNS_DIR / plot_path).resolve()
-        if full_path != runs_root and runs_root not in full_path.parents:
-            return jsonify({'success': False, 'error': 'Invalid path'}), 403
+        try:
+            full_path = _resolve_allowed_path(
+                plot_path,
+                roots=(RUNS_DIR,),
+                bases=(RUNS_DIR,),
+                must_exist=True,
+                require_file=True,
+            )
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except FileNotFoundError:
+            return jsonify({'success': False, 'error': 'Plot not found'}), 404
 
         if not full_path.is_file():
             return jsonify({'success': False, 'error': 'Plot not found'}), 404
@@ -1783,13 +2059,19 @@ def parse_library():
         if not library_path:
             return jsonify({'success': False, 'error': 'No library path provided'}), 400
 
-        library_file = Path(library_path)
-
-        if not library_file.exists():
+        try:
+            library_file = _resolve_allowed_path(
+                library_path,
+                roots=_enabled_code_roots(),
+                bases=(ENGINE_DIR, REPO_ROOT),
+                suffixes={'.py'},
+                must_exist=True,
+                require_file=True,
+            )
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except FileNotFoundError:
             return jsonify({'success': False, 'error': f'Library file not found: {library_path}'}), 404
-
-        if library_file.suffix != '.py':
-            return jsonify({'success': False, 'error': 'Library must be a .py file'}), 400
 
         # Parse the Python file
         with open(library_file, 'r') as f:
@@ -1855,6 +2137,28 @@ def get_observability_dir():
     """Get the observability directory path."""
     engine_dir = get_engine_path().parent
     return engine_dir / "results" / "observability"
+
+
+def _observability_scope_dir(obs_dir, scope_key):
+    safe_key = str(scope_key).replace(":", "_")
+    context_root = Path(obs_dir) / "context"
+    return _resolve_allowed_path(
+        safe_key,
+        roots=(context_root,),
+        bases=(context_root,),
+    )
+
+
+def _observability_json_file(obs_dir, path, *, must_exist=True):
+    """Resolve a server-derived snapshot/diff path without following escapes."""
+    return _resolve_allowed_path(
+        path,
+        roots=(obs_dir,),
+        suffixes={'.json'},
+        must_exist=must_exist,
+        require_file=must_exist,
+        allow_absolute=True,
+    )
 
 
 @app.route('/api/observability/meta', methods=['GET'])
@@ -2000,9 +2304,10 @@ def get_observability_context():
         if not scope_key:
             return jsonify({'success': False, 'error': 'scopeKey is required'}), 400
 
-        # Convert scope key to safe directory name
-        safe_key = scope_key.replace(":", "_")
-        scope_dir = obs_dir / "context" / safe_key
+        try:
+            scope_dir = _observability_scope_dir(obs_dir, scope_key)
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
         if not scope_dir.exists():
             return jsonify({'success': False, 'error': f'No context data for scope: {scope_key}'}), 404
@@ -2012,9 +2317,26 @@ def get_observability_context():
             snapshot_files = sorted(scope_dir.glob("v*.json"))
             if not snapshot_files:
                 return jsonify({'success': False, 'error': 'No snapshots available'}), 404
-            snapshot_file = snapshot_files[-1]
+            try:
+                snapshot_file = _observability_json_file(
+                    obs_dir, snapshot_files[-1]
+                )
+            except PathPolicyError as e:
+                return jsonify({'success': False, 'error': str(e)}), 400
         else:
-            snapshot_file = scope_dir / f"v{int(version):06d}.json"
+            try:
+                version_number = int(version)
+                if version_number < 0:
+                    raise ValueError
+                snapshot_file = _observability_json_file(
+                    obs_dir,
+                    scope_dir / f"v{version_number:06d}.json",
+                    must_exist=False,
+                )
+            except ValueError:
+                return jsonify({'success': False, 'error': 'version must be a nonnegative integer'}), 400
+            except PathPolicyError as e:
+                return jsonify({'success': False, 'error': str(e)}), 400
 
         if not snapshot_file.exists():
             return jsonify({'success': False, 'error': f'Snapshot version {version} not found'}), 404
@@ -2039,21 +2361,57 @@ def get_observability_diff():
         if not from_version or not to_version:
             return jsonify({'success': False, 'error': 'from and to versions are required'}), 400
 
-        # Convert scope key to safe directory name
-        safe_key = scope_key.replace(":", "_")
-        context_dir = obs_dir / "context" / safe_key
-        diff_dir = context_dir / "diff"
+        try:
+            context_dir = _observability_scope_dir(obs_dir, scope_key)
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        try:
+            from_number = int(from_version)
+            to_number = int(to_version)
+            if from_number < 0 or to_number < 0:
+                raise ValueError
+            diff_dir = _resolve_allowed_path(
+                context_dir / "diff",
+                roots=(obs_dir,),
+                allow_absolute=True,
+            )
+        except ValueError:
+            return jsonify({'success': False, 'error': 'from and to must be nonnegative integers'}), 400
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
         # Try pre-computed diff first
         if diff_dir.exists():
-            diff_file = diff_dir / f"v{int(from_version):06d}_to_v{int(to_version):06d}.json"
+            try:
+                diff_file = _observability_json_file(
+                    obs_dir,
+                    diff_dir / f"v{from_number:06d}_to_v{to_number:06d}.json",
+                    must_exist=False,
+                )
+            except PathPolicyError as e:
+                return jsonify({'success': False, 'error': str(e)}), 400
             if diff_file.exists():
+                try:
+                    diff_file = _observability_json_file(obs_dir, diff_file)
+                except PathPolicyError as e:
+                    return jsonify({'success': False, 'error': str(e)}), 400
                 diff = json.loads(diff_file.read_text())
                 return jsonify({'success': True, 'diff': diff})
 
         # Compute diff on-the-fly from snapshots
-        from_file = context_dir / f"v{int(from_version):06d}.json"
-        to_file = context_dir / f"v{int(to_version):06d}.json"
+        try:
+            from_file = _observability_json_file(
+                obs_dir,
+                context_dir / f"v{from_number:06d}.json",
+                must_exist=False,
+            )
+            to_file = _observability_json_file(
+                obs_dir,
+                context_dir / f"v{to_number:06d}.json",
+                must_exist=False,
+            )
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
         if not from_file.exists() or not to_file.exists():
             return jsonify({'success': False, 'error': f'Snapshots not found for versions {from_version} and/or {to_version}'}), 404
@@ -2091,12 +2449,18 @@ def get_observability_artifact():
         if not artifact_path:
             return jsonify({'success': False, 'error': 'path is required'}), 400
 
-        # Security: ensure path doesn't escape observability directory
-        full_path = (obs_dir / "artifacts" / artifact_path).resolve()
-        if not str(full_path).startswith(str(obs_dir.resolve())):
-            return jsonify({'success': False, 'error': 'Invalid path'}), 400
-
-        if not full_path.exists():
+        artifacts_root = obs_dir / "artifacts"
+        try:
+            full_path = _resolve_allowed_path(
+                artifact_path,
+                roots=(artifacts_root,),
+                bases=(artifacts_root,),
+                must_exist=True,
+                require_file=True,
+            )
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except FileNotFoundError:
             return jsonify({'success': False, 'error': 'Artifact not found'}), 404
 
         # Return file content based on type
@@ -2122,15 +2486,18 @@ def get_observability_versions():
         if not scope_key:
             return jsonify({'success': False, 'error': 'scopeKey is required'}), 400
 
-        # Convert scope key to safe directory name
-        safe_key = scope_key.replace(":", "_")
-        scope_dir = obs_dir / "context" / safe_key
+        try:
+            scope_dir = _observability_scope_dir(obs_dir, scope_key)
+        except PathPolicyError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
         if not scope_dir.exists():
             return jsonify({'success': True, 'versions': []})
 
         versions = []
         for f in sorted(scope_dir.glob("v*.json")):
+            if f.is_symlink():
+                continue
             try:
                 version_num = int(f.stem[1:])  # Extract number from v000001
                 versions.append(version_num)
@@ -2201,6 +2568,17 @@ def agent_generate():
         return jsonify({'error': f'Generation failed: {e}'}), 500
 
 
+def run_server():
+    """Run the backend (loopback by default; containers override internally)."""
+    app.run(
+        host=BACKEND_HOST,
+        port=BACKEND_PORT,
+        debug=False,
+        threaded=True,
+        use_reloader=False,
+    )
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("OpenCellComms Backend Server")
@@ -2217,4 +2595,4 @@ if __name__ == '__main__':
     # in-flight run and can leave a zombie listener on the port (splitting /api/run
     # and /api/logs across processes, so logs vanish). Sims still survive an
     # intentional restart; we just give up hot-reload on backend edits.
-    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True, use_reloader=False)
+    run_server()

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, RotateCcw, Edit2, Eye, AlertCircle, CheckCircle } from 'lucide-react';
+import { API_BASE_URL } from '../apiConfig';
 import './CodeViewer.css';
-
-const API_BASE_URL = 'http://localhost:5001';
 
 /**
  * Code Viewer Component - View and edit function source code
@@ -26,10 +25,6 @@ const CodeViewer = ({ functionName, sourceFile }) => {
 
       try {
         const params = new URLSearchParams({ name: functionName });
-        if (sourceFile) {
-          params.append('file', sourceFile);
-        }
-
         const response = await fetch(`${API_BASE_URL}/api/function/source?${params}`);
         const data = await response.json();
 
@@ -95,7 +90,6 @@ const CodeViewer = ({ functionName, sourceFile }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: functionName,
-          file: sourceFile,
           source: code,
         }),
       });
@@ -238,4 +232,3 @@ const CodeViewer = ({ functionName, sourceFile }) => {
 };
 
 export default CodeViewer;
-

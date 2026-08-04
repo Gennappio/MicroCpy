@@ -15,7 +15,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     environment:
       PYTHONUNBUFFERED: "1"
       PYTHONIOENCODING: "utf-8"
@@ -32,10 +32,10 @@ services:
       context: ./opencellcomms_gui
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       # The browser runs on the host, so it reaches the backend at
-      # localhost:5001 directly (the GUI's hardcoded URL) — no proxy needed.
+      # localhost:5001 directly (the VITE_API_URL default) — no proxy needed.
       NO_OPEN: "1"
     volumes:
       - ./opencellcomms_gui:/app

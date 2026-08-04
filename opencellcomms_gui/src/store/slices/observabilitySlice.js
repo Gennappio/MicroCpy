@@ -5,7 +5,7 @@
  * inspector panel, badge stats, and run metadata.
  */
 
-const API_BASE_URL = 'http://localhost:5001';
+import { API_BASE_URL } from '../../apiConfig';
 
 /**
  * Creates the observability slice for the workflow store
@@ -316,4 +316,3 @@ export const createObservabilitySlice = (set, get) => ({
     simulationRunCounter: state.simulationRunCounter + 1,
   })),
 });
-

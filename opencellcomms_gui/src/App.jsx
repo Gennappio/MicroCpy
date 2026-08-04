@@ -16,7 +16,7 @@ import { fetchRegistry } from './data/functionRegistry';
 import './App.css';
 
 function App() {
-	  const {
+  const {
     currentMainTab,
     setCurrentMainTab,
     workflow,
@@ -33,6 +33,7 @@ function App() {
 
   // AI coding agent settings modal
   const [showAgentSettings, setShowAgentSettings] = useState(false);
+  const [registryError, setRegistryError] = useState('');
 
   // Resize handlers
   const handleMouseDown = (panel) => (e) => {
@@ -77,11 +78,20 @@ function App() {
   // Preload function registry on app mount
   useEffect(() => {
     fetchRegistry().then(() => {
+      setRegistryError('');
       console.log('[APP] Function registry loaded');
     }).catch((error) => {
+      setRegistryError(error.message || 'The backend is unavailable');
       console.error('[APP] Failed to load function registry:', error);
     });
   }, []);
+
+  const retryRegistry = () => {
+    setRegistryError('');
+    fetchRegistry({ force: true }).catch((error) => {
+      setRegistryError(error.message || 'The backend is unavailable');
+    });
+  };
 
   // When main tab changes, switch to first available subworkflow of that kind
   // Stage switching is handled inside each tab view component.
@@ -287,6 +297,13 @@ function App() {
           </button>
         </div>
       </header>
+
+      {registryError && (
+        <div className="backend-unavailable" role="alert">
+          <span>Backend unavailable: {registryError}</span>
+          <button type="button" onClick={retryRegistry}>Retry</button>
+        </div>
+      )}
 
       {showAgentSettings && (
         <AgentSettings onClose={() => setShowAgentSettings(false)} />

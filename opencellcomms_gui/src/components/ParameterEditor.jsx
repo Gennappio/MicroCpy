@@ -5,8 +5,8 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getFunction } from '../data/functionRegistry';
 import useWorkflowStore from '../store/workflowStore';
 import { KINDS } from '../store/subworkflowKinds';
+import { API_BASE_URL } from '../apiConfig';
 import './ParameterEditor.css';
-const API_BASE_URL = 'http://localhost:5001';
 
 
 /**
@@ -113,7 +113,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
     try {
       const params = new URLSearchParams({ name: functionName });
       const sourceHint = (functionMetadata && functionMetadata.source_file) || functionFile || parameters?.function_file || '';
-      if (sourceHint) params.append('file', sourceHint);
       const res = await fetch(`${API_BASE_URL}/api/function/source?${params.toString()}`);
       const data = await res.json();
       if (data && data.success) {
@@ -163,9 +162,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('function_name', functionName);
-      if (resolvedSourcePath) {
-        formData.append('target_path', resolvedSourcePath);
-      }
 
       const res = await fetch(`${API_BASE_URL}/api/function/upload`, {
         method: 'POST',
@@ -216,7 +212,6 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          file_path: resolvedSourcePath,
           source: editedCode,
           function_name: functionName
         })
@@ -304,9 +299,7 @@ const ParameterEditor = ({ node, onSave, onClose }) => {
   // Ensure the code viewer scrolls to top whenever code is loaded/shown
   useEffect(() => {
     if (showCode && codeTextareaRef?.current) {
-      try {
-        codeTextareaRef.current.scrollTop = 0;
-      } catch (_) {}
+      codeTextareaRef.current.scrollTop = 0;
     }
   }, [showCode, code]);
 

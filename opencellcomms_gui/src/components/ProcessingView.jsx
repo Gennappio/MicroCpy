@@ -30,7 +30,6 @@ const ProcessingView = ({ paletteWidth, inspectorWidth, onMouseDownPalette, onMo
     if (behaviors.length > 0 && !behaviors.includes(currentStage)) {
       setCurrentStage(behaviors[0]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [behaviors.join(',')]);
 
   const handleCreateBehavior = () => {

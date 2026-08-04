@@ -44,6 +44,27 @@
   gap: 12px;
 }
 
+.backend-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  color: #7f1d1d;
+  background: #fee2e2;
+  border-bottom: 1px solid #fecaca;
+  font-size: 13px;
+}
+
+.backend-unavailable button {
+  padding: 5px 12px;
+  color: #7f1d1d;
+  background: white;
+  border: 1px solid #fca5a5;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 .btn {
   padding: 8px 16px;
   border-radius: 6px;

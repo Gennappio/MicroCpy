@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, KeyRound, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { API_BASE_URL } from '../apiConfig';
 import './AgentSettings.css';
-
-const API_BASE_URL = 'http://localhost:5001';
 
 const PROVIDERS = [
   { value: 'anthropic', label: 'Anthropic (direct)' },
