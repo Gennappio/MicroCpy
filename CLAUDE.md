@@ -61,7 +61,7 @@ A scientist must be capable to understand mechanism tested from the GUI. The cod
 
 ## Repository Structure
 
-This repo is the OpenCellComms project. The outer repo (`MicroCpy3D`) tracks it as a git submodule (currently on the `Abstraction` branch). All real work happens here.
+This repository is the OpenCellComms project; treat its root as the working directory.
 
 ## Commands
 
@@ -71,13 +71,11 @@ All commands run from the project root unless otherwise noted.
 
 ```bash
 # Development install
-make install-dev          # pip install -e ".[dev,docs,jupyter,performance,visualization]"
+make install-dev          # installs dev tooling plus active diffusion/MaBoSS extras
 
 # Testing
 make test                 # pytest tests/ -v
 make test-fast            # pytest tests/ -v -m "not slow"
-make test-unit            # pytest tests/unit/ -v
-make test-integration     # pytest tests/integration/ -v
 make test-coverage        # pytest tests/ --cov=src --cov-report=html
 
 # Single test
@@ -89,8 +87,8 @@ make format               # black src/ tests/ && isort src/ tests/
 make format-check         # Check only, no changes
 
 # CLI simulation run
-python run_workflow.py --workflow path/to/workflow.json
-python run_workflow.py --sim path/to/config.yaml
+occ-run --workflow path/to/workflow.json
+occ-run --sim path/to/config.yaml
 ```
 
 ### React GUI (`opencellcomms_gui/`)
@@ -141,9 +139,11 @@ Bridges GUI and engine:
 
 ## Workflow JSON Format (v2.0)
 
-Workflows are JSON documents with **stages** containing **nodes** (function calls) connected by edges. The v2.0 system supports **subworkflows** — reusable, modular workflow components that can be nested. All functions share a `context` dict that flows through the pipeline.
-
-Execution stages in order: `initialization → intracellular → diffusion → intercellular → finalization`
+Workflows are JSON documents with **subworkflows** containing ordered function
+nodes and nested subworkflow calls. The GUI's `main` composer sequences
+`__init_sequence__`, `__scheduler__`, and processing behaviors. All functions
+share a context that is exposed to new biological functions through the typed
+`BiologicalContext` API.
 
 ## Gene Network Pattern
 
@@ -364,77 +364,75 @@ go in the engine:
 
 This section is for biologists and non-engineers. You do not need to understand Python architecture to add a new biological rule to a simulation. Use the `/occ_new-function` slash command in Claude Code and answer a few plain-English questions — Claude will generate and place the code for you.
 
-### The `context` dictionary — what's available inside any function
+### The typed `env` — what's available inside a function
 
-Every function receives a single `context` dict. Here are the keys you will need:
+New biological functions receive `env: BiologicalContext`. Use these accessors
+instead of reaching into the raw context or engine state:
 
 | What you want | Code | Notes |
 |---|---|---|
-| Loop over all cells | `for cell in context['population'].cells:` | `cell.id`, `cell.position`, `cell.state.phenotype` |
+| Loop over all cells | `for cell in env.cells:` | `cell.id`, `cell.position`, `cell.phenotype` |
 | Cell position (x, y or x, y, z) | `x, y = cell.position[0], cell.position[1]` | 2D sim; add `z = cell.position[2]` for 3D |
-| Substance concentration at a cell | `context['simulator'].get_substance_concentration('oxygen', x, y)` | Returns float in simulation units |
-| Mark a cell as dying | `cell.state.phenotype = 'apoptotic'` | Also: `'necrotic'`, `'growth_arrested'`, `'proliferating'` |
-| Read a gene node state | `context['gene_networks'][cell.id].nodes['GeneName'].current_state` | Returns `True` (ON) or `False` (OFF) |
-| Set a gene node state | `context['gene_networks'][cell.id].nodes['GeneName'].current_state = True` | |
-| Current simulation step | `context['current_step']` | Integer |
-| Time step size (hours) | `context['dt']` | Float |
-| Substance→gene input mappings | `context['associations']` | Dict |
-| Store results | `context['results']['my_key'] = value` | Persists across steps |
+| Substance concentration at a cell | `env.concentration('oxygen', cell)` | Returns float in simulation units |
+| Mark a cell as dying | `cell.mark_apoptotic()` | Also `mark_necrotic()`, `mark_growth_arrested()`, `mark_proliferating()` |
+| Read a gene node state | `cell.gene('GeneName').is_on()` | Check for `None` when a node is optional |
+| Set a gene node state | `cell.gene('GeneName').turn_on()` | Also `turn_off()` and `set(bool)` |
+| Current simulation step | `env.step` | Integer |
+| Time step size (hours) | `env.dt` | Float |
+| Store a result | `env.results.store('my_key', value)` | Persists across steps |
 
 ### Biological patterns — copy-paste recipes
 
 **Pattern 1: Environmental trigger → cell death**
 ```python
 # Kill cells when oxygen drops below a threshold
-for cell in context['population'].cells:
-    x, y = cell.position[0], cell.position[1]
-    oxygen = context['simulator'].get_substance_concentration('oxygen', x, y)
+for cell in env.cells:
+    oxygen = env.concentration('oxygen', cell)
     if oxygen < necrosis_threshold:
-        cell.state.phenotype = 'necrotic'
+        cell.mark_necrotic()
 ```
 
 **Pattern 2: Gene network output → proliferation decision**
 ```python
 # A cell divides only if the 'Proliferation' gene is ON
-for cell in context['population'].cells:
-    gn = context['gene_networks'].get(cell.id)
-    if gn and gn.nodes['Proliferation'].current_state:
-        cell.state.phenotype = 'proliferating'
+for cell in env.cells:
+    proliferation = cell.gene('Proliferation')
+    if proliferation and proliferation.is_on():
+        cell.mark_proliferating()
 ```
 
 **Pattern 3: Substance concentration → boolean gene input**
 ```python
 # Convert analog oxygen level to a binary gene input
-for cell in context['population'].cells:
-    x, y = cell.position[0], cell.position[1]
-    oxygen = context['simulator'].get_substance_concentration('oxygen', x, y)
-    gn = context['gene_networks'].get(cell.id)
-    if gn and 'Oxygen' in gn.nodes:
-        gn.nodes['Oxygen'].current_state = (oxygen > oxygen_threshold)
+for cell in env.cells:
+    oxygen = env.concentration('oxygen', cell)
+    oxygen_gene = cell.gene('Oxygen')
+    if oxygen_gene:
+        oxygen_gene.set(oxygen > oxygen_threshold)
 ```
 
 **Pattern 4: Population census**
 ```python
 # Count cells by phenotype and store
 counts = {}
-for cell in context['population'].cells:
-    ph = cell.state.phenotype
+for cell in env.cells:
+    ph = cell.phenotype
     counts[ph] = counts.get(ph, 0) + 1
-context['results']['phenotype_counts'] = counts
+env.results.store('phenotype_counts', counts)
 ```
 
 ### Biological terms → code concepts
 
 | Biologist says | Code means |
 |---|---|
-| "cell dies" | `cell.state.phenotype = 'apoptotic'` (programmed) or `'necrotic'` (stress) |
-| "cell divides" | `cell.state.phenotype = 'proliferating'` (triggers `update_cell_division`) |
-| "cell stops growing" | `cell.state.phenotype = 'growth_arrested'` |
-| "oxygen gradient / oxygen at position" | `context['simulator'].get_substance_concentration('oxygen', x, y)` |
-| "glucose level" | `context['simulator'].get_substance_concentration('glucose', x, y)` |
-| "gene is ON / expressed" | `network.nodes['GeneName'].current_state = True` |
-| "gene is OFF / silenced" | `network.nodes['GeneName'].current_state = False` |
-| "each cell, every step" | `for cell in context['population'].cells:` inside any intracellular function |
+| "cell dies" | `cell.mark_apoptotic()` (programmed) or `cell.mark_necrotic()` (stress) |
+| "cell divides" | `cell.mark_proliferating()` (triggers division) |
+| "cell stops growing" | `cell.mark_growth_arrested()` |
+| "oxygen gradient / oxygen at a cell" | `env.concentration('oxygen', cell)` |
+| "glucose level" | `env.concentration('glucose', cell)` |
+| "gene is ON / expressed" | `cell.gene('GeneName').turn_on()` |
+| "gene is OFF / silenced" | `cell.gene('GeneName').turn_off()` |
+| "each cell, every step" | `env.cell` in a scheduler `for_each` behavior; do not add a second loop |
 | "substance diffuses" | handled by `run_diffusion_solver_coupled` in the diffusion stage — no code needed |
 | "initial condition" | a function in the `initialization` stage (runs once at t=0) |
 

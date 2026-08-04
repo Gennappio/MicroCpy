@@ -17,7 +17,7 @@ OpenCellComms is a Python-based simulation framework for modeling gene regulator
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.11+
 - Node.js 18+
 - npm 7+
 
@@ -70,7 +70,7 @@ Then open http://localhost:3000. See the [Installation Guide](docs/INSTALL.md#ru
 | [Usage Guide](docs/USAGE.md) | How to use the GUI and CLI |
 | [Engine README](opencellcomms_engine/README.md) | Simulation engine documentation |
 | [GUI README](opencellcomms_gui/README.md) | Visual designer documentation |
-| [Getting Started](opencellcomms_engine/GETTING_STARTED.md) | Step-by-step tutorial |
+| [Getting Started](docs/engine/GETTING_STARTED.md) | Step-by-step tutorial |
 
 ## 📁 Project Structure
 
@@ -80,7 +80,7 @@ OpenCellComms/
 │   ├── src/                  # Source code
 │   ├── tests/                # Test suites
 │   ├── tools/                # Utility scripts
-│   └── run_workflow.py       # Main CLI entry point
+│   └── run_workflow.py       # Compatibility/master utility runner
 ├── opencellcomms_gui/        # React visual workflow designer
 │   ├── src/                  # React components
 │   ├── server/               # Flask API backend
@@ -111,10 +111,10 @@ source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 
 # Run a workflow
 cd opencellcomms_engine
-python run_workflow.py --workflow path/to/workflow.json
+occ-run --workflow path/to/workflow.json
 
 # See all options
-python run_workflow.py --help
+occ-run --help
 ```
 
 ## 🤖 Claude Code Commands
@@ -152,4 +152,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 - Check the [documentation](docs/) for guides
 - Review existing [issues](../../issues) for known problems
 - Open a new issue for bugs or feature requests
-

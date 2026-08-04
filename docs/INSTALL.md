@@ -8,7 +8,7 @@ Before installing, ensure you have the following:
 
 | Requirement | Minimum Version | Check Command | Download |
 |-------------|-----------------|---------------|----------|
-| Python | 3.8+ | `python --version` | [python.org](https://www.python.org/downloads/) |
+| Python | 3.11+ | `python --version` | [python.org](https://www.python.org/downloads/) |
 | Node.js | 18+ | `node --version` | [nodejs.org](https://nodejs.org/) |
 | npm | 7+ | `npm --version` | Included with Node.js |
 | Git | Any | `git --version` | [git-scm.com](https://git-scm.com/) |
@@ -110,14 +110,14 @@ python -m venv .venv
 ```bash
 cd opencellcomms_engine
 pip install --upgrade pip
-pip install -e .
+pip install -e ".[diffusion,maboss]"
 cd ..
 ```
 
 ### Step 4: Install Flask Server Dependencies
 
 ```bash
-pip install flask flask-cors
+pip install flask flask-cors anthropic
 ```
 
 ### Step 5: Install GUI Dependencies
@@ -210,7 +210,7 @@ pip install -e ".[all]"
 
 ### Virtual environment issues
 - Delete `.venv/` and run the installer again
-- Ensure you're using Python 3.8 or higher
+- Ensure you're using Python 3.11 or higher
 
 ### Permission errors on Unix
 ```bash
@@ -220,4 +220,3 @@ chmod +x install.sh run.sh
 ## Next Steps
 
 After installation, see [USAGE.md](USAGE.md) for how to run OpenCellComms.
-

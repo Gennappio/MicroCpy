@@ -73,7 +73,7 @@ Send this to your team:
 ### Getting Started with OpenCellComms
 
 **Prerequisites:**
-- Python 3.8+
+- Python 3.11+
 - Node.js 18+
 - npm 7+
 
@@ -116,7 +116,7 @@ Then open http://localhost:3000 in your browser.
 ## Troubleshooting for Team Members
 
 ### "Python not found"
-Install Python 3.8+ from https://www.python.org/downloads/
+Install Python 3.11+ from https://www.python.org/downloads/
 
 ### "Node.js not found"
 Install Node.js 18+ from https://nodejs.org/
@@ -145,4 +145,3 @@ If team members have issues:
 2. Verify prerequisites are installed
 3. Check the terminal output for specific error messages
 4. Open an issue in your repository (if using Git hosting)
-

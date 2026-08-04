@@ -63,20 +63,22 @@ description = "MicroC metabolic ABM."  # one-line summary (shown in the GUI)
 author = ""                           # who maintains it
 engine_version = ">=0.0.0"            # engine versions this works with
 compatible_kernels = ["biophysics"]   # kernels this plugin targets; ["*"] = any
+enabled = true                         # false keeps an archived/test plugin out of production
 ```
 
 | Field | Meaning |
 |---|---|
-| `name` | Plugin name (display + identity). |
-| `version` | Semantic version of the plugin. |
+| `name` | Required plugin identity; it must match the adapter directory. |
+| `version` | Required semantic version of the plugin. |
 | `description` | One-line summary surfaced in the GUI plugin picker. |
 | `author` | Maintainer. |
-| `engine_version` | Engine version range the plugin is known to work with. |
+| `engine_version` | Required engine-version specifier used by compatibility checks. |
 | `compatible_kernels` | Kernels the plugin's functions target. `["*"]` = all. |
+| `enabled` | Whether production discovery imports the plugin. Defaults to `true`. |
 
-The manifest is **optional for loading** — a plugin with only a `register.py`
-still loads — but it's how the plugin gets a real identity, and it's what
-`GET /api/plugins` reports. New plugins created through the GUI get a manifest
+The manifest is required for production discovery. Its `engine_version` is
+validated before import; malformed, disabled, or incompatible plugins are
+skipped with a diagnostic. New plugins created through the GUI get a manifest
 seeded automatically.
 
 ---
@@ -129,14 +131,14 @@ On startup the engine **auto-discovers** plugins — there is no hand-maintained
 list. `registry.py` (`discover_adapter_names()` → `get_default_registry()`)
 imports the `register.py` of every folder under `opencellcomms_adapters/` that:
 
-1. has a `register.py`, and
-2. has a Python-importable name (a valid identifier).
+1. has a Python-importable name and a `register.py`,
+2. has a valid `plugin.toml` with `enabled = true` (or no explicit flag), and
+3. declares an `engine_version` compatible with the running engine.
 
 `common` is imported first because the experiment plugins import from it.
 
-**This means a newly created plugin works on the next backend restart with zero
-edits to engine code.** (Previously the list was hardcoded, so new plugins
-vanished on restart.)
+**This means a newly created, manifested plugin works on the next backend
+restart with zero edits to engine code.**
 
 ---
 

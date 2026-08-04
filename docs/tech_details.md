@@ -48,7 +48,7 @@ Key entry points:
 - `run_workflow.py`: **master CLI** / runner that can:
   - run simulations in “config-only” mode (`--sim ...`)
   - run workflow-only mode (`--workflow ...`)
-  - run “workflow + config setup” mode (`--sim ... --workflow ...`)
+  - run either config mode (`--sim ...`) or self-contained workflow mode (`--workflow ...`)
   - generate 2D CSV initial cell layouts (`--generate-csv ...`)
   - plot CSV results (`--plot-csv ...`)
 
@@ -106,7 +106,8 @@ Each stage includes:
 - `functions`: array of function nodes
 - `execution_order`: array of node IDs defining the exact order
 
-**Example**: `opencellcomms_gui/server/workflows/jaya_workflow_2d_csv_macrostep.json` is a v1.0 workflow designed so “all parameters are configurable from the GUI.”
+Archived v1 examples remain under the legacy adapter directories. New work
+should use the canonical v2 workflows listed in section 11.
 
 ### 3.2 Workflow v2.0: subworkflow/composer-based
 
@@ -176,7 +177,7 @@ This is a “clean architecture” decision: workflow node functions should not 
 2. paths relative to the workflow JSON directory
 3. paths relative to engine root
 4. common subdirectories (`tests/`, `tests/maboss_example/`)
-5. GUI workflows directory (`opencellcomms_gui/server/workflows/`), including `maboss_example/`
+5. enabled adapter trees (legacy filename search only)
 
 This exists because workflows frequently refer to files (BND/CFG/CSV/YAML), and those files may live in different locations depending on whether runs happen from GUI or CLI.
 
@@ -301,7 +302,7 @@ The Flask server:
 - launches the engine as a subprocess:
   - invokes `opencellcomms_engine/run_workflow.py` with:
     - `--workflow <path>`
-    - `--gui-results-dir <absolute path to opencellcomms_gui/results>`
+    - `--gui-results-dir <absolute path to runs/<label>>`
     - optional `--entry-subworkflow <name>`
 - streams stdout/stderr through threads into a queue for the GUI to consume
 
@@ -309,23 +310,13 @@ The server is intentionally local and simple: it does not aim to be a multi-user
 
 ## 8) Results layout and overwrite semantics
 
-### 8.1 Two modes: GUI vs CLI outputs
+### 8.1 Shared GUI/CLI output tree
 
 The engine uses `WorkflowExecutor.setup_context_paths()` to define output locations.
 
-**GUI mode**:
-
-- GUI passes `--gui-results-dir <.../opencellcomms_gui/results>`
-- outputs go under GUI results directory, and are split by v2 “kind”:
-  - `results/composers/<name>/...`
-  - `results/subworkflows/<name>/...`
-
-**CLI mode**:
-
-- outputs go under engine results:
-  - `opencellcomms_engine/results/composers/<name>/...`
-  - `opencellcomms_engine/results/subworkflows/<name>/...`
-  - plus subfolders `plots/` and `data/` depending on context keys
+The GUI passes a labeled directory under the repository-level `runs/` tree.
+The CLI derives its label from the workflow filename. In both cases, node
+outputs are written below `runs/<label>/<subworkflow>/`.
 
 ### 8.2 Overwrite semantics
 
@@ -403,20 +394,14 @@ Once registered, it appears in the GUI palette and can be used in workflows.
 
 ## 11) Example workflows and demos
 
-Important example assets:
+Canonical examples:
 
-- `opencellcomms_gui/server/workflows/jaya_workflow_2d_csv_macrostep.json`
-  - v1 workflow exposing many parameters through parameter nodes (GUI-first)
-- `opencellcomms_gui/server/workflows/maboss_workflow.json`
-  - minimal MaBoSS demo workflow (stochastic Boolean network updates)
-- `opencellcomms_gui/server/workflows/maboss_example/*`
-  - includes `cell_fate_config.yaml`, `.bnd`, `.cfg`, and initial cells CSV
+- `opencellcomms_adapters/MicroC/workflows/microc.json`
+- `opencellcomms_adapters/TCELL_CORRAL/workflows/tcell_corral.json`
+- `opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json`
 
-The MaBoSS demo is useful because it is small enough to understand end-to-end:
-
-- initialization loads config, sets up MaBoSS, loads initial cells
-- macrostep runs an intracellular sub-step
-- finalization saves results and plots
+Files marked with `metadata.validation.skip: true` and adapters whose names
+contain `(legacy)` are preserved references, not authoring templates.
 
 ## 12) Tooling: generators and post-processing
 
@@ -471,4 +456,3 @@ If an LLM needs to answer questions or implement changes, the most informative s
 7. Observability spec + implementation:
    - `opencellcomms_gui/NODES_OBSERVABILITY.md`
    - `opencellcomms_engine/src/workflow/observability/*`
-

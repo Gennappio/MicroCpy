@@ -26,12 +26,8 @@ Open http://localhost:3000 in your browser to use the GUI.
 
 ### 1. Design Your Workflow
 
-1. **Select a Stage** - Click one of the 5 stage tabs:
-   - Initialization
-   - Intracellular
-   - Diffusion
-   - Intercellular
-   - Finalization
+1. **Select a view** — use Overview, Agents, Resources, World,
+   Initialization, Scheduler, Planner, Processing, or Results.
 
 2. **Add Functions** - Drag functions from the left palette onto the canvas
 
@@ -70,19 +66,19 @@ source .venv/bin/activate
 
 ```bash
 cd opencellcomms_engine
-python run_workflow.py --workflow path/to/workflow.json
+occ-run --workflow path/to/workflow.json
 ```
 
 ### Run with Configuration File
 
 ```bash
-python run_workflow.py --sim config.yaml --workflow workflow.json
+occ-run --sim config.yaml
 ```
 
 ### Command Line Options
 
 ```bash
-python run_workflow.py --help
+occ-run --help
 ```
 
 **Main options:**
@@ -121,25 +117,26 @@ python run_workflow.py --plot-csv --cells-dir results/csv_cells \
 
 ## Example Workflows
 
-Pre-built example workflows are located in:
+Canonical workflows are located in the enabled adapters, for example:
 
 ```
-opencellcomms_gui/server/workflows/
+opencellcomms_adapters/MicroC/workflows/microc.json
+opencellcomms_adapters/TCELL_CORRAL/workflows/tcell_corral.json
+opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json
 ```
 
 To run an example:
 
 ```bash
 cd opencellcomms_engine
-python run_workflow.py --workflow ../opencellcomms_gui/server/workflows/jaya_workflow_2d_csv_macrostep.json
+occ-run --workflow ../opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json
 ```
 
 ## Output Files
 
 Simulation results are saved to:
 
-- **GUI Mode**: `opencellcomms_gui/results/`
-- **CLI Mode**: `opencellcomms_engine/results/`
+- **GUI and CLI modes**: the repository-level `runs/<label>/` tree
 
 Output includes:
 - **CSV files**: Cell data at each timestep
@@ -157,13 +154,9 @@ Workflows are saved as JSON files with this structure:
   "subworkflows": {
     "main": {
       "kind": "main",
-      "stages": {
-        "initialization": { "functions": [...] },
-        "intracellular": { "functions": [...] },
-        "diffusion": { "functions": [...] },
-        "intercellular": { "functions": [...] },
-        "finalization": { "functions": [...] }
-      }
+      "functions": [...],
+      "subworkflow_calls": [...],
+      "execution_order": [...]
     }
   }
 }
@@ -173,7 +166,7 @@ Workflows are saved as JSON files with this structure:
 
 ### Performance
 - Start with small cell counts for testing
-- Use `--steps N` to limit simulation length during development
+- Reduce the `__scheduler__` call's `iterations` value for development smokes
 
 ### Debugging
 - Check the terminal/console for detailed error messages
@@ -185,7 +178,6 @@ Workflows are saved as JSON files with this structure:
 
 ## Next Steps
 
-- Explore the example workflows in `opencellcomms_gui/server/workflows/`
+- Explore the canonical workflows in the enabled adapter `workflows/` folders
 - Read the engine documentation in `opencellcomms_engine/README.md`
-- Check `opencellcomms_engine/GETTING_STARTED.md` for more examples
-
+- Check `docs/engine/GETTING_STARTED.md` for more examples

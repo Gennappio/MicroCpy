@@ -14,12 +14,12 @@ OpenCellComms provides a flexible, workflow-based simulation engine for:
 
 ### Run a Workflow
 ```bash
-python run_workflow.py --workflow path/to/your_workflow.json
+occ-run --workflow path/to/your_workflow.json
 ```
 
 ### Run with Config File
 ```bash
-python run_workflow.py --sim path/to/your_config.yaml
+occ-run --sim path/to/your_config.yaml
 ```
 
 ## Architecture
@@ -66,7 +66,7 @@ opencellcomms_engine/
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - Core: NumPy, SciPy, Matplotlib, PyYAML
 - Diffusion: FiPy
 - Gene Networks: MaBoss (optional)
