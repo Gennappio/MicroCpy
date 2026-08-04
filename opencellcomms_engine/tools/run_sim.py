@@ -3,9 +3,8 @@
 OpenCellComms - Generic Simulation Runner
 
 Usage:
-    python run_sim.py config/my_simulation.yaml
-    python run_sim.py config/complete_substances_config.yaml
-    python run_sim.py my_custom_config.yaml
+    occ-run --sim path/to/config.yaml
+    occ-run --workflow path/to/workflow.json
 
 Features:
 - Loads any YAML configuration file
@@ -28,15 +27,59 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "config"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.config.config import OpenCellCommsConfig
-from src.core.domain import MeshManager
-from src.core.units import Length
-from simulation.multi_substance_simulator import MultiSubstanceSimulator
-from simulation.orchestrator import TimescaleOrchestrator
-from biology.population import CellPopulation
-from biology.gene_network import BooleanNetwork
-from src.io.initial_state import InitialStateManager
 import importlib.util
+
+OpenCellCommsConfig = None
+MeshManager = None
+Length = None
+MultiSubstanceSimulator = None
+TimescaleOrchestrator = None
+CellPopulation = None
+BooleanNetwork = None
+InitialStateManager = None
+AutoPlotter = None
+AUTOPLOTTER_AVAILABLE = False
+
+
+def _load_default_pipeline_runtime():
+    """Load optional simulation dependencies only after CLI argument parsing.
+
+    Keeping these imports lazy makes ``occ-run --help`` usable from a minimal
+    package installation; the config-driven simulation remains available when
+    the diffusion extra installed by the project installer is present.
+    """
+    global OpenCellCommsConfig, MeshManager, Length
+    global MultiSubstanceSimulator, TimescaleOrchestrator
+    global CellPopulation, BooleanNetwork, InitialStateManager
+    global AutoPlotter, AUTOPLOTTER_AVAILABLE
+
+    from src.config.config import OpenCellCommsConfig as Config
+    from src.core.domain import MeshManager as Mesh
+    from src.core.units import Length as LengthType
+    from src.simulation.multi_substance_simulator import MultiSubstanceSimulator as Simulator
+    from src.simulation.orchestrator import TimescaleOrchestrator as Orchestrator
+    from src.biology.population import CellPopulation as Population
+    from src.biology.gene_network import BooleanNetwork as Network
+    from src.io.initial_state import InitialStateManager as StateManager
+
+    OpenCellCommsConfig = Config
+    MeshManager = Mesh
+    Length = LengthType
+    MultiSubstanceSimulator = Simulator
+    TimescaleOrchestrator = Orchestrator
+    CellPopulation = Population
+    BooleanNetwork = Network
+    InitialStateManager = StateManager
+
+    try:
+        from src.visualization.auto_plotter import AutoPlotter as Plotter
+    except ImportError as exc:
+        print(f"[!] AutoPlotter not available (plotting disabled): {exc}")
+        AutoPlotter = None
+        AUTOPLOTTER_AVAILABLE = False
+    else:
+        AutoPlotter = Plotter
+        AUTOPLOTTER_AVAILABLE = True
 
 def load_custom_functions(custom_functions_path):
     """Load custom functions from file path"""
@@ -80,15 +123,7 @@ def load_custom_functions(custom_functions_path):
         traceback.print_exc()
         return None
 
-# Try to import AutoPlotter, but make it optional to avoid scipy hanging issues
-try:
-    from visualization.auto_plotter import AutoPlotter
-    AUTOPLOTTER_AVAILABLE = True
-except ImportError as e:
-    print(f"[!] AutoPlotter not available (plotting disabled): {e}")
-    AUTOPLOTTER_AVAILABLE = False
-
-def parse_arguments():
+def parse_arguments(argv=None):
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
         description="OpenCellComms - Generic Simulation Runner",
@@ -96,10 +131,10 @@ def parse_arguments():
         epilog="""
 Examples:
   # Default pipeline mode
-  python run_sim.py --sim config/complete_substances_config.yaml
+  occ-run --sim src/config/complete_substances_config.yaml
 
   # Workflow mode (config loaded by workflow functions)
-  python run_sim.py --workflow my_workflow.json
+  occ-run --workflow ../opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json
         """
     )
 
@@ -151,7 +186,7 @@ Examples:
         help='GUI results directory (sets context paths for GUI mode - Clean Architecture)'
     )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 def validate_configuration(config, config_path, verbose=True):
     """Comprehensive configuration validation"""
@@ -306,14 +341,13 @@ def load_configuration(config_file, verbose=True):
         print(f"   * Required sections: domain, time, substances")
         print(f"   * Each section has required parameters - see documentation")
         sys.exit(1)
+    except FileNotFoundError as e:
+        print(f"[!] Failed to load configuration - referenced file not found: {e}")
+        print("   Paths in a configuration are resolved relative to that YAML file.")
+        sys.exit(1)
     except Exception as e:
         print(f"[!] Failed to load configuration: {e}")
-        print(f"   This usually indicates a YAML syntax error or missing required sections.")
-        print(f"   Please check your configuration file format.")
-        print(f"\n[HELP] Common issues:")
-        print(f"   * YAML indentation must be consistent (use spaces, not tabs)")
-        print(f"   * Missing required sections: domain, time, substances")
-        print(f"   * Invalid YAML syntax (check colons, quotes, etc.)")
+        print("   Check the reported field, type, or YAML syntax above.")
         sys.exit(1)
 
     # Validate configuration
@@ -433,9 +467,6 @@ def setup_simulation(config, custom_functions_path=None, verbose=True):
             # Update domain configuration with detected cell size
             print(f"[*] Updating domain cell_height from {config.domain.cell_height.micrometers:.2f} um to {detected_cell_size_um:.2f} um")
             config.domain.cell_height = Length(detected_cell_size_um, "um")
-        except Exception as e:
-            print(f"[!] Failed to load initial state: {e}")
-            raise
 
             # Recalculate biological grid size based on detected cell size
             domain_size_um = config.domain.size_x.micrometers
@@ -452,9 +483,8 @@ def setup_simulation(config, custom_functions_path=None, verbose=True):
 
             # Update population grid size
             population.grid_size = biocell_grid_size
-
         except Exception as e:
-            print(f"[!] Failed to load VTK initial state: {e}")
+            print(f"[!] Failed to load initial state: {e}")
             raise
 
     elif hasattr(config, '_workflow_mode') and config._workflow_mode:
@@ -1047,13 +1077,13 @@ def generate_plots(config, results, simulator, population, args):
 
     return generated_plots
 
-def main():
+def main(argv=None):
     """Main simulation runner (CLI + setup + persistence/plots)."""
     print("OpenCellComms - Generic Simulation Runner")
     print("=" * 50)
 
     # Parse arguments
-    args = parse_arguments()
+    args = parse_arguments(argv)
 
     # Check which mode we're in
     if args.workflow:
@@ -1062,9 +1092,12 @@ def main():
     else:
         # Default pipeline mode - run with config file
         run_default_mode(args)
+    return 0
 
 def run_default_mode(args):
     """Run default pipeline with config file (hardcoded behavior)"""
+    _load_default_pipeline_runtime()
+
     # Load configuration (no CLI overrides)
     config, custom_functions_path = load_configuration(args.sim)
 
@@ -1144,38 +1177,30 @@ def run_default_mode(args):
         config, custom_functions_path, verbose=verbose_setup
     )
 
-    # Prefer the new SimulationEngine if available
-    try:
-        from src.simulation.engine import SimulationEngine
-        custom_functions = load_custom_functions(custom_functions_path)
+    from src.simulation.engine import SimulationEngine
+    custom_functions = load_custom_functions(custom_functions_path)
 
-        # Determine steps and dt strictly from config
-        dt = config.time.dt
-        num_steps = int(config.time.end_time / dt)
+    # Determine steps and dt strictly from config
+    dt = config.time.dt
+    num_steps = int(config.time.end_time / dt)
 
-        engine = SimulationEngine(
-            config=config,
-            simulator=simulator,
-            population=population,
-            gene_network=gene_network,
-            custom_functions=custom_functions,
-            workflow=workflow,
-        )
-        # Run via engine
-        engine_results = engine.run(num_steps=num_steps, dt=dt, verbose=args.verbose)
+    engine = SimulationEngine(
+        config=config,
+        simulator=simulator,
+        population=population,
+        gene_network=gene_network,
+        custom_functions=custom_functions,
+        workflow=workflow,
+    )
+    engine_results = engine.run(num_steps=num_steps, dt=dt, verbose=args.verbose)
 
-        # Convert to legacy dict expected by save_results/generate_plots
-        results = {
-            'time': engine_results.time,
-            'substance_stats': engine_results.substance_stats,
-            'cell_counts': engine_results.cell_counts,
-            'gene_network_states': engine_results.gene_network_states,
-        }
-    except Exception as _:
-        # Fallback to legacy inline loop if engine import or execution fails
-        results = run_simulation(
-            config, simulator, gene_network, population, args, custom_functions_path, detected_cell_size_um
-        )
+    # Convert to legacy dict expected by save_results/generate_plots
+    results = {
+        'time': engine_results.time,
+        'substance_stats': engine_results.substance_stats,
+        'cell_counts': engine_results.cell_counts,
+        'gene_network_states': engine_results.gene_network_states,
+    }
 
     # Save results - only for non-workflow simulations
     # When using workflows, data saving should be handled by the finalization stage
@@ -1259,7 +1284,7 @@ def run_default_mode(args):
             print(f"   * Plots generated: {len(generated_plots)}")
 
         print(f"\n[RUN] To run again:")
-        print(f"   python run_sim.py --sim {args.sim}")
+        print(f"   occ-run --sim {args.sim}")
 
 def run_workflow_mode(args):
     """Run workflow mode.
@@ -1308,6 +1333,22 @@ def run_workflow_mode(args):
             print(f"[WORKFLOW] GUI results directory: {gui_results_dir}")
         else:
             print(f"[WORKFLOW] Initialized workflow executor for: {workflow.name}")
+
+        # Apply the GUI-readability/ABM structural rules to the same file the
+        # executor is about to run. Archived fixtures explicitly marked with
+        # metadata.validation.skip retain their documented opt-out.
+        from scripts.validate_workflow import check_workflow
+        readability_errors, readability_warnings, skip_reason = check_workflow(
+            workflow_path, executor.registry
+        )
+        if skip_reason:
+            print(f"[WORKFLOW] Readability validation skipped: {skip_reason}")
+        else:
+            for warning in readability_warnings:
+                print(f"[WORKFLOW] Validation warning: {warning}")
+            if readability_errors:
+                details = "\n".join(f"  - {error}" for error in readability_errors)
+                raise ValueError(f"Workflow readability validation failed:\n{details}")
     except Exception as e:
         print(f"[WORKFLOW] Failed to initialize workflow executor: {e}")
         import traceback
@@ -1597,4 +1638,4 @@ def run_workflow_mode(args):
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -35,6 +35,37 @@ except ImportError:
 _typed_env_cache: Dict[int, bool] = {}
 
 
+class WorkflowExecutionError(RuntimeError):
+    """A workflow node could not be resolved or completed.
+
+    The structured attributes are intentionally stable so the CLI, GUI and
+    observability layers can report the exact failing node without parsing a
+    traceback string.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        node_id: Optional[str] = None,
+        function_name: Optional[str] = None,
+        subworkflow_name: Optional[str] = None,
+    ) -> None:
+        self.node_id = node_id
+        self.function_name = function_name
+        self.subworkflow_name = subworkflow_name
+
+        location = []
+        if function_name:
+            location.append(f"function={function_name!r}")
+        if node_id:
+            location.append(f"node={node_id!r}")
+        if subworkflow_name:
+            location.append(f"subworkflow={subworkflow_name!r}")
+        suffix = f" ({', '.join(location)})" if location else ""
+        super().__init__(f"{message}{suffix}")
+
+
 def _wants_typed_env(func: Callable) -> bool:
     """Return True if `func` opts into the typed `env: BiologicalContext` API.
 
@@ -339,15 +370,18 @@ class WorkflowExecutor:
             Callable function or None if not found
         """
         try:
-            # Convert relative path to absolute
+            # Convert relative path to absolute. Workflow-local files are the
+            # first relative-path contract; cwd remains a compatibility fallback.
             file_path = Path(function_file)
             if not file_path.is_absolute():
-                # Try multiple resolution strategies
-                # 1. Relative to current working directory
-                if not file_path.exists():
-                    # 2. Relative to project root directory (go up from src/workflow)
-                    project_root = Path(__file__).parent.parent.parent
-                    file_path = project_root / function_file
+                candidates = []
+                if self._workflow_dir is not None:
+                    candidates.append(self._workflow_dir / file_path)
+                candidates.extend((Path.cwd() / file_path, self._engine_root / file_path))
+                file_path = next(
+                    (candidate for candidate in candidates if candidate.exists()),
+                    candidates[0],
+                )
 
             if not file_path.exists():
                 print(f"[WORKFLOW] Warning: Function file not found: {function_file}")
@@ -405,6 +439,9 @@ class WorkflowExecutor:
             if func is not None:
                 self.function_cache[cache_key] = func
                 return func
+            # An explicit file is authoritative. Falling back to another
+            # implementation would run different code than the workflow shows.
+            return None
 
         # Try to get from custom functions module first
         if self.custom_functions_module and hasattr(self.custom_functions_module, function_name):
@@ -412,7 +449,21 @@ class WorkflowExecutor:
             self.function_cache[cache_key] = func
             return func
 
-        # Try to get from standard functions module
+        # Try to get from the registry (decorator-based functions)
+        if function_name in self.registry.functions:
+            metadata = self.registry.functions[function_name]
+            # Import the function from its module
+            module = importlib.import_module(metadata.module_path)
+            if not hasattr(module, function_name):
+                raise WorkflowExecutionError(
+                    f"Registered module {metadata.module_path!r} does not expose the function",
+                    function_name=function_name,
+                )
+            func = getattr(module, function_name)
+            self.function_cache[cache_key] = func
+            return func
+
+        # Legacy fallback for functions that predate decorator registration.
         try:
             from . import standard_functions
             if hasattr(standard_functions, function_name):
@@ -421,19 +472,6 @@ class WorkflowExecutor:
                 return func
         except ImportError:
             pass
-
-        # Try to get from the registry (decorator-based functions)
-        if function_name in self.registry.functions:
-            metadata = self.registry.functions[function_name]
-            # Import the function from its module
-            try:
-                module = importlib.import_module(metadata.module_path)
-                if hasattr(module, function_name):
-                    func = getattr(module, function_name)
-                    self.function_cache[cache_key] = func
-                    return func
-            except ImportError as e:
-                print(f"[WORKFLOW] Failed to import {metadata.module_path}: {e}")
 
         # Function not found
         print(f"[WORKFLOW] Warning: Function '{function_name}' not found in custom or standard functions")
@@ -501,15 +539,12 @@ class WorkflowExecutor:
 
                 # Execute this function 'func_step_count' times
                 for func_iteration in range(func_step_count):
-                    try:
-                        result = self._execute_function(workflow_func, context, stage)
-                        # Update context with results
-                        if result is not None:
-                            context.update(result)
-                    except Exception as e:
-                        print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
-                        import traceback
-                        traceback.print_exc()
+                    result = self._execute_function(
+                        workflow_func, context, stage, stage_name=stage_name
+                    )
+                    # Update context with results
+                    if result is not None:
+                        context.update(result)
 
         return context
 
@@ -529,16 +564,34 @@ class WorkflowExecutor:
                 continue
             try:
                 if ptype.value == 'int':
-                    kwargs[key] = int(float(value))
+                    numeric = float(value)
+                    if not numeric.is_integer():
+                        raise ValueError("must be a whole number")
+                    kwargs[key] = int(numeric)
                 elif ptype.value == 'float':
                     kwargs[key] = float(value)
                 elif ptype.value == 'bool':
-                    kwargs[key] = value.lower() in ('true', '1', 'yes')
-            except (ValueError, AttributeError):
-                pass  # leave as-is if conversion fails
+                    normalized = value.strip().lower()
+                    if normalized in ('true', '1', 'yes'):
+                        kwargs[key] = True
+                    elif normalized in ('false', '0', 'no'):
+                        kwargs[key] = False
+                    else:
+                        raise ValueError("must be true/false, yes/no, or 1/0")
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise ValueError(
+                    f"Invalid value {value!r} for parameter {key!r} "
+                    f"({ptype.value}): {exc}"
+                ) from exc
         return kwargs
 
-    def _execute_function(self, workflow_func: WorkflowFunction, context: Dict[str, Any], stage: 'WorkflowStage') -> Optional[Dict[str, Any]]:
+    def _execute_function(
+        self,
+        workflow_func: WorkflowFunction,
+        context: Dict[str, Any],
+        stage: 'WorkflowStage',
+        stage_name: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
         """
         Execute a single workflow function.
 
@@ -554,9 +607,24 @@ class WorkflowExecutor:
         function_file = workflow_func.function_file or workflow_func.parameters.get('function_file')
 
         # Get function implementation
-        func = self._get_function_implementation(workflow_func.function_name, function_file)
+        try:
+            func = self._get_function_implementation(
+                workflow_func.function_name, function_file
+            )
+        except Exception as exc:
+            raise WorkflowExecutionError(
+                f"Function implementation could not be loaded: {exc}",
+                node_id=workflow_func.id,
+                function_name=workflow_func.function_name,
+                subworkflow_name=stage_name,
+            ) from exc
         if func is None:
-            return None
+            raise WorkflowExecutionError(
+                "Function implementation could not be resolved",
+                node_id=workflow_func.id,
+                function_name=workflow_func.function_name,
+                subworkflow_name=stage_name,
+            )
 
         # Get function metadata from registry
         metadata = self.registry.get(workflow_func.function_name)
@@ -574,7 +642,15 @@ class WorkflowExecutor:
                 kwargs[key] = value
 
         # Coerce string values to declared parameter types (GUI may save as strings)
-        self._coerce_parameters(kwargs, metadata)
+        try:
+            self._coerce_parameters(kwargs, metadata)
+        except (TypeError, ValueError) as exc:
+            raise WorkflowExecutionError(
+                str(exc),
+                node_id=workflow_func.id,
+                function_name=workflow_func.function_name,
+                subworkflow_name=stage_name,
+            ) from exc
 
         # Add context data based on function inputs
         wants_env = _wants_typed_env(func)
@@ -605,16 +681,20 @@ class WorkflowExecutor:
         if self.config is not None and not function_file and 'config' not in kwargs:
             kwargs['config'] = self.config
 
-        # Execute function
+        # Execute function. Preserve an already-structured nested workflow
+        # failure; wrap all other node exceptions with their workflow identity.
         try:
             result = func(**kwargs)
-            return {"result": result} if result is not None else None
-        except TypeError as e:
-            # Handle missing required arguments
-            print(f"[WORKFLOW] Function '{workflow_func.function_name}' called with wrong arguments: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+        except WorkflowExecutionError:
+            raise
+        except Exception as exc:
+            raise WorkflowExecutionError(
+                str(exc),
+                node_id=workflow_func.id,
+                function_name=workflow_func.function_name,
+                subworkflow_name=stage_name,
+            ) from exc
+        return {"result": result} if result is not None else None
 
     def _run_rng(self, context: Dict[str, Any]):
         """The single run RNG that randomizes agent/resource iteration order.
@@ -819,8 +899,10 @@ class WorkflowExecutor:
         # Get the sub-workflow
         subworkflow = self.workflow.get_subworkflow(subworkflow_name)
         if not subworkflow or not subworkflow.enabled:
-            print(f"[WORKFLOW] Warning: Sub-workflow '{subworkflow_name}' not found or disabled")
-            return context
+            raise WorkflowExecutionError(
+                "Sub-workflow was not found or is disabled",
+                subworkflow_name=subworkflow_name,
+            )
 
         # Check call depth to prevent infinite recursion
         if len(self.call_stack) >= self.max_call_depth:
@@ -913,45 +995,35 @@ class WorkflowExecutor:
                 for node_type, node in nodes_to_execute:
                     if node_type == 'function':
                         if node.enabled:
-                            try:
-                                result = self._execute_function_in_subworkflow(node, context, subworkflow)
-                                if result is not None:
-                                    context.update(result)
-                            except Exception as e:
-                                print(f"[WORKFLOW] Error executing function '{node.function_name}' in sub-workflow '{subworkflow_name}': {e}")
-                                import traceback
-                                traceback.print_exc()
+                            result = self._execute_function_in_subworkflow(node, context, subworkflow)
+                            if result is not None:
+                                context.update(result)
 
                     elif node_type == 'subworkflow_call':
                         if node.enabled:
-                            try:
-                                # Merge parameters for the sub-workflow call
-                                merged_params = subworkflow.merge_parameters_for_subworkflow_call(node)
+                            # Merge parameters for the sub-workflow call
+                            merged_params = subworkflow.merge_parameters_for_subworkflow_call(node)
 
-                                for_each = getattr(node, 'for_each', None)
-                                if for_each:
-                                    # ABM entity iteration: run behaviour calls
-                                    # over their owning agents/resources.
-                                    context = self._run_for_each_entity(node, for_each, context, merged_params)
-                                else:
-                                    # Get iterations (from parameters or default)
-                                    call_iterations = merged_params.get('iterations', node.iterations)
-                                    try:
-                                        call_iterations = int(call_iterations)
-                                    except (TypeError, ValueError):
-                                        call_iterations = 1
+                            for_each = getattr(node, 'for_each', None)
+                            if for_each:
+                                # ABM entity iteration: run behaviour calls
+                                # over their owning agents/resources.
+                                context = self._run_for_each_entity(node, for_each, context, merged_params)
+                            else:
+                                # Get iterations (from parameters or default)
+                                call_iterations = merged_params.get('iterations', node.iterations)
+                                try:
+                                    call_iterations = int(call_iterations)
+                                except (TypeError, ValueError):
+                                    call_iterations = 1
 
-                                    # Recursively execute the called sub-workflow
-                                    context = self.execute_subworkflow(
-                                        node.subworkflow_name,
-                                        context,
-                                        iterations=call_iterations,
-                                        parameters=merged_params
-                                    )
-                            except Exception as e:
-                                print(f"[WORKFLOW] Error executing sub-workflow call to '{node.subworkflow_name}': {e}")
-                                import traceback
-                                traceback.print_exc()
+                                # Recursively execute the called sub-workflow
+                                context = self.execute_subworkflow(
+                                    node.subworkflow_name,
+                                    context,
+                                    iterations=call_iterations,
+                                    parameters=merged_params
+                                )
 
             # Log timing for final iteration
             if iterations > 1 and iteration_start_time is not None:
@@ -985,9 +1057,22 @@ class WorkflowExecutor:
         function_file = workflow_func.function_file or workflow_func.parameters.get('function_file')
 
         # Get function implementation
-        func = self._get_function_implementation(function_name, function_file)
+        try:
+            func = self._get_function_implementation(function_name, function_file)
+        except Exception as exc:
+            raise WorkflowExecutionError(
+                f"Function implementation could not be loaded: {exc}",
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_name=subworkflow_name,
+            ) from exc
         if func is None:
-            return None
+            raise WorkflowExecutionError(
+                "Function implementation could not be resolved",
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_name=subworkflow_name,
+            )
 
         # Get function metadata from registry
         metadata = self.registry.get(function_name)
@@ -1005,7 +1090,15 @@ class WorkflowExecutor:
                 kwargs[key] = value
 
         # Coerce string values to declared parameter types (GUI may save as strings)
-        self._coerce_parameters(kwargs, metadata)
+        try:
+            self._coerce_parameters(kwargs, metadata)
+        except (TypeError, ValueError) as exc:
+            raise WorkflowExecutionError(
+                str(exc),
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_name=subworkflow_name,
+            ) from exc
 
         # === OBSERVABILITY: Take before snapshot ===
         before_version = None
@@ -1074,20 +1167,13 @@ class WorkflowExecutor:
         status = "ok"
         error_message = None
         result = None
+        execution_error = None
         try:
             result = func(**kwargs)
-        except TypeError as e:
-            status = "error"
-            error_message = str(e)
-            print(f"[WORKFLOW] Function '{function_name}' called with wrong arguments: {e}")
-            import traceback
-            traceback.print_exc()
         except Exception as e:
             status = "error"
             error_message = str(e)
-            print(f"[WORKFLOW] Function '{function_name}' raised exception: {e}")
-            import traceback
-            traceback.print_exc()
+            execution_error = e
 
         # === OBSERVABILITY: Stop tracking and get reads/writes ===
         read_keys = []
@@ -1123,8 +1209,15 @@ class WorkflowExecutor:
                 error_message=error_message,
             )
 
-        if status == "error":
-            return None
+        if execution_error is not None:
+            if isinstance(execution_error, WorkflowExecutionError):
+                raise execution_error
+            raise WorkflowExecutionError(
+                str(execution_error),
+                node_id=node_id,
+                function_name=function_name,
+                subworkflow_name=subworkflow_name,
+            ) from execution_error
 
         return {"result": result} if result is not None else None
 
@@ -1285,15 +1378,12 @@ class WorkflowExecutor:
 
             # Execute function 'func_step_count' times
             for _ in range(func_step_count):
-                try:
-                    result = self._execute_function(workflow_func, context, stage)
-                    # Update context with results (don't replace it)
-                    if result is not None:
-                        context.update(result)
-                except Exception as e:
-                    print(f"[WORKFLOW] Error executing function '{workflow_func.function_name}': {e}")
-                    import traceback
-                    traceback.print_exc()
+                result = self._execute_function(
+                    workflow_func, context, stage, stage_name="macrostep"
+                )
+                # Update context with results (don't replace it)
+                if result is not None:
+                    context.update(result)
 
         return context
 

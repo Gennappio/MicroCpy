@@ -36,7 +36,7 @@ def run_tool(tool_path, args=None):
         print(f"[!] {tool_path.name} failed with exit code {e.returncode}")
         return False
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="OpenCellComms Master Runner - Run all OpenCellComms tools and simulations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -63,11 +63,13 @@ Examples:
         """
     )
 
-    # Main simulation - can use --sim alone, --workflow alone, or both together
-    parser.add_argument('--sim', metavar='CONFIG',
-                       help='Run with config file (default pipeline if no workflow, or config setup for workflow)')
-    parser.add_argument('--workflow', metavar='WORKFLOW_JSON',
-                       help='Run workflow (complete user control, optionally with --sim for config setup)')
+    # Simulation modes are deliberately exclusive: workflows contain their own
+    # initialization, while --sim runs the config-driven default pipeline.
+    simulation_mode = parser.add_mutually_exclusive_group()
+    simulation_mode.add_argument('--sim', metavar='CONFIG',
+                                 help='Run the config-driven default pipeline')
+    simulation_mode.add_argument('--workflow', metavar='WORKFLOW_JSON',
+                                 help='Run a self-contained workflow')
     parser.add_argument('--entry-subworkflow', metavar='SUBWORKFLOW_NAME', default='main',
                        help='Entry point subworkflow for v2.0 workflows (default: main)')
     parser.add_argument('--gui-results-dir', metavar='DIR',
@@ -109,12 +111,11 @@ Examples:
     parser.add_argument('--statistics', action='store_true',
                        help='Generate population statistics plots')
 
-    args = parser.parse_args()
-
-    # Check if no arguments provided
-    if not any(vars(args).values()):
+    raw_args = sys.argv[1:] if argv is None else list(argv)
+    if not raw_args:
         parser.print_help()
-        return
+        return 0
+    args = parser.parse_args(raw_args)
 
     # Get the directory where this script is located
     script_dir = Path(__file__).parent
@@ -123,16 +124,13 @@ Examples:
     success_count = 0
     total_count = 0
 
-    # Main simulation - three modes: --sim only, --workflow only, or both together
+    # Main simulation: config-only or workflow-only.
     if args.sim or args.workflow:
         total_count += 1
         run_sim_path = script_dir / "run_sim.py" if (script_dir / "run_sim.py").exists() else tools_dir / "run_sim.py"
         sim_args = []
 
-        if args.sim and args.workflow:
-            # Both: workflow controls execution, config provides setup
-            sim_args = ['--sim', args.sim, '--workflow', args.workflow]
-        elif args.sim:
+        if args.sim:
             # Config only: default pipeline mode
             sim_args = ['--sim', args.sim]
         else:
@@ -183,7 +181,7 @@ Examples:
         if not args.cells_dir:
             print("[!] Error: --cells-dir is required when using --plot-csv")
             print("    Specify the directory containing CSV cell state files")
-            return
+            return 2
 
         # Build plotting arguments
         plot_args = [
@@ -215,8 +213,11 @@ Examples:
     # Summary
     if total_count > 0:
         print(f"\n[DONE] Completed {success_count}/{total_count} tasks")
+        return 0 if success_count == total_count else 1
     else:
         print("\n[INFO] No tasks were run")
+        parser.print_help()
+        return 2
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

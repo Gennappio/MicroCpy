@@ -10,7 +10,7 @@ This module provides:
 
 from .schema import WorkflowDefinition, WorkflowStage, WorkflowFunction
 from .registry import FunctionRegistry, get_default_registry
-from .executor import WorkflowExecutor
+from .executor import WorkflowExecutionError, WorkflowExecutor
 from .loader import WorkflowLoader
 
 __all__ = [
@@ -20,6 +20,6 @@ __all__ = [
     'FunctionRegistry',
     'get_default_registry',
     'WorkflowExecutor',
+    'WorkflowExecutionError',
     'WorkflowLoader',
 ]
-
