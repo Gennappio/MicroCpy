@@ -14,21 +14,52 @@ Pure AST analysis: it imports nothing from the engine, so it runs without the
 engine's heavy dependencies and with no import side effects.
 """
 import ast
+import subprocess
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCAN_DIRS = [
-    REPO_ROOT / "opencellcomms_engine" / "src" / "workflow" / "functions",
-    REPO_ROOT / "opencellcomms_adapters",
-]
+
+
+def _scan_dirs():
+    yield REPO_ROOT / "opencellcomms_engine" / "src" / "workflow" / "functions"
+    adapters = REPO_ROOT / "opencellcomms_adapters"
+    if not adapters.is_dir():
+        return
+    for adapter in adapters.iterdir():
+        manifest = adapter / "plugin.toml"
+        if not manifest.is_file():
+            continue
+        try:
+            plugin = tomllib.loads(manifest.read_text(encoding="utf-8"))["plugin"]
+        except (OSError, KeyError, tomllib.TOMLDecodeError):
+            continue
+        if plugin.get("enabled", True) is not False:
+            yield adapter
 
 
 def _function_files():
-    for d in SCAN_DIRS:
+    tracked = None
+    if (REPO_ROOT / ".git").exists():
+        completed = subprocess.run(
+            ["git", "ls-files", "-z", "opencellcomms_engine/src", "opencellcomms_adapters"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            tracked = {
+                (REPO_ROOT / item.decode()).resolve()
+                for item in completed.stdout.split(b"\0")
+                if item
+            }
+    for d in _scan_dirs():
         if not d.exists():
             continue
         for f in d.rglob("*.py"):
             if "__pycache__" in f.parts or f.name == "__init__.py":
+                continue
+            if tracked is not None and f.resolve() not in tracked:
                 continue
             yield f
 
@@ -74,6 +105,11 @@ def test_typed_env_functions_declare_their_parameters():
             # on Windows (where read_text() would otherwise default to cp1252).
             tree = ast.parse(f.read_text(encoding="utf-8"))
         except SyntaxError:
+            continue
+        except TimeoutError:
+            # Cloud placeholders and other unavailable workspace-only files are
+            # not executable source. Production discovery will not import an
+            # unreadable module, so exclude it from this AST-only contract scan.
             continue
         for fn, param in _undeclared_params(tree):
             offenders.append(

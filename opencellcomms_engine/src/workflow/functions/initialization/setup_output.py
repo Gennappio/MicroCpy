@@ -51,33 +51,35 @@ def setup_output(
     Returns:
         True if successful
     """
-    print(f"[WORKFLOW] Setting up output configuration")
-    
-    try:
-        config: Optional[IConfig] = context.get('config')
-        
-        if not config:
-            print("[ERROR] Config must be set up before output")
-            return False
-        
-        # Store output configuration
-        config.output_save_data_interval = save_data_interval
-        config.output_save_plots_interval = save_plots_interval
-        config.output_save_final_plots = save_final_plots
-        config.output_save_initial_plots = save_initial_plots
-        config.output_status_print_interval = status_print_interval
-        config.output_save_cellstate_interval = save_cellstate_interval
-        
-        print(f"   [+] Save data interval: {save_data_interval}")
-        print(f"   [+] Save plots interval: {save_plots_interval}")
-        print(f"   [+] Save final plots: {save_final_plots}")
-        print(f"   [+] Save initial plots: {save_initial_plots}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] Failed to setup output: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    print("[WORKFLOW] Setting up output configuration")
 
+    config: Optional[IConfig] = context.get('config')
+    if config is None:
+        raise RuntimeError("Config must be set up before output")
+    if not hasattr(config, 'output') or config.output is None:
+        raise RuntimeError("Config has no output configuration")
+
+    positive_intervals = {
+        'save_data_interval': save_data_interval,
+        'save_plots_interval': save_plots_interval,
+        'status_print_interval': status_print_interval,
+    }
+    for name, value in positive_intervals.items():
+        if int(value) <= 0:
+            raise ValueError(f"{name} must be greater than zero")
+    if int(save_cellstate_interval) < 0:
+        raise ValueError("save_cellstate_interval must be zero or greater")
+
+    output = config.output
+    output.save_data_interval = int(save_data_interval)
+    output.save_plots_interval = int(save_plots_interval)
+    output.save_final_plots = bool(save_final_plots)
+    output.save_initial_plots = bool(save_initial_plots)
+    output.status_print_interval = int(status_print_interval)
+    output.save_cellstate_interval = int(save_cellstate_interval)
+
+    print(f"   [+] Save data interval: {output.save_data_interval}")
+    print(f"   [+] Save plots interval: {output.save_plots_interval}")
+    print(f"   [+] Save final plots: {output.save_final_plots}")
+    print(f"   [+] Save initial plots: {output.save_initial_plots}")
+    return True

@@ -267,7 +267,7 @@ class BooleanNetwork(IGeneNetwork):
 
     def _load_from_config(self, gene_network_config):
         """Load network from configuration object"""
-        from config.config import GeneNetworkConfig, GeneNodeConfig
+        from src.config.config import GeneNetworkConfig, GeneNodeConfig
 
         # Clear existing nodes
         self.nodes = {}

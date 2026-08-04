@@ -9,7 +9,7 @@ It is extracted from tools/vtk_export.py to avoid dynamic sys.path imports and
 keep reusable loader functionality under src/ for clean package imports.
 """
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Sequence
 import numpy as np
 
 class VTKDomainLoader:
@@ -18,6 +18,105 @@ class VTKDomainLoader:
     def __init__(self):
         """Initialize VTK domain loader"""
         pass
+
+    def save_complete_domain(
+        self,
+        file_path: str,
+        positions: Sequence[Sequence[float]],
+        gene_states: Sequence[Dict[str, bool]],
+        phenotypes: Sequence[str],
+        metabolism: Sequence[float],
+        gene_nodes: Sequence[str],
+        metadata: Dict[str, Any],
+    ) -> None:
+        """Write the enhanced legacy-VTK format consumed by this loader.
+
+        Each biological cell is represented as one VTK hexahedron. Logical
+        positions are converted to physical metres with the configured cell
+        size, matching ``load_complete_domain``'s inverse conversion.
+        """
+        count = len(positions)
+        if not (
+            len(gene_states) == count
+            and len(phenotypes) == count
+            and len(metabolism) == count
+        ):
+            raise ValueError("positions, gene_states, phenotypes and metabolism must have equal lengths")
+
+        size_um = float(metadata.get('biocell_grid_size_um', 20.0))
+        if size_um <= 0:
+            raise ValueError("biocell_grid_size_um must be greater than zero")
+        size_m = size_um * 1e-6
+        half = size_m / 2.0
+
+        phenotype_types = list(dict.fromkeys(str(value) for value in phenotypes))
+        phenotype_indexes = {name: index for index, name in enumerate(phenotype_types)}
+
+        description = [
+            f"cells={count}",
+            f"size={size_um:g}um",
+            f"genes={','.join(gene_nodes)}",
+            f"phenotypes={','.join(phenotype_types)}",
+        ]
+        for key, value in metadata.items():
+            if key in {'biocell_grid_size_um', 'cell_count'}:
+                continue
+            if isinstance(value, (list, tuple)):
+                value = ','.join(str(item) for item in value)
+            description.append(f"{key}={str(value).replace(' ', '_')}")
+
+        lines = [
+            "# vtk DataFile Version 3.0",
+            "OpenCellComms complete domain | " + " ".join(description),
+            "ASCII",
+            "DATASET UNSTRUCTURED_GRID",
+            f"POINTS {count * 8} float",
+        ]
+
+        offsets = (
+            (-half, -half, -half),
+            (half, -half, -half),
+            (half, half, -half),
+            (-half, half, -half),
+            (-half, -half, half),
+            (half, -half, half),
+            (half, half, half),
+            (-half, half, half),
+        )
+        for position in positions:
+            coords = list(position)
+            if len(coords) not in (2, 3):
+                raise ValueError(f"Cell position must have 2 or 3 coordinates: {position!r}")
+            x, y = float(coords[0]) * size_m, float(coords[1]) * size_m
+            z = float(coords[2]) * size_m if len(coords) == 3 else 0.0
+            lines.extend(
+                f"{x + dx:.12g} {y + dy:.12g} {z + dz:.12g}"
+                for dx, dy, dz in offsets
+            )
+
+        lines.append(f"CELLS {count} {count * 9}")
+        for index in range(count):
+            start = index * 8
+            lines.append("8 " + " ".join(str(start + offset) for offset in range(8)))
+        lines.append(f"CELL_TYPES {count}")
+        lines.extend("12" for _ in range(count))  # VTK_HEXAHEDRON
+        lines.append(f"CELL_DATA {count}")
+
+        def add_scalar(name: str, values: Sequence[Any], vtk_type: str = "int") -> None:
+            lines.extend((f"SCALARS {name} {vtk_type} 1", "LOOKUP_TABLE default"))
+            lines.extend(str(value) for value in values)
+
+        for gene_name in gene_nodes:
+            add_scalar(
+                gene_name,
+                [int(bool(states.get(gene_name, False))) for states in gene_states],
+            )
+        add_scalar("Phenotype", [phenotype_indexes[str(value)] for value in phenotypes])
+        add_scalar("Metabolism", metabolism, "float")
+
+        target = Path(file_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def load_complete_domain(self, vtk_path: str) -> Dict:
         """
@@ -64,6 +163,10 @@ class VTKDomainLoader:
                                 metadata['biocell_grid_size_um'] = float(size_str)
                             elif key == "time":
                                 metadata['simulated_time'] = float(value)
+                            elif key == "ages":
+                                metadata['ages'] = [float(v) for v in value.split(',') if v]
+                            elif key == "generations":
+                                metadata['generations'] = [int(v) for v in value.split(',') if v]
                             elif key == "bounds":
                                 metadata['domain_bounds_um'] = value
                             else:
@@ -74,7 +177,7 @@ class VTKDomainLoader:
         points_section = False
         cell_data_section = False
         current_scalar = None
-        scalar_data: Dict[str, List[int]] = {}
+        scalar_data: Dict[str, List[float]] = {}
 
         for line in lines:
             line = line.strip()
@@ -102,8 +205,8 @@ class VTKDomainLoader:
                     positions.append(coords)
             elif cell_data_section and current_scalar and line and not line.startswith("#") and not line.startswith("SCALARS"):
                 try:
-                    value = int(line)
-                    scalar_data[current_scalar].append(value)
+                    scalar_value = float(line)
+                    scalar_data[current_scalar].append(scalar_value)
                 except ValueError:
                     pass
 
@@ -131,7 +234,7 @@ class VTKDomainLoader:
         # Parse gene states, phenotypes, and metabolism
         gene_states: Dict[int, Dict[str, bool]] = {}
         phenotypes: List[str] = []
-        metabolism: List[int] = []
+        metabolism: List[float] = []
 
         # Get phenotype mapping
         phenotype_values = scalar_data.get('Phenotype', [])
@@ -150,7 +253,7 @@ class VTKDomainLoader:
 
             # Phenotype for this cell
             if i < len(phenotype_values):
-                phenotype_idx = phenotype_values[i]
+                phenotype_idx = int(phenotype_values[i])
                 phenotype = phenotype_map.get(phenotype_idx, 'Unknown')
                 phenotypes.append(phenotype)
             else:
@@ -173,10 +276,12 @@ class VTKDomainLoader:
             'phenotype_types': phenotype_types
         }
 
+        result['ages'] = metadata.get('ages', [])
+        result['generations'] = metadata.get('generations', [])
+
         # print(f"[+] Loaded domain: {len(cell_positions)} cells")
         # print(f"    Cell size: {metadata.get('biocell_grid_size_um', 'unknown')} um")
         # print(f"    Gene nodes: {len(gene_nodes)}")
         # print(f"    Phenotypes: {len(set(phenotypes))} types")
 
         return result
-

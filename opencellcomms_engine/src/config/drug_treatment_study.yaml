@@ -91,4 +91,4 @@ thresholds:
 output_dir: "results/drug_treatment"
 plots_dir: "plots/drug_treatment"
 data_dir: "data/drug_treatment"
-custom_functions_path: "config/custom_functions.py"
+custom_functions_path: "custom_functions.py"

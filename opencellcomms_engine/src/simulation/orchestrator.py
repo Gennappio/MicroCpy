@@ -17,7 +17,7 @@ import importlib.util
 
 # Add config to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "config"))
-from config.config import TimeConfig
+from src.config.config import TimeConfig
 
 @dataclass
 class TimescaleState:

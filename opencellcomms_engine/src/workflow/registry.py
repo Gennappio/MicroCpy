@@ -137,15 +137,28 @@ def discover_adapter_names(adapters_root) -> List[str]:
     """
     Discover installed adapters (plugins) under `adapters_root`.
 
-    Returns the sorted names of every folder that has a `register.py` and a
-    Python-importable name. Folders whose names aren't valid module identifiers
-    (e.g. 'jayatilake_(legacy)', 'maboss_(legacy)') are skipped — they're kept
-    on disk for reference only. `common` is included; callers that need load
-    ordering should import it first.
+    A production plugin must have a valid Python package name, ``register.py``,
+    and a valid ``plugin.toml`` whose ``enabled`` flag is not false and whose
+    engine version constraint accepts this engine. Invalid or archived folders
+    are skipped with a diagnostic.
     """
     import keyword
+    import importlib.metadata
+    import tomllib
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    from packaging.version import InvalidVersion, Version
     from pathlib import Path
+
     root = Path(adapters_root)
+    try:
+        engine_version = importlib.metadata.version("opencellcomms")
+    except importlib.metadata.PackageNotFoundError:
+        pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+        try:
+            engine_version = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+        except (OSError, KeyError, tomllib.TOMLDecodeError):
+            engine_version = "0.0.0"
+
     names = []
     if root.is_dir():
         for child in sorted(root.iterdir()):
@@ -154,8 +167,45 @@ def discover_adapter_names(adapters_root) -> List[str]:
                 continue
             if not name.isidentifier() or keyword.iskeyword(name):
                 continue
-            if (child / 'register.py').is_file():
-                names.append(name)
+            if not (child / 'register.py').is_file():
+                continue
+            manifest_path = child / 'plugin.toml'
+            if not manifest_path.is_file():
+                print(f"[Registry] Skipping adapter '{name}': plugin.toml is required")
+                continue
+            try:
+                manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))["plugin"]
+                if not isinstance(manifest, dict):
+                    raise ValueError("[plugin] must be a table")
+                if manifest.get("enabled", True) is False:
+                    continue
+                declared_name = manifest.get("name")
+                if declared_name != name:
+                    raise ValueError(
+                        f"manifest name {declared_name!r} must match folder name {name!r}"
+                    )
+                if not manifest.get("version"):
+                    raise ValueError("plugin.version is required")
+                if not manifest.get("engine_version"):
+                    raise ValueError("plugin.engine_version is required")
+                constraint = str(manifest["engine_version"])
+                if Version(engine_version) not in SpecifierSet(constraint):
+                    print(
+                        f"[Registry] Skipping adapter '{name}': engine {engine_version} "
+                        f"does not satisfy {constraint}"
+                    )
+                    continue
+            except (
+                OSError,
+                KeyError,
+                ValueError,
+                tomllib.TOMLDecodeError,
+                InvalidSpecifier,
+                InvalidVersion,
+            ) as exc:
+                print(f"[Registry] Skipping adapter '{name}': invalid plugin.toml: {exc}")
+                continue
+            names.append(name)
     return names
 
 
@@ -193,15 +243,14 @@ def get_default_registry() -> FunctionRegistry:
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
 
-    # Auto-discover adapters (plugins). Any folder under opencellcomms_adapters/
-    # that has a `register.py` and a Python-importable name is loaded — no need
-    # to hand-maintain a list here, so a newly created plugin works on restart.
+    # Auto-discover enabled, manifested adapters. There is no hand-maintained
+    # production list, so a valid newly created plugin works on restart.
     import importlib
 
     def _load_adapter(pkg_name):
         try:
             importlib.import_module(f'opencellcomms_adapters.{pkg_name}.register')
-        except ImportError as e:
+        except Exception as e:
             print(f"[Registry] Adapter '{pkg_name}' not available: {e}")
 
     adapters_root = Path(repo_root) / 'opencellcomms_adapters'

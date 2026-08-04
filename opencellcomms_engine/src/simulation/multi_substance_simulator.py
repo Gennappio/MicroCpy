@@ -25,8 +25,8 @@ except ImportError:
     print("Warning: FiPy not available. Using simplified diffusion model.")
 
 # TODO: These config imports should be removed and passed as arguments instead
-from config.config import OpenCellCommsConfig, SubstanceConfig, ThresholdConfig
-from core.domain import MeshManager
+from src.config.config import OpenCellCommsConfig, SubstanceConfig, ThresholdConfig
+from src.core.domain import MeshManager
 # Hook system removed - using direct function calls
 
 # Global debug switch - set to True to enable detailed logging
@@ -732,5 +732,4 @@ class MultiSubstanceSimulator:
             }
         
         return stats
-
 

@@ -71,26 +71,26 @@ def save_gene_network_checkpoint(
         
         # Collect gene network states
         gene_states = []
-        for cell in population.state.cells:
+        gene_networks = context.get('gene_networks', {})
+        for cell in population.state.cells.values():
+            state = cell.state
             cell_state = {
-                "cell_id": cell.cell_id,
-                "position": list(cell.position),
+                "cell_id": state.id,
+                "position": list(state.position),
             }
             
             # Get gene network states if available
-            if hasattr(cell, 'gene_network') and cell.gene_network:
+            gene_network = gene_networks.get(state.id)
+            if gene_network is not None:
                 try:
-                    cell_state["gene_states"] = dict(cell.gene_network.get_all_states())
+                    cell_state["gene_states"] = dict(gene_network.get_all_states())
                 except Exception:
                     cell_state["gene_states"] = {}
-            elif hasattr(cell, 'gene_states'):
-                cell_state["gene_states"] = dict(cell.gene_states) if cell.gene_states else {}
             else:
-                cell_state["gene_states"] = {}
+                cell_state["gene_states"] = dict(state.gene_states)
             
             # Get phenotype if available
-            if hasattr(cell, 'phenotype'):
-                cell_state["phenotype"] = str(cell.phenotype)
+            cell_state["phenotype"] = str(state.phenotype)
             
             gene_states.append(cell_state)
         
@@ -108,9 +108,7 @@ def save_gene_network_checkpoint(
         
     except Exception as e:
         print(f"[CHECKPOINT] Error saving gene network checkpoint: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        raise
 
 
 @register_function(
@@ -183,8 +181,7 @@ def save_substance_checkpoint(
         try:
             concentrations = simulator.get_substance_concentrations()
         except Exception as e:
-            print(f"[CHECKPOINT] Failed to get concentrations: {e}")
-            return False
+            raise RuntimeError(f"Failed to get concentrations: {e}") from e
 
         saved_count = 0
         for name, field in concentrations.items():
@@ -214,9 +211,7 @@ def save_substance_checkpoint(
 
     except Exception as e:
         print(f"[CHECKPOINT] Error saving substance checkpoint: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        raise
 
 
 @register_function(
@@ -334,8 +329,7 @@ def save_checkpoint(
         csv_file = export_csv_cell_state(population, str(checkpoint_dir), step, cell_size_um)
 
         if not csv_file:
-            print(f"[CHECKPOINT] Failed to export cell state at step {step}")
-            return False
+            raise RuntimeError(f"Failed to export cell state at step {step}")
 
         print(f"[CHECKPOINT] Saved CSV checkpoint at step {step}: {csv_file}")
 
@@ -346,14 +340,10 @@ def save_checkpoint(
                 if substance_files:
                     print(f"[CHECKPOINT] Saved {len(substance_files)} substance fields at step {step}")
             except Exception as e:
-                print(f"[CHECKPOINT] Warning: Failed to save substance fields: {e}")
-                # Don't fail the whole checkpoint if substances fail
+                raise RuntimeError(f"Failed to save substance fields: {e}") from e
 
         return True
 
     except Exception as e:
         print(f"[CHECKPOINT] Error saving CSV checkpoint: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
+        raise

@@ -6,3 +6,4 @@ description = "Test plugin used during GUI development."
 author = ""
 engine_version = ">=0.0.0"
 compatible_kernels = ["*"]
+enabled = false

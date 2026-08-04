@@ -37,7 +37,12 @@ if command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2)
     print_status "Python 3 found: $PYTHON_VERSION"
 else
-    print_error "Python 3 not found. Please install Python 3.8 or higher."
+    print_error "Python 3 not found. Please install Python 3.11 or higher."
+    exit 1
+fi
+
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)'; then
+    print_error "Python 3.11 or newer is required. Found: $PYTHON_VERSION"
     exit 1
 fi
 
@@ -80,7 +85,7 @@ echo "Installing Python engine..."
 # Install the engine package
 cd opencellcomms_engine
 pip install --upgrade pip > /dev/null 2>&1
-pip install -e . > /dev/null 2>&1
+pip install -e ".[diffusion,maboss]" > /dev/null 2>&1
 print_status "OpenCellComms engine installed"
 
 # Install Flask server dependencies (anthropic powers the in-GUI coding agent)
@@ -93,7 +98,8 @@ echo ""
 echo "Installing adapter dependencies..."
 
 for req_file in opencellcomms_adapters/*/requirements.txt; do
-    if [ -f "$req_file" ]; then
+    plugin_dir=$(dirname "$req_file")
+    if [ -f "$req_file" ] && [ -f "$plugin_dir/plugin.toml" ]; then
         adapter_name=$(basename "$(dirname "$req_file")")
         echo -n "  $adapter_name adapter... "
         if pip install -r "$req_file" > /dev/null 2>&1; then
@@ -156,4 +162,3 @@ echo "  3. Open http://localhost:3000 in your browser"
 echo ""
 echo "For more information, see docs/INSTALL.md and docs/USAGE.md"
 echo ""
-

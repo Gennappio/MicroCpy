@@ -6,3 +6,4 @@ description = ""
 author = ""
 engine_version = ">=0.0.0"
 compatible_kernels = ["biophysics"]
+enabled = false

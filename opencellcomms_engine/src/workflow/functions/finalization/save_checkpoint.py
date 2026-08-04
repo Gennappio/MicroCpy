@@ -4,7 +4,7 @@ This function saves cell data to a VTK checkpoint file that can be loaded later.
 VTK format supports both 2D and 3D simulations with gene networks.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 from src.workflow.decorators import register_function
 
@@ -58,13 +58,10 @@ def save_checkpoint_vtk(
     config = context.get('config')
     gene_networks = context.get('gene_networks', {})
     
-    if not population:
-        print("[ERROR] No population in context")
-        return False
-    
-    if not config:
-        print("[ERROR] No config in context")
-        return False
+    if population is None:
+        raise RuntimeError("No population in context")
+    if config is None:
+        raise RuntimeError("No config in context")
 
     # Determine output directory
     if 'output_dir' in context:
@@ -83,101 +80,77 @@ def save_checkpoint_vtk(
 
     print(f"[WORKFLOW] Saving checkpoint to: {checkpoint_path}")
 
-    try:
-        from src.io.vtk_domain_loader import VTKDomainLoader
-        
-        # Collect cell data
-        cells = population.cells
-        if not cells:
-            print("[WARNING] No cells to save")
-            return True
-        
-        positions = []
-        phenotypes = []
-        ages = []
-        generations = []
-        gene_states_list = []
-        metabolism_list = []
-        
-        # Extract all gene node names from first cell's gene network (if available)
-        gene_nodes = []
-        if include_gene_states and gene_networks and cells:
-            first_cell_id = cells[0].id
-            if first_cell_id in gene_networks:
-                gene_network = gene_networks[first_cell_id]
-                # Get all node names from the gene network
-                if hasattr(gene_network, 'nodes'):
-                    gene_nodes = list(gene_network.nodes.keys())
-        
-        # Collect data from all cells
-        for cell in cells:
-            # Position (logical grid coordinates)
-            pos = cell.position
-            if len(pos) == 2:
-                positions.append((pos[0], pos[1], 0))
-            else:
-                positions.append(pos)
-            
-            # Phenotype
-            phenotypes.append(cell.phenotype)
-            
-            # Age and generation
-            ages.append(cell.age)
-            generations.append(cell.division_count)
-            
-            # Gene states
-            if include_gene_states and cell.id in gene_networks:
-                gene_network = gene_networks[cell.id]
-                cell_gene_states = {}
-                
-                # Extract states for all nodes
-                for gene_name in gene_nodes:
-                    if hasattr(gene_network, 'nodes') and gene_name in gene_network.nodes:
-                        node = gene_network.nodes[gene_name]
-                        cell_gene_states[gene_name] = node.state
-                    else:
-                        cell_gene_states[gene_name] = False
-                
-                gene_states_list.append(cell_gene_states)
-            else:
-                gene_states_list.append({})
-            
-            # Metabolism (placeholder - can be extended)
-            metabolism_list.append(0)
-        
-        # Prepare metadata
-        cell_size_um = getattr(config.domain, 'cell_height', 20.0)
-        if hasattr(cell_size_um, 'micrometers'):
-            cell_size_um = cell_size_um.micrometers
-        
-        metadata = {
-            'biocell_grid_size_um': float(cell_size_um),
-            'dimensions': config.domain.dimensions,
-            'ages': ','.join(str(age) for age in ages),
-            'generations': ','.join(str(gen) for gen in generations)
-        }
-        
-        # Save as VTK domain file
-        loader = VTKDomainLoader()
-        loader.save_complete_domain(
-            file_path=str(checkpoint_path),
-            positions=positions,
-            gene_states=gene_states_list,
-            phenotypes=phenotypes,
-            metabolism=metabolism_list,
-            gene_nodes=gene_nodes,
-            metadata=metadata
-        )
-        
-        print(f"[WORKFLOW] Successfully saved {len(cells)} cells to checkpoint")
-        print(f"   [+] File: {checkpoint_path}")
-        print(f"   [+] Gene networks: {'Yes' if gene_nodes else 'No'}")
-        print(f"   [+] Gene nodes: {len(gene_nodes)}")
-        
-        return True
+    from src.io.vtk_domain_loader import VTKDomainLoader
 
-    except Exception as e:
-        print(f"[ERROR] Failed to save checkpoint: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # CellPopulation owns cells through its immutable population state.
+    cells = list(population.state.cells.values())
+    if not cells:
+        print("[WARNING] No cells to save")
+        return True
+        
+    positions = []
+    phenotypes = []
+    ages = []
+    generations = []
+    gene_states_list = []
+    metabolism_list = []
+        
+    # Extract all gene node names from first cell's gene network (if available)
+    gene_nodes = []
+    if include_gene_states and gene_networks:
+        first_cell_id = cells[0].state.id
+        if first_cell_id in gene_networks:
+            gene_network = gene_networks[first_cell_id]
+            if hasattr(gene_network, 'nodes'):
+                gene_nodes = list(gene_network.nodes.keys())
+        
+    # Collect data from all cells
+    for cell in cells:
+        state = cell.state
+        positions.append(tuple(state.position))
+        phenotypes.append(state.phenotype)
+        ages.append(state.age)
+        generations.append(state.division_count)
+            
+        # Gene states
+        if include_gene_states and state.id in gene_networks:
+            gene_network = gene_networks[state.id]
+            gene_states_list.append({
+                gene_name: bool(gene_network.nodes[gene_name].current_state)
+                if hasattr(gene_network, 'nodes') and gene_name in gene_network.nodes
+                else False
+                for gene_name in gene_nodes
+            })
+        else:
+            gene_states_list.append({})
+        metabolism_list.append(state.metabolic_state.get('value', 0))
+        
+    # Prepare metadata
+    cell_size_um = getattr(config.domain, 'cell_height', 20.0)
+    if hasattr(cell_size_um, 'micrometers'):
+        cell_size_um = cell_size_um.micrometers
+        
+    metadata = {
+        'biocell_grid_size_um': float(cell_size_um),
+        'dimensions': config.domain.dimensions,
+        'ages': ages,
+        'generations': generations,
+    }
+        
+    # Save as VTK domain file
+    loader = VTKDomainLoader()
+    loader.save_complete_domain(
+        file_path=str(checkpoint_path),
+        positions=positions,
+        gene_states=gene_states_list,
+        phenotypes=phenotypes,
+        metabolism=metabolism_list,
+        gene_nodes=gene_nodes,
+        metadata=metadata,
+    )
+        
+    print(f"[WORKFLOW] Successfully saved {len(cells)} cells to checkpoint")
+    print(f"   [+] File: {checkpoint_path}")
+    print(f"   [+] Gene networks: {'Yes' if gene_nodes else 'No'}")
+    print(f"   [+] Gene nodes: {len(gene_nodes)}")
+    return True

@@ -316,7 +316,7 @@ USAGE INSTRUCTIONS:
    from interfaces.hooks import set_custom_functions_path
 
    # Load your custom functions from config folder
-   set_custom_functions_path(Path("config/custom_functions.py"))
+   set_custom_functions_path(Path("custom_functions.py"))
 
    # Run simulation - custom functions will be used automatically!
 

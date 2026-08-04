@@ -1,29 +1,10 @@
-#!/usr/bin/env python3
-"""
-Setup script for OpenCellComms
-"""
+"""Forward legacy root-level setup invocations to the engine package."""
 
-from setuptools import setup, find_packages
+import os
+import runpy
+from pathlib import Path
 
-setup(
-    name="opencellcomms",
-    version="3.0.0",
-    description="OpenCellComms - Biological Simulation Framework",
-    author="OpenCellComms Team",
-    package_dir={"": "src"},
-    packages=find_packages(where="src"),
-    python_requires=">=3.8",
-    install_requires=[
-        "numpy",
-        "matplotlib",
-        "pyyaml",
-        "scipy",
-    ],
-    extras_require={
-        "dev": [
-            "pytest",
-            "flake8",
-            "black",
-        ]
-    },
-)
+
+ENGINE_DIR = Path(__file__).resolve().parent / "opencellcomms_engine"
+os.chdir(ENGINE_DIR)
+runpy.run_path(str(ENGINE_DIR / "setup.py"), run_name="__main__")

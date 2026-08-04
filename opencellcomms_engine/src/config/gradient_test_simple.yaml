@@ -67,4 +67,4 @@ thresholds:
 output_dir: "results/gradient_test"
 plots_dir: "plots/gradient_test"
 data_dir: "data/gradient_test"
-custom_functions_path: "config/custom_functions.py" 
+custom_functions_path: "custom_functions.py"

@@ -66,4 +66,4 @@ thresholds:
 output_dir: "results/high_res_sim"
 plots_dir: "plots/high_res_sim"
 data_dir: "data/high_res_sim"
-custom_functions_path: "config/custom_functions.py"
+custom_functions_path: "custom_functions.py"

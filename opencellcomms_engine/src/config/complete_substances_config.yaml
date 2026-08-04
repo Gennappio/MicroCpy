@@ -235,4 +235,4 @@ thresholds:
 output_dir: "results/complete_substances"
 plots_dir: "plots/complete_substances"
 data_dir: "data/complete_substances"
-custom_functions_path: "config/custom_functions.py"
+custom_functions_path: "custom_functions.py"

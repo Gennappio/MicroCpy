@@ -66,4 +66,4 @@ thresholds:
 output_dir: "results/simple_sim"
 plots_dir: "plots/simple_sim"
 data_dir: "data/simple_sim"
-custom_functions_path: "config/custom_functions.py"
+custom_functions_path: "custom_functions.py"

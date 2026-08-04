@@ -14,8 +14,8 @@ try:
 except ImportError:
     FIPY_AVAILABLE = False
 from src.interfaces.base import ISubstanceSimulator
-from core.domain import MeshManager
-from config.config import SubstanceConfig
+from src.core.domain import MeshManager
+from src.config.config import SubstanceConfig
 
 @dataclass
 class SimulationState:

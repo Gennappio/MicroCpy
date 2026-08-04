@@ -7,8 +7,8 @@ try:
 except ImportError:
     FIPY_AVAILABLE = False
 
-from config.config import DomainConfig
-from core.units import Length, UnitValidator
+from src.config.config import DomainConfig
+from src.core.units import Length, UnitValidator
 from src.interfaces.base import IMeshManager
 
 class DomainError(Exception):

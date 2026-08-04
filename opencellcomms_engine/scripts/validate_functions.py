@@ -4,10 +4,9 @@ Validate all workflow functions for common issues.
 
 This script checks all registered workflow functions for:
 1. Adapter import failures (e.g., missing sys.path after refactoring)
-2. Missing compatible_kernels parameter
-3. Legacy input patterns
-4. Parameter type validity
-5. Signature-decorator parameter consistency
+2. Legacy input patterns
+3. Parameter type validity
+4. Signature-decorator parameter consistency
 
 Run this before committing new workflow functions to catch common mistakes early.
 
@@ -97,17 +96,7 @@ def validate_functions():
         # We add additional checks here for completeness
 
         # =====================================================================
-        # Check 1: missing compatible_kernels
-        # =====================================================================
-        if not hasattr(metadata, 'compatible_kernels') or metadata.compatible_kernels is None:
-            warnings.append(
-                f"⚠️  {name}: missing compatible_kernels\n"
-                f"   File: {metadata.source_file}\n"
-                f"   Fix: Add compatible_kernels=['biophysics'] to @register_function"
-            )
-
-        # =====================================================================
-        # Check 2: Using legacy pattern (inputs != ["context"])
+        # Check 1: Using legacy pattern (inputs != ["context"])
         # =====================================================================
         if metadata.inputs != ["context"] and metadata.inputs != []:
             warnings.append(
@@ -117,7 +106,7 @@ def validate_functions():
             )
 
         # =====================================================================
-        # Check 3: Parameter type validity
+        # Check 2: Parameter type validity
         # =====================================================================
         valid_types = {t.value for t in ParameterType}
         for param in metadata.parameters:
@@ -133,7 +122,7 @@ def validate_functions():
                 )
 
         # =====================================================================
-        # Check 4: Signature-decorator parameter consistency
+        # Check 3: Signature-decorator parameter consistency
         # =====================================================================
         # Find the actual function object to inspect its signature
         try:
@@ -160,7 +149,7 @@ def validate_functions():
             pass  # If we can't inspect, skip — decorator already validates at import time
 
     # =========================================================================
-    # Check 5: one file = one node (warn — legacy files intentionally bundle many)
+    # Check 4: one file = one node (warn — legacy files intentionally bundle many)
     # =========================================================================
     from collections import defaultdict
     by_file = defaultdict(list)

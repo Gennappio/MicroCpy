@@ -57,6 +57,18 @@ def validate_kernel_compatibility(
             continue
         needed = set(metadata.requires or [])
         missing = needed - provided
+        compatible_kernels = set(metadata.compatible_kernels or [])
+        explicitly_compatible = (
+            not compatible_kernels
+            or "*" in compatible_kernels
+            or kernel.kernel_id in compatible_kernels
+        )
+        if not explicitly_compatible:
+            label = func.custom_name or func.function_name
+            violations.append(
+                f"Function '{label}' declares compatible kernels "
+                f"{sorted(compatible_kernels)}, not '{kernel.kernel_id}'."
+            )
         if missing:
             label = func.custom_name or func.function_name
             violations.append(

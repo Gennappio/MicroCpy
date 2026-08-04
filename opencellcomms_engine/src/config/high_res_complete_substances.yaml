@@ -219,4 +219,4 @@ thresholds:
 output_dir: "results/high_res_complete"
 plots_dir: "plots/high_res_complete"
 data_dir: "data/high_res_complete"
-custom_functions_path: "config/custom_functions.py"
+custom_functions_path: "custom_functions.py"

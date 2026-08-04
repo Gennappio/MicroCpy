@@ -2,9 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import yaml
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from core.units import Length, Concentration
+from src.core.units import Length, Concentration
 from src.interfaces.base import IConfig
 
 @dataclass
@@ -232,8 +230,8 @@ class OpenCellCommsConfig(IConfig):
             nz=domain_data.get('nz', None),
             dimensions=domain_data.get('dimensions', 2),
             cell_height=Length(
-                domain_data['cell_height'],
-                domain_data['cell_height_unit']
+                domain_data.get('cell_height', 20.0),
+                domain_data.get('cell_height_unit', 'um')
             )
         )
         
@@ -245,22 +243,25 @@ class OpenCellCommsConfig(IConfig):
             intercellular_step=data['time']['intercellular_step']
         )
 
-        # Diffusion configuration (required)
+        diffusion_data = data.get('diffusion', {})
         diffusion = DiffusionConfig(
-            max_iterations=data['diffusion']['max_iterations'],
-            tolerance=data['diffusion']['tolerance'],
-            solver_type=data['diffusion']['solver_type'],
-            twodimensional_adjustment_coefficient=data['diffusion']['twodimensional_adjustment_coefficient']
+            max_iterations=diffusion_data.get('max_iterations', 1000),
+            tolerance=diffusion_data.get('tolerance', 1e-6),
+            solver_type=diffusion_data.get('solver_type', 'steady_state'),
+            twodimensional_adjustment_coefficient=diffusion_data.get(
+                'twodimensional_adjustment_coefficient', 1.0
+            )
         )
 
-        # Output configuration (required)
+        output_data = data.get('output', {})
         output = OutputConfig(
-            save_data_interval=data['output']['save_data_interval'],
-            save_plots_interval=data['output']['save_plots_interval'],
-            save_final_plots=data['output']['save_final_plots'],
-            save_initial_plots=data['output']['save_initial_plots'],
-            status_print_interval=data['output']['status_print_interval'],
-            save_cellstate_interval=data['output'].get('save_cellstate_interval', 0)
+            save_data_interval=output_data.get('save_data_interval', 1),
+            save_plots_interval=output_data.get('save_plots_interval', 50),
+            save_final_plots=output_data.get('save_final_plots', True),
+            save_initial_plots=output_data.get('save_initial_plots', True),
+            status_print_interval=output_data.get('status_print_interval', 10),
+            save_cellstate_interval=output_data.get('save_cellstate_interval', 0),
+            cell_size_um=output_data.get('cell_size_um', 5.0),
         )
 
         # Initial state configuration (optional)
@@ -284,11 +285,11 @@ class OpenCellCommsConfig(IConfig):
             )
 
         # Load associations (substance -> gene_input mapping)
-        associations = data['associations']
+        associations = data.get('associations', {})
 
         # Load thresholds
         thresholds = {}
-        for name, thresh_data in data['thresholds'].items():
+        for name, thresh_data in data.get('thresholds', {}).items():
             thresholds[name] = ThresholdConfig(
                 name=name,
                 threshold=thresh_data['threshold'],
@@ -300,7 +301,7 @@ class OpenCellCommsConfig(IConfig):
         if 'gene_network' in data:
             gene_net_data = data['gene_network']
             nodes = {}
-            for name, node_data in gene_net_data['nodes'].items():
+            for name, node_data in gene_net_data.get('nodes', {}).items():
                 # For nodes defined in .bnd files, inputs and logic are optional in YAML
                 inputs = node_data.get('inputs', []) if 'bnd_file' in gene_net_data else node_data['inputs']
                 logic = node_data.get('logic', '') if 'bnd_file' in gene_net_data else node_data['logic']
@@ -322,14 +323,15 @@ class OpenCellCommsConfig(IConfig):
             gene_network = GeneNetworkConfig(
                 nodes=nodes,
                 input_nodes=input_nodes,
-                output_nodes=gene_net_data['output_nodes'],
-                propagation_steps=gene_net_data['propagation_steps'],
-                bnd_file=gene_net_data['bnd_file']
+                output_nodes=gene_net_data.get('output_nodes', []),
+                propagation_steps=gene_net_data.get('propagation_steps', 3),
+                bnd_file=gene_net_data.get('bnd_file')
             )
 
         # Load environment configuration
+        environment_data = data.get('environment', {})
         environment = EnvironmentConfig(
-            ph=data['environment']['ph']
+            ph=environment_data.get('ph', 7.4)
         )
 
         # Load composite gene configurations
@@ -355,13 +357,13 @@ class OpenCellCommsConfig(IConfig):
             environment=environment,
             output=output,
             initial_state=initial_state,
-            output_dir=Path(data['output_dir']),
-            plots_dir=Path(data['plots_dir']),
-            data_dir=Path(data['data_dir']),
-            custom_functions_path=data['custom_functions_path'],
-            custom_parameters=data['custom_parameters'],
-            debug_phenotype_detailed=data['debug_phenotype_detailed'],
-            log_simulation_status=data['log_simulation_status']
+            output_dir=Path(data.get('output_dir', project_root / 'results')),
+            plots_dir=Path(data.get('plots_dir', project_root / 'plots')),
+            data_dir=Path(data.get('data_dir', project_root / 'data')),
+            custom_functions_path=data.get('custom_functions_path'),
+            custom_parameters=data.get('custom_parameters', {}),
+            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
+            log_simulation_status=data.get('log_simulation_status', False)
         )
 
     @classmethod
@@ -378,8 +380,8 @@ class OpenCellCommsConfig(IConfig):
             nz=domain_data.get('nz', None),
             dimensions=domain_data.get('dimensions', 2),
             cell_height=Length(
-                domain_data['cell_height'],
-                domain_data['cell_height_unit']
+                domain_data.get('cell_height', 20.0),
+                domain_data.get('cell_height_unit', 'um')
             )
         )
 
@@ -393,12 +395,14 @@ class OpenCellCommsConfig(IConfig):
             intercellular_step=time_data['intercellular_step']
         )
 
-        # Diffusion configuration (required)
+        diffusion_data = data.get('diffusion', {})
         diffusion = DiffusionConfig(
-            max_iterations=data['diffusion']['max_iterations'],
-            tolerance=data['diffusion']['tolerance'],
-            solver_type=data['diffusion']['solver_type'],
-            twodimensional_adjustment_coefficient=data['diffusion']['twodimensional_adjustment_coefficient']
+            max_iterations=diffusion_data.get('max_iterations', 1000),
+            tolerance=diffusion_data.get('tolerance', 1e-6),
+            solver_type=diffusion_data.get('solver_type', 'steady_state'),
+            twodimensional_adjustment_coefficient=diffusion_data.get(
+                'twodimensional_adjustment_coefficient', 1.0
+            )
         )
 
         # Substances
@@ -416,9 +420,9 @@ class OpenCellCommsConfig(IConfig):
             )
 
         # Associations and thresholds
-        associations = data['associations']
+        associations = data.get('associations', {})
         thresholds = {}
-        for name, thresh_data in data['thresholds'].items():
+        for name, thresh_data in data.get('thresholds', {}).items():
             thresholds[name] = ThresholdConfig(
                 name=name,
                 initial=thresh_data['initial'],
@@ -430,7 +434,7 @@ class OpenCellCommsConfig(IConfig):
         if 'gene_network' in data:
             gene_net_data = data['gene_network']
             nodes = {}
-            for name, node_data in gene_net_data['nodes'].items():
+            for name, node_data in gene_net_data.get('nodes', {}).items():
                 # For nodes defined in .bnd files, inputs and logic are optional in YAML
                 inputs = node_data.get('inputs', []) if 'bnd_file' in gene_net_data else node_data['inputs']
                 logic = node_data.get('logic', '') if 'bnd_file' in gene_net_data else node_data['logic']
@@ -452,19 +456,20 @@ class OpenCellCommsConfig(IConfig):
             gene_network = GeneNetworkConfig(
                 nodes=nodes,
                 input_nodes=input_nodes,
-                output_nodes=gene_net_data['output_nodes'],
-                propagation_steps=gene_net_data['propagation_steps'],
-                bnd_file=gene_net_data['bnd_file']
+                output_nodes=gene_net_data.get('output_nodes', []),
+                propagation_steps=gene_net_data.get('propagation_steps', 3),
+                bnd_file=gene_net_data.get('bnd_file')
             )
 
-        # Output configuration (required)
+        output_data = data.get('output', {})
         output = OutputConfig(
-            save_data_interval=data['output']['save_data_interval'],
-            save_plots_interval=data['output']['save_plots_interval'],
-            save_final_plots=data['output']['save_final_plots'],
-            save_initial_plots=data['output']['save_initial_plots'],
-            status_print_interval=data['output']['status_print_interval'],
-            save_cellstate_interval=data['output'].get('save_cellstate_interval', 0)
+            save_data_interval=output_data.get('save_data_interval', 1),
+            save_plots_interval=output_data.get('save_plots_interval', 50),
+            save_final_plots=output_data.get('save_final_plots', True),
+            save_initial_plots=output_data.get('save_initial_plots', True),
+            status_print_interval=output_data.get('status_print_interval', 10),
+            save_cellstate_interval=output_data.get('save_cellstate_interval', 0),
+            cell_size_um=output_data.get('cell_size_um', 5.0),
         )
 
         # Initial state configuration (optional)
@@ -485,12 +490,14 @@ class OpenCellCommsConfig(IConfig):
             gene_network_steps=data.get('gene_network_steps', gene_network.propagation_steps if gene_network else 3),
             output=output,
             initial_state=initial_state,
-            output_dir=Path(data['output_dir']),
-            plots_dir=Path(data['plots_dir']),
-            data_dir=Path(data['data_dir']),
-            custom_functions_path=data['custom_functions_path'],
-            debug_phenotype_detailed=data['debug_phenotype_detailed'],
-            log_simulation_status=data['log_simulation_status']
+            environment=EnvironmentConfig(ph=data.get('environment', {}).get('ph', 7.4)),
+            output_dir=Path(data.get('output_dir', 'results')),
+            plots_dir=Path(data.get('plots_dir', 'plots')),
+            data_dir=Path(data.get('data_dir', 'data')),
+            custom_functions_path=data.get('custom_functions_path'),
+            custom_parameters=data.get('custom_parameters', {}),
+            debug_phenotype_detailed=data.get('debug_phenotype_detailed', False),
+            log_simulation_status=data.get('log_simulation_status', False)
         )
     
     def validate(self) -> bool:

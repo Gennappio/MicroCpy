@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "opencellcomms"
 version = "2.0.0"
 description = "Multi-scale cellular simulation platform with gene networks and spatial dynamics"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "MIT"}
 authors = [
     {name = "OpenCellComms Development Team", email = "opencellcomms@example.com"},
 ]
@@ -21,14 +21,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.21.0",
     "scipy>=1.7.0",
@@ -40,6 +38,7 @@ dependencies = [
     "seaborn>=0.11.0",
     "plotly>=5.0.0",
     "bokeh>=2.4.0",
+    "packaging>=23.0",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +49,8 @@ dev = [
     "flake8>=4.0.0",
     "mypy>=0.910",
     "pre-commit>=2.20.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
 ]
 docs = [
     "sphinx>=4.0.0",
@@ -79,10 +80,10 @@ mayavi = [
 diffusion = [
     "fipy>=3.4.0",
 ]
-# Reference intracellular Boolean engine (cmaboss = the compiled MaBoSS core,
-# with the `maboss` Python wrapper). Only used by the step_maboss cross-check
-# tests, which skip when it is absent -- the engine has no runtime dependency
-# on it. cmaboss ships as pre-releases, so the floor allows 1.0.0bN.
+# Intracellular Boolean engine used by MaBoSS-capable adapters
+# (cmaboss is the compiled core and `maboss` is its Python wrapper).
+# Kept optional so adapters without this capability stay lightweight.
+# cmaboss ships as pre-releases, so the floor allows 1.0.0bN.
 maboss = [
     "maboss>=0.8.0",
     "cmaboss>=1.0.0b1",
@@ -92,9 +93,7 @@ all = [
 ]
 
 [project.scripts]
-occ_run = "opencellcomms.cli:main"
-occ_analyze = "opencellcomms.analysis:main"
-occ_plot = "opencellcomms.visualization:main"
+occ-run = "tools.run_sim:main"
 
 [project.urls]
 Homepage = "https://github.com/opencellcomms/opencellcomms"
@@ -103,17 +102,18 @@ Repository = "https://github.com/opencellcomms/opencellcomms.git"
 "Bug Tracker" = "https://github.com/opencellcomms/opencellcomms/issues"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src", "src.*", "tools", "tools.*", "scripts", "scripts.*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.yml", "*.bnd", "*.txt", "*.md"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -150,7 +150,7 @@ exclude = [
 ]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

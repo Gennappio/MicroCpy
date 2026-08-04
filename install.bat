@@ -13,13 +13,19 @@ echo.
 REM Check Python
 python --version >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [X] Python not found. Please install Python 3.8 or higher.
+    echo [X] Python not found. Please install Python 3.11 or higher.
     echo     Download from: https://www.python.org/downloads/
     pause
     exit /b 1
 )
 for /f "tokens=2" %%i in ('python --version 2^>^&1') do set PYTHON_VERSION=%%i
 echo [OK] Python found: %PYTHON_VERSION%
+python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)"
+if %ERRORLEVEL% neq 0 (
+    echo [X] Python 3.11 or newer is required. Found: %PYTHON_VERSION%
+    pause
+    exit /b 1
+)
 
 REM Check Node.js
 node --version >nul 2>&1
@@ -64,7 +70,7 @@ echo Installing Python engine...
 REM Install the engine package
 cd opencellcomms_engine
 pip install --upgrade pip >nul 2>&1
-pip install -e . >nul 2>&1
+pip install -e ".[diffusion,maboss]" >nul 2>&1
 echo [OK] OpenCellComms engine installed
 
 REM Install Flask server dependencies (anthropic powers the in-GUI coding agent)
@@ -77,7 +83,7 @@ echo.
 echo Installing adapter dependencies...
 
 for /d %%D in (opencellcomms_adapters\*) do (
-    if exist "%%D\requirements.txt" (
+    if exist "%%D\plugin.toml" if exist "%%D\requirements.txt" (
         echo   %%~nxD adapter...
         pip install -r "%%D\requirements.txt" >nul 2>&1
         if errorlevel 1 (
