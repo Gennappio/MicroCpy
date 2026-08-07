@@ -5,7 +5,8 @@ A deliberately simple, model-agnostic plotter: it draws each resource field as a
 heatmap and overlays agent positions colored by kind. It works for any tile-grid
 ABM (not just biology). Drop it wherever you want a picture:
 - on the World/Initialization canvas → an initial-conditions snapshot,
-- in the Scheduler loop → one frame per step (an animation series),
+- in the Scheduler loop → one frame every ``plot_interval`` steps (an animation
+  series),
 - in Processing/finalization → a final snapshot.
 
 It is an ordinary node: removable, replaceable, and enable/disable like any other.
@@ -102,6 +103,7 @@ def _draw_agents(ax, world, population) -> None:
         {"name": "show_resources", "type": "BOOL", "description": "Draw resource fields as a heatmap", "default": True},
         {"name": "show_agents", "type": "BOOL", "description": "Draw agent positions", "default": True},
         {"name": "show_world", "type": "BOOL", "description": "Draw the computational world/grid", "default": True},
+        {"name": "plot_interval", "type": "INT", "description": "Plot every N steps when run inside the scheduler loop (1 = every step)", "default": 1},
     ],
     inputs=["context"],
     outputs=[],
@@ -116,8 +118,17 @@ def plot_world(
     show_resources: bool = True,
     show_agents: bool = True,
     show_world: bool = True,
+    plot_interval: int = 1,
     **kwargs,
 ) -> bool:
+    # Inside the scheduler loop the executor exposes loop_iteration (1-based);
+    # env.step (clock-backed) covers init/finalization canvases. loop_iteration
+    # has no typed accessor (same idiom as generate_iteration_plots).
+    step = int(env.raw_context.get("loop_iteration") or env.step)
+    plot_interval = int(plot_interval)
+    if plot_interval > 1 and step % plot_interval != 0:
+        return True  # not a plotting step
+
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -156,7 +167,6 @@ def plot_world(
             lower, upper = world.bounds()
             ax.set_xlim(lower[0], upper[0])
             ax.set_ylim(lower[1], upper[1])
-    step = env.step
     ax.set_title(f"{prefix} — step {step}" + (f" · {chosen.name}" if chosen else ""))
 
     out_dir = env.plots_dir
