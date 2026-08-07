@@ -29,7 +29,8 @@
       "world": {
         "subworkflow": "__world__",
         "behavior_subworkflows": [
-          "world_step"
+          "world_step",
+          "live_snapshot"
         ]
       },
       "init_sequence": {
@@ -550,13 +551,28 @@
           },
           "description": "Commit pending intents and print world census.",
           "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-live-snapshot",
+          "type": "subworkflow_call",
+          "subworkflow_name": "live_snapshot",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "Plot a live world snapshot every N steps.",
+          "parameter_nodes": []
         }
       ],
       "parameters": [],
       "execution_order": [
         "sched-call-forager-step",
         "sched-call-sugar-growback",
-        "sched-call-world-step"
+        "sched-call-world-step",
+        "sched-call-live-snapshot"
       ],
       "input_parameters": []
     },
@@ -824,6 +840,82 @@
       "parameters": [],
       "execution_order": [
         "plot-final-world"
+      ],
+      "input_parameters": [],
+      "contract": {
+        "reads": [
+          "agents",
+          "resources",
+          "world"
+        ],
+        "writes": [],
+        "emits": []
+      }
+    },
+    "live_snapshot": {
+      "description": "Reporting behavior: plot the sugar field and forager positions every N steps during the run.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-live_snapshot",
+        "type": "initNode",
+        "label": "LIVE SNAPSHOT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "plot-live-world",
+          "function_name": "plot_world",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "live_sugarscape",
+            "show_resources": true,
+            "show_agents": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 180
+          },
+          "description": "Plot the sugar field and forager positions for the current step.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "live-snapshot-plot-interval"
+          ],
+          "contract": {
+            "reads": [
+              "agents",
+              "resources",
+              "world"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "live-snapshot-plot-interval",
+          "type": "parameterNode",
+          "label": "Plot Frequency (steps)",
+          "parameters": {
+            "plot_interval": 5
+          },
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "plot-live-world"
       ],
       "input_parameters": [],
       "contract": {

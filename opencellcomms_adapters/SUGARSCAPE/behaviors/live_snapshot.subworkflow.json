@@ -1,0 +1,99 @@
+{
+  "format": "subworkflow",
+  "version": "1.0",
+  "name": "live_snapshot",
+  "kind": "world_behavior",
+  "description": "Reporting behavior: plot the sugar field and forager positions every N steps during the run.",
+  "exported_from": "Sugarscape",
+  "subworkflow": {
+    "description": "Reporting behavior: plot the sugar field and forager positions every N steps during the run.",
+    "enabled": true,
+    "deletable": true,
+    "controller": {
+      "id": "controller-live_snapshot",
+      "type": "initNode",
+      "label": "LIVE SNAPSHOT",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "number_of_steps": 1
+    },
+    "functions": [
+      {
+        "id": "plot-live-world",
+        "function_name": "plot_world",
+        "function_file": "",
+        "parameters": {
+          "resource": "sugar",
+          "prefix": "live_sugarscape",
+          "show_resources": true,
+          "show_agents": true
+        },
+        "enabled": true,
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "description": "Plot the sugar field and forager positions for the current step.",
+        "custom_name": "",
+        "step_count": 1,
+        "parameter_nodes": [
+          "live-snapshot-plot-interval"
+        ],
+        "contract": {
+          "reads": [
+            "agents",
+            "resources",
+            "world"
+          ],
+          "writes": [],
+          "emits": []
+        }
+      }
+    ],
+    "subworkflow_calls": [],
+    "parameters": [
+      {
+        "id": "live-snapshot-plot-interval",
+        "type": "parameterNode",
+        "label": "Plot Frequency (steps)",
+        "parameters": {
+          "plot_interval": 5
+        },
+        "position": {
+          "x": 100,
+          "y": 300
+        }
+      }
+    ],
+    "execution_order": [
+      "plot-live-world"
+    ],
+    "input_parameters": [],
+    "contract": {
+      "reads": [
+        "agents",
+        "resources",
+        "world"
+      ],
+      "writes": [],
+      "emits": []
+    }
+  },
+  "dependencies": {
+    "subworkflows_referenced": [],
+    "functions_required": [
+      "plot_world"
+    ]
+  },
+  "contract": {
+    "reads": [
+      "agents",
+      "resources",
+      "world"
+    ],
+    "writes": [],
+    "emits": []
+  }
+}
