@@ -17,7 +17,7 @@ from src.biology.context import BiologicalContext
 from src.workflow.decorators import register_function
 from src.workflow.logging import log_always
 
-_KIND_COLORS = ["#f59e0b", "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#ef4444"]
+_KIND_COLORS = ["#2563eb", "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#ef4444"]
 
 
 def _is_lattice(world) -> bool:
@@ -87,10 +87,6 @@ def _draw_agents(ax, world, population) -> None:
         ci = kinds.index(a.kind or "agent") % len(_KIND_COLORS)
         x, y = _position_xy(world, a.position)
         ax.plot(x, y, "o", color=_KIND_COLORS[ci], markersize=3, zorder=4)
-    for i, k in enumerate(kinds):
-        ax.plot([], [], "o", color=_KIND_COLORS[i % len(_KIND_COLORS)], label=k)
-    if kinds:
-        ax.legend(loc="upper right", fontsize=7, framealpha=0.7)
 
 
 @register_function(
@@ -145,15 +141,24 @@ def plot_world(
     if show_world:
         _draw_world(ax, world, show_grid=True, show_allowed=True)
 
-    # Resource heatmap (optional)
+    # Resource heatmap (optional), with a colorbar as its value legend. The
+    # color scale is pinned to [0, max capacity] when the resource has one, so
+    # colors keep the same meaning across the frames of a run.
     resources = domain.resources() if show_resources and domain is not None else []
     chosen = None
     if resources:
+        import numpy as np
         names = [r.name for r in resources]
         pick = resource if resource in names else names[0]
         chosen = domain.resource(pick)
+        scale_kw = {}
+        cap = getattr(chosen, "capacity", None)
+        if cap is not None:
+            scale_kw = {"vmin": 0.0, "vmax": float(np.max(cap))}
         chosen.heatmap(ax=ax, cmap="YlOrBr",
-                       extent=[0, world.nx, 0, world.ny], zorder=1)
+                       extent=[0, world.nx, 0, world.ny], zorder=1, **scale_kw)
+        fig.colorbar(ax.images[-1], ax=ax, fraction=0.046, pad=0.04,
+                     label=chosen.name)
 
     # Agents as dots, colored by kind
     if show_agents:
