@@ -8,6 +8,7 @@ to actual Python implementations and managing execution order.
 import importlib
 import importlib.util
 import inspect
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -309,8 +310,10 @@ class WorkflowExecutor:
             <project_root>/runs/<label>/<subworkflow_name>/
         The GUI passes the already-labeled base (<project_root>/runs/<label>) via
         --gui-results-dir; a pure-CLI run derives <label> from the workflow file
-        stem. Directories are created lazily by the writers themselves, so a
-        subworkflow that emits nothing leaves no folder behind.
+        stem. The run root is created eagerly and receives a workflow.json copy
+        of the executed workflow (provenance); per-subworkflow directories are
+        still created lazily by the writers themselves, so a subworkflow that
+        emits nothing leaves no folder behind.
 
         Context keys set:
             - engine_root: Absolute path to opencellcomms_engine/
@@ -346,6 +349,17 @@ class WorkflowExecutor:
             label = self._workflow_file.stem if self._workflow_file else 'default'
             label = label.replace(' ', '_').replace('/', '_').replace('\\', '_') or 'default'
             run_base = self._project_root / 'runs' / label
+
+        # Provenance: drop a copy of the executed workflow at the run root, so
+        # any run folder can be traced back to the exact configuration that
+        # produced it (for GUI runs the file already carries planner overrides).
+        if self._workflow_file and not getattr(self, '_provenance_copied', False):
+            try:
+                run_base.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(self._workflow_file, run_base / 'workflow.json')
+                self._provenance_copied = True
+            except OSError as exc:
+                print(f"[WORKFLOW] WARNING: could not copy workflow into run folder: {exc}")
 
         subworkflow_dir = run_base / subworkflow_name
 
