@@ -173,6 +173,30 @@ give the functions different names (e.g. `microc_mark_necrotic` vs
 When in doubt, **make it a plugin**. Plugins are the path designed for sharing
 and for the GUI.
 
+### There is no custom-functions hook file — all behavior is registered functions
+
+Older MicroC-2.0 builds injected model behavior through a **hook file**: a plain
+Python module (`initialize_cell_placement`, `calculate_cell_metabolism`,
+`get_cell_color`, …) loaded by path via `setup_population`'s
+`custom_functions_module` parameter and called invisibly by `Cell`/
+`CellPopulation`/plotters. **That mechanism is removed from workflow
+authoring.** A hidden module loaded by path cannot be seen or edited in the
+GUI, which breaks the platform's core promise.
+
+- `setup_population` no longer has a `custom_functions_module` parameter.
+- `scripts/validate_workflow.py` **errors** on any workflow node that sets
+  `custom_functions_module` (the pre-commit hook, the CLI runner, and the GUI's
+  Overview/Export checks all run it).
+- Everything a hook file used to do has an explicit, GUI-visible home:
+  model rules → registered plugin functions under
+  `<plugin>/functions/<role>/`; plot styling → an explicit argument from the
+  plugin's own reporting function (e.g. MicroC passes
+  `AutoPlotter(config, dir, cell_color_fn=jayatilake_cell_color)` from
+  `MicroC/functions/reporting/cell_colors.py`).
+- Archived pre-migration workflows that still carry the parameter are
+  `metadata.validation.skip`-flagged references — never copy from them, and do
+  not "fix" them by porting the hook file forward.
+
 ---
 
 ## Creating a plugin

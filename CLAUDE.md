@@ -358,6 +358,17 @@ go in the engine:
 5. **Use the template:** Copy `src/workflow/functions/_TEMPLATE.py` as a starting point.
 6. If needed see `docs/CREATING_FUNCTIONS.md`.
 
+**There is no custom-functions hook file.** The legacy mechanism (a Python
+module loaded by path via `setup_population`'s `custom_functions_module` and
+called invisibly by `Cell`/`CellPopulation`/plotters) is **removed** from
+workflow authoring: the parameter no longer exists and
+`scripts/validate_workflow.py` errors on any workflow that sets it. All model
+behavior is registered plugin functions; plot styling is passed explicitly
+(e.g. `AutoPlotter(..., cell_color_fn=...)` from the plugin's reporting
+function). Archived workflows still carrying the parameter are
+`validation.skip` references — never copy from or "fix" them
+(see `docs/PLUGINS.md`).
+
 ---
 
 ## Biologist's Guide: Writing Simulation Code
