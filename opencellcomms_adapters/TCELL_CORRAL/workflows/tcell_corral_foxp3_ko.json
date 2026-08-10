@@ -1,0 +1,861 @@
+{
+  "version": "2.0",
+  "name": "TCELL_CORRAL \u2014 FOXP3_2 knockout",
+  "description": "FOXP3_2 knockout of the Corral T-helper differentiation model: identical to tcell_corral.json except the T0 MaBoSS networks have FOXP3_2 clamped OFF for the whole run (fix_tcell_nodes \"Fixed gene nodes\" = {FOXP3_2: false}), so no cell can commit the Treg programme through FOXP3_2. Compare fate counts against the WT baseline.",
+  "kernel": "biophysics",
+  "seed": 42,
+  "metadata": {
+    "author": "TCELL_CORRAL builder",
+    "created": "2026-08-10",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "tcell",
+          "create_subworkflow": "tcell_create",
+          "behavior_subworkflows": [
+            "tcell_step"
+          ]
+        },
+        {
+          "name": "dendritic_cell",
+          "behavior_subworkflows": [
+            "dc_step"
+          ]
+        },
+        {
+          "name": "endothelial_cell",
+          "behavior_subworkflows": []
+        }
+      ],
+      "resource_kinds": [
+        {
+          "name": "CCL21",
+          "init_subworkflow": "ccl21_init",
+          "behavior_subworkflows": [
+            "ccl21_diffuse"
+          ]
+        }
+      ],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": [
+          "world_reconcile",
+          "reports"
+        ]
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "final_report"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-foxp3-ko",
+            "name": "FOXP3_2_KO",
+            "enabled": true,
+            "parameterOverrides": {}
+          }
+        ]
+      },
+      "contract_enforcement": "warn"
+    }
+  },
+  "subworkflows": {
+    "__world__": {
+      "description": "World setup: simulation, domain, population.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "w-sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {
+            "output_dir": "results"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 80
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "w-domain",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {
+            "dimensions": 2,
+            "size_x": 600.0,
+            "size_y": 600.0,
+            "nx": 30,
+            "ny": 30,
+            "cell_height": 15.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "w-pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "w-sim",
+        "w-domain",
+        "w-pop"
+      ],
+      "input_parameters": []
+    },
+    "tcell_create": {
+      "description": "tcell creation (collective, runs once): place the Corral cells from CSV, wrap them into the ABM population, build one MaBoSS network per T0 cell, and clamp any mutation nodes.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-tcell_create",
+        "type": "controller",
+        "label": "TCELL CREATE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "tc-place",
+          "function_name": "place_cells_from_csv",
+          "function_file": "",
+          "parameters": {
+            "file_path": "cells.csv"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 80
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "tc-wrap",
+          "function_name": "build_tcell_abm_population",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ti-build",
+          "function_name": "build_tcell_networks",
+          "function_file": "",
+          "parameters": {
+            "bnd_file": "tcell_corral.bnd",
+            "cfg_file": "tcell_corral.cfg",
+            "kind": "tcell"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "ti-overrides"
+          ]
+        },
+        {
+          "id": "ti-fix",
+          "function_name": "fix_tcell_nodes",
+          "function_file": "",
+          "parameters": {
+            "kind": "tcell"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "ti-fixed"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "ti-overrides",
+          "type": "dictParameterNode",
+          "label": "Up-rate overrides",
+          "entries": [],
+          "target_param": "up_rate_overrides",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "id": "ti-fixed",
+          "type": "dictParameterNode",
+          "label": "Fixed gene nodes",
+          "entries": [
+            {
+              "key": "FOXP3_2",
+              "valueType": "bool",
+              "value": false
+            }
+          ],
+          "target_param": "fixed_nodes",
+          "position": {
+            "x": 100,
+            "y": 320
+          }
+        }
+      ],
+      "execution_order": [
+        "tc-place",
+        "tc-wrap",
+        "ti-build",
+        "ti-fix"
+      ],
+      "input_parameters": []
+    },
+    "ccl21_init": {
+      "description": "CCL21 resource Setup: register the chemokine field (D, decay, secretion, uptake) on the world mesh.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-ccl21_init",
+        "type": "controller",
+        "label": "CCL21 INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "ci-setup",
+          "function_name": "setup_ccl21_field",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "ci-setup"
+      ],
+      "input_parameters": []
+    },
+    "ccl21_diffuse": {
+      "description": "CCL21 resource Step: solve steady-state CCL21 diffusion (endothelial source, Th17 uptake, decay) for this step.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-ccl21_diffuse",
+        "type": "controller",
+        "label": "CCL21 DIFFUSE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "cd-diffuse",
+          "function_name": "diffuse_ccl21",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "cd-diffuse"
+      ],
+      "input_parameters": []
+    },
+    "dc_step": {
+      "description": "Dendritic-cell Step (per agent): chemotax up CCL21 toward the T0 cluster.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-dc_step",
+        "type": "controller",
+        "label": "DC STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "dc-chemotax",
+          "function_name": "chemotax_ccl21",
+          "function_file": "",
+          "parameters": {
+            "bias": 0.8,
+            "vision": 4
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "dc-chemotax"
+      ],
+      "input_parameters": []
+    },
+    "tcell_step": {
+      "description": "T0 Step (per agent): sense DC contact, advance the MaBoSS network, commit a fate when it settles, then move at the fate's speed.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-tcell_step",
+        "type": "controller",
+        "label": "TCELL STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "ts-sense",
+          "function_name": "sense_dc_contact",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 80
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ts-step",
+          "function_name": "step_tcell_network",
+          "function_file": "",
+          "parameters": {
+            "intracellular_dt": 6.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ts-commit",
+          "function_name": "commit_tcell_fate",
+          "function_file": "",
+          "parameters": {
+            "stable_steps": 3
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "ts-motility",
+          "function_name": "differentiated_motility",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "ts-sense",
+        "ts-step",
+        "ts-commit",
+        "ts-motility"
+      ],
+      "input_parameters": []
+    },
+    "world_reconcile": {
+      "description": "World: commit queued move intents (one agent per tile).",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-world_reconcile",
+        "type": "controller",
+        "label": "RECONCILE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "wr-reconcile",
+          "function_name": "apply_reconciliation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "wr-reconcile"
+      ],
+      "input_parameters": []
+    },
+    "reports": {
+      "description": "World: DC migration progress and Treg/Th1/Th17 counts.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-reports",
+        "type": "controller",
+        "label": "REPORTS",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "rp-dc",
+          "function_name": "report_dc_progress",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "rp-fate",
+          "function_name": "record_fate_counts",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        },
+        {
+          "id": "rp-plot",
+          "function_name": "plot_ccl21_cells",
+          "function_file": "",
+          "parameters": {
+            "plot_interval": 5,
+            "minutes_per_step": 6.0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "rp-dc",
+        "rp-fate",
+        "rp-plot"
+      ],
+      "input_parameters": []
+    },
+    "final_report": {
+      "description": "Processing (post-loop): plot the committed-fate time series.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-final_report",
+        "type": "controller",
+        "label": "FINAL REPORT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fr-plot",
+          "function_name": "plot_fate_timeseries",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "fr-plot"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order: world, CCL21 resource field, then cell placement + networks + clamp.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "is-world",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "__world__",
+          "parameter_nodes": []
+        },
+        {
+          "id": "is-ccl21",
+          "type": "subworkflow_call",
+          "subworkflow_name": "ccl21_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "ccl21_init (CCL21 resource setup)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "is-tcell-create",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tcell_create",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "tcell_create (place cells, build networks, clamp; collective)",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "is-world",
+        "is-ccl21",
+        "is-tcell-create"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Per-step loop: diffuse CCL21, DC chemotaxis, T0 sense+step+commit+move, reconcile, report.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 100
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sc-diffuse",
+          "type": "subworkflow_call",
+          "subworkflow_name": "ccl21_diffuse",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "ccl21_diffuse (world)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sc-dc",
+          "type": "subworkflow_call",
+          "subworkflow_name": "dc_step",
+          "iterations": 1,
+          "for_each": {
+            "type": "agent",
+            "kind": "dendritic_cell",
+            "order": "random"
+          },
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "dc_step (per dendritic cell)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sc-tcell",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tcell_step",
+          "iterations": 1,
+          "for_each": {
+            "type": "agent",
+            "kind": "tcell",
+            "order": "random"
+          },
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "tcell_step (per T0 cell)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sc-reconcile",
+          "type": "subworkflow_call",
+          "subworkflow_name": "world_reconcile",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "world_reconcile (world)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sc-reports",
+          "type": "subworkflow_call",
+          "subworkflow_name": "reports",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 500
+          },
+          "description": "reports (world)",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "sc-diffuse",
+        "sc-dc",
+        "sc-tcell",
+        "sc-reconcile",
+        "sc-reports"
+      ],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main: initialization, the spatial loop, then post-processing.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "m-init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "m-sched",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 100,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "m-final",
+          "type": "subworkflow_call",
+          "subworkflow_name": "final_report",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Processing: final report",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "m-init",
+        "m-sched",
+        "m-final"
+      ],
+      "input_parameters": []
+    }
+  }
+}
