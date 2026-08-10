@@ -6,7 +6,11 @@
     "author": "OpenCellComms Team",
     "experiment": "Jayatilake Metabolic Symbiosis",
     "reference": "Jayatilake et al. 'A computational model of metabolic symbiosis in cancer'",
-    "created": "2025-01-10"
+    "created": "2025-01-10",
+    "validation": {
+      "skip": true,
+      "reason": "archived jayatilake legacy reference; uses the removed custom-functions hook mechanism and pre-migration structure"
+    }
   },
   "stages": {
     "initialization": {

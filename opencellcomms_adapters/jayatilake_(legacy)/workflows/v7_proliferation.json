@@ -15,11 +15,15 @@
         "analysis": "subworkflow",
         "Setup_population": "subworkflow"
       }
+    },
+    "validation": {
+      "skip": true,
+      "reason": "archived jayatilake legacy reference; uses the removed custom-functions hook mechanism and pre-migration structure"
     }
   },
   "subworkflows": {
     "main": {
-      "description": "Main composer: kernel_setup → loop × 10 → analysis",
+      "description": "Main composer: kernel_setup \u2192 loop \u00d7 10 \u2192 analysis",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -133,7 +137,10 @@
           "description": "Create NetLogo-faithful gene networks with inputs and probabilistic activation",
           "custom_name": "initialize_netlogo_gene_networks",
           "step_count": 1,
-          "parameter_nodes": ["param_input_states", "param_concentrations"]
+          "parameter_nodes": [
+            "param_input_states",
+            "param_concentrations"
+          ]
         }
       ],
       "subworkflow_calls": [
@@ -159,16 +166,56 @@
           "label": "Input States",
           "targetParam": "input_states",
           "entries": [
-            {"key": "Oxygen_supply", "valueType": "bool", "value": true},
-            {"key": "Glucose_supply", "valueType": "bool", "value": true},
-            {"key": "MCT1_stimulus", "valueType": "bool", "value": true},
-            {"key": "Proton_level", "valueType": "bool", "value": false},
-            {"key": "FGFR_stimulus", "valueType": "bool", "value": false},
-            {"key": "EGFR_stimulus", "valueType": "bool", "value": false},
-            {"key": "cMET_stimulus", "valueType": "bool", "value": false},
-            {"key": "Growth_Inhibitor", "valueType": "bool", "value": false},
-            {"key": "DNA_damage", "valueType": "bool", "value": false},
-            {"key": "TGFBR_stimulus", "valueType": "bool", "value": false}
+            {
+              "key": "Oxygen_supply",
+              "valueType": "bool",
+              "value": true
+            },
+            {
+              "key": "Glucose_supply",
+              "valueType": "bool",
+              "value": true
+            },
+            {
+              "key": "MCT1_stimulus",
+              "valueType": "bool",
+              "value": true
+            },
+            {
+              "key": "Proton_level",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "FGFR_stimulus",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "EGFR_stimulus",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "cMET_stimulus",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "Growth_Inhibitor",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "DNA_damage",
+              "valueType": "bool",
+              "value": false
+            },
+            {
+              "key": "TGFBR_stimulus",
+              "valueType": "bool",
+              "value": false
+            }
           ],
           "position": {
             "x": -50,
@@ -181,8 +228,16 @@
           "label": "Concentrations",
           "targetParam": "concentrations",
           "entries": [
-            {"key": "GLUT1I_concentration", "valueType": "float", "value": 0},
-            {"key": "MCT1I_concentration", "valueType": "float", "value": 0}
+            {
+              "key": "GLUT1I_concentration",
+              "valueType": "float",
+              "value": 0
+            },
+            {
+              "key": "MCT1I_concentration",
+              "valueType": "float",
+              "value": 0
+            }
           ],
           "position": {
             "x": -50,

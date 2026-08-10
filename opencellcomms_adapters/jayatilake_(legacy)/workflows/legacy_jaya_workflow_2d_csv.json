@@ -7,7 +7,11 @@
     "experiment": "Jayatilake Metabolic Symbiosis - 2D CSV Version",
     "reference": "Jayatilake et al. 'A computational model of metabolic symbiosis in cancer'",
     "created": "2025-11-14",
-    "notes": "Uses CSV file for 2D cell initialization instead of VTK"
+    "notes": "Uses CSV file for 2D cell initialization instead of VTK",
+    "validation": {
+      "skip": true,
+      "reason": "archived jayatilake legacy reference; uses the removed custom-functions hook mechanism and pre-migration structure"
+    }
   },
   "stages": {
     "initialization": {
@@ -523,7 +527,6 @@
         "csv_export_node"
       ]
     },
-
     "intracellular": {
       "enabled": true,
       "steps": 1,

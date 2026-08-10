@@ -15,11 +15,15 @@
         "analysis": "subworkflow",
         "Setup_population": "subworkflow"
       }
+    },
+    "validation": {
+      "skip": true,
+      "reason": "archived jayatilake legacy reference; uses the removed custom-functions hook mechanism and pre-migration structure"
     }
   },
   "subworkflows": {
     "main": {
-      "description": "Main composer: kernel_setup → loop × 10 → analysis",
+      "description": "Main composer: kernel_setup \u2192 loop \u00d7 10 \u2192 analysis",
       "enabled": true,
       "deletable": false,
       "controller": {

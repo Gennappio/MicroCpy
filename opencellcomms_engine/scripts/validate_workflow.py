@@ -24,6 +24,14 @@ scientist can actually find and edit a behaviour in the GUI:
      flat string in the GUI; use a dictParameterNode / listParameterNode wired
      via `parameter_nodes` instead.
 
+  4. custom_functions_module set at all (ERROR)
+     The legacy custom-functions hook file mechanism was removed from workflow
+     authoring: model-specific behavior belongs in registered plugin functions
+     (visible and editable in the GUI), never in a hidden module loaded by
+     path. Workflows must not set `custom_functions_module` on any node.
+     Archived pre-migration workflows that still carry it are skip-flagged
+     (`metadata.validation.skip`), not fixed.
+
 Usage:
     python scripts/validate_workflow.py <workflow.json> [<workflow.json> ...]
     python scripts/validate_workflow.py --all   # scan opencellcomms_adapters/*/workflows/*.json
@@ -270,6 +278,27 @@ def check_agent_creation_structure(gui, subworkflows, errors, warnings):
         )
 
 
+def check_no_custom_functions_module(subworkflows, errors):
+    """The legacy custom-functions hook-file mechanism was removed from
+    workflow authoring: a hidden Python module loaded by path is invisible in
+    the GUI and couples the model to files outside its canvases. Any node
+    setting `custom_functions_module` is an error - port the behavior into
+    registered plugin functions (e.g. an explicit AutoPlotter cell_color_fn,
+    a plugin division/metabolism function) instead."""
+    for sw_name, sw in subworkflows.items():
+        for fn in sw.get("functions") or []:
+            value = (fn.get("parameters") or {}).get("custom_functions_module")
+            if isinstance(value, str) and value:
+                errors.append(
+                    f"node '{fn.get('id', '?')}' ({fn.get('function_name')}) in "
+                    f"subworkflow '{sw_name}' sets custom_functions_module "
+                    f"('{value}'). The hook-file mechanism was removed: move the "
+                    f"behavior into registered plugin functions "
+                    f"(opencellcomms_adapters/<plugin>/functions/...) and delete "
+                    f"this parameter."
+                )
+
+
 def check_execution_order_complete(subworkflows, warnings):
     """Warn when a sub-workflow's execution_order is non-empty but omits an enabled
     node that exists in it. The executor runs ONLY execution_order when it is present
@@ -321,6 +350,7 @@ def check_workflow(path, registry):
     check_inlined_params(subworkflows, registry, errors, warnings)
     check_no_agent_init(gui, errors)
     check_agent_creation_structure(gui, subworkflows, errors, warnings)
+    check_no_custom_functions_module(subworkflows, errors)
     check_execution_order_complete(subworkflows, warnings)
     return errors, warnings, None
 
