@@ -36,9 +36,13 @@ plt.rcParams.update({
 class AutoPlotter:
     """Automatic plotting for OpenCellComms simulations"""
     
-    def __init__(self, config, plots_dir: Path):
+    def __init__(self, config, plots_dir: Path, cell_color_fn=None):
         self.config = config
         self.plots_dir = Path(plots_dir)
+        # Optional explicit per-cell colourer: callable(cell=, gene_states=, config=)
+        # returning "interior|border". Passed by the plugin that owns the model
+        # (e.g. MicroC's reporting functions) instead of a hidden hook module.
+        self.cell_color_fn = cell_color_fn
         self.plots_dir.mkdir(parents=True, exist_ok=True)
 
         # Create subdirectories
@@ -205,20 +209,23 @@ class AutoPlotter:
                         # Try looking up by position from the original tuple
                         cell = population.get_cell_at_position(position)
 
+                    # Explicit colourer wins; the population-attached hook module
+                    # remains only for the legacy YAML (--sim) path.
+                    color_fn = self.cell_color_fn
+                    if color_fn is None and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
+                        color_fn = population.custom_functions.get_cell_color
+
                     # DEBUG: Log why we're not getting into the color block
                     if self._plot_debug_count < 5:
-                        has_cf = hasattr(population, 'custom_functions')
-                        cf_exists = population.custom_functions if has_cf else None
-                        has_gcc = hasattr(cf_exists, 'get_cell_color') if cf_exists else False
-                        print(f"[PLOT DEBUG] cell={cell is not None}, has_custom_functions={has_cf}, cf_exists={cf_exists is not None}, has_get_cell_color={has_gcc}")
+                        print(f"[PLOT DEBUG] cell={cell is not None}, has_color_fn={color_fn is not None}, explicit={self.cell_color_fn is not None}")
                         if cell:
                             print(f"[PLOT DEBUG] Cell position={cell.state.position}, gene_states={cell.state.gene_states}")
                         self._plot_debug_count += 1
 
-                    if cell and hasattr(population, 'custom_functions') and population.custom_functions and hasattr(population.custom_functions, 'get_cell_color'):
+                    if cell and color_fn:
                         gene_states = cell.state.gene_states if hasattr(cell.state, 'gene_states') else {}
 
-                        custom_color = population.custom_functions.get_cell_color(
+                        custom_color = color_fn(
                             cell=cell,
                             gene_states=gene_states,
                             config=population.config

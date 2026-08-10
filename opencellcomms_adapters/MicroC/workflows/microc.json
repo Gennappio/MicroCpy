@@ -505,8 +505,7 @@
           "id": "envinit-Setup_population-setup_pop",
           "function_name": "setup_population",
           "parameters": {
-            "enable_gene_network": true,
-            "custom_functions_module": "../custom_functions/jayatilake_experiment_cell_functions.py"
+            "enable_gene_network": true
           },
           "position": {
             "x": 400,

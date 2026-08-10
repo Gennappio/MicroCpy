@@ -86,8 +86,10 @@ def _generate_plots_to_directory(
     if substances_to_plot:
         substance_list = [s.strip() for s in substances_to_plot.split(',') if s.strip()]
 
-    # Create plotter with the specified output directory
-    plotter = AutoPlotter(config, output_dir)
+    # Create plotter with the specified output directory and this plugin's
+    # explicit cell colourer (metabolic interior / phenotype border).
+    from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
+    plotter = AutoPlotter(config, output_dir, cell_color_fn=jayatilake_cell_color)
 
     # Generate all plots with marker and substance filter
     generated_plots = plotter.generate_all_plots(

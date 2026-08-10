@@ -24,12 +24,6 @@ from src.workflow.logging import log, log_always
             "default": True
         },
         {
-            "name": "custom_functions_module",
-            "type": "STRING",
-            "description": "Path to custom functions module",
-            "default": "src/config/custom_functions.py"
-        },
-        {
             "name": "verbose",
             "type": "BOOL",
             "description": "Enable detailed logging",
@@ -43,19 +37,22 @@ from src.workflow.logging import log, log_always
 def setup_population(
     context: Dict[str, Any],
     enable_gene_network: bool = True,
-    custom_functions_module: str = "src/config/custom_functions.py",
     verbose: Optional[bool] = None,
     **kwargs
 ) -> bool:
     """
     Setup cell population and gene network.
-    
+
+    Model-specific behavior belongs in registered plugin functions, not here:
+    the legacy `custom_functions_module` hook file was removed. A stray
+    `custom_functions_module` value from an archived workflow is absorbed by
+    **kwargs and ignored.
+
     Args:
         context: Workflow context (must contain config, mesh_manager, simulator)
         enable_gene_network: Whether to enable the gene network
-        custom_functions_module: Path to custom functions module
         **kwargs: Additional parameters
-        
+
     Returns:
         True if successful
     """
@@ -71,60 +68,6 @@ def setup_population(
         if not config or not mesh_manager:
             print("[ERROR] Config and mesh_manager must be set up before population")
             return False
-
-        # Store custom functions path in config and context
-        from pathlib import Path
-
-        # === CLEAN ARCHITECTURE: Use context['resolve_path'] if available ===
-        if 'resolve_path' in context:
-            resolve_path = context['resolve_path']
-            custom_functions_path = resolve_path(custom_functions_module)
-            if not custom_functions_path.exists():
-                print(f"   [WARNING] Custom functions file not found: {custom_functions_module}")
-        else:
-            # Fallback to local resolution for legacy contexts
-            custom_functions_path = Path(custom_functions_module)
-
-            # If path is relative, try multiple resolution strategies
-            if not custom_functions_path.is_absolute() and not custom_functions_path.exists():
-                resolved = False
-                project_root = Path(__file__).parent.parent.parent.parent.parent
-
-                # Strategy 1: Relative to workflow file directory
-                workflow_file = context.get('workflow_file')
-                if workflow_file:
-                    workflow_dir = Path(workflow_file).parent
-                    resolved_path = workflow_dir / custom_functions_module
-                    if resolved_path.exists():
-                        custom_functions_path = resolved_path
-                        resolved = True
-
-                # Strategy 2: Relative to project root directory
-                if not resolved:
-                    resolved_path = project_root / custom_functions_module
-                    if resolved_path.exists():
-                        custom_functions_path = resolved_path
-                        resolved = True
-
-                # Strategy 3: Search in tests/ directory and subdirectories
-                if not resolved:
-                    tests_dir = project_root / "tests"
-                    if tests_dir.exists():
-                        for found_path in tests_dir.rglob(custom_functions_module):
-                            if found_path.is_file():
-                                custom_functions_path = found_path
-                                resolved = True
-                                break
-
-                if not resolved:
-                    print(f"   [WARNING] Custom functions file not found at any location")
-
-        # Verify the path exists
-        if not custom_functions_path.exists():
-            print(f"   [ERROR] Custom functions file does not exist: {custom_functions_path}")
-
-        config.custom_functions_path = str(custom_functions_path.absolute())
-        context['custom_functions_path'] = str(custom_functions_path.absolute())
 
         # Create gene network
         if enable_gene_network:
@@ -147,12 +90,11 @@ def setup_population(
         else:
             grid_size = (biocell_nx, biocell_ny)
 
-        # Create cell population (use resolved path, not original parameter)
+        # Create cell population
         # Pass context so gene networks are stored in context['gene_networks']
         population = CellPopulation(
             grid_size=grid_size,
             gene_network=gene_network,
-            custom_functions_module=str(custom_functions_path.absolute()),
             config=config,
             context=context  # Pass context for gene network storage
         )

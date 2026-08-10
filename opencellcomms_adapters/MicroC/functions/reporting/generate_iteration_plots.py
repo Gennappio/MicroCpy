@@ -171,7 +171,8 @@ def generate_iteration_plots(
 
     # --- generate plots using the *same* AutoPlotter as FINAL plots -------
     try:
-        plotter = AutoPlotter(config, output_path)
+        from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
+        plotter = AutoPlotter(config, output_path, cell_color_fn=jayatilake_cell_color)
 
         generated_plots = plotter.generate_all_plots(
             results, simulator, population,
