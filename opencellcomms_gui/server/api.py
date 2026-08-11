@@ -2182,6 +2182,15 @@ def get_observability_meta():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# Incremental cache for /api/observability/nodes. The GUI polls that endpoint,
+# and events.jsonl grows without bound during a run — re-parsing the whole file
+# on every poll once froze the GUI (six multi-minute requests saturated the
+# browser's 6-connections-per-host limit, starving every other /api call).
+# Instead, remember the aggregate and only parse bytes appended since last poll.
+_node_stats_cache = {'inode': None, 'offset': 0, 'stats': {}}
+_node_stats_lock = threading.Lock()
+
+
 @app.route('/api/observability/nodes', methods=['GET'])
 def get_observability_nodes():
     """Get node stats for badges (status, timing, log counts)."""
@@ -2189,54 +2198,71 @@ def get_observability_nodes():
         obs_dir = get_observability_dir()
         events_file = obs_dir / "events.jsonl"
 
-        if not events_file.exists():
-            return jsonify({'success': True, 'nodes': {}})
+        with _node_stats_lock:
+            if not events_file.exists():
+                _node_stats_cache.update(inode=None, offset=0, stats={})
+                return jsonify({'success': True, 'nodes': {}})
 
-        # Parse events and aggregate by node
-        node_stats = {}
+            st = events_file.stat()
+            if (
+                _node_stats_cache['inode'] != st.st_ino
+                or st.st_size < _node_stats_cache['offset']
+            ):
+                # New or truncated file: start aggregation over
+                _node_stats_cache.update(inode=st.st_ino, offset=0, stats={})
 
-        with open(events_file, 'r') as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                try:
-                    event = json.loads(line)
-                    node_id = event.get('nodeId')
-                    if not node_id:
+            node_stats = _node_stats_cache['stats']
+
+            with open(events_file, 'rb') as f:
+                f.seek(_node_stats_cache['offset'])
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    if not line.endswith(b'\n'):
+                        # Partial trailing line (writer mid-append): retry next poll
+                        break
+                    _node_stats_cache['offset'] = f.tell()
+                    if not line.strip():
+                        continue
+                    try:
+                        event = json.loads(line)
+                        node_id = event.get('nodeId')
+                        if not node_id:
+                            continue
+
+                        if node_id not in node_stats:
+                            node_stats[node_id] = {
+                                'status': 'idle',
+                                'lastStart': None,
+                                'lastEnd': None,
+                                'lastDurationMs': None,
+                                'logCounts': {'info': 0, 'warn': 0, 'error': 0},
+                                'writes': 0,
+                            }
+
+                        stats = node_stats[node_id]
+                        event_type = event.get('event')
+
+                        if event_type == 'node_start':
+                            stats['lastStart'] = event.get('ts')
+                            stats['status'] = 'running'
+                        elif event_type == 'node_end':
+                            stats['lastEnd'] = event.get('ts')
+                            payload = event.get('payload', {})
+                            stats['lastDurationMs'] = payload.get('durationMs')
+                            stats['status'] = payload.get('status', 'ok')
+                            stats['writes'] = len(payload.get('writtenKeys', []))
+                        elif event_type == 'log':
+                            level = event.get('level', 'INFO').lower()
+                            if level in stats['logCounts']:
+                                stats['logCounts'][level] += 1
+                            elif level == 'warning':
+                                stats['logCounts']['warn'] += 1
+                    except json.JSONDecodeError:
                         continue
 
-                    if node_id not in node_stats:
-                        node_stats[node_id] = {
-                            'status': 'idle',
-                            'lastStart': None,
-                            'lastEnd': None,
-                            'lastDurationMs': None,
-                            'logCounts': {'info': 0, 'warn': 0, 'error': 0},
-                            'writes': 0,
-                        }
-
-                    stats = node_stats[node_id]
-                    event_type = event.get('event')
-
-                    if event_type == 'node_start':
-                        stats['lastStart'] = event.get('ts')
-                        stats['status'] = 'running'
-                    elif event_type == 'node_end':
-                        stats['lastEnd'] = event.get('ts')
-                        payload = event.get('payload', {})
-                        stats['lastDurationMs'] = payload.get('durationMs')
-                        stats['status'] = payload.get('status', 'ok')
-                        stats['writes'] = len(payload.get('writtenKeys', []))
-                    elif event_type == 'log':
-                        level = event.get('level', 'INFO').lower()
-                        if level in stats['logCounts']:
-                            stats['logCounts'][level] += 1
-                        elif level == 'warning':
-                            stats['logCounts']['warn'] += 1
-                except json.JSONDecodeError:
-                    continue
-
-        return jsonify({'success': True, 'nodes': node_stats})
+            return jsonify({'success': True, 'nodes': node_stats})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
