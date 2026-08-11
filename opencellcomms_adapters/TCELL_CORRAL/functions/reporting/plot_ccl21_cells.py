@@ -88,6 +88,25 @@ def plot_ccl21_cells(env: BiologicalContext, plot_interval: int = 5,
                             linewidth=0.3, zorder=3))
         n += 1
 
+    # Legend for the cell colors (kinds + committed fates), kept in sync with
+    # the color tables above. Lower right is empty in this model's frames.
+    from matplotlib.lines import Line2D
+    legend_entries = [
+        ("T0 (naive)", "grey"),
+        ("Treg", _FATE_COLORS["Treg"]),
+        ("Th1", _FATE_COLORS["Th1"]),
+        ("Th17", _FATE_COLORS["Th17"]),
+        ("Dendritic", _KIND_COLORS["dendritic_cell"]),
+        ("Endothelial", _KIND_COLORS["endothelial_cell"]),
+    ]
+    handles = [
+        Line2D([], [], marker="o", linestyle="", markersize=7,
+               markerfacecolor=color, markeredgecolor="black", label=label)
+        for label, color in legend_entries
+    ]
+    ax.legend(handles=handles, loc="lower right", fontsize=8, framealpha=0.9,
+              title="Cells", title_fontsize=8)
+
     total_min = step * minutes_per_step
     d, h, m = int(total_min // 1440), int((total_min % 1440) // 60), int(total_min % 60)
     ax.set_title(f"{d} days, {h} hrs, {m} mins ({n} agents)")
