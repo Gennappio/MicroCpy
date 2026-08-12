@@ -27,6 +27,8 @@ import opencellcomms_adapters.MicroC.functions.fate.mark_necrotic_cells  # noqa:
 import opencellcomms_adapters.MicroC.functions.fate.mark_apoptotic_cells  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.fate.mark_growth_arrest_cells  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells_gated  # noqa: F401,E501
+import opencellcomms_adapters.MicroC.functions.fate.advance_cell_age  # noqa: F401
 
 # Reporting plots
 import opencellcomms_adapters.MicroC.functions.reporting.generate_iteration_plots  # noqa: F401
