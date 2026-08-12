@@ -10,6 +10,11 @@ function ResultsExplorer() {
   const [error, setError] = useState('');
   const [expandedResults, setExpandedResults] = useState(new Set());
   const [selectedPlot, setSelectedPlot] = useState(null);
+  // Cache-buster for plot images. Must be state bumped on explicit Refresh —
+  // an inline Date.now() in the <img> key/src re-downloads the plot on every
+  // React render, flooding the backend with connections until the browser
+  // exhausts local ports (net::ERR_ADDRESS_INVALID).
+  const [imageVersion, setImageVersion] = useState(() => Date.now());
 
   useEffect(() => {
     loadResults();
@@ -18,6 +23,7 @@ function ResultsExplorer() {
   const loadResults = async () => {
     setLoading(true);
     setError('');
+    setImageVersion(Date.now());
     try {
       const res = await fetch(`${API_BASE_URL}/api/results/list`);
       const data = await res.json();
@@ -190,10 +196,10 @@ function ResultsExplorer() {
             </div>
             <div className="viewer-content">
               <img
-                src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${Date.now()}`}
+                src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${imageVersion}`}
                 alt={selectedPlot.name}
                 className="plot-image"
-                key={`${selectedPlot.path}-${Date.now()}`}
+                key={selectedPlot.path}
               />
             </div>
           </>
