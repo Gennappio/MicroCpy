@@ -1020,13 +1020,38 @@
       },
       "functions": [
         {
+          "id": "diffusion_step-calculate_metabolism",
+          "function_name": "calculate_cell_metabolism",
+          "parameters": {
+            "verbose": false
+          },
+          "position": {
+            "x": 400,
+            "y": -60
+          },
+          "description": "MicroC metabolic model \u2014 per-cell O2/glucose consumption and lactate/proton production. The solver calls this once per coupling iteration.",
+          "custom_name": "calculate_cell_metabolism",
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
           "id": "diffusion_step-run_diffusion_coupled",
           "function_name": "run_diffusion_solver_coupled",
-          "parameters": {
-            "lactate_conversion_factor": 1,
-            "glucose_conversion_factor": 1,
-            "oxygen_conversion_factor": 1
-          },
+          "parameters": {},
           "position": {
             "x": 400,
             "y": 100
@@ -1039,7 +1064,11 @@
             "diffusion_step-param_solver_type",
             "diffusion_step-param_max_coupling_iterations",
             "diffusion_step-param_coupling_tolerance",
-            "diffusion_step-param_relaxation_factor"
+            "diffusion_step-param_relaxation_factor",
+            "diffusion_step-param_oxygen_conversion_factor",
+            "diffusion_step-param_oxygen_consumption_multiplier",
+            "diffusion_step-param_lactate_conversion_factor",
+            "diffusion_step-param_glucose_conversion_factor"
           ],
           "contract": {
             "participants": [
@@ -1135,9 +1164,54 @@
             "x": 100,
             "y": 400
           }
+        },
+        {
+          "id": "diffusion_step-param_oxygen_conversion_factor",
+          "label": "Oxygen Consumption Scale",
+          "parameters": {
+            "oxygen_conversion_factor": 1.0
+          },
+          "position": {
+            "x": -250,
+            "y": 1068
+          }
+        },
+        {
+          "id": "diffusion_step-param_oxygen_consumption_multiplier",
+          "label": "mitoATP Oxygen Multiplier",
+          "parameters": {
+            "oxygen_consumption_multiplier": 1.0
+          },
+          "position": {
+            "x": -250,
+            "y": 1206
+          }
+        },
+        {
+          "id": "diffusion_step-param_lactate_conversion_factor",
+          "label": "Lactate Production Scale",
+          "parameters": {
+            "lactate_conversion_factor": 1.0
+          },
+          "position": {
+            "x": -250,
+            "y": 1344
+          }
+        },
+        {
+          "id": "diffusion_step-param_glucose_conversion_factor",
+          "label": "Glucose Consumption Scale",
+          "parameters": {
+            "glucose_conversion_factor": 1.0
+          },
+          "position": {
+            "x": -250,
+            "y": 1482
+          }
         }
       ],
       "execution_order": [
+        "diffusion_step-calculate_metabolism",
         "diffusion_step-run_diffusion_coupled"
       ],
       "contract": {

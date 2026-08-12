@@ -94,6 +94,12 @@
                 "parameters": {
                   "file_path": "../data/initial_cells_500_center_1500.csv"
                 }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": 80
+                }
               }
             }
           },
@@ -787,7 +793,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_x",
-          "label": "Size X (\u03bcm)",
+          "label": "Size X (μm)",
           "parameters": {
             "size_x": 1500
           },
@@ -798,7 +804,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_size_y",
-          "label": "Size Y (\u03bcm)",
+          "label": "Size Y (μm)",
           "parameters": {
             "size_y": 1500
           },
@@ -831,7 +837,7 @@
         },
         {
           "id": "envinit-Setup_simulation-param_domain_cell_height",
-          "label": "Cell Height (\u03bcm)",
+          "label": "Cell Height (μm)",
           "parameters": {
             "cell_height": 20
           },
@@ -885,7 +891,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "cMET_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             },
             {
@@ -893,7 +899,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "EGFR_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             }
           ],
@@ -926,12 +932,12 @@
             {
               "key": "KL",
               "valueType": "float",
-              "value": 1.0
+              "value": 1
             },
             {
               "key": "max_atp",
               "valueType": "float",
-              "value": 30.0
+              "value": 30
             },
             {
               "key": "glyco_oxygen_ratio",
@@ -1188,6 +1194,38 @@
       },
       "functions": [
         {
+          "id": "diffusion_step-calculate_metabolism",
+          "function_name": "calculate_cell_metabolism",
+          "function_file": "",
+          "parameters": {
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": -60
+          },
+          "description": "MicroC metabolic model — per-cell O2/glucose consumption and lactate/proton production. The solver calls this once per coupling iteration.",
+          "custom_name": "calculate_cell_metabolism",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
           "id": "diffusion_step-run_diffusion_coupled",
           "function_name": "run_diffusion_solver_coupled",
           "function_file": "",
@@ -1257,7 +1295,7 @@
           "id": "diffusion_step-param_tolerance",
           "label": "Tolerance",
           "parameters": {
-            "tolerance": 1e-06
+            "tolerance": 0.000001
           },
           "position": {
             "x": -250,
@@ -1299,7 +1337,7 @@
         },
         {
           "id": "diffusion_step-param_relaxation_factor",
-          "label": "Relaxation Factor (\u03b1)",
+          "label": "Relaxation Factor (α)",
           "parameters": {
             "relaxation_factor": "0.1"
           },
@@ -1323,7 +1361,7 @@
           "id": "diffusion_step-param_oxygen_consumption_multiplier",
           "label": "mitoATP Oxygen Multiplier",
           "parameters": {
-            "oxygen_consumption_multiplier": 1.0
+            "oxygen_consumption_multiplier": 1
           },
           "position": {
             "x": -250,
@@ -1334,7 +1372,7 @@
           "id": "diffusion_step-param_lactate_conversion_factor",
           "label": "Lactate Production Scale",
           "parameters": {
-            "lactate_conversion_factor": 1.0
+            "lactate_conversion_factor": "4"
           },
           "position": {
             "x": -250,
@@ -1345,7 +1383,7 @@
           "id": "diffusion_step-param_glucose_conversion_factor",
           "label": "Glucose Consumption Scale",
           "parameters": {
-            "glucose_conversion_factor": 1.0
+            "glucose_conversion_factor": 1
           },
           "position": {
             "x": -250,
@@ -1354,6 +1392,7 @@
         }
       ],
       "execution_order": [
+        "diffusion_step-calculate_metabolism",
         "diffusion_step-run_diffusion_coupled"
       ],
       "input_parameters": []
@@ -1470,7 +1509,7 @@
             "x": 40,
             "y": 240
           },
-          "description": "Translate substance concentrations \u2192 gene input states via associations",
+          "description": "Translate substance concentrations → gene input states via associations",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [],
@@ -2034,7 +2073,12 @@
             "y": 420
           },
           "description": "fate_summary (before division, so marked phenotypes are still visible). NOT for_each: record_gene_fate_counts is a whole-population reporter whose aggregate block is guarded on env.cell is None, so a per-agent ask silently disables the CSV and the [FATE_SUMMARY] line.",
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent",
+            "kind": "tumor_cell",
+            "order": "random"
+          }
         }
       ],
       "parameters": [
@@ -2061,7 +2105,7 @@
       "input_parameters": []
     },
     "main": {
-      "description": "Synthesized main workflow (do not edit \u2014 managed by ABM structure)",
+      "description": "Synthesized main workflow (do not edit — managed by ABM structure)",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -2128,7 +2172,7 @@
       "input_parameters": []
     },
     "__init_sequence__": {
-      "description": "Initialization order \u2014 env init + agent inits",
+      "description": "Initialization order — env init + agent inits",
       "enabled": true,
       "deletable": false,
       "controller": {

@@ -285,6 +285,20 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
         glucose_conversion_factor: Multiplier for glucose consumption
         lactate_conversion_factor: Multiplier for lactate production
     """
+    # If a metabolism NODE is on the canvas it owns the model, and this built-in
+    # copy must not run instead of it. The node publishes its callable on the
+    # context when it executes; absent that key, fall through to the default
+    # below so workflows without the node behave exactly as before.
+    metabolism_fn = context.get('metabolism_fn')
+    if callable(metabolism_fn):
+        metabolism_fn(context, simulator, population, config,
+                      oxygen_conversion_factor=oxygen_conversion_factor,
+                      glucose_conversion_factor=glucose_conversion_factor,
+                      lactate_conversion_factor=lactate_conversion_factor,
+                      oxygen_consumption_multiplier=oxygen_consumption_multiplier,
+                      verbose=context.get('metabolism_fn_verbose', verbose))
+        return
+
     # Get current concentrations from simulator
     try:
         substance_concentrations = simulator.get_substance_concentrations()

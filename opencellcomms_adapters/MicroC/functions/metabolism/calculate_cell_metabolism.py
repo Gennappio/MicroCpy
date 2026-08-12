@@ -1,0 +1,194 @@
+"""
+Cell metabolism: how each cell consumes oxygen and glucose and produces lactate
+and protons, given its ATP mode and the concentrations where it sits.
+
+This is the MicroC metabolic model. It is experiment-specific biology, not
+generic ABM infrastructure, so it lives here as an editable node rather than
+inside the engine's diffusion solver. Change the equations in this file and the
+model changes; the constants are set separately by ``set_metabolism_parameters``.
+
+HOW IT IS DRIVEN
+    ``run_diffusion_solver_coupled`` needs the metabolic rates recomputed at the
+    *current* concentrations on every Picard coupling iteration -- that inner
+    recomputation is what lets Michaelis-Menten saturation pull consumption down
+    as a substance approaches zero, and it is why this cannot simply be a
+    once-per-tick node in the scheduler.
+
+    So this node does two things when it runs. It computes one pass immediately,
+    and it publishes itself on the context as the metabolism the solver should
+    call. The solver then invokes THIS function once per coupling iteration
+    instead of its own built-in copy. Placing the node on the diffusion_step
+    canvas is what activates it; remove the node and the solver falls back to
+    its internal default.
+
+WHO IS SKIPPED
+    Necrotic and growth-arrested cells do not metabolise and are left untouched.
+
+THE MODEL
+    With local concentrations at the cell's grid position, the saturation terms
+
+        mm_O2  = C_O2  / (KO2 + C_O2)
+        mm_Glc = C_Glc / (KG  + C_Glc)
+        mm_Lac = C_Lac / (KL  + C_Lac)
+
+    OXPHOS (gene mitoATP ON) -- burns oxygen, and can consume lactate:
+
+        O2  -= oxygen_vmax * mito_multiplier * mm_O2
+        Glc -= (oxygen_vmax / 6) * mm_Glc * mm_O2
+        Lac -= (oxygen_vmax * 2/6) * mm_Lac * mm_O2
+
+    Glycolysis (gene glycoATP ON) -- cheap in oxygen, produces lactate:
+
+        O2  -= oxygen_vmax * glyco_oxygen_ratio * mm_O2
+        g    = (oxygen_vmax / 6) * (max_atp / 2) * mm_Glc
+        Glc -= g
+        Lac += 3 * g
+
+    Protons, from glycolytic flux, independent of ATP mode:
+
+        H   += (oxygen_vmax * 2/6) * proton_coefficient * (max_atp / 2) * mm_Glc
+
+    Oxygen therefore obeys
+        R_O2 = oxygen_vmax * mm_O2 * (mitoATP + glyco_oxygen_ratio * glycoATP)
+
+    The three *_conversion_factor parameters on run_diffusion_solver_coupled
+    scale the results of the above.
+"""
+
+from typing import Any, Dict, Optional
+
+from src.workflow.decorators import register_function
+from src.biology.context import BiologicalContext
+
+from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import DEFAULTS
+
+# Cells in these states do not metabolise.
+_INACTIVE = ('Necrosis', 'Growth_Arrest')
+
+
+def compute_metabolism(context: Dict[str, Any], simulator, population, config,
+                       oxygen_conversion_factor: float = 1.0,
+                       glucose_conversion_factor: float = 1.0,
+                       lactate_conversion_factor: float = 1.0,
+                       oxygen_consumption_multiplier: float = 1.0,
+                       verbose: Optional[bool] = None) -> None:
+    """Recompute every cell's metabolic_state at the current concentrations.
+
+    Signature matches what run_diffusion_solver_coupled calls each coupling
+    iteration. Keep it that way if you edit this file.
+    """
+    try:
+        conc = simulator.get_substance_concentrations()
+    except Exception as exc:
+        print(f"[METABOLISM] could not read concentrations: {exc}")
+        return
+
+    p = dict(DEFAULTS)
+    p.update({k: v for k, v in (context.get('custom_parameters') or {}).items() if k in DEFAULTS})
+
+    cell_size_um = 20.0
+    if config is not None and getattr(config, 'domain', None) is not None:
+        dom = config.domain
+        gsx = dom.size_x.micrometers / dom.nx
+        gsy = dom.size_y.micrometers / dom.ny
+    else:
+        gsx = gsy = 30.0
+
+    updated, n_mito, n_glyco = {}, 0, 0
+
+    for cell_id, cell in population.state.cells.items():
+        phenotype = cell.state.phenotype
+        name = phenotype.name if hasattr(phenotype, 'name') else (str(phenotype) if phenotype else None)
+        if name in _INACTIVE:
+            updated[cell_id] = cell
+            continue
+
+        pos = cell.state.position
+        gx = int((pos[0] * cell_size_um) / gsx)
+        gy = int((pos[1] * cell_size_um) / gsy)
+        if config is not None and getattr(config, 'domain', None) is not None:
+            gx = max(0, min(config.domain.nx - 1, gx))
+            gy = max(0, min(config.domain.ny - 1, gy))
+
+        o2 = max(0.0, conc.get('Oxygen', {}).get((gx, gy), 0.0))
+        glc = max(0.0, conc.get('Glucose', {}).get((gx, gy), 0.0))
+        lac = max(0.0, conc.get('Lactate', {}).get((gx, gy), 0.0))
+
+        genes = cell.state.gene_states or {}
+        mito = bool(genes.get('mitoATP', False))
+        glyco = bool(genes.get('glycoATP', False))
+        n_mito += mito
+        n_glyco += glyco
+
+        mm_o2 = o2 / (p['KO2'] + o2) if (p['KO2'] + o2) > 0 else 0.0
+        mm_glc = glc / (p['KG'] + glc) if (p['KG'] + glc) > 0 else 0.0
+        mm_lac = lac / (p['KL'] + lac) if (p['KL'] + lac) > 0 else 0.0
+
+        vmax = p['oxygen_vmax']
+        o2_use = glc_use = lac_prod = lac_use = 0.0
+
+        if mito:
+            o2_use += vmax * oxygen_consumption_multiplier * mm_o2
+            glc_use += (vmax / 6.0) * mm_glc * mm_o2
+            lac_use += (vmax * 2.0 / 6.0) * mm_lac * mm_o2
+
+        if glyco:
+            o2_use += vmax * p['glyco_oxygen_ratio'] * mm_o2
+            g = (vmax / 6.0) * (p['max_atp'] / 2.0) * mm_glc
+            glc_use += g
+            lac_prod += g * 3.0
+
+        h_prod = (vmax * 2.0 / 6.0) * p['proton_coefficient'] * (p['max_atp'] / 2.0) * mm_glc
+
+        cell.state = cell.state.with_updates(metabolic_state={
+            'oxygen_consumption': o2_use * oxygen_conversion_factor,
+            'glucose_consumption': glc_use * glucose_conversion_factor,
+            'lactate_production': lac_prod * lactate_conversion_factor,
+            'lactate_consumption': lac_use,
+            'h_production': h_prod,
+        })
+        updated[cell_id] = cell
+
+    population.state = population.state.with_updates(cells=updated)
+
+    if verbose:
+        print(f"[METABOLISM] node: {len(updated)} cells, mitoATP={n_mito}, "
+              f"glycoATP={n_glyco}, KO2={p['KO2']}, oxygen_vmax={p['oxygen_vmax']:.2e}")
+
+
+@register_function(
+    requires=['population'],
+    display_name="Calculate Cell Metabolism",
+    description="MicroC metabolic model: per-cell oxygen/glucose consumption and "
+                "lactate/proton production from the mitoATP and glycoATP gene states, "
+                "with Michaelis-Menten saturation. Place it before the diffusion solver; "
+                "the solver then calls it once per coupling iteration.",
+    category="INTRACELLULAR",
+    parameters=[
+        {"name": "verbose", "type": "BOOL",
+         "description": "Log per-iteration cell counts and the constants in use",
+         "default": False},
+    ],
+    inputs=["context"],
+    outputs=[],
+    cloneable=True,
+    compatible_kernels=["biophysics"],
+)
+def calculate_cell_metabolism(env: BiologicalContext, verbose: bool = False, **kwargs) -> bool:
+    ctx = env.raw_context
+    # Publish this function as the metabolism the coupled solver must call each
+    # Picard iteration. The solver looks for this key and falls back to its own
+    # built-in copy when the node is absent from the canvas.
+    ctx['metabolism_fn'] = compute_metabolism
+    ctx['metabolism_fn_verbose'] = verbose
+
+    simulator = ctx.get('simulator')
+    population = env.cells.raw
+    if simulator is None or population is None:
+        # Nothing to compute yet at init time; the solver will drive it.
+        print("[METABOLISM] node registered (no simulator/population yet — "
+              "the diffusion solver will drive it)")
+        return True
+
+    compute_metabolism(ctx, simulator, population, env.config, verbose=verbose)
+    return True
