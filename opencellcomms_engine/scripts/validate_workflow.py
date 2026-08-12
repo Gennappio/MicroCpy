@@ -325,6 +325,36 @@ def check_execution_order_complete(subworkflows, warnings):
             )
 
 
+def check_loop_count_single_source(subworkflows, errors):
+    """Error when a sub-workflow call's `iterations` contradicts the loop count set on
+    the called sub-workflow's own controller.
+
+    The controller is the single source of truth -- it is the number shown and edited
+    on that sub-workflow's canvas, and the executor uses it whenever it has been set
+    (>1). `iterations` on the call is only a fallback for workflows that never set a
+    controller, which is why a controller of 1 (the unset default) is not flagged.
+    Two different numbers both claiming to be the run length is exactly the drift this
+    rule exists to stop: a hand-edited `iterations` that the canvas contradicts."""
+    for name, sw in subworkflows.items():
+        for call in sw.get("subworkflow_calls") or []:
+            target = subworkflows.get(call.get("subworkflow_name"))
+            if not target:
+                continue
+            try:
+                iterations = int(call.get("iterations", 1))
+                steps = int((target.get("controller") or {}).get("number_of_steps", 1))
+            except (TypeError, ValueError):
+                continue
+            if steps > 1 and iterations > 1 and steps != iterations:
+                errors.append(
+                    f"'{name}' calls '{call['subworkflow_name']}' with iterations="
+                    f"{iterations}, but that sub-workflow's controller says "
+                    f"number_of_steps={steps}. The controller is the single source of "
+                    f"truth and is what will run ({steps}); set iterations to match it "
+                    f"or leave iterations at 1."
+                )
+
+
 def check_workflow(path, registry):
     """Returns (errors, warnings, skip_reason) for one workflow file.
 
@@ -352,6 +382,7 @@ def check_workflow(path, registry):
     check_agent_creation_structure(gui, subworkflows, errors, warnings)
     check_no_custom_functions_module(subworkflows, errors)
     check_execution_order_complete(subworkflows, warnings)
+    check_loop_count_single_source(subworkflows, errors)
     return errors, warnings, None
 
 

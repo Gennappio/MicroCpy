@@ -1024,12 +1024,31 @@ class WorkflowExecutor:
                                 # over their owning agents/resources.
                                 context = self._run_for_each_entity(node, for_each, context, merged_params)
                             else:
-                                # Get iterations (from parameters or default)
+                                # Loop count. SINGLE SOURCE OF TRUTH: the called
+                                # sub-workflow's own controller. That is the number a
+                                # user sets on its canvas, so the canvas is what runs.
+                                # `iterations` on the call is the fallback, kept for
+                                # workflows that never set a controller (it stays 1
+                                # there, so their behaviour is unchanged).
                                 call_iterations = merged_params.get('iterations', node.iterations)
                                 try:
                                     call_iterations = int(call_iterations)
                                 except (TypeError, ValueError):
                                     call_iterations = 1
+
+                                target_sw = self.workflow.get_subworkflow(node.subworkflow_name)
+                                controller_steps = getattr(
+                                    getattr(target_sw, 'controller', None), 'number_of_steps', 1)
+                                try:
+                                    controller_steps = int(controller_steps)
+                                except (TypeError, ValueError):
+                                    controller_steps = 1
+                                if controller_steps > 1 and controller_steps != call_iterations:
+                                    print(f"[WORKFLOW] '{node.subworkflow_name}': using its "
+                                          f"controller's {controller_steps} steps "
+                                          f"(call said iterations={call_iterations})")
+                                if controller_steps > 1:
+                                    call_iterations = controller_steps
 
                                 # Recursively execute the called sub-workflow
                                 context = self.execute_subworkflow(
