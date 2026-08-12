@@ -195,6 +195,75 @@ conversion and kernel-gating and reads clearly in the GUI.
 - **Prefer DICT parameters over many individual BOOL/FLOAT parameters** in `@register_function`. A single `"type": "DICT"` is more flexible and renders as an editable table in the GUI.
 - **Design for the GUI first.** A scientist must be able to read and modify parameters visually. If it's not readable in the canvas, it's wrong.
 
+## No hidden biology: a parameter that isn't wired is a lie
+
+Two failure modes keep recurring, both of which look fine on inspection and are
+invisible until someone runs an experiment and gets a nonsense answer. Both are
+about the gap between what a value *looks like* and what the code *does with it*.
+
+### 1. Verify a parameter is CONSUMED, not just defined
+
+**Before reporting a parameter as wrong, tuning it, or telling a user to change
+it, grep for where it is READ.** A value living in a config, a substance JSON, or
+a registered `@register_function` parameter is not evidence that anything uses
+it. Declaring a parameter and consuming it are separate acts, and in this
+codebase they have drifted apart repeatedly.
+
+Real cases found in MicroC, every one of which produced confidently wrong advice
+before being traced:
+
+| looks like it controls | actually |
+|---|---|
+| `Oxygen.uptake_rate` in the substance JSON | only consumed for TGFA/FGF/HGF/GI (`_GROWTH_FACTOR_SUBSTANCES`). Cell O2 uptake uses `oxygen_vmax`. |
+| `Lactate.production_rate` in the substance JSON | dead. Lactate uses the Michaelis-Menten metabolism path. |
+| `glucose_vmax` | read into a local and logged, never used in a formula (glucose derives from `oxygen_vmax/6`). |
+| `setup_custom_parameters` node | writes `config.custom_parameters`; the metabolism reads `context['custom_parameters']`. Nothing mirrors them, so the node is inert. |
+
+The check is cheap and non-negotiable:
+
+```bash
+# where is it READ? (not where is it assigned)
+grep -rn "custom_params.get('KO2'\|\.uptake_rate\|production_rate" \
+     opencellcomms_engine/src opencellcomms_adapters --include='*.py'
+```
+
+If the only hits are the assignment and a log line, the parameter does nothing.
+Say so plainly rather than proposing a value for it. Two adjacent spellings of
+the "same" thing (`config.custom_parameters` vs `context['custom_parameters']`)
+are a specific trap — confirm they are the same object, don't assume.
+
+### 2. Biological law inside an engine helper is a defect, not an implementation detail
+
+The premise of this project is that a scientist reads the mechanism off the
+canvas. So **any computation that decides biology must be reachable as a node**:
+consumption and production laws, fate rules, growth rules, rate constants.
+
+The counter-example to learn from: the entire cell metabolism (Michaelis-Menten
+O2/glucose/lactate/proton laws plus seven rate constants) lived in
+`_recalculate_metabolism`, a private helper inside
+`run_diffusion_solver_coupled`. It was correct code — and completely invisible.
+No node, no parameters on any canvas, no way to change `KO2` or `oxygen_vmax`
+from the GUI. It is now surfaced by
+`MicroC/functions/metabolism/set_metabolism_parameters.py`, which owns the
+constants as a `dictParameterNode` and documents the equations in its docstring.
+
+When you meet this pattern, **surface it rather than describing it**:
+
+- If the numerics require the computation to stay where it is (here: metabolism
+  is recalculated once per Picard coupling iteration, so moving it to the
+  scheduler would break the Michaelis-Menten feedback), then extract the
+  **constants** into a node and write the equations in that node's docstring.
+  Behaviour is unchanged; visibility and control are gained.
+- Set the new node's defaults to the values the code already falls back to, so
+  adding it to a workflow changes no results. Then verify by running with a
+  deliberately non-default value and confirming it reaches the computation.
+- Do not accept "it matches the reference formula" as sufficient. Correct and
+  invisible is still a defect here.
+
+**The tell:** you are explaining to a user in prose where a biological constant
+lives and how to change it by editing Python. That explanation is the bug
+report — go and expose it as a node.
+
 ## Every behavior must belong to a navigable category (NO orphans)
 
 This is non-negotiable, and it is the #1 thing that breaks when a workflow JSON is
