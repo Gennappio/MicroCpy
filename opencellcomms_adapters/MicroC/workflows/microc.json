@@ -545,6 +545,31 @@
             ],
             "emits": []
           }
+        },
+        {
+          "id": "envinit-Set_metabolism-set_metabolism_parameters",
+          "function_name": "set_metabolism_parameters",
+          "position": {
+            "x": 400,
+            "y": 500
+          },
+          "description": "Metabolism model constants (Michaelis-Menten laws used by the coupled diffusion solver). Equations are documented in the node source.",
+          "custom_name": "set_metabolism_parameters",
+          "parameter_nodes": [
+            "envinit-Set_metabolism-param_metabolism"
+          ],
+          "contract": {
+            "owner": {
+              "type": "world"
+            },
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "simulation.config"
+            ],
+            "emits": []
+          }
         }
       ],
       "parameters": [
@@ -709,13 +734,33 @@
             "x": 100,
             "y": 700
           }
+        },
+        {
+          "id": "envinit-Set_metabolism-param_metabolism",
+          "type": "dictParameterNode",
+          "label": "Metabolism Parameters",
+          "entries": [
+            { "key": "oxygen_vmax", "valueType": "float", "value": 3.0e-17 },
+            { "key": "KO2", "valueType": "float", "value": 0.005 },
+            { "key": "KG", "valueType": "float", "value": 0.5 },
+            { "key": "KL", "valueType": "float", "value": 1.0 },
+            { "key": "max_atp", "valueType": "float", "value": 30.0 },
+            { "key": "glyco_oxygen_ratio", "valueType": "float", "value": 0.5 },
+            { "key": "proton_coefficient", "valueType": "float", "value": 0.001 }
+          ],
+          "target_param": "metabolism_parameters",
+          "position": {
+            "x": 100,
+            "y": 900
+          }
         }
       ],
       "execution_order": [
         "envinit-Setup_simulation-setup_sim",
         "envinit-Setup_simulation-setup_domain_node",
         "envinit-Setup_population-setup_pop",
-        "envinit-Setup_associations-setup_all_associations"
+        "envinit-Setup_associations-setup_all_associations",
+        "envinit-Set_metabolism-set_metabolism_parameters"
       ],
       "contract": {
         "owner": {

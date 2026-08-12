@@ -18,6 +18,9 @@ import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_netwo
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_single_gene  # noqa: F401,E501
 import opencellcomms_adapters.MicroC.functions.gene_network.fix_gene_nodes  # noqa: F401
 
+# Metabolism
+import opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters  # noqa: F401,E501
+
 # Fate functions
 import opencellcomms_adapters.MicroC.functions.fate.mark_necrotic_cells  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.fate.mark_apoptotic_cells  # noqa: F401
