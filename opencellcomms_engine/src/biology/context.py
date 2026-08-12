@@ -123,6 +123,11 @@ class CellHandle:
         """Snapshot of last-known gene states stored on cell.state."""
         return dict(self._cell.state.gene_states)
 
+    @property
+    def metabolic_state(self) -> Dict[str, float]:
+        """Per-cell metabolic rates written by the metabolism node."""
+        return dict(self._cell.state.metabolic_state or {})
+
     # --- Phenotype mutations -------------------------------------------------
 
     def set_phenotype(self, p: Union[Phenotype, str]) -> None:
