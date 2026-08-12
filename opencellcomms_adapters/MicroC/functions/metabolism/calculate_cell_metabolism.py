@@ -53,6 +53,35 @@ THE MODEL
 
     The three *_conversion_factor parameters on run_diffusion_solver_coupled
     scale the results of the above.
+
+ATP PRODUCTION RATE
+    With A0 = max_atp (ATP yield per glucose through OXPHOS):
+
+        R_ATP = A0 * (oxygen_vmax/6) * mm_O2 * mm_Glc   (mitoATP)
+              + A0 * (oxygen_vmax/6) * mm_Glc           (glycoATP)
+
+    The two terms are consistent with the consumption laws above. OXPHOS burns
+    (oxygen_vmax/6)*mm_Glc*mm_O2 glucose at A0 ATP per glucose; glycolysis burns
+    A0/2 times more glucose at 2 ATP per glucose, which is the same A0*vmax/6.
+
+    NOT MODELLED: lactate-fuelled OXPHOS produces no ATP here. Lactate is still
+    consumed (mm_Lac term above), it just does not feed R_ATP. The NetLogo
+    original and the legacy port do add an MCT1 ATP term; this model omits it
+    deliberately.
+
+    The saturation ceiling of a single pathway,
+
+        atp_rate_max = A0 * oxygen_vmax / 6
+
+    is stored alongside R_ATP so consumers compare against one derived number
+    instead of re-deriving it from the constants. A cell running both pathways
+    at full saturation reaches 2 * atp_rate_max. This is the derivation the
+    NetLogo source intended for `the-cell-atp-rate-max`
+    (microC_Metabolic_Symbiosis.nlogo3d:2856-2858), where the assignment is
+    commented out and the global therefore stays at 0.
+
+    R_ATP is deliberately NOT scaled by the *_conversion_factor arguments:
+    those are solver-side scalings of the PDE source terms, not biology.
 """
 
 from typing import Any, Dict, Optional
@@ -140,12 +169,20 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
 
         h_prod = (vmax * 2.0 / 6.0) * p['proton_coefficient'] * (p['max_atp'] / 2.0) * mm_glc
 
+        atp_rate = 0.0
+        if mito:
+            atp_rate += p['max_atp'] * (vmax / 6.0) * mm_o2 * mm_glc
+        if glyco:
+            atp_rate += p['max_atp'] * (vmax / 6.0) * mm_glc
+
         cell.state = cell.state.with_updates(metabolic_state={
             'oxygen_consumption': o2_use * oxygen_conversion_factor,
             'glucose_consumption': glc_use * glucose_conversion_factor,
             'lactate_production': lac_prod * lactate_conversion_factor,
             'lactate_consumption': lac_use,
             'h_production': h_prod,
+            'atp_rate': atp_rate,
+            'atp_rate_max': p['max_atp'] * vmax / 6.0,
         })
         updated[cell_id] = cell
 
@@ -159,10 +196,11 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
 @register_function(
     requires=['population'],
     display_name="Calculate Cell Metabolism",
-    description="MicroC metabolic model: per-cell oxygen/glucose consumption and "
-                "lactate/proton production from the mitoATP and glycoATP gene states, "
-                "with Michaelis-Menten saturation. Place it before the diffusion solver; "
-                "the solver then calls it once per coupling iteration.",
+    description="MicroC metabolic model: per-cell oxygen/glucose consumption, "
+                "lactate/proton production and ATP production rate from the mitoATP "
+                "and glycoATP gene states, with Michaelis-Menten saturation. Place it "
+                "before the diffusion solver; the solver then calls it once per "
+                "coupling iteration.",
     category="INTRACELLULAR",
     parameters=[
         {"name": "verbose", "type": "BOOL",
