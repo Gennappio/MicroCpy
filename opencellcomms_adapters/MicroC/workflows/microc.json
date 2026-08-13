@@ -13,7 +13,8 @@
           "create_subworkflow": "tumor_cell_create",
           "behavior_subworkflows": [
             "gene_update",
-            "fate_update"
+            "fate_update",
+            "symbiosis_summary"
           ]
         }
       ],
@@ -1597,6 +1598,95 @@
         "emits": []
       }
     },
+    "symbiosis_summary": {
+      "description": "MicroC: symbiosis_summary (per-iteration CSV for the metabolic-symbiosis figures -- cells by ATP pathway, cells by oxygen region, and the metabolic symbiosis index)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "resource.fields"
+        ],
+        "writes": [],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-symbiosis_summary",
+        "type": "controller",
+        "label": "SYMBIOSIS SUMMARY",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "symbiosis_summary-record_symbiosis",
+          "function_name": "record_metabolic_symbiosis",
+          "function_file": "",
+          "parameters": {
+            "csv_filename": "metabolic_symbiosis_over_time.csv"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "One CSV row per iteration: cells by ATP pathway (glycoATP / mitoATP / total), cells by oxygen region (oxygenated / hypoxic), and the metabolic symbiosis index. MSI is emitted twice because 'lactate metabolic' has two defensible readings in jaya.bnd: msi_mct1 counts only cells importing lactate (MCT1 ON), msi_mito counts any oxidative cell (mitoATP ON, which includes glucose-fed ones).",
+          "custom_name": "record_metabolic_symbiosis",
+          "step_count": 1,
+          "parameter_nodes": [
+            "symbiosis_summary-param_hypoxia_threshold"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "symbiosis_summary-param_hypoxia_threshold",
+          "label": "Hypoxia Threshold (mM)",
+          "parameters": {
+            "hypoxia_threshold": 0.022
+          },
+          "position": {
+            "x": 100,
+            "y": 240
+          }
+        }
+      ],
+      "execution_order": [
+        "symbiosis_summary-record_symbiosis"
+      ],
+      "input_parameters": []
+    },
     "__scheduler__": {
       "description": "MicroC main simulation loop",
       "deletable": false,
@@ -1663,6 +1753,20 @@
           "parameter_nodes": []
         },
         {
+          "id": "sched-call-symbiosis_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "symbiosis_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 500
+          },
+          "description": "symbiosis_summary (placed before division, so the census matches the fates just marked). Must NOT carry for_each: record_metabolic_symbiosis is a whole-population reporter that writes one row per iteration.",
+          "parameter_nodes": []
+        },
+        {
           "id": "sched-call-division",
           "type": "subworkflow_call",
           "subworkflow_name": "division",
@@ -1709,6 +1813,7 @@
         "sched-call-diffusion_step",
         "sched-call-gene_update",
         "sched-call-fate_update",
+        "sched-call-symbiosis_summary",
         "sched-call-division",
         "sched-call-iteration_plots"
       ]
