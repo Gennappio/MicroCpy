@@ -74,6 +74,10 @@ Examples:
                        help='Entry point subworkflow for v2.0 workflows (default: main)')
     parser.add_argument('--gui-results-dir', metavar='DIR',
                        help='GUI results directory (sets context paths for GUI mode)')
+    parser.add_argument('--planner-tab', metavar='NAME',
+                       help='Run only this Planner tab instead of every enabled one')
+    parser.add_argument('--no-planner', action='store_true',
+                       help='Ignore the Planner and run the values on the canvas')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -146,6 +150,14 @@ Examples:
         gui_results_dir = getattr(args, 'gui_results_dir', None)
         if gui_results_dir:
             sim_args.extend(['--gui-results-dir', gui_results_dir])
+
+        # Planner selection. Without these a workflow carrying tabs runs all of
+        # its enabled arms, matching the GUI.
+        planner_tab = getattr(args, 'planner_tab', None)
+        if planner_tab:
+            sim_args.extend(['--planner-tab', planner_tab])
+        if getattr(args, 'no_planner', False):
+            sim_args.append('--no-planner')
 
         if run_tool(run_sim_path, sim_args):
             success_count += 1

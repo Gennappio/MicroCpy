@@ -186,6 +186,19 @@ Examples:
         help='GUI results directory (sets context paths for GUI mode - Clean Architecture)'
     )
 
+    parser.add_argument(
+        '--planner-tab',
+        type=str,
+        metavar='NAME',
+        help='Run only this Planner tab instead of every enabled one'
+    )
+
+    parser.add_argument(
+        '--no-planner',
+        action='store_true',
+        help='Ignore the Planner and run the values on the canvas as they stand'
+    )
+
     return parser.parse_args(argv)
 
 def validate_configuration(config, config_path, verbose=True):
@@ -1286,6 +1299,100 @@ def run_default_mode(args):
         print(f"\n[RUN] To run again:")
         print(f"   occ-run --sim {args.sim}")
 
+def _run_planner_arms(args, workflow_path):
+    """Run one execution per Planner tab, the way the GUI does.
+
+    Returns None when there is nothing to expand -- no Planner, no enabled tab,
+    or --no-planner -- and the caller then runs the file as it stands. Otherwise
+    every arm is run and the return value marks the work as done.
+    """
+    import copy as _copy
+    import json
+    import re
+    import shutil
+    import tempfile
+
+    from src.workflow.planner import apply_overrides, enabled_tabs, planner_tabs
+
+    if getattr(args, 'no_planner', False):
+        return None
+
+    try:
+        document = json.loads(workflow_path.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        print(f"[PLANNER] Could not read {workflow_path} to check for tabs: {exc}")
+        return None
+
+    wanted = getattr(args, 'planner_tab', None)
+    if wanted:
+        tabs = [t for t in planner_tabs(document)
+                if str(t.get('name', '')).lower() == wanted.lower()]
+        if not tabs:
+            available = ', '.join(str(t.get('name'))
+                                  for t in planner_tabs(document)) or '(none)'
+            print(f"[PLANNER] No tab named '{wanted}'. Available: {available}")
+            sys.exit(1)
+    else:
+        tabs = enabled_tabs(document)
+
+    if not tabs:
+        if planner_tabs(document):
+            print("[PLANNER] Every tab is disabled; running the canvas values.")
+        return None
+
+    names = ', '.join(str(t.get('name')) for t in tabs)
+    print(f"[PLANNER] {len(tabs)} experiment(s) to run: {names}")
+
+    # Results are labelled from the workflow file stem, so each arm gets its own
+    # stem and lands in runs/<stem>_<arm>/. Without that the arms would overwrite
+    # one another in a single run folder.
+    stem = workflow_path.stem
+    scratch = Path(tempfile.mkdtemp(prefix='occ_planner_'))
+    failures = []
+
+    try:
+        for index, tab in enumerate(tabs, start=1):
+            name = str(tab.get('name') or f'tab{index}')
+            slug = re.sub(r'[^0-9A-Za-z._-]+', '_', name).strip('_') or f'tab{index}'
+            arm_path = scratch / f'{stem}_{slug}.json'
+            arm_path.write_text(
+                json.dumps(apply_overrides(document,
+                                           tab.get('parameterOverrides', {})),
+                           indent=2),
+                encoding='utf-8',
+            )
+
+            print(f"\n[PLANNER] >>> [{index}/{len(tabs)}] '{name}' "
+                  f"-> runs/{stem}_{slug}/")
+            arm_args = _copy.copy(args)
+            arm_args.workflow = str(arm_path)
+            arm_args._planner_expanded = True
+
+            try:
+                run_workflow_mode(arm_args)
+            except SystemExit as exc:
+                if exc.code:
+                    failures.append(name)
+                    print(f"[PLANNER] FAILED '{name}' (exit {exc.code})")
+                    continue
+            except Exception as exc:  # keep going: one bad arm is not all of them
+                failures.append(name)
+                print(f"[PLANNER] FAILED '{name}': {exc}")
+                import traceback
+                traceback.print_exc()
+                continue
+            print(f"[PLANNER] OK '{name}'")
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+    done = len(tabs) - len(failures)
+    print(f"\n[PLANNER] {done}/{len(tabs)} experiment(s) completed")
+    if failures:
+        print(f"[PLANNER] failed: {', '.join(failures)}")
+        sys.exit(1)
+    return 0
+
+
 def run_workflow_mode(args):
     """Run workflow mode.
 
@@ -1307,6 +1414,16 @@ def run_workflow_mode(args):
     if not workflow_path.exists():
         print(f"[!] Workflow file not found: {workflow_path}")
         sys.exit(1)
+
+    # A Planner tab is an experiment arm, and running the workflow means running
+    # every enabled one -- the same thing the GUI does when you press Run. Expand
+    # them here, once, before anything is loaded, so a CLI or batch run of a file
+    # produces the same set of experiments as the browser rather than silently
+    # executing only the values left on the canvas.
+    if not getattr(args, '_planner_expanded', False):
+        expanded = _run_planner_arms(args, workflow_path)
+        if expanded is not None:
+            return expanded
 
     try:
         workflow = WorkflowLoader.load(workflow_path)
