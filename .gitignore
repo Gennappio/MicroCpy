@@ -130,11 +130,15 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-hpc/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# SLURM job logs and the per-job workflow snapshot (run_microc_slurm.sh)
+slurm_logs/
 
 # Scaffold / export backups (created when re-writing function files,
 # register.py, or .subworkflow.json structure files)
