@@ -2,13 +2,13 @@
 #SBATCH --job-name="microc_p53wt"
 #SBATCH --mem=80000
 #SBATCH --account=abbruzzese
-#SBATCH --partition=long_gpunew
+#SBATCH --partition=medium_gpunew
 #SBATCH --output=slurm_logs/%x_%j.out
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --mail-type=END
 #SBATCH --mail-user=gennaro.abbruzzese@unibocconi.it
 #SBATCH --cpus-per-task=8
-#SBATCH --time=24:00:00
+
 #
 # Install the engine (once) and run a MicroC workflow headless.
 #
@@ -34,7 +34,7 @@ set -euo pipefail
 #   MICROC_WORKFLOW=.../microc.json sbatch run_microc_slurm.sh
 # --------------------------------------------------------------------------
 REPO_ROOT="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
-WORKFLOW="${MICROC_WORKFLOW:-$REPO_ROOT/opencellcomms_adapters/MicroC/workflows/microc_p53_v2_p53wt.json}"
+WORKFLOW="${MICROC_WORKFLOW:-$REPO_ROOT/opencellcomms_adapters/MicroC/workflows/microc_p53_experiment.json}"
 VENV="${MICROC_VENV:-$REPO_ROOT/.venv-hpc}"
 PYTHON="${MICROC_PYTHON:-python3}"
 ARM="${1:-${MICROC_ARM:-}}"
