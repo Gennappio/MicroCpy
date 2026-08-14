@@ -2,7 +2,7 @@
 #SBATCH --job-name="microc_p53wt"
 #SBATCH --mem=80000
 #SBATCH --account=abbruzzese
-#SBATCH --partition=gpu
+#SBATCH --partition=long_gpunew
 #SBATCH --output=slurm_logs/%x_%j.out
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --mail-type=END
