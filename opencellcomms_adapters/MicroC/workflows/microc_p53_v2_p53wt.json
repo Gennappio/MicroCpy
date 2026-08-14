@@ -3238,12 +3238,7 @@
             "y": 500
           },
           "description": "symbiosis_summary (placed before division, so the census matches the fates just marked). Must NOT carry for_each: record_metabolic_symbiosis is a whole-population reporter that writes one row per iteration.",
-          "parameter_nodes": [],
-          "for_each": {
-            "type": "agent",
-            "kind": "tumor_cell",
-            "order": "random"
-          }
+          "parameter_nodes": []
         },
         {
           "id": "sched-call-division",
@@ -3285,12 +3280,7 @@
             "y": 420
           },
           "description": "fate_summary (before division, so marked phenotypes are still visible). Must NOT carry for_each. With kind: tumor_cell it does not run at all -- MicroC deliberately leaves metabolic_state['_kind'] untagged (see build_tumor_cell_abm_population), so agents_of_kind('tumor_cell') is empty and the log reads \"Running 'fate_summary' over 0 tumor_cell(s)\". A kind-less per-agent ask is no better: record_gene_fate_counts is a whole-population reporter with no env.cell guard, so it would write one duplicate census row per cell and zero out the fires/reverts deltas.",
-          "parameter_nodes": [],
-          "for_each": {
-            "type": "agent",
-            "kind": "tumor_cell",
-            "order": "random"
-          }
+          "parameter_nodes": []
         }
       ],
       "parameters": [

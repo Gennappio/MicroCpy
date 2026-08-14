@@ -824,6 +824,24 @@ class WorkflowExecutor:
 
         kind = for_each.get('kind')
         agents = pop.agents_of_kind(kind) if kind else pop.agents()
+
+        # A kind that matches nothing while the population is not empty means the
+        # behavior never runs, and every earlier occurrence of this was found only
+        # by noticing a missing output file days later. agents_of_kind filters on
+        # metabolic_state['_kind'], which single-kind models (MicroC) deliberately
+        # never set, so a `kind` the GUI derived from the owning tab silently
+        # disables the behavior. Fail loudly instead of skipping in silence.
+        if kind and not agents and pop.count():
+            raise WorkflowExecutionError(
+                f"for_each on '{node.subworkflow_name}' asks for agents of kind "
+                f"'{kind}' but none of the {pop.count()} agents declare a kind, so "
+                f"the behavior would never run. Either drop \"kind\" from the "
+                f"for_each (a single-kind model iterates every agent without it), "
+                f"or drop the for_each entirely if this behavior is a "
+                f"whole-population one such as a reporter.",
+                subworkflow_name=node.subworkflow_name,
+            )
+
         self._run_rng(context).shuffle(agents)
         if self._should_log_step(context):
             print(f"[WORKFLOW] Running '{node.subworkflow_name}' over "
