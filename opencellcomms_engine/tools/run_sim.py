@@ -199,6 +199,14 @@ Examples:
         help='Ignore the Planner and run the values on the canvas as they stand'
     )
 
+    parser.add_argument(
+        '--no-observability',
+        action='store_true',
+        help='Skip the per-node context snapshots under results/observability. '
+             'They are a debugging aid and cost hundreds of MB across tens of '
+             'thousands of files on a long run.'
+    )
+
     return parser.parse_args(argv)
 
 def validate_configuration(config, config_path, verbose=True):
@@ -1443,7 +1451,8 @@ def run_workflow_mode(args):
         executor = WorkflowExecutor(
             workflow,
             gui_results_dir=Path(gui_results_dir) if gui_results_dir else None,
-            workflow_file=workflow_path
+            workflow_file=workflow_path,
+            observability_enabled=not getattr(args, 'no_observability', False),
         )
         if gui_results_dir:
             print(f"[WORKFLOW] Initialized workflow executor (GUI mode)")

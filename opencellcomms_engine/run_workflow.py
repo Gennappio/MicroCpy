@@ -78,6 +78,9 @@ Examples:
                        help='Run only this Planner tab instead of every enabled one')
     parser.add_argument('--no-planner', action='store_true',
                        help='Ignore the Planner and run the values on the canvas')
+    parser.add_argument('--no-observability', action='store_true',
+                       help='Skip the per-node context snapshots under '
+                            'results/observability (hundreds of MB on a long run)')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',
@@ -158,6 +161,8 @@ Examples:
             sim_args.extend(['--planner-tab', planner_tab])
         if getattr(args, 'no_planner', False):
             sim_args.append('--no-planner')
+        if getattr(args, 'no_observability', False):
+            sim_args.append('--no-observability')
 
         if run_tool(run_sim_path, sim_args):
             success_count += 1
