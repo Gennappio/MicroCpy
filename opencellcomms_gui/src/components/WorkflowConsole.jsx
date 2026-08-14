@@ -298,12 +298,49 @@ const WorkflowConsole = ({ workflowName }) => {
   };
 
   /**
-   * Wait for the current run to finish (complete or error) via SSE.
-   * Returns a promise that resolves when the SSE handler receives a terminal event.
+   * Wait for the current run to finish (complete or error).
+   *
+   * Resolves on the SSE terminal event, OR on the backend reporting itself idle.
+   * The poll is not belt-and-braces: a planner run waits here between arms, and
+   * a single missed SSE event -- a dropped stream during a long arm, or a
+   * terminal event arriving before this resolver was installed -- would leave
+   * the loop waiting forever. The remaining arms are then never submitted, with
+   * no error anywhere: the backend goes idle, the first arm's folder is the only
+   * one on disk, and the GUI just sits there. Asking the backend directly is the
+   * only way to be sure a run is over.
    */
   const waitForRunCompletion = () => {
     return new Promise((resolve) => {
-      completionResolverRef.current = resolve;
+      let settled = false;
+      let poll = null;
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        completionResolverRef.current = null;
+        if (poll) clearInterval(poll);
+        resolve(result);
+      };
+
+      completionResolverRef.current = finish;
+
+      // Give the run a moment to register before believing "not running": /run
+      // sets the flag before it responds, but the fetch and this call are not
+      // one atomic step.
+      const startedAt = Date.now();
+      poll = setInterval(async () => {
+        if (Date.now() - startedAt < 3000) return;
+        try {
+          const response = await fetch(`${API_BASE_URL}/status`);
+          if (!response.ok) return;
+          const status = await response.json();
+          if (!status.running) {
+            finish(status.status === 'completed' ? 'complete' : 'error');
+          }
+        } catch {
+          // Transient network error: keep waiting rather than declaring the arm done.
+        }
+      }, 2000);
     });
   };
 
@@ -359,6 +396,7 @@ const WorkflowConsole = ({ workflowName }) => {
         // Names of all current planner tabs — the backend keeps only these
         // result folders and prunes orphans from removed/renamed tabs.
         const keepLabels = plannerTabs.map((t) => t.name);
+        const failedTabs = [];
         const timestamp = new Date().toLocaleTimeString();
         setDisplayedLogsStore(workflowName, [{
           type: 'info',
@@ -394,12 +432,14 @@ const WorkflowConsole = ({ workflowName }) => {
               message: `❌ "${tab.name}" failed to start: ${errorData.error || 'Unknown error'}`,
               timestamp: new Date().toLocaleTimeString(),
             }]);
+            failedTabs.push(tab.name);
             continue; // Try next tab
           }
 
           // Wait for this run to complete via SSE
           const result = await waitForRunCompletion();
 
+          if (result !== 'complete') failedTabs.push(tab.name);
           appendDisplayedLogs(workflowName, [{
             type: result === 'complete' ? 'info' : 'error',
             message: result === 'complete'
@@ -409,9 +449,13 @@ const WorkflowConsole = ({ workflowName }) => {
           }]);
         }
 
+        // Say what actually happened. Reporting "all finished" after arms failed
+        // reads as success and hides missing experiments.
         appendDisplayedLogs(workflowName, [{
-          type: 'info',
-          message: `✓ All planner configurations finished`,
+          type: failedTabs.length ? 'error' : 'info',
+          message: failedTabs.length
+            ? `✗ ${activeTabs.length - failedTabs.length}/${activeTabs.length} planner configurations completed — failed: ${failedTabs.join(', ')}`
+            : `✓ All ${activeTabs.length} planner configurations finished`,
           timestamp: new Date().toLocaleTimeString(),
         }]);
         setIsRunning(false);
