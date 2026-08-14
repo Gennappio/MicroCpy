@@ -351,8 +351,8 @@ def _steps_param_value(sw):
     return None
 
 
-def check_loop_count_single_source(subworkflows, errors, warnings):
-    """Keep the loop count a single source of truth.
+def check_loop_count_single_source(gui, subworkflows, errors, warnings):
+    """Keep the loop count a single source of truth -- and actually consumed.
 
     The executor resolves, in order: the steps parameter node wired to the
     called sub-workflow's controller, then the controller's number_of_steps
@@ -360,7 +360,47 @@ def check_loop_count_single_source(subworkflows, errors, warnings):
     IS the run length -- a controller or `iterations` value that contradicts
     it is a stale mirror that misleads a reader (WARN, the run is still
     correct). Without the node, the controller wins over `iterations`, and two
-    different numbers both claiming to be the run length is drift (ERROR)."""
+    different numbers both claiming to be the run length is drift (ERROR).
+
+    Two loop counts that LOOK set but are not what they seem (WARN):
+    a count on a sub-workflow only ever called with for_each (per-agent asks
+    ignore it), and a count on a creation canvas (creation would literally run
+    N times, creating the agents N times)."""
+    creation_subworkflows = {
+        k.get("create_subworkflow")
+        for k in gui.get("agent_kinds") or []
+        if k.get("create_subworkflow")
+    }
+    calls_by_target = {}
+    for sw in subworkflows.values():
+        for call in sw.get("subworkflow_calls") or []:
+            calls_by_target.setdefault(call.get("subworkflow_name"), []).append(call)
+
+    for name, sw in subworkflows.items():
+        node_steps = _steps_param_value(sw)
+        try:
+            ctrl_steps = int((sw.get("controller") or {}).get("number_of_steps", 1))
+        except (TypeError, ValueError):
+            ctrl_steps = 1
+        loop_count = node_steps if node_steps is not None else ctrl_steps
+        if loop_count <= 1:
+            continue
+        if name in creation_subworkflows:
+            warnings.append(
+                f"'{name}' is a creation canvas with a loop count of {loop_count}: "
+                f"creation would run {loop_count} times and create the agents "
+                f"{loop_count} times over. Creation is once-only; set the count "
+                f"back to 1."
+            )
+        calls = calls_by_target.get(name) or []
+        if calls and all(c.get("for_each") for c in calls):
+            warnings.append(
+                f"'{name}' has a loop count of {loop_count}, but every call to it "
+                f"is a per-agent ask (for_each), which ignores the count -- the "
+                f"behavior runs once per agent per step regardless. Remove the "
+                f"count or call it without for_each."
+            )
+
     for name, sw in subworkflows.items():
         node_steps = _steps_param_value(sw)
         try:
@@ -472,7 +512,7 @@ def check_workflow(path, registry):
     check_agent_creation_structure(gui, subworkflows, errors, warnings)
     check_no_custom_functions_module(subworkflows, errors)
     check_execution_order_complete(subworkflows, warnings)
-    check_loop_count_single_source(subworkflows, errors, warnings)
+    check_loop_count_single_source(gui, subworkflows, errors, warnings)
     check_planner_tab_overrides(gui, subworkflows, errors, warnings)
     return errors, warnings, None
 

@@ -1,7 +1,6 @@
 import { Handle, Position } from 'reactflow';
 import { Zap, Settings } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
-import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import './InitNode.css';
 
 /**
@@ -12,10 +11,11 @@ import './InitNode.css';
 const InitNode = ({ id, data, selected }) => {
   const label = data?.label || 'INIT';
 
-  // Macrostep controller — the canvas where the controller exposes a
-  // "Number of steps" parameter handle. In the ABM model the Scheduler IS the
-  // main loop, so its controller owns the loop-count handle too.
-  const isMacrostepController = id.includes('macrostep') || id.includes(SCHEDULER_NAME);
+  // Every controller exposes a "Number of steps" parameter handle: wiring a
+  // steps parameter node to it makes that node the loop count for this
+  // subworkflow (the executor resolves it directly). The Scheduler's node is
+  // auto-created; on other canvases the count defaults to 1 (run once) until
+  // a node is wired.
   const numberOfSteps = data?.numberOfSteps || 1;
   const isParameterConnected = data?.isStepsParameterConnected || false;
   const connectedParameterValue = data?.connectedStepsValue;
@@ -39,36 +39,34 @@ const InitNode = ({ id, data, selected }) => {
         <span className="init-label">{label}</span>
       </div>
 
-      {isMacrostepController && (
-        <div className="init-parameter-section">
-          <div className={`init-parameter-row ${isParameterConnected ? 'connected' : ''}`}>
-            <Handle
-              type="target"
-              position={Position.Left}
-              id="steps-param"
-              className="init-parameter-handle"
-              style={{
-                background: '#3b82f6',
-                width: '10px',
-                height: '10px',
-                border: '2px solid white',
-                left: '-5px',
-              }}
-            />
-            <span className="init-parameter-label">
-              Number of steps: {isParameterConnected && connectedParameterValue !== undefined ? connectedParameterValue : numberOfSteps}
+      <div className="init-parameter-section">
+        <div className={`init-parameter-row ${isParameterConnected ? 'connected' : ''}`}>
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="steps-param"
+            className="init-parameter-handle"
+            style={{
+              background: '#3b82f6',
+              width: '10px',
+              height: '10px',
+              border: '2px solid white',
+              left: '-5px',
+            }}
+          />
+          <span className="init-parameter-label">
+            Number of steps: {isParameterConnected && connectedParameterValue !== undefined ? connectedParameterValue : numberOfSteps}
+          </span>
+          {plannerShadowed && (
+            <span
+              className="init-planner-badge"
+              title="One or more enabled Planner configurations override this value; planner runs use the tab value."
+            >
+              Planner
             </span>
-            {plannerShadowed && (
-              <span
-                className="init-planner-badge"
-                title="One or more enabled Planner configurations override this value; planner runs use the tab value."
-              >
-                Planner
-              </span>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <Handle
         type="source"
