@@ -333,32 +333,75 @@ def check_execution_order_complete(subworkflows, warnings):
             )
 
 
-def check_loop_count_single_source(subworkflows, errors):
-    """Error when a sub-workflow call's `iterations` contradicts the loop count set on
-    the called sub-workflow's own controller.
+def _steps_param_value(sw):
+    """The loop count from the steps parameter node wired to a sub-workflow's
+    controller, or None. Mirrors SubWorkflow.steps_param_value in the engine."""
+    ctrl = sw.get("controller") or {}
+    for node_id in ctrl.get("parameter_nodes") or []:
+        for param in sw.get("parameters") or []:
+            if param.get("id") != node_id:
+                continue
+            params = param.get("parameters") or {}
+            for key in ("steps", "step_count", "numberOfSteps"):
+                if key in params:
+                    try:
+                        return int(float(params[key]))
+                    except (TypeError, ValueError):
+                        pass
+    return None
 
-    The controller is the single source of truth -- it is the number shown and edited
-    on that sub-workflow's canvas, and the executor uses it whenever it has been set
-    (>1). `iterations` on the call is only a fallback for workflows that never set a
-    controller, which is why a controller of 1 (the unset default) is not flagged.
-    Two different numbers both claiming to be the run length is exactly the drift this
-    rule exists to stop: a hand-edited `iterations` that the canvas contradicts."""
+
+def check_loop_count_single_source(subworkflows, errors, warnings):
+    """Keep the loop count a single source of truth.
+
+    The executor resolves, in order: the steps parameter node wired to the
+    called sub-workflow's controller, then the controller's number_of_steps
+    (when set, >1), then `iterations` on the call. So when the node exists it
+    IS the run length -- a controller or `iterations` value that contradicts
+    it is a stale mirror that misleads a reader (WARN, the run is still
+    correct). Without the node, the controller wins over `iterations`, and two
+    different numbers both claiming to be the run length is drift (ERROR)."""
+    for name, sw in subworkflows.items():
+        node_steps = _steps_param_value(sw)
+        try:
+            ctrl_steps = int((sw.get("controller") or {}).get("number_of_steps", 1))
+        except (TypeError, ValueError):
+            ctrl_steps = 1
+        if node_steps is not None and ctrl_steps > 1 and ctrl_steps != node_steps:
+            warnings.append(
+                f"'{name}': controller says number_of_steps={ctrl_steps}, but its "
+                f"steps parameter node says {node_steps}. The node is the single "
+                f"source of truth and is what will run ({node_steps}); update or "
+                f"re-save from the GUI to clear the stale mirror."
+            )
+
     for name, sw in subworkflows.items():
         for call in sw.get("subworkflow_calls") or []:
-            target = subworkflows.get(call.get("subworkflow_name"))
+            target_name = call.get("subworkflow_name")
+            target = subworkflows.get(target_name)
             if not target:
                 continue
             try:
                 iterations = int(call.get("iterations", 1))
-                steps = int((target.get("controller") or {}).get("number_of_steps", 1))
+                ctrl_steps = int((target.get("controller") or {}).get("number_of_steps", 1))
             except (TypeError, ValueError):
                 continue
-            if steps > 1 and iterations > 1 and steps != iterations:
+            node_steps = _steps_param_value(target)
+            if node_steps is not None:
+                if iterations > 1 and iterations != node_steps:
+                    warnings.append(
+                        f"'{name}' calls '{target_name}' with iterations={iterations}, "
+                        f"but that sub-workflow's steps parameter node says "
+                        f"{node_steps}. The node is the single source of truth and is "
+                        f"what will run ({node_steps}); update iterations or leave it "
+                        f"at 1."
+                    )
+            elif ctrl_steps > 1 and iterations > 1 and ctrl_steps != iterations:
                 errors.append(
-                    f"'{name}' calls '{call['subworkflow_name']}' with iterations="
+                    f"'{name}' calls '{target_name}' with iterations="
                     f"{iterations}, but that sub-workflow's controller says "
-                    f"number_of_steps={steps}. The controller is the single source of "
-                    f"truth and is what will run ({steps}); set iterations to match it "
+                    f"number_of_steps={ctrl_steps}. The controller is the single source of "
+                    f"truth and is what will run ({ctrl_steps}); set iterations to match it "
                     f"or leave iterations at 1."
                 )
 
@@ -429,7 +472,7 @@ def check_workflow(path, registry):
     check_agent_creation_structure(gui, subworkflows, errors, warnings)
     check_no_custom_functions_module(subworkflows, errors)
     check_execution_order_complete(subworkflows, warnings)
-    check_loop_count_single_source(subworkflows, errors)
+    check_loop_count_single_source(subworkflows, errors, warnings)
     check_planner_tab_overrides(gui, subworkflows, errors, warnings)
     return errors, warnings, None
 

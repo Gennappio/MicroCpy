@@ -38,6 +38,10 @@ def apply_overrides(workflow: Dict[str, Any],
     ``overrides`` maps a parameter-node id to the values that node should take
     for this arm. Only value-bearing keys are copied across, so a tab can change
     what a node holds but never move or rename it on the canvas.
+
+    Loop counts need no special handling: the executor resolves the steps
+    parameter node wired to a controller directly (SubWorkflow.steps_param_value),
+    so overriding that node is enough.
     """
     patched = copy.deepcopy(workflow)
 
@@ -55,39 +59,4 @@ def apply_overrides(workflow: Dict[str, Any],
                     merged[key] = override[key]
             params[i] = merged
 
-    _propagate_step_counts(patched, overrides)
     return patched
-
-
-def _propagate_step_counts(patched: Dict[str, Any],
-                           overrides: Dict[str, Any]) -> None:
-    """Push an overridden loop count into the places the run actually reads.
-
-    A scheduler's "Simulation Steps" parameter node is wired to its controller,
-    but the executor takes the loop count from ``controller.number_of_steps``
-    and the synthesized main's call ``iterations`` -- not from the node. Patch
-    the node alone and a tab's step count is silently ignored.
-    """
-    for sw_name, sw in patched.get("subworkflows", {}).items():
-        ctrl = sw.get("controller") or {}
-        overridden = next((pid for pid in ctrl.get("parameter_nodes", [])
-                           if pid in overrides), None)
-        if not overridden:
-            continue
-
-        node = next((p for p in sw.get("parameters", [])
-                     if p.get("id") == overridden), None)
-        node_params = (node or {}).get("parameters", {})
-        raw = (node_params.get("steps")
-               or node_params.get("step_count")
-               or node_params.get("numberOfSteps"))
-        try:
-            steps = int(float(raw))
-        except (TypeError, ValueError):
-            continue
-
-        ctrl["number_of_steps"] = steps
-        main = patched.get("subworkflows", {}).get("main", {})
-        for call in main.get("subworkflow_calls", []):
-            if call.get("subworkflow_name") == sw_name:
-                call["iterations"] = steps

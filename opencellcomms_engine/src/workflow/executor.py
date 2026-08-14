@@ -1042,12 +1042,13 @@ class WorkflowExecutor:
                                 # over their owning agents/resources.
                                 context = self._run_for_each_entity(node, for_each, context, merged_params)
                             else:
-                                # Loop count. SINGLE SOURCE OF TRUTH: the called
-                                # sub-workflow's own controller. That is the number a
-                                # user sets on its canvas, so the canvas is what runs.
-                                # `iterations` on the call is the fallback, kept for
-                                # workflows that never set a controller (it stays 1
-                                # there, so their behaviour is unchanged).
+                                # Loop count. SINGLE SOURCE OF TRUTH: the steps
+                                # parameter node wired to the called sub-workflow's
+                                # controller -- the one number a user edits, on the
+                                # canvas or in the JSON. Fallbacks, in order, for
+                                # workflows without that node: the controller's
+                                # number_of_steps (when set, >1), then `iterations`
+                                # on the call.
                                 call_iterations = merged_params.get('iterations', node.iterations)
                                 try:
                                     call_iterations = int(call_iterations)
@@ -1055,17 +1056,24 @@ class WorkflowExecutor:
                                     call_iterations = 1
 
                                 target_sw = self.workflow.get_subworkflow(node.subworkflow_name)
+                                node_steps = target_sw.steps_param_value() if target_sw else None
                                 controller_steps = getattr(
                                     getattr(target_sw, 'controller', None), 'number_of_steps', 1)
                                 try:
                                     controller_steps = int(controller_steps)
                                 except (TypeError, ValueError):
                                     controller_steps = 1
-                                if controller_steps > 1 and controller_steps != call_iterations:
-                                    print(f"[WORKFLOW] '{node.subworkflow_name}': using its "
-                                          f"controller's {controller_steps} steps "
-                                          f"(call said iterations={call_iterations})")
-                                if controller_steps > 1:
+                                if node_steps is not None:
+                                    if node_steps != call_iterations and call_iterations > 1:
+                                        print(f"[WORKFLOW] '{node.subworkflow_name}': using its "
+                                              f"steps parameter node's {node_steps} steps "
+                                              f"(call said iterations={call_iterations})")
+                                    call_iterations = node_steps
+                                elif controller_steps > 1:
+                                    if controller_steps != call_iterations:
+                                        print(f"[WORKFLOW] '{node.subworkflow_name}': using its "
+                                              f"controller's {controller_steps} steps "
+                                              f"(call said iterations={call_iterations})")
                                     call_iterations = controller_steps
 
                                 # Recursively execute the called sub-workflow

@@ -218,7 +218,10 @@ order them. That order is not inferred by any magic — the GUI **serializes it 
 an explicit list**, and the executor walks that list. Two fields do the work:
 
 - every subworkflow has an `execution_order`: an ordered list of node ids;
-- its controller has a step count (`number_of_steps` / `iterations`).
+- its step count comes from the "Simulation Steps" parameter node wired to its
+  controller — the single source of truth, editable on the canvas or in the
+  JSON (the controller's `number_of_steps` and a call's `iterations` are
+  fallbacks for subworkflows without that node).
 
 The special `__scheduler__` subworkflow **is** the main loop: the executor runs
 its `execution_order` once per step, for `number_of_steps` steps. So the visual

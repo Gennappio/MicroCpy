@@ -354,22 +354,29 @@ class ControllerNode:
         id: Unique identifier for this controller
         label: Display label (default: "CONTROLLER")
         position: UI position for visual editor
-        number_of_steps: Number of steps (for compatibility, usually 1)
+        number_of_steps: Number of steps (fallback when no steps parameter
+            node is wired; see SubWorkflow.steps_param_value)
+        parameter_nodes: IDs of parameter nodes wired to this controller
+            (the GUI wires the "Simulation Steps" node here)
     """
     id: str
     label: str = "CONTROLLER"
     position: Dict[str, float] = field(default_factory=lambda: {"x": 100, "y": 100})
     number_of_steps: int = 1
+    parameter_nodes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "id": self.id,
             "type": "controller",
             "label": self.label,
             "position": self.position,
             "number_of_steps": self.number_of_steps
         }
+        if self.parameter_nodes:
+            result["parameter_nodes"] = self.parameter_nodes
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ControllerNode":
@@ -378,7 +385,8 @@ class ControllerNode:
             id=data["id"],
             label=data.get("label", "CONTROLLER"),
             position=data.get("position", {"x": 100, "y": 100}),
-            number_of_steps=data.get("number_of_steps", 1)
+            number_of_steps=data.get("number_of_steps", 1),
+            parameter_nodes=data.get("parameter_nodes", [])
         )
 
 
@@ -657,6 +665,29 @@ class SubWorkflow:
             deletable=data.get("deletable", True),
             contract=data.get("contract")
         )
+
+    def steps_param_value(self) -> Optional[int]:
+        """Loop count from the parameter node wired to this controller.
+
+        This is the SINGLE SOURCE OF TRUTH for how many times the executor
+        iterates this sub-workflow: the "Simulation Steps" node the GUI wires
+        to the controller (controller.parameter_nodes). Returns None when no
+        such node carries an int-like value, in which case the executor falls
+        back to controller.number_of_steps, then to the caller's iterations.
+        """
+        if not self.controller:
+            return None
+        for node_id in self.controller.parameter_nodes:
+            for param in self.parameters:
+                if param.id != node_id:
+                    continue
+                for key in ("steps", "step_count", "numberOfSteps"):
+                    if key in param.parameters:
+                        try:
+                            return int(float(param.parameters[key]))
+                        except (TypeError, ValueError):
+                            pass
+        return None
 
     def get_function_by_id(self, function_id: str) -> Optional[WorkflowFunction]:
         """Get a function by its ID."""

@@ -227,7 +227,9 @@ For v2 workflows:
 - the `main` composer defines:
   - controller `number_of_steps`
   - an `execution_order` of function nodes and subworkflow calls
-- subworkflow calls can repeat via `iterations`
+- subworkflow calls can repeat via `iterations` (the called subworkflow's own
+  steps parameter node, when wired to its controller, takes precedence — then
+  its controller's `number_of_steps`, then `iterations`)
 - the executor tracks a call stack to prevent runaway recursion (`max_call_depth`)
 
 ## 5) Built-in function library (what nodes do)
