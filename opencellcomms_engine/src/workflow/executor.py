@@ -825,22 +825,29 @@ class WorkflowExecutor:
         kind = for_each.get('kind')
         agents = pop.agents_of_kind(kind) if kind else pop.agents()
 
-        # A kind that matches nothing while the population is not empty means the
-        # behavior never runs, and every earlier occurrence of this was found only
-        # by noticing a missing output file days later. agents_of_kind filters on
-        # metabolic_state['_kind'], which single-kind models (MicroC) deliberately
-        # never set, so a `kind` the GUI derived from the owning tab silently
-        # disables the behavior. Fail loudly instead of skipping in silence.
+        if self._is_collective_subworkflow(node.subworkflow_name):
+            return self._run_collective_once(node, context, merged_params)
+
+        # A `kind` that matches nothing, in a population where nothing declares a
+        # kind, means single-kind: iterate the whole population rather than
+        # silently running the behavior zero times.
+        #
+        # agents_of_kind filters on metabolic_state['_kind'], which single-kind
+        # models deliberately never set (MicroC's metabolism rebuilds that dict
+        # every step and would wipe the tag). The GUI derives `kind` from whichever
+        # tab owns the behavior, so an owned behavior arrives here with a kind no
+        # agent carries. Treating that as "no agents" skipped the behavior with
+        # nothing in the log but a `over 0 tumor_cell(s)` line, which is how two
+        # reporters sat dead for days. Falling back keeps the behavior running;
+        # the warning says the filter did nothing.
         if kind and not agents and pop.count():
-            raise WorkflowExecutionError(
-                f"for_each on '{node.subworkflow_name}' asks for agents of kind "
-                f"'{kind}' but none of the {pop.count()} agents declare a kind, so "
-                f"the behavior would never run. Either drop \"kind\" from the "
-                f"for_each (a single-kind model iterates every agent without it), "
-                f"or drop the for_each entirely if this behavior is a "
-                f"whole-population one such as a reporter.",
-                subworkflow_name=node.subworkflow_name,
-            )
+            agents = pop.agents()
+            warned = context.setdefault('_for_each_kind_fallback_warned', set())
+            if kind not in warned:
+                warned.add(kind)
+                print(f"[WORKFLOW] for_each kind '{kind}' matches no agent — none of "
+                      f"the {pop.count()} agents declare a kind, so this is a "
+                      f"single-kind population and every agent is iterated.")
 
         self._run_rng(context).shuffle(agents)
         if self._should_log_step(context):
@@ -871,6 +878,51 @@ class WorkflowExecutor:
             context['_current_agent'] = prev_agent
             context['_current_cell'] = prev_cell
         return context
+
+    def _is_collective_subworkflow(self, subworkflow_name: str) -> bool:
+        """True if every enabled function in this subworkflow acts on the whole
+        population in one call.
+
+        Such a behavior must run ONCE per tick even when the scheduler asks for
+        it per agent. The GUI derives a per-agent `for_each` from whichever tab
+        owns a behavior, so a census owned by an agent kind arrives here marked
+        per-agent; iterating it would re-run a whole-population pass once per
+        agent -- 500x the work for one row of output.
+        """
+        try:
+            sw = self.workflow.get_subworkflow(subworkflow_name)
+        except Exception:
+            return False
+        if sw is None:
+            return False
+
+        functions = [f for f in getattr(sw, 'functions', []) if getattr(f, 'enabled', True)]
+        if not functions:
+            return False
+        for f in functions:
+            metadata = self.registry.get(f.function_name)
+            if metadata is None or not getattr(metadata, 'collective', False):
+                return False
+        return True
+
+    def _run_collective_once(self, node, context: Dict[str, Any],
+                             merged_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Run a collective behavior a single time, with no agent bound."""
+        if self._should_log_step(context):
+            print(f"[WORKFLOW] Running '{node.subworkflow_name}' once "
+                  f"(collective: acts on the whole population)")
+        prev_agent = context.get('_current_agent')
+        prev_cell = context.get('_current_cell')
+        context['_current_agent'] = None
+        context['_current_cell'] = None
+        try:
+            return self.execute_subworkflow(
+                node.subworkflow_name, context, iterations=1,
+                parameters=merged_params, quiet=True
+            )
+        finally:
+            context['_current_agent'] = prev_agent
+            context['_current_cell'] = prev_cell
 
     def _run_for_each_legacy_cell(self, node, context: Dict[str, Any],
                                   merged_params: Dict[str, Any]) -> Dict[str, Any]:

@@ -375,7 +375,8 @@ def register_function(
     requires: Optional[List[str]] = None,
     operates_on: Optional[List[str]] = None,
     contract: Optional[Dict[str, Any]] = None,
-    typed_env_exempt: bool = False
+    typed_env_exempt: bool = False,
+    collective: bool = False
 ) -> Callable:
     """
     Decorator for registering workflow functions.
@@ -522,6 +523,7 @@ def register_function(
             requires=requires,
             operates_on=operates_on,
             contract=contract,
+            collective=collective,
             validation_errors=param_validation_errors
         )
 

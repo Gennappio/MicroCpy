@@ -83,6 +83,7 @@ DEFAULT_METABOLIC_GENES = "glycoATP,mitoATP"
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    collective=True,
 )
 def record_gene_fate_counts(
     env: BiologicalContext,
@@ -102,6 +103,15 @@ def record_gene_fate_counts(
         iteration = int(iteration)
     except (TypeError, ValueError):
         iteration = len(history) + 1
+
+    # One row per iteration, whatever the calling convention. This node is a
+    # whole-population census, but the GUI gives every behavior owned by an agent
+    # kind a per-agent for_each, so it is called once per cell. env.cells is the
+    # full population either way, so the first call of a tick writes the row and
+    # the rest return here rather than writing N identical ones (which would also
+    # zero the fires/reverts deltas, since each would diff against its twin).
+    if history and history[-1]["iteration"] == iteration:
+        return True
 
     total_cells = len(env.cells)
     row: Dict[str, Any] = {

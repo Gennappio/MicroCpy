@@ -81,6 +81,7 @@ from src.biology.context import BiologicalContext
     inputs=["context"],
     outputs=[],
     cloneable=False,
+    collective=True,
     compatible_kernels=["biophysics"]
 )
 def record_metabolic_symbiosis(
@@ -89,12 +90,6 @@ def record_metabolic_symbiosis(
     csv_filename: str = "metabolic_symbiosis_over_time.csv",
     **kwargs,
 ) -> bool:
-    # Whole-population reporter: one row per iteration, not per cell. Bail out if
-    # a per-agent ask bound a cell, so a stray for_each on the calling node cannot
-    # multiply the CSV by the population size.
-    if env.cell is not None:
-        return True
-
     ctx = env.raw_context
     history: List[Dict[str, Any]] = ctx.setdefault("symbiosis_history", [])
 
@@ -103,6 +98,14 @@ def record_metabolic_symbiosis(
         iteration = int(iteration)
     except (TypeError, ValueError):
         iteration = len(history) + 1
+
+    # One row per iteration, whatever the calling convention. This node is a
+    # whole-population census, but the GUI gives every behavior owned by an agent
+    # kind a per-agent for_each, so it is called once per cell. env.cells is the
+    # full population either way, so the first call of a tick writes the row and
+    # the rest return here rather than writing N identical ones.
+    if history and history[-1]["iteration"] == iteration:
+        return True
 
     counts = {
         ('oxy', 'glyco'): 0, ('oxy', 'mito'): 0, ('oxy', 'mct1'): 0,

@@ -66,6 +66,7 @@ class FunctionMetadata:
     requires: Optional[List[str]] = None  # Capability tokens this function needs from the kernel (None/[] = no requirement). A workflow fails to load if its kernel does not provide all of these.
     operates_on: Optional[List[str]] = None  # Purely descriptive: resource field(s) this function reads/writes (e.g. ["sugar"]). Not validated; a hook for the GUI to link a behavior back to the resource it acts on.
     contract: Optional[Dict[str, Any]] = None  # Optional read/write contract for GUI placement and workflow validation.
+    collective: bool = False  # True = acts on the WHOLE population in one call (a census, a reporter, a field solve). The executor runs a subworkflow of only-collective functions ONCE even under a per-agent for_each, so a behavior the GUI homed under an agent kind is not re-run per agent.
     validation_errors: List[str] = field(default_factory=list)  # Authoring problems found at registration (e.g. an undeclared parameter). Empty = clean. Surfaced in the GUI so the node shows a "fix me" state instead of silently losing a socket.
 
     def to_dict(self) -> Dict[str, Any]:
@@ -91,6 +92,7 @@ class FunctionMetadata:
             "inputs": self.inputs,
             "outputs": self.outputs,
             "cloneable": self.cloneable,
+            "collective": self.collective,
             "module_path": self.module_path,
             "source_file": self.source_file,
             "compatible_kernels": self.compatible_kernels,
