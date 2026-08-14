@@ -1,0 +1,1076 @@
+{
+  "version": "2.0",
+  "name": "Sugarscape",
+  "description": "Sugarscape on the ABM class layer, arranged for the current World / Resources / Agents / Scheduler GUI.",
+  "kernel": "biophysics",
+  "metadata": {
+    "author": "OpenCellComms",
+    "created": "2026-06-13",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "forager",
+          "create_subworkflow": "forager_create",
+          "behavior_subworkflows": [
+            "forager_step"
+          ]
+        }
+      ],
+      "resource_kinds": [
+        {
+          "name": "sugar",
+          "init_subworkflow": "sugar_init",
+          "behavior_subworkflows": [
+            "sugar_growback"
+          ]
+        }
+      ],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": [
+          "world_step",
+          "live_snapshot"
+        ]
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "final_snapshot"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-baseline",
+            "name": "baseline_30_steps",
+            "enabled": true,
+            "parameterOverrides": {}
+          },
+          {
+            "id": "tab-long",
+            "name": "long_60_steps",
+            "enabled": false,
+            "parameterOverrides": {
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": 60
+                }
+              }
+            }
+          }
+        ]
+      },
+      "contract_enforcement": "warn"
+    },
+    "workflow_source_path": "sugarscape_move.json"
+  },
+  "subworkflows": {
+    "main": {
+      "description": "Synthesized main workflow (do not edit — managed by ABM structure)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "main-call-__init_sequence__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 30,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-final_snapshot",
+          "type": "subworkflow_call",
+          "subworkflow_name": "final_snapshot",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "description": "Processing: final_snapshot",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__",
+        "main-call-final_snapshot"
+      ],
+      "input_parameters": []
+    },
+    "__world__": {
+      "description": "World canvas: build the toroidal Sugarscape grid.",
+      "enabled": true,
+      "deletable": false,
+      "contract": {
+        "owner": {
+          "type": "world"
+        },
+        "reads": [],
+        "writes": [
+          "world.self"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "world-setup",
+          "function_name": "setup_world",
+          "function_file": "",
+          "parameters": {
+            "size_x": 50,
+            "size_y": 50,
+            "tile_size": 1,
+            "topology_x": "toroidal",
+            "topology_y": "toroidal",
+            "seed": 42
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "Create the toroidal tile-grid world.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [],
+            "writes": [
+              "world.self"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "world-plot",
+          "function_name": "plot_world",
+          "function_file": "",
+          "parameters": {
+            "prefix": "world"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Plot the computational world and allowed cells.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "world-setup",
+        "world-plot"
+      ],
+      "input_parameters": []
+    },
+    "sugar_init": {
+      "description": "Resource setup for sugar, including its internal capacity landscape.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "resource",
+          "kind": "sugar"
+        },
+        "reads": [
+          "world.self"
+        ],
+        "writes": [
+          "resource.self"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-sugar_init",
+        "type": "controller",
+        "label": "SUGAR INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "sugar-resource",
+          "function_name": "setup_resource",
+          "function_file": "",
+          "parameters": {
+            "name": "sugar",
+            "initial": 0
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "Add sugar to the Domain.",
+          "custom_name": "setup_resource (sugar)",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "sugar-seed",
+          "function_name": "seed_sugar_capacity",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "peak": 4,
+            "radius_frac": 0.45,
+            "fill_current": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Set sugar capacity to the two Sugarscape mountains and fill current sugar.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "sugar-plot",
+          "function_name": "plot_resources",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "sugar"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "Plot initialized sugar values.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "sugar-resource",
+        "sugar-seed",
+        "sugar-plot"
+      ],
+      "input_parameters": []
+    },
+    "forager_create": {
+      "description": "Agent setup: scatter foragers and assign sugar, metabolism, and vision.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "forager"
+        },
+        "reads": [
+          "world.self",
+          "resource.sugar"
+        ],
+        "writes": [
+          "agent.collection"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-forager_create",
+        "type": "controller",
+        "label": "FORAGER CREATE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "forager-place",
+          "function_name": "place_foragers",
+          "function_file": "",
+          "parameters": {
+            "kind": "forager",
+            "count": 120,
+            "sugar_min": 5,
+            "sugar_max": 25,
+            "metabolism_min": 1,
+            "metabolism_max": 4,
+            "vision_min": 1,
+            "vision_max": "3"
+          },
+          "enabled": true,
+          "position": {
+            "x": 386.1835748792271,
+            "y": 105.39130434782606
+          },
+          "description": "Create the initial forager population.",
+          "custom_name": "place_foragers",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self",
+              "resource.sugar"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "forager-plot",
+          "function_name": "plot_agents",
+          "function_file": "",
+          "parameters": {
+            "prefix": "foragers"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Plot initialized forager positions.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": []
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "forager-place",
+        "forager-plot"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order: world, sugar resource, agents.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-world",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Build the world grid first.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-sugar",
+          "type": "subworkflow_call",
+          "subworkflow_name": "sugar_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Create sugar and seed its internal capacity.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-forager",
+          "type": "subworkflow_call",
+          "subworkflow_name": "forager_create",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Place foragers after resources exist.",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-world",
+        "init-call-sugar",
+        "init-call-forager"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Main loop: ask foragers, regrow sugar, then reconcile intents and report.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 30,
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ]
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sched-call-forager-step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "forager_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 140
+          },
+          "description": "Ask each forager to move, eat, and metabolize.",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent",
+            "kind": "forager",
+            "order": "random"
+          }
+        },
+        {
+          "id": "sched-call-sugar-growback",
+          "type": "subworkflow_call",
+          "subworkflow_name": "sugar_growback",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "Regrow sugar toward capacity.",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "resource",
+            "kind": "sugar"
+          }
+        },
+        {
+          "id": "sched-call-world-step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "world_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 420
+          },
+          "description": "Commit pending intents and print world census.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-live-snapshot",
+          "type": "subworkflow_call",
+          "subworkflow_name": "live_snapshot",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "Plot a live world snapshot every N steps.",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "label": "Simulation Steps",
+          "parameters": {
+            "steps": 30
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
+      "execution_order": [
+        "sched-call-forager-step",
+        "sched-call-sugar-growback",
+        "sched-call-world-step",
+        "sched-call-live-snapshot"
+      ],
+      "input_parameters": []
+    },
+    "forager_step": {
+      "description": "Forager step behavior, run per agent through the scheduler ask.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "forager"
+        },
+        "reads": [
+          "agent.self",
+          "resource.sugar.local",
+          "world.neighborhood"
+        ],
+        "writes": [
+          "agent.self"
+        ],
+        "emits": [
+          "intent.remove_agent"
+        ]
+      },
+      "controller": {
+        "id": "controller-forager_step",
+        "type": "controller",
+        "label": "FORAGER STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "forager-move",
+          "function_name": "move_to_best_sugar",
+          "function_file": "",
+          "parameters": {
+            "explore_when_tied": "false"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Move toward the best visible sugar tile.",
+          "custom_name": "move_to_best_sugar",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "forager"
+              },
+              {
+                "type": "resource",
+                "kind": "sugar"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.self",
+              "resource.sugar.local",
+              "world.neighborhood"
+            ],
+            "writes": [
+              "agent.self"
+            ],
+            "emits": [
+              "intent.move"
+            ]
+          }
+        },
+        {
+          "id": "forager-eat",
+          "function_name": "eat_sugar",
+          "function_file": "",
+          "parameters": {
+            "eat_all": "false",
+            "amount": 2
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Eat all sugar on the current tile.",
+          "custom_name": "eat_sugar",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "forager"
+              },
+              {
+                "type": "resource",
+                "kind": "sugar"
+              }
+            ],
+            "reads": [
+              "agent.self",
+              "resource.sugar.local"
+            ],
+            "writes": [],
+            "emits": [
+              "intent.consume_resource"
+            ]
+          }
+        },
+        {
+          "id": "forager-metabolize",
+          "function_name": "metabolize",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 386.5424164524421
+          },
+          "description": "Burn sugar and mark the forager dead when depleted.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "forager"
+            },
+            "reads": [
+              "agent.self"
+            ],
+            "writes": [
+              "agent.self"
+            ],
+            "emits": [
+              "intent.remove_agent"
+            ]
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "forager-move",
+        "forager-eat",
+        "forager-metabolize"
+      ],
+      "input_parameters": []
+    },
+    "sugar_growback": {
+      "description": "Resource behavior: regrow sugar toward capacity.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "resource",
+          "kind": "sugar"
+        },
+        "reads": [
+          "resource.self"
+        ],
+        "writes": [
+          "resource.self"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-sugar_growback",
+        "type": "controller",
+        "label": "SUGAR GROWBACK",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "sugar-grow",
+          "function_name": "grow_sugar",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "rate": 1
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Regrow sugar toward its internal capacity.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "resource",
+              "kind": "sugar"
+            },
+            "reads": [
+              "resource.self"
+            ],
+            "writes": [
+              "resource.self"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "sugar-grow"
+      ],
+      "input_parameters": []
+    },
+    "final_snapshot": {
+      "description": "Processing behavior: write a final world snapshot to Results.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agents",
+          "resources",
+          "world"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-final_snapshot",
+        "type": "controller",
+        "label": "FINAL SNAPSHOT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "plot-final-world",
+          "function_name": "plot_world",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "final_sugarscape",
+            "show_resources": true,
+            "show_agents": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 180
+          },
+          "description": "Plot final sugar field and forager positions.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agents",
+              "resources",
+              "world"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "plot-final-world"
+      ],
+      "input_parameters": []
+    },
+    "live_snapshot": {
+      "description": "Reporting behavior: plot the sugar field and forager positions every N steps during the run.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agents",
+          "resources",
+          "world"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-live_snapshot",
+        "type": "controller",
+        "label": "LIVE SNAPSHOT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "plot-live-world",
+          "function_name": "plot_world",
+          "function_file": "",
+          "parameters": {
+            "resource": "sugar",
+            "prefix": "live_sugarscape",
+            "show_resources": true,
+            "show_agents": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 180
+          },
+          "description": "Plot the sugar field and forager positions for the current step.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "live-snapshot-plot-interval"
+          ],
+          "contract": {
+            "reads": [
+              "agents",
+              "resources",
+              "world"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "live-snapshot-plot-interval",
+          "label": "Plot Frequency (steps)",
+          "parameters": {
+            "plot_interval": 5
+          },
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "plot-live-world"
+      ],
+      "input_parameters": []
+    },
+    "world_step": {
+      "description": "Reconciliation behavior: commit pending intents and report aggregate state.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "intent.*",
+          "agent.collection",
+          "resource.collection",
+          "world.self"
+        ],
+        "writes": [
+          "agent.collection",
+          "resource.self",
+          "world.self"
+        ],
+        "consumes": [
+          "intent.*"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-world_step",
+        "type": "controller",
+        "label": "WORLD STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "world-reconciliation",
+          "function_name": "apply_reconciliation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Commit pending movement, resource, birth, and removal intents.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "intent.*",
+              "agent.collection",
+              "resource.collection",
+              "world.self"
+            ],
+            "writes": [
+              "agent.collection",
+              "resource.self",
+              "world.self"
+            ],
+            "consumes": [
+              "intent.*"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "world-cull",
+          "function_name": "cull_starved",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 260
+          },
+          "description": "Remove foragers left with negative sugar after eating.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "world-census",
+          "function_name": "census",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 370
+          },
+          "description": "Print agent count and resource totals.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agents",
+              "resources"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "world-reconciliation",
+        "world-cull",
+        "world-census"
+      ],
+      "input_parameters": []
+    }
+  }
+}
