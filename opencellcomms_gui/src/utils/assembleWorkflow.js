@@ -157,14 +157,21 @@ const rebuildSubworkflow = (workflow, name, nodes, edges) => {
         .filter((e) => e.target === controllerNode.id && e.targetHandle === 'steps-param')
         .map((e) => e.source)
     : [];
-  let resolvedSteps = controllerNode?.data?.numberOfSteps || 1;
+  // The steps parameter node wired to the controller is the single source of
+  // truth for the loop count -- the executor resolves it directly. Normalize
+  // its value to a number and do NOT mirror it into number_of_steps; that
+  // field is only a fallback for controllers without a wired node.
   if (stepsParamNodeIds.length > 0) {
-    const pNode = nodes.find((n) => n.id === stepsParamNodeIds[0]);
-    const v =
-      pNode?.data?.parameters?.steps ??
-      pNode?.data?.parameters?.step_count ??
-      pNode?.data?.parameters?.numberOfSteps;
-    if (v !== undefined && v !== '' && Number.isFinite(Number(v))) resolvedSteps = Number(v);
+    const exported = parameters.find((p) => p.id === stepsParamNodeIds[0]);
+    if (exported?.parameters) {
+      exported.parameters = { ...exported.parameters };
+      for (const key of ['steps', 'step_count', 'numberOfSteps']) {
+        const v = exported.parameters[key];
+        if (v !== undefined && v !== '' && Number.isFinite(Number(v))) {
+          exported.parameters[key] = Number(v);
+        }
+      }
+    }
   }
   // Fall back to the persisted controller when this canvas was never mounted.
   const persisted = cached.controller;
@@ -174,8 +181,9 @@ const rebuildSubworkflow = (workflow, name, nodes, edges) => {
         type: 'controller',
         label: controllerLabel(name),
         position: controllerNode.position,
-        number_of_steps: resolvedSteps,
-        ...(stepsParamNodeIds.length > 0 ? { parameter_nodes: stepsParamNodeIds } : {}),
+        ...(stepsParamNodeIds.length > 0
+          ? { parameter_nodes: stepsParamNodeIds }
+          : { number_of_steps: controllerNode.data?.numberOfSteps || 1 }),
       }
     : persisted
       ? {
@@ -240,8 +248,9 @@ const synthesizeMain = (workflow, subworkflows) => {
   const mainCalls = [];
   if (subworkflows[initSeqName]) mainCalls.push(makeMainCall(initSeqName, 'Initialization sequence'));
   if (subworkflows[schedulerName]) {
-    const loopSteps = subworkflows[schedulerName]?.controller?.number_of_steps || 1;
-    mainCalls.push(makeMainCall(schedulerName, 'Main simulation loop', loopSteps));
+    // iterations stays 1: the executor takes the loop count from the
+    // scheduler's own steps parameter node (or its controller as fallback).
+    mainCalls.push(makeMainCall(schedulerName, 'Main simulation loop'));
   }
   (processingMeta.behavior_subworkflows || []).forEach((b) =>
     mainCalls.push(makeMainCall(b, `Processing: ${b}`)),
