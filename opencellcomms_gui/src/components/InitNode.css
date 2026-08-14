@@ -130,4 +130,16 @@
   opacity: 0.5;
 }
 
+.init-planner-badge {
+  margin-left: 6px;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
 

@@ -231,8 +231,10 @@ const WorkflowCanvas = ({ stage }) => {
 
     // Get the value from the connected parameter node
     let connectedStepsValue;
+    let stepsParamNodeId;
     if (stepsParamEdge) {
       const paramNode = nodes.find((n) => n.id === stepsParamEdge.source);
+      stepsParamNodeId = paramNode?.id;
       if (paramNode && paramNode.data.parameters) {
         // Extract the steps value from the parameter node
         // Could be "steps" or "step_count" depending on the parameter
@@ -247,6 +249,7 @@ const WorkflowCanvas = ({ stage }) => {
     const needsUpdate =
       controllerNode.data.isStepsParameterConnected !== isStepsParamConnected ||
       controllerNode.data.connectedStepsValue !== connectedStepsValue ||
+      controllerNode.data.stepsParamNodeId !== stepsParamNodeId ||
       (isStepsParamConnected && connectedStepsValue !== undefined &&
         controllerNode.data.numberOfSteps !== connectedStepsValue);
     if (!needsUpdate) return;
@@ -263,6 +266,7 @@ const WorkflowCanvas = ({ stage }) => {
                 ...node.data,
                 isStepsParameterConnected: isStepsParamConnected,
                 connectedStepsValue: connectedStepsValue,
+                stepsParamNodeId: stepsParamNodeId,
                 ...(isStepsParamConnected && connectedStepsValue !== undefined
                   ? { numberOfSteps: connectedStepsValue }
                   : {}),

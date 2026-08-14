@@ -15,6 +15,7 @@ import {
   assembleSubworkflowsFromStages,
   deriveForEachForBehavior,
 } from '../../utils/assembleWorkflow';
+import { overrideMatchesBase } from '../../utils/extractConnectedParams';
 
 /**
  * Creates the workflow I/O slice
@@ -482,13 +483,35 @@ export const createWorkflowIOSlice = (set, get) => ({
     }));
 
     // Always sync planner tabs: restore from loaded workflow, or seed a default
-    // so the Planner is never empty (a "Run 1" snapshot of current canvas params).
+    // so the Planner is never empty (an empty "Run 1" diff tab that follows the
+    // canvas values).
     const plannerData = workflowJson.metadata?.gui?.planner?.tabs;
     if (Array.isArray(plannerData) && plannerData.length > 0) {
-      get().setPlannerTabs(plannerData);
+      // Tabs are sparse diffs from the canvas base values. Older files carry
+      // full snapshots of every parameter; prune entries equal to the base so
+      // they collapse to true diffs (a pruned entry was a no-op at run time).
+      // Entries matching no base node are kept — the workflow validator
+      // reports those, don't silently self-heal.
+      const baseById = {};
+      for (const sw of Object.values(workflowJson.subworkflows || {})) {
+        for (const p of sw.parameters || []) {
+          if (p?.id) baseById[p.id] = p;
+        }
+      }
+      const prunedTabs = plannerData.map((tab) => {
+        const overrides = tab.parameterOverrides || {};
+        const kept = {};
+        for (const [pid, ov] of Object.entries(overrides)) {
+          const base = baseById[pid];
+          if (base && overrideMatchesBase(ov, base)) continue;
+          kept[pid] = ov;
+        }
+        return { ...tab, parameterOverrides: kept };
+      });
+      get().setPlannerTabs(prunedTabs);
     } else {
       get().setPlannerTabs([]);   // resets nextTabCounter to 1, clears stale state
-      get().addPlannerTab();      // seeds "Run 1" with default snapshot, sets active
+      get().addPlannerTab();      // seeds an empty "Run 1" diff tab, sets active
     }
   },
 

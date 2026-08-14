@@ -89,6 +89,28 @@ function deepClone(obj) {
 }
 
 /**
+ * The keys on a parameter node's data that carry values applied at run time.
+ * Everything else (label, position, targetParam, ...) is presentation-only and
+ * ignored by both override runners (planner.py apply_overrides and
+ * WorkflowConsole applyOverridesToWorkflow).
+ */
+export const OVERRIDE_VALUE_KEYS = ['parameters', 'items', 'entries', 'listType'];
+
+/**
+ * True when a planner override entry carries the same values as the base
+ * parameter node data, i.e. the override is redundant and can be dropped.
+ * Only value keys present on the override are compared; absent keys inherit
+ * from the base anyway.
+ */
+export function overrideMatchesBase(override, baseData) {
+  return OVERRIDE_VALUE_KEYS.every(
+    (k) =>
+      !(k in (override || {})) ||
+      JSON.stringify(override[k]) === JSON.stringify(baseData?.[k] ?? null)
+  );
+}
+
+/**
  * Snapshot all connected parameter node data.
  * Returns { paramNodeId: deepClone(node.data) } for every param node that has
  * at least one edge to a workflowFunction node.

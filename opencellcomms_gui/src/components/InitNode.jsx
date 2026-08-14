@@ -1,5 +1,6 @@
 import { Handle, Position } from 'reactflow';
 import { Zap, Settings } from 'lucide-react';
+import useWorkflowStore from '../store/workflowStore';
 import { SCHEDULER_NAME } from '../store/subworkflowKinds';
 import './InitNode.css';
 
@@ -18,6 +19,14 @@ const InitNode = ({ id, data, selected }) => {
   const numberOfSteps = data?.numberOfSteps || 1;
   const isParameterConnected = data?.isStepsParameterConnected || false;
   const connectedParameterValue = data?.connectedStepsValue;
+
+  // An enabled Planner configuration can override the steps parameter at run
+  // time; flag it so the displayed count isn't mistaken for what will run.
+  const plannerTabs = useWorkflowStore((s) => s.plannerTabs);
+  const plannerShadowed =
+    isParameterConnected &&
+    !!data?.stepsParamNodeId &&
+    plannerTabs.some((t) => t.enabled && t.parameterOverrides?.[data.stepsParamNodeId]);
 
   return (
     <div className={`init-node ${selected ? 'selected' : ''}`}>
@@ -49,6 +58,14 @@ const InitNode = ({ id, data, selected }) => {
             <span className="init-parameter-label">
               Number of steps: {isParameterConnected && connectedParameterValue !== undefined ? connectedParameterValue : numberOfSteps}
             </span>
+            {plannerShadowed && (
+              <span
+                className="init-planner-badge"
+                title="One or more enabled Planner configurations override this value; planner runs use the tab value."
+              >
+                Planner
+              </span>
+            )}
           </div>
         </div>
       )}

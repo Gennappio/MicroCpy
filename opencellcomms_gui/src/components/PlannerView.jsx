@@ -6,7 +6,8 @@ import './PlannerView.css';
 
 /**
  * PlannerView - Multiple named parameter configurations (tabs).
- * Each tab holds its own copy of parameter values (overrides).
+ * Each tab stores only the parameter values edited in it (a sparse diff);
+ * everything else follows the canvas base values.
  * When "Run" is pressed in the console, all active tabs execute sequentially.
  */
 const PlannerView = () => {
@@ -19,6 +20,7 @@ const PlannerView = () => {
     togglePlannerTab,
     setActivePlannerTab,
     updatePlannerTabParam,
+    removePlannerTabParam,
   } = useWorkflowStore();
 
   const [renamingTabId, setRenamingTabId] = useState(null);
@@ -47,6 +49,14 @@ const PlannerView = () => {
       updatePlannerTabParam(activePlannerTabId, paramNodeId, updater);
     },
     [activePlannerTabId, updatePlannerTabParam]
+  );
+
+  const handleResetParam = useCallback(
+    (paramNodeId) => {
+      if (!activePlannerTabId) return;
+      removePlannerTabParam(activePlannerTabId, paramNodeId);
+    },
+    [activePlannerTabId, removePlannerTabParam]
   );
 
   const handleDelete = useCallback(
@@ -134,8 +144,8 @@ const PlannerView = () => {
             <h2>No Planner Configurations</h2>
             <p>
               Click <strong>+ New</strong> to create a parameter configuration.
-              Each configuration captures the current parameter values and lets you
-              modify them independently. Active configurations run sequentially when
+              Each configuration stores only the values you change; everything else
+              follows the canvas. Active configurations run sequentially when
               you press Run.
             </p>
           </div>
@@ -143,6 +153,7 @@ const PlannerView = () => {
           <ParametersDashboard
             overrideData={activeTab.parameterOverrides}
             onUpdateParam={handleUpdateParam}
+            onResetParam={handleResetParam}
           />
         ) : (
           <div className="planner-empty">

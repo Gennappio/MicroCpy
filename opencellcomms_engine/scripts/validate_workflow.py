@@ -32,6 +32,14 @@ scientist can actually find and edit a behaviour in the GUI:
      Archived pre-migration workflows that still carry it are skip-flagged
      (`metadata.validation.skip`), not fixed.
 
+  5. Planner tab overrides (ERROR / WARN)
+     Planner tabs (`metadata.gui.planner.tabs[*].parameterOverrides`) are sparse
+     diffs from the canvas base values. An override keyed by an id that matches
+     no parameter node in any subworkflow is silently ignored at run time
+     (ERROR). An override deep-equal to the base node's values is a redundant
+     snapshot copy -- a second source of truth for the same number (WARN);
+     delete it or re-save the workflow from the GUI, which prunes on load.
+
 Usage:
     python scripts/validate_workflow.py <workflow.json> [<workflow.json> ...]
     python scripts/validate_workflow.py --all   # scan opencellcomms_adapters/*/workflows/*.json
@@ -355,6 +363,45 @@ def check_loop_count_single_source(subworkflows, errors):
                 )
 
 
+PLANNER_VALUE_KEYS = ("parameters", "items", "entries", "listType")
+
+
+def check_planner_tab_overrides(gui, subworkflows, errors, warnings):
+    """Planner tabs must be sparse diffs from the canvas base values.
+
+    An override whose id matches no parameter node is dead: both runners
+    (planner.py apply_overrides and the GUI's applyOverridesToWorkflow) merge
+    by parameter-node id and silently skip unmatched keys (ERROR). An override
+    deep-equal to the base node's value keys changes nothing at run time but
+    duplicates the value in the file (WARN). Only the value keys the runners
+    apply are compared; `==` on parsed JSON is key-order independent. Type
+    matters: "80" (string) vs 80 (int) is NOT redundant, since the applied
+    JSON would differ."""
+    tabs = ((gui.get("planner") or {}).get("tabs")) or []
+    base = {
+        p.get("id"): p
+        for sw in subworkflows.values()
+        for p in (sw.get("parameters") or [])
+        if p.get("id")
+    }
+    for tab in tabs:
+        name = tab.get("name") or tab.get("id") or "?"
+        for pid, ov in (tab.get("parameterOverrides") or {}).items():
+            node = base.get(pid)
+            if node is None:
+                errors.append(
+                    f"planner tab '{name}' overrides '{pid}', which matches no "
+                    f"parameter node id in any subworkflow -- the override is "
+                    f"silently ignored at run time."
+                )
+            elif all(k not in ov or ov[k] == node.get(k) for k in PLANNER_VALUE_KEYS):
+                warnings.append(
+                    f"planner tab '{name}' override for '{pid}' equals the base "
+                    f"values (redundant snapshot copy); delete it or re-save the "
+                    f"workflow from the GUI to prune."
+                )
+
+
 def check_workflow(path, registry):
     """Returns (errors, warnings, skip_reason) for one workflow file.
 
@@ -383,6 +430,7 @@ def check_workflow(path, registry):
     check_no_custom_functions_module(subworkflows, errors)
     check_execution_order_complete(subworkflows, warnings)
     check_loop_count_single_source(subworkflows, errors)
+    check_planner_tab_overrides(gui, subworkflows, errors, warnings)
     return errors, warnings, None
 
 

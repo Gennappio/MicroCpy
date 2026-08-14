@@ -55,9 +55,11 @@ The tab bar at the top manages the list of configurations. The content area belo
 
 ### Creating a configuration
 
-Clicking **+ New** creates a new configuration tab named `Run N` (where N is an auto-incrementing counter). At creation time, a **snapshot** of all current canvas parameter values is taken and stored independently inside the tab. From that point on, editing values in the Planner does not touch the canvas, and editing the canvas does not affect the saved configuration.
+Clicking **+ New** creates a new configuration tab named `Run N` (where N is an auto-incrementing counter). A new tab starts **empty**: it stores only the parameter values you edit in it (a sparse diff), and every other parameter follows the canvas base value at run time. Editing a value in the Planner does not touch the canvas; editing the canvas immediately affects every configuration that has not overridden that parameter.
 
-The snapshot captures every parameter node that is connected to a function node via an edge, across all stages and subworkflows.
+The dashboard shows every parameter node that is connected to a function node via an edge, across all stages and subworkflows. Entries the tab overrides carry an **override** badge (with a **Reset** button that reverts to the canvas value); all other entries display the live canvas value. Editing an overridden value back to exactly the canvas value also removes the override.
+
+> Older workflow files stored a full snapshot of every parameter in each tab. These load fine: entries equal to the canvas base are pruned on load (a no-op at run time), so the tabs collapse to true diffs, and the next save migrates the file.
 
 ### Tab controls
 
@@ -157,11 +159,13 @@ The engine receives each run as an independent execution with its own output dir
 
 ## How Overrides Are Applied
 
-When a tab is created, `snapshotAllParamNodeData` traverses all stage nodes and edges, finds every parameter node that drives at least one function node parameter, and deep-clones its `data` object into a flat map:
+A tab's `parameterOverrides` is a flat map holding an entry **only for parameters edited in that tab**:
 
 ```js
-{ [paramNodeId]: deepClone(node.data), ... }
+{ [paramNodeId]: paramNodeData, ... }   // sparse: edited entries only
 ```
+
+When you edit a parameter that has no entry yet, the current canvas value is cloned as the starting point (via `snapshotAllParamNodeData` for that one node) and the entry is stored; editing it back to the canvas value (or clicking **Reset**) removes the entry again.
 
 At run time, `applyOverridesToWorkflow` patches the exported workflow JSON:
 
@@ -172,7 +176,7 @@ for each subworkflow in workflow.subworkflows:
       merge override fields (parameters, items, entries, listType) into param
 ```
 
-Only the fields that exist in the override are replaced; all other fields of the parameter node are preserved. The canvas JSON is never mutated.
+Only the fields that exist in the override are replaced; all other fields of the parameter node are preserved, and parameters with no override entry keep their canvas values. The canvas JSON is never mutated.
 
 ---
 
@@ -187,7 +191,7 @@ The Planner state is managed in a Zustand slice (`plannerSlice.js`) with the fol
       id: string,           // Unique ID (timestamp-based)
       name: string,         // Display name ("Run 1", "Run 2", ...)
       enabled: boolean,     // Whether to include in sequential runs
-      parameterOverrides: { // Snapshot of param node data at creation time
+      parameterOverrides: { // Sparse diff: only parameters edited in this tab
         [paramNodeId]: paramNodeData
       }
     },
@@ -201,18 +205,19 @@ The Planner state is managed in a Zustand slice (`plannerSlice.js`) with the fol
 
 | Action | Description |
 |--------|------------|
-| `addPlannerTab()` | Snapshot current canvas, create new tab, make it active |
+| `addPlannerTab()` | Create a new empty (no-override) tab, make it active |
 | `removePlannerTab(tabId)` | Delete tab; switch active to previous tab if needed |
 | `renamePlannerTab(tabId, newName)` | Update tab name |
 | `togglePlannerTab(tabId)` | Flip enabled/disabled |
 | `setActivePlannerTab(tabId)` | Change the viewed tab |
-| `updatePlannerTabParam(tabId, paramNodeId, updater)` | Apply an updater function to one param node's stored data |
+| `updatePlannerTabParam(tabId, paramNodeId, updater)` | Apply an updater to one param's override (seeds from the canvas value; drops the entry if the result equals the base) |
+| `removePlannerTabParam(tabId, paramNodeId)` | Remove one override entry (reset to the canvas value) |
 | `setPlannerTabs(tabs)` | Bulk-load tabs (used when importing a saved workflow) |
 | `getActivePlannerTabs()` | Return all tabs where `enabled === true` |
 
 ### Persistence
 
-Planner tabs are included in the workflow JSON when the workflow is saved (via the workflow IO slice). When a workflow is loaded, `setPlannerTabs` restores the saved tabs and resets the auto-increment counter to continue after the highest existing `Run N` number.
+Planner tabs are included in the workflow JSON when the workflow is saved (via the workflow IO slice). When a workflow is loaded, override entries equal to the base parameter nodes are pruned (older files stored full snapshots; a pruned entry was a no-op at run time), then `setPlannerTabs` restores the tabs and resets the auto-increment counter to continue after the highest existing `Run N` number. `scripts/validate_workflow.py` errors on override keys that match no parameter node and warns on redundant (base-equal) entries; `scripts/prune_planner_tabs.py` prunes a file in place from the command line.
 
 ---
 
@@ -221,7 +226,7 @@ Planner tabs are included in the workflow JSON when the workflow is saved (via t
 **No configurations created yet:**
 
 > No Planner Configurations
-> Click + New to create a parameter configuration. Each configuration captures the current parameter values and lets you modify them independently. Active configurations run sequentially when you press Run.
+> Click + New to create a parameter configuration. Each configuration stores only the values you change; everything else follows the canvas. Active configurations run sequentially when you press Run.
 
 **A configuration exists but has no connected parameters:**
 
@@ -237,9 +242,9 @@ Planner tabs are included in the workflow JSON when the workflow is saved (via t
 
 1. Design the workflow in the **Composers** and **Sub-workflows** tabs, connecting parameter nodes to function nodes for every value you want to vary.
 2. Switch to the **Planner** tab.
-3. Click **+ New** to create the first configuration (`Run 1`). This snapshots the current values.
-4. Edit the parameter values in the dashboard for `Run 1`.
-5. Click **+ New** again for `Run 2`. This snapshots the same canvas (which is unchanged — you only edited the Planner copy). Edit values for `Run 2`.
+3. Click **+ New** to create the first configuration (`Run 1`). It starts with no overrides — it runs exactly the canvas values.
+4. Edit the parameter values you want to vary in the dashboard for `Run 1`; each edited entry is marked **override**.
+5. Click **+ New** again for `Run 2` and edit its values. Parameters neither tab overrides keep following the canvas.
 6. Repeat for as many configurations as needed.
 7. Disable configurations you want to skip by clicking their eye toggle.
 8. Open the **Run** console and click **Run**. All enabled configurations execute in sequence, each producing its own timestamped output folder.

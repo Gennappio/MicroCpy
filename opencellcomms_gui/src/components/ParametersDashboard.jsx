@@ -51,7 +51,7 @@ const KIND_ORDER = [
  * ParametersDashboard - Centralized view of all connected parameter nodes
  * across all subworkflows, with inline editing.
  */
-function ParametersDashboard({ overrideData, onUpdateParam }) {
+function ParametersDashboard({ overrideData, onUpdateParam, onResetParam }) {
   const {
     workflow,
     stageNodes,
@@ -487,10 +487,16 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
   // Render a single parameter entry
   const renderParamEntry = (entry) => {
     const { stageName, paramNodeId, paramNodeType, paramName } = entry;
-    // Use override data if available, otherwise fall back to canvas node data
-    const paramNodeData = overrideData ? (overrideData[paramNodeId] || entry.paramNodeData) : entry.paramNodeData;
+    // In planner mode (overrideData given), a tab stores only edited entries;
+    // everything else inherits the live canvas value.
+    const isOverridden =
+      !!overrideData && Object.prototype.hasOwnProperty.call(overrideData, paramNodeId);
+    const paramNodeData = isOverridden ? overrideData[paramNodeId] : entry.paramNodeData;
     return (
-      <div key={paramNodeId} className="param-entry">
+      <div
+        key={paramNodeId}
+        className={`param-entry ${overrideData ? (isOverridden ? 'overridden' : 'inherited') : ''}`}
+      >
         <div className="param-entry-header">
           <span className="param-name">{paramNodeData?.label || paramName}</span>
           <span className={`param-node-type-badge ${paramNodeType}`}>
@@ -501,6 +507,22 @@ function ParametersDashboard({ overrideData, onUpdateParam }) {
               : 'dict'}
           </span>
           <span className="param-target-name">{paramName}</span>
+          {isOverridden && (
+            <>
+              <span className="param-override-badge" title="This configuration overrides the canvas value">
+                override
+              </span>
+              {onResetParam && (
+                <button
+                  className="param-reset-btn"
+                  onClick={() => onResetParam(paramNodeId)}
+                  title="Reset to the canvas base value"
+                >
+                  Reset
+                </button>
+              )}
+            </>
+          )}
         </div>
         {paramNodeType === 'parameterNode' &&
           renderParameterNodeEditor(stageName, paramNodeId, paramNodeData)}

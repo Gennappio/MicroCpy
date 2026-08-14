@@ -2,11 +2,12 @@
  * Planner Slice
  *
  * Manages multiple named parameter configurations ("planner tabs").
- * Each tab holds a snapshot of parameter node data (parameterOverrides)
- * that is independent of the canvas nodes.
+ * Each tab holds a sparse diff from the canvas base values (parameterOverrides):
+ * only parameters the user edited in the tab are stored; everything else
+ * follows the canvas parameter nodes at run time.
  */
 
-import { snapshotAllParamNodeData } from '../../utils/extractConnectedParams';
+import { snapshotAllParamNodeData, overrideMatchesBase } from '../../utils/extractConnectedParams';
 
 let nextTabCounter = 1;
 
@@ -24,16 +25,16 @@ export const createPlannerSlice = (set, get) => ({
   activePlannerTabId: null,
 
   /**
-   * Add a new planner tab by snapshotting current canvas param values.
+   * Add a new planner tab. Starts with no overrides: every parameter follows
+   * the canvas base value until the user edits it in this tab.
    */
   addPlannerTab: () => {
-    const { stageNodes, stageEdges, workflow, plannerTabs } = get();
-    const overrides = snapshotAllParamNodeData(stageNodes, stageEdges, workflow.metadata);
+    const { plannerTabs } = get();
     const id = `planner-tab-${Date.now()}-${nextTabCounter}`;
     const name = `Run ${nextTabCounter}`;
     nextTabCounter++;
 
-    const newTab = { id, name, enabled: true, parameterOverrides: overrides };
+    const newTab = { id, name, enabled: true, parameterOverrides: {} };
 
     set({
       plannerTabs: [...plannerTabs, newTab],
@@ -92,27 +93,42 @@ export const createPlannerSlice = (set, get) => ({
    * @param {Function} updater - (oldData) => newData
    */
   updatePlannerTabParam: (tabId, paramNodeId, updater) => {
+    const { stageNodes, stageEdges, workflow } = get();
+    const base = snapshotAllParamNodeData(stageNodes, stageEdges, workflow.metadata)[paramNodeId];
     set((state) => ({
       plannerTabs: state.plannerTabs.map((t) => {
         if (t.id !== tabId) return t;
-        let oldData = t.parameterOverrides[paramNodeId];
-        if (!oldData) {
-          // This param node was added to the canvas after the tab was
-          // snapshotted (a newer parameter the saved tab predates). The
-          // dashboard already renders it from the live canvas value, so adopt
-          // that same value as the override base instead of silently dropping
-          // the edit.
-          const { stageNodes, stageEdges, workflow } = get();
-          oldData = snapshotAllParamNodeData(stageNodes, stageEdges, workflow.metadata)[paramNodeId];
-        }
+        const oldData = t.parameterOverrides[paramNodeId] || base;
         if (!oldData) return t;
+        const newData = updater(oldData);
+        if (base && overrideMatchesBase(newData, base)) {
+          // Edited back to the canvas base value: drop the override entry so
+          // the tab stays a sparse diff.
+          const { [paramNodeId]: _removed, ...rest } = t.parameterOverrides;
+          return { ...t, parameterOverrides: rest };
+        }
         return {
           ...t,
           parameterOverrides: {
             ...t.parameterOverrides,
-            [paramNodeId]: updater(oldData),
+            [paramNodeId]: newData,
           },
         };
+      }),
+    }));
+  },
+
+  /**
+   * Remove a single override entry from a tab (reset the parameter to the
+   * canvas base value).
+   */
+  removePlannerTabParam: (tabId, paramNodeId) => {
+    set((state) => ({
+      plannerTabs: state.plannerTabs.map((t) => {
+        if (t.id !== tabId) return t;
+        if (!(paramNodeId in t.parameterOverrides)) return t;
+        const { [paramNodeId]: _removed, ...rest } = t.parameterOverrides;
+        return { ...t, parameterOverrides: rest };
       }),
     }));
   },
