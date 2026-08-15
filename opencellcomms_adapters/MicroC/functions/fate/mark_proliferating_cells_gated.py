@@ -50,7 +50,8 @@ from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext, Phenotype
 
 
-_PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value}
+_PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value,
+                    Phenotype.NECROSIS.value}
 
 DEFAULTS: Dict[str, float] = {
     "atp_threshold1": 0.8,   # fraction of one saturated ATP pathway
@@ -139,6 +140,14 @@ def mark_proliferating_cells_gated(
     tally = _tally(env)
 
     for cell in targets:
+        # Count every cell seen, so the end-of-pass flush below still fires
+        # under a per-agent ask, then skip necrotic cells: Necrosis is terminal
+        # (and a necrotic cell can still carry stale atp_rate values from
+        # before it died, so the gate alone is not enough to keep it out).
+        tally['cells'] += 1
+        if cell.is_necrotic:
+            continue
+
         metabolic_state = cell.metabolic_state
         atp_rate = metabolic_state.get('atp_rate')
         atp_rate_max = metabolic_state.get('atp_rate_max')
@@ -154,7 +163,6 @@ def mark_proliferating_cells_gated(
         gene_on = cell.gene_states.get(Phenotype.PROLIFERATION.value, False)
         age_ok = cell.age > cell_cycle_time
 
-        tally['cells'] += 1
         tally['has_atp'] += bool(has_atp)
         tally['gene_on'] += bool(gene_on)
         tally['atp_ok'] += bool(atp_ok)

@@ -51,6 +51,9 @@ def mark_growth_arrest_cells(
     cells_newly_marked = 0
 
     for cell in targets:
+        # Necrosis is terminal: never re-fate a necrotic cell.
+        if cell.is_necrotic:
+            continue
         if cell.gene_states.get(Phenotype.GROWTH_ARREST.value, False):
             if not cell.is_growth_arrested:
                 cell.mark_growth_arrested()

@@ -16,7 +16,8 @@ from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext, Phenotype
 
 
-_PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value}
+_PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value,
+                    Phenotype.NECROSIS.value}
 
 
 @register_function(
@@ -41,6 +42,9 @@ def mark_proliferating_cells(env: BiologicalContext, **kwargs) -> None:
     quiescent = 0
 
     for cell in targets:
+        # Necrosis is terminal: never re-fate a necrotic cell.
+        if cell.is_necrotic:
+            continue
         old_phenotype = cell.phenotype
         if cell.gene_states.get(Phenotype.PROLIFERATION.value, False):
             if not cell.is_proliferating:

@@ -5,6 +5,10 @@ This is the FIRST marking function in the fate cycle. It resets every cell
 to Quiescent (clearing stale phenotypes from the previous iteration), then
 marks cells whose Apoptosis gene is ON.
 
+Necrosis is a terminal fate: necrotic cells are skipped by both the reset
+and the marking, so once mark_necrotic_cells marks a cell it stays Necrosis
+until remove_necrotic_cells takes it out of the population.
+
 Apoptotic cells are marked but NOT removed here. Use remove_apoptotic_cells
 to actually remove marked cells from the population.
 """
@@ -29,12 +33,15 @@ def mark_apoptotic_cells(env: BiologicalContext, **kwargs) -> None:
 
     # Reset every cell to Quiescent so stale phenotypes from the previous
     # iteration do not carry over. Later marking functions overwrite this.
+    # Necrosis is terminal, so necrotic cells are exempt from the reset.
     for cell in targets:
-        if not cell.is_quiescent:
+        if not cell.is_quiescent and not cell.is_necrotic:
             cell.mark_quiescent()
 
     marked_count = 0
     for cell in targets:
+        if cell.is_necrotic:
+            continue
         if cell.gene_states.get(Phenotype.APOPTOSIS.value, False):
             cell.mark_apoptotic()
             marked_count += 1
