@@ -153,7 +153,7 @@
         ]
       }
     },
-    "workflow_source_path": "microc_p53_v2_p53wt.json"
+    "workflow_source_path": "microc_p53_experiment.json"
   },
   "subworkflows": {
     "oxygen_init": {
@@ -920,7 +920,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "cMET_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             },
             {
@@ -928,7 +928,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "EGFR_stimulus",
-                "threshold": 1e-06
+                "threshold": 0.000001
               }
             }
           ],
@@ -1318,7 +1318,7 @@
           "id": "diffusion_step-param_tolerance",
           "label": "Tolerance",
           "parameters": {
-            "tolerance": 1e-06
+            "tolerance": 0.000001
           },
           "position": {
             "x": -250,
@@ -1406,7 +1406,7 @@
           "id": "diffusion_step-param_glucose_conversion_factor",
           "label": "Glucose Consumption Scale",
           "parameters": {
-            "glucose_conversion_factor": 1
+            "glucose_conversion_factor": "3"
           },
           "position": {
             "x": -250,
