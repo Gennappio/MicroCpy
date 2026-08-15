@@ -89,7 +89,12 @@ def _generate_plots_to_directory(
     # Create plotter with the specified output directory and this plugin's
     # explicit cell colourer (metabolic interior / phenotype border).
     from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
-    plotter = AutoPlotter(config, output_dir, cell_color_fn=jayatilake_cell_color)
+    # Necrosis thresholds published by mark_necrotic_cells → dashed isolines
+    # on the Oxygen/Glucose heatmaps.
+    extra_isolines = {substance: [(value, 'Necrosis')]
+                      for substance, value in results.get('necrosis_thresholds', {}).items()}
+    plotter = AutoPlotter(config, output_dir, cell_color_fn=jayatilake_cell_color,
+                          extra_isolines=extra_isolines)
 
     # Generate all plots with marker and substance filter
     generated_plots = plotter.generate_all_plots(

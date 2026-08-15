@@ -2,7 +2,13 @@
 Mark cells as necrotic based on user-defined environmental conditions.
 
 Necrotic cells remain in the population but do nothing (no metabolism,
-no gene network updates, no phenotype changes).
+no gene network updates, no phenotype changes). Necrosis is a terminal
+fate: the other markers skip necrotic cells. Pair with
+remove_necrotic_cells to take them out of the population after a
+configurable number of steps.
+
+The thresholds are published to results['necrosis_thresholds'] so the
+plotting nodes can draw them as isolines on the substance heatmaps.
 
 USAGE:
 The 'necrosis_params' dictionary can contain any parameters the user needs.
@@ -50,6 +56,13 @@ def mark_necrotic_cells(
     oxygen_threshold = params.get('oxygen_threshold', 0.022)
     glucose_threshold = params.get('glucose_threshold', 0.23)
     require_both = params.get('require_both', True)
+
+    # Publish the thresholds so the plotting nodes can draw necrosis isolines
+    # on the Oxygen/Glucose heatmaps. Idempotent, so safe under a per-agent ask.
+    env.results.store('necrosis_thresholds', {
+        'Oxygen': oxygen_threshold,
+        'Glucose': glucose_threshold,
+    })
 
     # Per-cell when bound (env.cell); else the whole-population loop.
     targets = [env.cell] if env.cell is not None else list(env.cells)

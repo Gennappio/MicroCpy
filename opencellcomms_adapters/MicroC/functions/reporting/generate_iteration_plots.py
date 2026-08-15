@@ -172,7 +172,12 @@ def generate_iteration_plots(
     # --- generate plots using the *same* AutoPlotter as FINAL plots -------
     try:
         from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
-        plotter = AutoPlotter(config, output_path, cell_color_fn=jayatilake_cell_color)
+        # Necrosis thresholds published by mark_necrotic_cells → dashed isolines
+        # on the Oxygen/Glucose heatmaps.
+        extra_isolines = {substance: [(value, 'Necrosis')]
+                          for substance, value in results.get('necrosis_thresholds', {}).items()}
+        plotter = AutoPlotter(config, output_path, cell_color_fn=jayatilake_cell_color,
+                              extra_isolines=extra_isolines)
 
         generated_plots = plotter.generate_all_plots(
             results, simulator, population,

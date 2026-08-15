@@ -36,13 +36,17 @@ plt.rcParams.update({
 class AutoPlotter:
     """Automatic plotting for OpenCellComms simulations"""
     
-    def __init__(self, config, plots_dir: Path, cell_color_fn=None):
+    def __init__(self, config, plots_dir: Path, cell_color_fn=None, extra_isolines=None):
         self.config = config
         self.plots_dir = Path(plots_dir)
         # Optional explicit per-cell colourer: callable(cell=, gene_states=, config=)
         # returning "interior|border". Passed by the plugin that owns the model
         # (e.g. MicroC's reporting functions) instead of a hidden hook module.
         self.cell_color_fn = cell_color_fn
+        # Optional extra isolines per substance, beyond the gene-association
+        # threshold: {substance_name: [(value, label), ...]} — e.g. necrosis
+        # thresholds passed by the plugin's reporting functions.
+        self.extra_isolines = extra_isolines or {}
         self.plots_dir.mkdir(parents=True, exist_ok=True)
 
         # Create subdirectories
@@ -132,12 +136,14 @@ class AutoPlotter:
 
         # Add threshold isoline if this substance has a gene network association
         threshold_value = self._get_threshold_for_substance(substance_name)
-        if threshold_value is not None:
+        extra_isolines = self.extra_isolines.get(substance_name, [])
+        if threshold_value is not None or extra_isolines:
             # Create coordinate grids for contour
             x_coords = np.linspace(0, self.config.domain.size_x.value, plot_data.shape[1])
             y_coords = np.linspace(0, self.config.domain.size_y.value, plot_data.shape[0])
             X, Y = np.meshgrid(x_coords, y_coords)
 
+        if threshold_value is not None:
             # Add threshold contour line
             threshold_contour = ax.contour(X, Y, plot_data, levels=[threshold_value],
                                          colors=['red'], linewidths=2, linestyles='-')
@@ -145,6 +151,14 @@ class AutoPlotter:
             ax.clabel(threshold_contour, inline=True, fontsize=10, fmt=f'Threshold: {threshold_value:.3g}')
             if not quiet:
                 print(f"   [ISO] Added threshold isoline at {threshold_value:.3g} mM for {substance_name}")
+
+        # Extra isolines supplied by the caller (e.g. necrosis thresholds)
+        for iso_value, iso_label in extra_isolines:
+            iso_contour = ax.contour(X, Y, plot_data, levels=[iso_value],
+                                     colors=['orangered'], linewidths=2, linestyles='--')
+            ax.clabel(iso_contour, inline=True, fontsize=10, fmt=f'{iso_label}: {iso_value:.3g}')
+            if not quiet:
+                print(f"   [ISO] Added {iso_label} isoline at {iso_value:.3g} mM for {substance_name}")
 
         # Add colorbar with FORCED correct range
         cbar = plt.colorbar(im, ax=ax, shrink=0.8)
