@@ -1972,13 +1972,56 @@
             ],
             "emits": []
           }
+        },
+        {
+          "id": "division-remove_necrotic",
+          "function_name": "remove_necrotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "description": "Remove cells that have stayed necrotic for necrosis_removal_delay scheduler steps",
+          "custom_name": "remove_necrotic_cells",
+          "step_count": 1,
+          "parameter_nodes": [
+            "division-param_necrosis_removal_delay"
+          ],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "division-param_necrosis_removal_delay",
+          "label": "Necrosis Removal Delay (steps)",
+          "parameters": {
+            "necrosis_removal_delay": 10
+          },
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
       "execution_order": [
         "division-cell_division",
-        "division-remove_apoptotic"
+        "division-remove_apoptotic",
+        "division-remove_necrotic"
       ],
       "input_parameters": []
     },
