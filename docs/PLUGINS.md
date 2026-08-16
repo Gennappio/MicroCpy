@@ -10,6 +10,11 @@ evolves cells, gene networks and behaviours arrives as a plugin.
 > the same thing is called an **adapter** and lives in `opencellcomms_adapters/`.
 > The two words are interchangeable.
 
+> **Readability Contract — mandatory.** Before authoring or modifying any
+> plugin, workflow, or node function, read [`READABILITY.md`](READABILITY.md)
+> and finish with its Verification checklist. Enforced strictly: **R1 — every
+> ABM mechanism is exposed** and **R2 — exactly one source of truth**.
+
 The shared biology primitives (gene networks, metabolism, cell lifecycle) are
 themselves a plugin — `opencellcomms_adapters/common/` — that the experiment
 plugins build on.

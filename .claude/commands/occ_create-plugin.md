@@ -10,6 +10,13 @@ This command creates an **empty, import-ready package**. It does not write any
 biological functions — that is `/occ_new-function`. It does not write a workflow —
 that is `/occ_create-workflow`.
 
+> **Readability Contract — mandatory.** Read `docs/READABILITY.md` before
+> writing anything, and finish with its Verification checklist. Enforced
+> strictly: **R1 — every ABM mechanism is exposed** (biology as nodes,
+> constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry) and **R2 — exactly
+> one source of truth** (one law, one implementation; one value, one owning
+> GUI location that everything else reads — never a copy).
+
 ## Step 1 — Ask questions (ask all at once in a single message)
 
 1. **What should the plugin be called?**

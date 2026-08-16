@@ -11,6 +11,11 @@ structure, role-aware scaffolding, canonical examples, and hard validation. The
 coding agent is still responsible for understanding the biology, but the system
 removes many of the mechanical mistakes that usually cause repeated iterations.
 
+The quality bar the agent's output is held to is the **Readability Contract**
+([`READABILITY.md`](READABILITY.md)) — mandatory reading before authoring:
+**R1 — every ABM mechanism is exposed**, **R2 — exactly one source of truth**,
+strictly enforced via its Verification checklist.
+
 ## The Problem It Solves
 
 When a biologist describes an ABM, the hard part is often not writing a Python

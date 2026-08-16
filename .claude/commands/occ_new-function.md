@@ -6,6 +6,13 @@ Your job is to gather their intent in plain English and produce a complete,
 correctly placed, working **atomic node-function** — one file, one function, one
 job — that they can see and edit on the GUI canvas.
 
+> **Readability Contract — mandatory.** Read `docs/READABILITY.md` before
+> writing anything, and finish with its Verification checklist. Enforced
+> strictly: **R1 — every ABM mechanism is exposed** (biology as nodes,
+> constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry) and **R2 — exactly
+> one source of truth** (one law, one implementation; one value, one owning
+> GUI location that everything else reads — never a copy).
+
 ## Step 1 — Ask questions (ask all at once in a single message)
 
 1. **What biological event does this function model?**
@@ -167,6 +174,18 @@ def <function_name>(env: BiologicalContext, <param>: <type> = <default>, **kwarg
 ```
 
 **Important rules:**
+- **Readability [R1.2, R1.4]:** every biological constant in the body
+  (threshold, rate, coefficient, exponent) must be a declared parameter —
+  prefer one `DICT` — never a hardcoded number; after wiring, prove consumption
+  (run or focused-test with a non-default value and confirm the result changes).
+- **Canvas-visible mechanisms [R1.6]:** a law, mode switch, or protocol gets
+  its **own node** (or its own clearly-labeled parameter slot) whose display
+  name and description announce it on the canvas — never a free-form "magic
+  key" inside a dict entry that only reveals itself when the dict is opened.
+  Dict tables hold tuning values of mechanisms the canvas already announces.
+- **Single source [R2.1, R2.2]:** if the law or value already exists elsewhere,
+  import the shared helper / resolve the owning parameter table at run time —
+  never re-type a formula or re-declare a value another node owns.
 - First arg is `env: BiologicalContext`. Declare `requires=[...]`; typed views fail
   loudly, so **no** manual `None`-checks for population/simulator (but **do** guard
   `env.agent is None` in per-agent functions).
@@ -217,6 +236,9 @@ After showing the code and getting approval (or "go ahead"):
   reports — orphans, inlined dict/list, and the agent-creation structure errors
   (a `create_subworkflow` scheduled with `for_each`, or a leftover per-agent
   `init_subworkflow` — that phase was removed, so fold per-cell setup into creation).
+- Run the **Verification checklist** in `docs/READABILITY.md` (exposure sweep,
+  consumption proof, duplication sweep, truthful logs) — the work is not done
+  until it passes.
 - Next steps:
   - Add it to a workflow canvas: `/occ_add-to-workflow`
   - Build a fresh workflow from this plugin's behaviors: `/occ_create-workflow`

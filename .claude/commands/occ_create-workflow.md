@@ -10,6 +10,16 @@ You **assemble from what exists**. You do not write biological functions here
 (that is `/occ_new-function`); you arrange already-authored behaviors and flag
 anything missing.
 
+> **Readability Contract — mandatory.** Read `docs/READABILITY.md` before
+> writing anything, and finish with its Verification checklist. Enforced
+> strictly: **R1 — every ABM mechanism is exposed** (biology as nodes,
+> constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry) and **R2 — exactly
+> one source of truth** (one law, one implementation; one value, one owning
+> GUI location that everything else reads — never a copy). For workflows this
+> means in particular: parameter values carried explicitly in parameter
+> nodes/tables (visible, not silent code defaults), and planner tab overrides
+> kept as sparse diffs of the owning node — never snapshot copies.
+
 **Use `opencellcomms_adapters/SUGARSCAPE/workflows/sugarscape.json` as the
 canonical structural template** — read it and mirror its shape. A second, simpler
 shape (agent + diffusion fields, no tile grid, no resources) is

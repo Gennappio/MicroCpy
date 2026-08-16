@@ -159,6 +159,7 @@ Cell state only stores `gene_states: Dict[str, bool]` (current gene values). Boo
 
 ## Key References
 
+- `docs/READABILITY.md` — **The Readability Contract — mandatory reading before creating or modifying any adapter, workflow, or node** (R1: mechanisms exposed; R2: single source of truth; verification checklist)
 - `docs/PLUGINS.md` — What a plugin (adapter) is: structure, `plugin.toml` manifest, auto-discovery, name-collision rules
 - `docs/BIOLOGICAL_CONTEXT.md` — Typed `env: BiologicalContext` authoring API (recommended for new functions)
 - `docs/GENE_NETWORK_GUIDE.md` — Deep dive on gene network architecture
@@ -187,6 +188,32 @@ conversion and kernel-gating and reads clearly in the GUI.
   substance's decay rate, a field solve), promote it — a config field on the
   substance/resource, or a verb in `src/abm/resource.py` — instead of copying the
   escape hatch into the next plugin.
+
+## The Readability Contract (`docs/READABILITY.md`) — read it before authoring
+
+**`docs/READABILITY.md` is the canonical, strictly enforced contract for every
+adapter, workflow, and node function. Reading it is a mandatory precondition
+for creating or modifying one.** A change that violates it is a defect even
+when the code is numerically correct. Its two current rules, one line each:
+
+- **R1 — Every ABM mechanism is exposed.** Biology is nodes; biological
+  constants are GUI parameters; a parameter must be consumed, not just defined;
+  logs and descriptions state the rule actually in effect; and **the canvas
+  itself must announce every law and mode** — a scientist never goes deeper
+  than the canvas, so a mechanism buried as a free-form key inside a dict
+  entry is hidden biology (R1.6): give it its own node or labeled slot.
+- **R2 — Exactly one source of truth.** One law, one implementation (a shared
+  helper, never a copy); one value, one owning GUI location that every other
+  consumer — including init-time code — resolves at run time; hardcoded
+  fallbacks only where the owner can legitimately be absent, proven
+  behavior-identical, documented, and logged.
+
+Finish any authoring work by running that document's **Verification checklist**.
+The three sections below ("Workflow JSON & GUI Readability", "No hidden
+biology", "Every behavior must belong to a navigable category") are the **case
+law** under this contract — the recorded failures and the operational guidance
+they produced. New rules are added to `docs/READABILITY.md` only (never
+restated here or in the skills); cite rules by ID (e.g. R1.4, R2.2).
 
 ## Workflow JSON & GUI Readability
 
@@ -398,6 +425,9 @@ typed `env` API, place them on the entity canvases, and order them in the World
 the simulation into one mega-node.
 
 ## Adding a new function
+
+**First read `docs/READABILITY.md`** (the Readability Contract — mandatory) and
+finish with its Verification checklist.
 
 Most new functions are **experiment-specific** and belong in a **plugin** (an
 `opencellcomms_adapters/<plugin>/` package). See `docs/PLUGINS.md` for the full

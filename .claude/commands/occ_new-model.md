@@ -19,6 +19,16 @@ skills — it does not duplicate them:
 Your unique job is the two things none of those do: **the intake discipline** and
 **the preview-before-code gate**.
 
+> **Readability Contract — mandatory.** Read `docs/READABILITY.md` before
+> writing anything, and finish with its Verification checklist. Enforced
+> strictly: **R1 — every ABM mechanism is exposed** (biology as nodes,
+> constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry) and **R2 — exactly
+> one source of truth** (one law, one implementation; one value, one owning
+> GUI location that everything else reads — never a copy). Every constant the
+> intake extracts from a paper or reference implementation must end up as a
+> visible GUI parameter with exactly one owner — never a hardcoded number in a
+> generated function body.
+
 ## The discipline (non-negotiable)
 
 Every slot in the intake reaches exactly one **terminal state**, marked inline:

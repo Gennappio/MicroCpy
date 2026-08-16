@@ -5,6 +5,13 @@ canvas inside a workflow JSON. They may not know the JSON format. Your job is to
 find the right canvas and insert the function node correctly, keeping the graph
 valid.
 
+> **Readability Contract — mandatory.** Read `docs/READABILITY.md` before
+> writing anything, and finish with its Verification checklist. Enforced
+> strictly: **R1 — every ABM mechanism is exposed** (biology as nodes,
+> constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry) and **R2 — exactly
+> one source of truth** (one law, one implementation; one value, one owning
+> GUI location that everything else reads — never a copy).
+
 ## Step 1 — Identify the function and target workflow
 
 Ask the user:
@@ -138,6 +145,9 @@ Tell the user:
   resource-mutating behavior on an `agent_behavior` canvas) without warning.
 - Do **not** inline dict/list values in `"parameters"` — use
   `dictParameterNode`/`listParameterNode` siblings.
+- Do **not** re-declare a value another parameter node already owns [R2.2] — a
+  node that needs the same threshold/coefficient reads the owning table at run
+  time; a second copy silently forks the model.
 - Do **not** reuse a node `"id"`, and do **not** forget to add it to
   `execution_order` (a node absent from `execution_order` never runs).
 - If the function needs a resource, substance, space, or gene network that the

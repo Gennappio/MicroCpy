@@ -2,6 +2,13 @@
 
 This guide explains how to create custom workflow functions that appear in the GUI and can be used in your simulations.
 
+> **Readability Contract — mandatory.** Before writing any function, read
+> [`READABILITY.md`](READABILITY.md) and finish with its Verification
+> checklist. Enforced strictly: **R1 — every ABM mechanism is exposed**
+> (biology as nodes, constants as GUI parameters, consumed not just defined, announced on the canvas — never hidden inside a dict entry)
+> and **R2 — exactly one source of truth** (one law, one implementation; one
+> value, one owning GUI location that everything else reads — never a copy).
+
 ## Overview
 
 Functions in OpenCellComms are Python functions decorated with `@register_function`. Once registered, they automatically appear in the GUI's function palette and can be dragged onto the workflow canvas.

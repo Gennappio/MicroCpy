@@ -22,6 +22,15 @@ Example:
 Notes:
     - [Important note 1]
     - [Important note 2]
+
+Readability Contract (docs/READABILITY.md — mandatory, strictly enforced):
+    - R1: every biological constant in the body is a declared parameter (prefer
+      one DICT), consumed and proven with a non-default value — never hardcoded.
+    - R1.6: a law/mode switch is its own node or clearly-labeled slot, announced
+      on the canvas — never a free-form key inside a dict entry (scientists do
+      not go deeper than the canvas).
+    - R2: one source of truth — reuse a shared helper for an existing law and
+      read values from their owning parameter table; never copy either.
 """
 
 from src.workflow.decorators import register_function
