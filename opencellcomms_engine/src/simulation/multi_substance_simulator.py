@@ -336,7 +336,8 @@ class MultiSubstanceSimulator:
             var.constrain(gradient_value, where=face_mask)
 
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]],
-               implicit_sinks: Optional[Dict[Tuple[float, float], Dict[str, float]]] = None):
+               implicit_sinks: Optional[Dict[Tuple[float, float], Dict[str, float]]] = None,
+               substance_filter: Optional[List[str]] = None):
         """Update using FiPy diffusion solver - steady state solution.
 
         Args:
@@ -347,6 +348,9 @@ class MultiSubstanceSimulator:
                 folded into the PDE matrix as an implicit sink -k(x)·c rather
                 than evaluated at the previous concentrations, which keeps
                 pure-Neumann systems with net production nonsingular.
+            substance_filter: optional list of substance names to solve;
+                substances not listed keep their current field untouched
+                (None = solve all).
         """
 
         # Progress logging: show which substances are being processed
@@ -357,6 +361,8 @@ class MultiSubstanceSimulator:
 
         for idx, (name, substance_state) in enumerate(self.state.substances.items(), 1):
             if name not in self.fipy_variables:
+                continue
+            if substance_filter is not None and name not in substance_filter:
                 continue
 
             # Progress indicator for each substance

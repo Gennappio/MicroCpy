@@ -1207,7 +1207,7 @@
       "input_parameters": []
     },
     "diffusion_step": {
-      "description": "MicroC coupled diffusion (SPECIAL CASE): one Picard-coupled PDE solves ALL substance fields (Oxygen, Glucose, Lactate, H, TGFA, FGF, HGF, GI) together, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors.",
+      "description": "MicroC diffusion (SPECIAL CASE): two collective solves advance all substance fields each step -- a Picard-coupled Michaelis-Menten solve of the metabolic group (Oxygen, Glucose, Lactate, H) and a single implicit solve of the growth factors (TGFA, FGF, HGF, GI). Each solve spans several substances at once, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors.",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -1289,7 +1289,7 @@
             "x": 40,
             "y": 459.5
           },
-          "description": "COUPLED solver - iterative coupling with under-relaxation. Disabled: growth-factor uptake is evaluated explicitly here, which makes the zero-flux TGFA/FGF/GI steady states singular (fields freeze at 0 or land on an arbitrary constant). Replaced by the implicit-uptake solver node below.",
+          "description": "COUPLED solver - iterative coupling with under-relaxation, all 8 substances in one loop. Disabled: growth-factor uptake is evaluated explicitly here, which makes the zero-flux TGFA/FGF/GI steady states singular (fields freeze at 0 or land on an arbitrary constant). Replaced by the split Metabolic + Growth Factor solver nodes below.",
           "custom_name": "run_diffusion_solver_coupled",
           "step_count": 1,
           "parameter_nodes": [
@@ -1332,8 +1332,8 @@
           }
         },
         {
-          "id": "diffusion_step-run_diffusion_coupled_implicit",
-          "function_name": "run_diffusion_solver_coupled_implicit",
+          "id": "diffusion_step-run_diffusion_metabolic",
+          "function_name": "run_diffusion_solver_metabolic",
           "function_file": "",
           "parameters": {},
           "enabled": true,
@@ -1341,10 +1341,11 @@
             "x": 40,
             "y": 900
           },
-          "description": "COUPLED solver with IMPLICIT growth-factor uptake: the first-order uptake R = γ_C·C of TGFA/FGF/HGF/GI goes into the PDE matrix (∇·(D∇C) − k·C = −P) instead of the explicit source side, so the zero-flux growth factors get a well-posed, bounded steady state peaked around producing cells. Michaelis-Menten metabolism (Oxygen/Glucose/Lactate/H) is identical to the old node.",
-          "custom_name": "run_diffusion_solver_coupled_implicit",
+          "description": "METABOLIC solve: Picard-coupled steady state of Oxygen/Glucose/Lactate/H with Michaelis-Menten cell metabolism. Growth factors are excluded — they are linear and handled by the Growth Factor Solver node below in a single implicit pass.",
+          "custom_name": "run_diffusion_solver_metabolic",
           "step_count": 1,
           "parameter_nodes": [
+            "diffusion_step-param_metabolic_substances",
             "diffusion_step-param_max_coupling_iterations",
             "diffusion_step-param_coupling_tolerance",
             "diffusion_step-param_relaxation_factor",
@@ -1376,6 +1377,49 @@
             "writes": [
               "resource.fields",
               "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "diffusion_step-run_growth_factor_solver",
+          "function_name": "run_growth_factor_solver",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1340
+          },
+          "description": "GROWTH FACTOR solve: TGFA/FGF/HGF/GI with per-cell production γ_P where the substance's gene node is ON and first-order uptake γ_C·C folded into the PDE matrix as an implicit sink (∇·(D∇C) − k·C = −P). Linear given the gene states, so one direct solve — no coupling iterations. Rates come from each substance's uptake_rate/production_rate in its Resources configuration.",
+          "custom_name": "run_growth_factor_solver",
+          "step_count": 1,
+          "parameter_nodes": [
+            "diffusion_step-param_growth_factor_substances"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields"
             ],
             "emits": []
           }
@@ -1492,12 +1536,35 @@
             "x": -250,
             "y": 1482
           }
+        },
+        {
+          "id": "diffusion_step-param_metabolic_substances",
+          "label": "Metabolic Substances",
+          "parameters": {
+            "substances": "Oxygen,Glucose,Lactate,H"
+          },
+          "position": {
+            "x": -250,
+            "y": 1620
+          }
+        },
+        {
+          "id": "diffusion_step-param_growth_factor_substances",
+          "label": "Growth Factor Substances",
+          "parameters": {
+            "substances": "TGFA,FGF,HGF,GI"
+          },
+          "position": {
+            "x": -250,
+            "y": 1758
+          }
         }
       ],
       "execution_order": [
         "diffusion_step-calculate_metabolism",
         "diffusion_step-run_diffusion_coupled",
-        "diffusion_step-run_diffusion_coupled_implicit"
+        "diffusion_step-run_diffusion_metabolic",
+        "diffusion_step-run_growth_factor_solver"
       ],
       "input_parameters": []
     },

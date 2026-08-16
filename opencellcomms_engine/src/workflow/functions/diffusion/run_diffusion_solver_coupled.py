@@ -188,7 +188,7 @@ def run_diffusion_solver_coupled(
         glucose_conversion_factor=glucose_conversion_factor,
         lactate_conversion_factor=lactate_conversion_factor,
         oxygen_consumption_multiplier=oxygen_consumption_multiplier,
-        implicit_growth_factor_uptake=False,
+        include_growth_factors=True,
         verbose=verbose,
     )
 
@@ -205,17 +205,21 @@ def _run_coupled(
     glucose_conversion_factor: float = 1.0,
     lactate_conversion_factor: float = 1.0,
     oxygen_consumption_multiplier: float = 1.0,
-    implicit_growth_factor_uptake: bool = False,
+    include_growth_factors: bool = True,
+    substance_filter: Optional[list] = None,
     verbose: Optional[bool] = None,
 ) -> None:
     """Shared Picard coupling loop.
 
-    With ``implicit_growth_factor_uptake=True`` (run_diffusion_solver_coupled_implicit
-    node) the first-order growth-factor uptake R = γ_C·C is NOT moved to the
-    explicit source side; its coefficients are handed to the simulator as an
-    implicit sink term, which keeps the pure-Neumann growth-factor systems
-    nonsingular. With False (run_diffusion_solver_coupled node) behavior is the
-    historical one: uptake evaluated explicitly at the previous concentrations.
+    run_diffusion_solver_coupled (historical, full solve) calls this with
+    ``include_growth_factors=True`` and no filter: every substance is solved,
+    growth-factor uptake evaluated explicitly at the previous concentrations.
+
+    run_diffusion_solver_metabolic calls this with
+    ``include_growth_factors=False`` and a substance filter: only the listed
+    (metabolic) fields are solved and growth factors are left entirely to
+    their own node (run_growth_factor_solver), whose linear system needs no
+    Picard iteration at all.
     """
     simulator = context.get('simulator')
     population = context.get('population')
@@ -267,12 +271,9 @@ def _run_coupled(
                                 oxygen_consumption_multiplier=oxygen_consumption_multiplier,
                                 verbose=verbose)
 
-        # Step 3: Collect reaction terms from cells. In implicit mode the
-        # growth-factor uptake coefficients are collected separately and go
-        # into the PDE matrix instead of the explicit source side.
-        implicit_sinks = {} if implicit_growth_factor_uptake else None
+        # Step 3: Collect reaction terms from cells
         new_reactions = _collect_reactions_from_cells(population, simulator, context, verbose=verbose,
-                                                      implicit_uptake_out=implicit_sinks)
+                                                      include_growth_factors=include_growth_factors)
 
         # Step 4: Blend reaction terms (under-relaxation on source terms)
         if old_reactions is not None and relaxation_factor < 1.0:
@@ -284,8 +285,8 @@ def _run_coupled(
         old_reactions = new_reactions  # store unblended for next iteration
 
         # Step 5: Solve diffusion with (blended) reaction terms
-        if implicit_sinks is not None:
-            simulator.update(position_reactions, implicit_sinks=implicit_sinks)
+        if substance_filter is not None:
+            simulator.update(position_reactions, substance_filter=substance_filter)
         else:
             simulator.update(position_reactions)
 
@@ -562,7 +563,7 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
 
 
 def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any], verbose: Optional[bool] = None,
-                                  implicit_uptake_out: Optional[Dict] = None) -> Dict[Tuple[float, float], Dict[str, float]]:
+                                  include_growth_factors: bool = True) -> Dict[Tuple[float, float], Dict[str, float]]:
     """Collect reaction terms from all cells based on their metabolic state."""
     position_reactions = {}
 
@@ -608,8 +609,8 @@ def _collect_reactions_from_cells(population, simulator, context: Dict[str, Any]
     log(context, f"Cells with oxygen_consumption > 0: {cells_with_oxygen_consumption}", prefix="[REACTIONS]", node_verbose=verbose)
     log(context, f"Total oxygen consumption: {total_oxygen_consumption:.2e} mol/s", prefix="[REACTIONS]", node_verbose=verbose)
     log(context, f"Max oxygen consumption (single cell): {max_oxygen_consumption:.2e} mol/s", prefix="[REACTIONS]", node_verbose=verbose)
-    _add_growth_factor_reactions(position_reactions, population, simulator, context, verbose=verbose,
-                                 implicit_uptake_out=implicit_uptake_out)
+    if include_growth_factors:
+        _add_growth_factor_reactions(position_reactions, population, simulator, context, verbose=verbose)
 
     log(context, f"Unique positions with reactions: {len(position_reactions)}", prefix="[REACTIONS]", node_verbose=verbose)
 
@@ -642,7 +643,8 @@ def _fate_weight(phenotype_name: str) -> float:
 
 def _add_growth_factor_reactions(position_reactions, population, simulator,
                                  context: Dict[str, Any], verbose: Optional[bool] = None,
-                                 implicit_uptake_out: Optional[Dict] = None) -> None:
+                                 implicit_uptake_out: Optional[Dict] = None,
+                                 substance_names: Optional[list] = None) -> None:
     """Add the generic secretion/uptake reaction terms for the signalling
     substances (TGFA/FGF/HGF/GI) into ``position_reactions`` (keyed by cell
     world position, like the metabolic reactions). Uses the production/uptake
@@ -662,7 +664,7 @@ def _add_growth_factor_reactions(position_reactions, population, simulator,
         return
 
     rates = {}
-    for name in _GROWTH_FACTOR_SUBSTANCES:
+    for name in (substance_names if substance_names is not None else _GROWTH_FACTOR_SUBSTANCES):
         cfg = substances.get(name)
         if cfg is None:
             continue
