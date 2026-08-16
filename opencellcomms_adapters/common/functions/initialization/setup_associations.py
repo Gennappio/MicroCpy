@@ -77,7 +77,9 @@ def _parse_associations(associations: Union[Dict, List[str], str]) -> Dict[str, 
         {
             "name": "associations",
             "type": "DICT",
-            "description": "Dict mapping substance names to {gene_input, threshold}",
+            "description": "Dict mapping substance names to {gene_input, threshold[, activation]}. "
+                           "activation: 'threshold' (default, conc > threshold) or 'hill' "
+                           "(NetLogo probabilistic drug activation, e.g. MCT1I/GLUT1I)",
             "default": {}
         }
     ],
@@ -99,9 +101,15 @@ def setup_associations(
     Args:
         context: Workflow context
         associations: Dictionary mapping substance names to {gene_input, threshold}.
+            An optional "activation" key selects how the input is set each step:
+            "threshold" (default) is the deterministic conc > threshold test;
+            "hill" is the NetLogo probabilistic drug activation
+            (probability 0.85 - 0.85/(1 + conc/threshold) compared against a
+            persistent per-cell random value; used for MCT1I/GLUT1I).
             Example: {
                 "Oxygen": {"gene_input": "Oxygen_supply", "threshold": 0.022},
-                "Glucose": {"gene_input": "Glucose_supply", "threshold": 4.0}
+                "Glucose": {"gene_input": "Glucose_supply", "threshold": 4.0},
+                "MCT1D": {"gene_input": "MCT1I", "threshold": 1.7e-5, "activation": "hill"}
             }
         **kwargs: Additional parameters
 
@@ -139,6 +147,7 @@ def setup_associations(
         for substance_name, assoc_data in parsed.items():
             gene_input = assoc_data.get('gene_input')
             threshold = assoc_data.get('threshold', 0.0)
+            activation = assoc_data.get('activation', 'threshold')
 
             if not gene_input:
                 print(f"[WARNING] Skipping {substance_name}: no gene_input specified")
@@ -155,21 +164,26 @@ def setup_associations(
 
                 # Add threshold as object with .threshold attribute
                 class ThresholdConfig:
-                    def __init__(self, threshold_value):
+                    def __init__(self, threshold_value, activation='threshold'):
                         self.threshold = threshold_value
+                        self.activation = activation
 
-                config.thresholds[gene_input] = ThresholdConfig(threshold)
+                config.thresholds[gene_input] = ThresholdConfig(threshold, activation)
             else:
                 # Simple mode: store directly in context
                 if 'associations' not in context:
                     context['associations'] = {}
                 if 'thresholds' not in context:
                     context['thresholds'] = {}
+                if 'association_activations' not in context:
+                    context['association_activations'] = {}
 
                 context['associations'][substance_name] = gene_input
                 context['thresholds'][gene_input] = threshold
+                context['association_activations'][gene_input] = activation
 
-            print(f"[ASSOCIATION] {substance_name} -> {gene_input} (threshold: {threshold})")
+            extra = f", activation: {activation}" if activation != 'threshold' else ""
+            print(f"[ASSOCIATION] {substance_name} -> {gene_input} (threshold: {threshold}{extra})")
             count += 1
 
         print(f"[WORKFLOW] Configured {count} substance-to-gene associations")

@@ -5,10 +5,63 @@ For each association (substance -> gene_input):
 - Read substance concentration (cell-local from simulator, or flat from context)
 - Compare to threshold
 - Set gene_input = ON if concentration > threshold, else OFF
+
+Associations flagged "activation": "hill" instead use the NetLogo probabilistic
+drug activation (see below) rather than the deterministic threshold test.
 """
+
+import random as _random
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+
+
+# NetLogo probabilistic activation (microC_Metabolic_Symbiosis.nlogo3d,
+# -ACTIVE-FROM-PATCH-16): MCT1I and GLUT1I are set stochastically instead of
+# by a hard threshold:
+#     probability = 0.85 - 0.85 / (1 + (conc / threshold)^1.0)
+#     active      = probability > cell_random
+# where cell_random is a persistent per-cell value in [0, 1) drawn at cell
+# creation and re-drawn for daughters on division (HierarchicalBooleanNetwork
+# .copy() re-draws _cell_ran1/_cell_ran2). This gives stable cell-to-cell
+# variability in drug response.
+_HILL_MAX = 0.85
+_HILL_EXPONENT = 1.0
+# NetLogo pairing: my-cell-ran1 -> MCT1I, my-cell-ran2 -> GLUT1I. These attrs
+# are drawn by initialize_netlogo_gene_networks; reuse them so init-time and
+# per-step activation see the same per-cell random.
+_CELL_RAN_ATTRS = {'MCT1I': '_cell_ran1', 'GLUT1I': '_cell_ran2'}
+
+
+def _hill_probability(concentration: float, threshold: float) -> float:
+    """NetLogo Hill activation probability. 0 at conc=0, saturates at 0.85."""
+    if threshold <= 0 or concentration <= 0:
+        return 0.0
+    return _HILL_MAX - _HILL_MAX / (1.0 + (concentration / threshold) ** _HILL_EXPONENT)
+
+
+def _cell_random(gene_network, gene_input: str) -> float:
+    """Persistent per-cell random in [0, 1) for a hill-activated input.
+
+    MCT1I/GLUT1I reuse _cell_ran1/_cell_ran2 (NetLogo my-cell-ran1/2); any
+    other hill input gets a lazily drawn value cached on the network.
+    """
+    if gene_network is None:
+        return _random.random()
+    attr = _CELL_RAN_ATTRS.get(gene_input)
+    if attr is not None:
+        val = getattr(gene_network, attr, None)
+        if val is None:
+            val = _random.random()
+            setattr(gene_network, attr, val)
+        return val
+    rans = getattr(gene_network, '_cell_input_rans', None)
+    if rans is None:
+        rans = {}
+        gene_network._cell_input_rans = rans
+    if gene_input not in rans:
+        rans[gene_input] = _random.random()
+    return rans[gene_input]
 
 
 @register_function(
@@ -34,6 +87,10 @@ def apply_associations_to_inputs(
 
     When no simulator is available (standalone gene network), falls back to flat
     context['substances'] values applied uniformly to all cells.
+
+    Associations with "activation": "hill" (MCT1I/GLUT1I in the NetLogo model)
+    are set probabilistically: hill(conc/threshold) > persistent per-cell random,
+    instead of the deterministic conc > threshold test.
     """
     try:
         # Population/simulator via the raw escape hatches: this reads neighbour-grid
@@ -43,19 +100,22 @@ def apply_associations_to_inputs(
         config = env.config
         simulator = env.environment.raw_simulator
 
-        # Get associations and thresholds from either context or config
+        # Get associations, thresholds and activation modes from context or config
         associations = env.raw_context.get('associations', {})
         thresholds = env.raw_context.get('thresholds', {})
+        activations = env.raw_context.get('association_activations', {})
 
         # If not in context directly, try config object
         if not associations and config:
             associations = getattr(config, 'associations', {}) or {}
             thresholds_config = getattr(config, 'thresholds', {}) or {}
+            activations = {}
             for gene_input, threshold_obj in thresholds_config.items():
                 if hasattr(threshold_obj, 'threshold'):
                     thresholds[gene_input] = threshold_obj.threshold
                 else:
                     thresholds[gene_input] = threshold_obj
+                activations[gene_input] = getattr(threshold_obj, 'activation', 'threshold')
 
         if not associations:
             print("[WARNING] No associations defined")
@@ -117,13 +177,25 @@ def apply_associations_to_inputs(
                     grid_x = max(0, min(config.domain.nx - 1, grid_x))
                     grid_y = max(0, min(config.domain.ny - 1, grid_y))
 
+                # This cell's gene network: write target (new pattern) and the
+                # holder of the persistent per-cell randoms for hill inputs.
+                cell_gn = gene_networks.get(cell_id)
+                ran_gn = cell_gn
+                if ran_gn is None and getattr(cell.state, 'gene_network', None):
+                    ran_gn = cell.state.gene_network
+
                 # Per-cell input states based on LOCAL concentrations
                 cell_input_states = {}
                 for substance_name, gene_input in associations.items():
                     local_conc = substance_concentrations.get(
                         substance_name, {}).get((grid_x, grid_y), 0.0)
                     threshold = thresholds.get(gene_input, 0.0)
-                    is_on = local_conc > threshold
+                    if activations.get(gene_input) == 'hill':
+                        # NetLogo probabilistic activation (MCT1I/GLUT1I)
+                        is_on = (_hill_probability(local_conc, threshold)
+                                 > _cell_random(ran_gn, gene_input))
+                    else:
+                        is_on = local_conc > threshold
                     cell_input_states[gene_input] = is_on
                     if is_on:
                         cells_on_count[gene_input] += 1
@@ -134,8 +206,7 @@ def apply_associations_to_inputs(
                         conc_max[gene_input] = lc
 
                 # Write to context['gene_networks'] (new pattern)
-                if cell_id in gene_networks:
-                    cell_gn = gene_networks[cell_id]
+                if cell_gn is not None:
                     for node_name, state in cell_input_states.items():
                         if node_name in cell_gn.nodes:
                             cell_gn.nodes[node_name].current_state = state
@@ -170,6 +241,8 @@ def apply_associations_to_inputs(
                     else:
                         conc_disp = f"{cmin:.4g}..{cmax:.4g}"
                         test_disp = f"[{cmin:.4g}..{cmax:.4g}] > {thr:g}"
+                    if activations.get(gene_input) == 'hill':
+                        test_disp = f"hill(conc/{thr:g}) > ran"
                     if total_cells > 0 and on == total_cells:
                         state_disp = "ON "
                     elif on == 0:
@@ -186,28 +259,44 @@ def apply_associations_to_inputs(
         elif population:
             substances = env.raw_context.get('substances', {})
             input_states = {}
+            hill_inputs = []  # (gene_input, probability) — resolved per cell below
 
             print(f"[ASSOCIATIONS] Applying {len(associations)} associations (flat, uniform):")
             for substance_name, gene_input in associations.items():
                 concentration = substances.get(substance_name, 0.0)
                 threshold = thresholds.get(gene_input, 0.0)
+                if activations.get(gene_input) == 'hill':
+                    prob = _hill_probability(concentration, threshold)
+                    hill_inputs.append((gene_input, prob))
+                    print(f"   {substance_name} ({concentration}) hill p={prob:.3f} "
+                          f"vs per-cell ran -> {gene_input}")
+                    continue
                 is_on = concentration > threshold
                 input_states[gene_input] = is_on
                 status = "ON" if is_on else "OFF"
                 print(f"   {substance_name} ({concentration}) > {threshold} -> {gene_input} = {status}")
 
-            # Apply uniformly to all cells
+            # Apply uniformly to all cells (hill inputs per-cell via cell randoms)
             for cell_id, cell_gn in gene_networks.items():
                 for node_name, state in input_states.items():
                     if node_name in cell_gn.nodes:
                         cell_gn.nodes[node_name].current_state = state
+                for gene_input, prob in hill_inputs:
+                    if gene_input in cell_gn.nodes:
+                        cell_gn.nodes[gene_input].current_state = \
+                            prob > _cell_random(cell_gn, gene_input)
 
             # Old-pattern backward compatibility
             for cell_id, cell in population.state.cells.items():
                 if hasattr(cell.state, 'gene_network') and cell.state.gene_network:
+                    old_gn = cell.state.gene_network
                     for node_name, state in input_states.items():
-                        if node_name in cell.state.gene_network.nodes:
-                            cell.state.gene_network.nodes[node_name].current_state = state
+                        if node_name in old_gn.nodes:
+                            old_gn.nodes[node_name].current_state = state
+                    for gene_input, prob in hill_inputs:
+                        if gene_input in old_gn.nodes:
+                            old_gn.nodes[gene_input].current_state = \
+                                prob > _cell_random(old_gn, gene_input)
 
             env.raw_context['gene_network_inputs'] = input_states
         else:

@@ -961,6 +961,72 @@
                 "gene_input": "EGFR_stimulus",
                 "threshold": 0.000001
               }
+            },
+            {
+              "key": "FGF",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "FGFR_stimulus",
+                "threshold": 0.000001
+              }
+            },
+            {
+              "key": "GI",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Growth_Inhibitor",
+                "threshold": 0.00005
+              }
+            },
+            {
+              "key": "EGFRD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "EGFRI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "FGFRD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "FGFRI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "cMETD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "cMETI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "MCT1D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT1I",
+                "threshold": 0.000017,
+                "activation": "hill"
+              }
+            },
+            {
+              "key": "MCT4D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT4I",
+                "threshold": 1.0
+              }
+            },
+            {
+              "key": "GLUT1D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "GLUT1I",
+                "threshold": 0.000004,
+                "activation": "hill"
+              }
             }
           ],
           "target_param": "associations",
