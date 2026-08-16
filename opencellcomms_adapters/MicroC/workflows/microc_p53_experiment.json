@@ -88,13 +88,20 @@
           {
             "id": "tab-p53-mutant",
             "name": "WT",
-            "enabled": true,
-            "parameterOverrides": {}
+            "enabled": false,
+            "parameterOverrides": {
+              "agentinit-Setup_population-param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "../data/initial_cells_500_center_1500.csv"
+                }
+              }
+            }
           },
           {
             "id": "planner-tab-1786647516606-1",
             "name": "p53on",
-            "enabled": true,
+            "enabled": false,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
                 "label": "Gene Knockouts",
@@ -124,13 +131,19 @@
                   }
                 ],
                 "targetParam": "fixed_nodes"
+              },
+              "agentinit-Setup_population-param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "../data/initial_cells_500_center_1500.csv"
+                }
               }
             }
           },
           {
             "id": "planner-tab-1786647663848-3",
             "name": "MCT1off",
-            "enabled": true,
+            "enabled": false,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
                 "label": "Gene Knockouts",
@@ -147,6 +160,24 @@
                   }
                 ],
                 "targetParam": "fixed_nodes"
+              },
+              "diffusion_step-param_oxygen_conversion_factor": {
+                "label": "Oxygen Consumption Scale",
+                "parameters": {
+                  "oxygen_conversion_factor": 2
+                }
+              },
+              "diffusion_step-param_lactate_conversion_factor": {
+                "label": "Lactate Production Scale",
+                "parameters": {
+                  "lactate_conversion_factor": "2"
+                }
+              },
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "2"
+                }
               }
             }
           }
@@ -197,7 +228,7 @@
           "label": "Substance (JSON)",
           "listType": "string",
           "items": [
-            "{\"name\":\"Oxygen\",\"diffusion_coeff\":3.0e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-19,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":1.0e-09,\"production_rate\":0.0,\"uptake_rate\":3.0e-19,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
           ],
           "target_param": "substances",
           "position": {
@@ -824,7 +855,7 @@
           "id": "envinit-Setup_simulation-param_domain_size_x",
           "label": "Size X (μm)",
           "parameters": {
-            "size_x": 1500
+            "size_x": "1500"
           },
           "position": {
             "x": -220,
@@ -835,7 +866,7 @@
           "id": "envinit-Setup_simulation-param_domain_size_y",
           "label": "Size Y (μm)",
           "parameters": {
-            "size_y": 1500
+            "size_y": "1500"
           },
           "position": {
             "x": -220,
@@ -846,7 +877,7 @@
           "id": "envinit-Setup_simulation-param_domain_nx",
           "label": "Grid NX",
           "parameters": {
-            "nx": 50
+            "nx": "30"
           },
           "position": {
             "x": -220,
@@ -857,7 +888,7 @@
           "id": "envinit-Setup_simulation-param_domain_ny",
           "label": "Grid NY",
           "parameters": {
-            "ny": 50
+            "ny": "30"
           },
           "position": {
             "x": -220,
@@ -1148,7 +1179,7 @@
           "id": "agentinit-Setup_population-param_checkpoint_file",
           "label": "Checkpoint File",
           "parameters": {
-            "file_path": "../data/initial_cells_500_center_1500.csv"
+            "file_path": "../data/initial_cells_1000_center_1500.csv"
           },
           "position": {
             "x": -269,
@@ -1373,7 +1404,7 @@
           "id": "diffusion_step-param_oxygen_conversion_factor",
           "label": "Oxygen Consumption Scale",
           "parameters": {
-            "oxygen_conversion_factor": 0.25
+            "oxygen_conversion_factor": "5"
           },
           "position": {
             "x": -250,
@@ -1384,7 +1415,7 @@
           "id": "diffusion_step-param_oxygen_consumption_multiplier",
           "label": "mitoATP Oxygen Multiplier",
           "parameters": {
-            "oxygen_consumption_multiplier": 1
+            "oxygen_consumption_multiplier": "1"
           },
           "position": {
             "x": -250,
@@ -1395,7 +1426,7 @@
           "id": "diffusion_step-param_lactate_conversion_factor",
           "label": "Lactate Production Scale",
           "parameters": {
-            "lactate_conversion_factor": "4"
+            "lactate_conversion_factor": "10"
           },
           "position": {
             "x": -250,
@@ -1406,7 +1437,7 @@
           "id": "diffusion_step-param_glucose_conversion_factor",
           "label": "Glucose Consumption Scale",
           "parameters": {
-            "glucose_conversion_factor": "3"
+            "glucose_conversion_factor": "20"
           },
           "position": {
             "x": -250,
@@ -1599,7 +1630,7 @@
           "id": "gene_update-param_propagation_steps",
           "label": "Propagation Steps",
           "parameters": {
-            "propagation_steps": "100"
+            "propagation_steps": "5"
           },
           "position": {
             "x": -220,
@@ -2313,7 +2344,7 @@
           "id": "steps_param-__scheduler__",
           "label": "Simulation Steps",
           "parameters": {
-            "steps": 2
+            "steps": 100
           },
           "position": {
             "x": 100,
