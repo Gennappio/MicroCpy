@@ -1484,12 +1484,12 @@
             "substances_to_plot": "Oxygen,Glucose,Lactate",
             "plot_interval": "1"
           },
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter",
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter. Disabled: replaced by the compact quadrant plot below; re-enable for one-heatmap-per-substance output.",
           "custom_name": "generate_iteration_plots",
           "step_count": 1,
           "parameter_nodes": [],
@@ -1503,12 +1503,75 @@
             "writes": [],
             "emits": []
           }
+        },
+        {
+          "id": "iteration_plots-gen_quadrant_plots",
+          "function_name": "generate_quadrant_plots",
+          "function_file": "",
+          "parameters": {
+            "plot_interval": "1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 420
+          },
+          "description": "Compact 2x2 view: one figure per iteration with the domain split into four quadrants (Lactate/Glucose/TGFA/H), each on its own white-to-colour gradient with a per-substance min/max legend; threshold isolines are drawn in the owning substance's quadrant and labelled with the substance name.",
+          "custom_name": "generate_quadrant_plots",
+          "step_count": 1,
+          "parameter_nodes": [
+            "iteration_plots-param_quadrant_substances"
+          ],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
-      "parameters": [],
+      "parameters": [
+        {
+          "id": "iteration_plots-param_quadrant_substances",
+          "type": "dictParameterNode",
+          "label": "Quadrant Substances",
+          "entries": [
+            {
+              "key": "Lactate",
+              "valueType": "string",
+              "value": "darkorange"
+            },
+            {
+              "key": "Glucose",
+              "valueType": "string",
+              "value": "teal"
+            },
+            {
+              "key": "TGFA",
+              "valueType": "string",
+              "value": "gold"
+            },
+            {
+              "key": "Oxygen",
+              "valueType": "string",
+              "value": "mediumvioletred"
+            }
+          ],
+          "target_param": "quadrant_substances",
+          "position": {
+            "x": 100,
+            "y": 420
+          }
+        }
+      ],
       "execution_order": [
-        "iteration_plots-gen_loop_plots"
+        "iteration_plots-gen_loop_plots",
+        "iteration_plots-gen_quadrant_plots"
       ],
       "input_parameters": []
     },

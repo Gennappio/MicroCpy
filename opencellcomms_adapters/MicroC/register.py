@@ -33,6 +33,7 @@ import opencellcomms_adapters.MicroC.functions.fate.remove_necrotic_cells  # noq
 
 # Reporting plots
 import opencellcomms_adapters.MicroC.functions.reporting.generate_iteration_plots  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.reporting.generate_quadrant_plots  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.generate_summary_plots  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.record_gene_fate_counts  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.record_metabolic_symbiosis  # noqa: F401
