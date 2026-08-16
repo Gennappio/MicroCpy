@@ -1743,7 +1743,8 @@
           "function_file": "",
           "parameters": {
             "plot_interval": "1",
-            "autorange": false
+            "autorange": false,
+            "show_isolines": true
           },
           "enabled": true,
           "position": {

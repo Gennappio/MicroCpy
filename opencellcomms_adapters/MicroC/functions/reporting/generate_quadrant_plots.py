@@ -177,15 +177,21 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         X, Y = np.meshgrid(x_coords, y_coords)
         for iso_value, iso_label in isolines.get(name, []):
             style = '--' if 'Necrosis' in iso_label else '-'
+            # zorder 5/6: above the cells (zorder 2/3) so the contour stays
+            # visible through the spheroid; legends are separate artists drawn
+            # on top regardless.
             cs = ax.contour(X, Y, concentrations, levels=[iso_value],
-                            colors=['red'], linewidths=1.5, linestyles=style)
+                            colors=['red'], linewidths=2.5, linestyles=style,
+                            zorder=5)
             _clip_contour(cs, clip_rect)
             # Label manually at a point inside this quadrant so the label
             # cannot land in another substance's quadrant.
             label_at = _label_point_in_quadrant(cs, (x0, y0, x1, y1))
             if label_at:
-                ax.clabel(cs, inline=True, fontsize=8, manual=[label_at],
-                          fmt=f'{name} {iso_label}: {iso_value:.3g}')
+                labels = ax.clabel(cs, inline=True, fontsize=11, manual=[label_at],
+                                   fmt=f'{name} {iso_label}: {iso_value:.3g}')
+                for text in labels:
+                    text.set_zorder(6)
 
         # Per-quadrant gradient legend with the substance's min/max
         lx, ly = legend_positions[idx]
@@ -323,6 +329,11 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                         "Empty = Lactate/Glucose/TGFA/H as in the MicroC reference "
                         "figure.",
          "default": {}},
+        {"name": "show_isolines", "type": "BOOL",
+         "description": "Draw the threshold isolines (gene-association thresholds "
+                        "and necrosis thresholds) in each substance's quadrant, on "
+                        "top of the cells. Off = clean fields only.",
+         "default": True},
         {"name": "autorange", "type": "BOOL",
          "description": "Ignore any fixed vmin/vmax in Quadrant Substances and scale "
                         "every quadrant to its field's min/max at each iteration. "
@@ -343,6 +354,7 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
 def generate_quadrant_plots(
     env: BiologicalContext,
     quadrant_substances: Union[Dict[str, Any], None] = None,
+    show_isolines: bool = True,
     autorange: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
@@ -394,8 +406,10 @@ def generate_quadrant_plots(
               for name in quadrants}
 
     # Isolines: gene-association threshold + necrosis thresholds, per substance
+    if isinstance(show_isolines, str):
+        show_isolines = show_isolines.strip().lower() in ('true', '1', 'yes')
     isolines: Dict[str, List[Tuple[float, str]]] = {}
-    for name in quadrants:
+    for name in quadrants if show_isolines else ():
         entries: List[Tuple[float, str]] = []
         threshold = _association_threshold(config, name)
         if threshold is not None:
