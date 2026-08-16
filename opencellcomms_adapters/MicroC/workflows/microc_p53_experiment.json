@@ -2579,7 +2579,7 @@
             "x": 400,
             "y": 560
           },
-          "description": "iteration_plots",
+          "description": "iteration_plots (before division, like fate_summary: division consumes the marked fates - remove_apoptotic_cells deletes Apoptosis cells and update_cell_division resets divided cells to Quiescent - so plotting after it would show every border as quiescent)",
           "parameter_nodes": []
         },
         {
@@ -2621,8 +2621,8 @@
         "sched-call-fate_update",
         "sched-call-fate_summary",
         "sched-call-symbiosis_summary",
-        "sched-call-division",
-        "sched-call-iteration_plots"
+        "sched-call-iteration_plots",
+        "sched-call-division"
       ],
       "input_parameters": []
     },

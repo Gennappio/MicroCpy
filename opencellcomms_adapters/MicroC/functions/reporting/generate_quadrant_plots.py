@@ -196,12 +196,21 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         cax.set_xticks([0, 255])
         cax.set_xticklabels([f'{vmin:.3g}', f'{vmax:.3g}'], fontsize=8)
         cax.set_title(f'{name} (mM)', fontsize=11, fontweight='bold', pad=2)
+        # With a fixed range the ticks show the scale, not the data — add the
+        # field's actual extremes so consumption/production stays readable.
+        if fixed_min is not None or fixed_max is not None:
+            cax.set_xlabel(f'now: {float(concentrations.min()):.3g} – '
+                           f'{float(concentrations.max()):.3g}',
+                           fontsize=7, labelpad=2)
         for spine in cax.spines.values():
             spine.set_linewidth(0.8)
 
-    # Cells drawn over the whole domain, MicroC colouring
+    # Cells drawn over the whole domain, MicroC colouring. Tally the colours
+    # actually drawn so the legends can carry per-category counts.
     cell_diameter = config.domain.cell_height.value
     spacing = config.domain.cell_height.value
+    interior_counts: Dict[str, int] = {}
+    border_counts: Dict[str, int] = {}
     for position, phenotype in cell_data:
         x, y = position[0], position[1]
         phys_x, phys_y = (x + 0.5) * spacing, (y + 0.5) * spacing
@@ -220,9 +229,15 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                         interior_color, border_color = custom.split('|', 1)
             except Exception:
                 pass
+        interior_counts[interior_color] = interior_counts.get(interior_color, 0) + 1
+        border_counts[border_color] = border_counts.get(border_color, 0) + 1
+        # Fate-marked cells (non-gray border) get a thicker ring and draw on
+        # top of quiescent neighbours so sparse marks stay visible.
+        marked = border_color != 'gray'
         circle = patches.Circle((phys_x, phys_y), cell_diameter / 2,
                                 facecolor=interior_color, edgecolor=border_color,
-                                alpha=0.9, linewidth=1.5, fill=True)
+                                alpha=0.9, linewidth=2.5 if marked else 1.2,
+                                fill=True, zorder=3 if marked else 2)
         ax.add_patch(circle)
 
     # Quadrant dividers and outer frame, as in the reference figure
@@ -236,6 +251,48 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     ax.set_ylabel(f'Y Position ({config.domain.size_y.unit})')
     ax.set_title(f'{" / ".join(substance_names)} at t = {time_point:.3f} {title_suffix}',
                  fontsize=13, pad=12)
+
+    # Cell-colour key, right of the plot. Fixed entries mirroring
+    # jayatilake_cell_color: interior = metabolic mode, border = phenotype.
+    from matplotlib.lines import Line2D
+
+    def _cell_marker(face, edge):
+        return Line2D([], [], marker='o', linestyle='', markersize=10,
+                      markerfacecolor=face, markeredgecolor=edge, markeredgewidth=2)
+
+    interior_key = [('Quiescent', 'lightgray'), ('Mixed', 'violet'),
+                    ('mitoATP', 'blue'), ('glycoATP', 'green')]
+    interior_handles = [_cell_marker(c, 'gray') for _, c in interior_key]
+    interior_labels = [f'{label}: {interior_counts.get(c, 0)}'
+                       for label, c in interior_key]
+    interior_legend = ax.legend(interior_handles, interior_labels,
+                                title='Interior — metabolism',
+                                loc='upper left', bbox_to_anchor=(1.02, 1.0),
+                                fontsize=9, title_fontsize=10, frameon=True,
+                                edgecolor='black', framealpha=0.95)
+    interior_legend.get_title().set_fontweight('bold')
+    ax.add_artist(interior_legend)
+
+    # Listed in priority order: necrosis wins over apoptosis, apoptosis over
+    # proliferation (enforced by the fate_update behaviour, shown here as a key).
+    border_key = [('Necrosis', 'black'), ('Apoptosis', 'red'),
+                  ('Proliferation', 'lightgreen'), ('Growth arrest', 'orange'),
+                  ('Quiescence', 'gray')]
+    border_handles = [_cell_marker('white', c) for _, c in border_key]
+    border_labels = [f'{label}: {border_counts.get(c, 0)}'
+                     for label, c in border_key]
+    border_legend = ax.legend(border_handles, border_labels,
+                              title='Border — phenotype',
+                              loc='upper left', bbox_to_anchor=(1.02, 0.72),
+                              fontsize=9, title_fontsize=10, frameon=True,
+                              edgecolor='black', framealpha=0.95)
+    border_legend.get_title().set_fontweight('bold')
+    ax.text(1.02, 0.44, f'Total cells: {len(cell_data)}',
+            transform=ax.transAxes, fontsize=10, fontweight='bold',
+            verticalalignment='top')
+    ax.text(1.02, 0.39, 'priority:\nNecrosis > Apoptosis\n> Proliferation',
+            transform=ax.transAxes, fontsize=8, style='italic',
+            verticalalignment='top')
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
