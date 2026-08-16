@@ -6,8 +6,9 @@ For each association (substance -> gene_input):
 - Compare to threshold
 - Set gene_input = ON if concentration > threshold, else OFF
 
-Associations flagged "activation": "hill" instead use the NetLogo probabilistic
-drug activation (see below) rather than the deterministic threshold test.
+Inputs marked probabilistic by the "Hill (Probabilistic) Input Activation"
+canvas node instead use the NetLogo hill drug activation (see below) rather
+than the deterministic threshold test.
 """
 
 import random as _random
@@ -19,12 +20,21 @@ from src.biology.context import BiologicalContext
 # NetLogo probabilistic activation (microC_Metabolic_Symbiosis.nlogo3d,
 # -ACTIVE-FROM-PATCH-16): MCT1I and GLUT1I are set stochastically instead of
 # by a hard threshold:
-#     probability = 0.85 - 0.85 / (1 + (conc / threshold)^1.0)
+#     probability = hill_max - hill_max / (1 + (conc / threshold)^hill_exponent)
 #     active      = probability > cell_random
 # where cell_random is a persistent per-cell value in [0, 1) drawn at cell
 # creation and re-drawn for daughters on division (HierarchicalBooleanNetwork
 # .copy() re-draws _cell_ran1/_cell_ran2). This gives stable cell-to-cell
 # variability in drug response.
+#
+# WHICH inputs are probabilistic, and their coefficients, are owned by the
+# canvas node "Hill (Probabilistic) Input Activation"
+# (set_hill_input_activation), which writes `input_activations`:
+# {gene_input: {hill_max, hill_exponent}}. The law switch is a node so it is
+# visible on the canvas, never a key buried inside the Associations dict
+# (Readability Contract R1.6). The values below are only the fallback for
+# entries that omit a coefficient, and match the NetLogo source
+# (0.85 saturation, exponent 1.0).
 _HILL_MAX = 0.85
 _HILL_EXPONENT = 1.0
 # NetLogo pairing: my-cell-ran1 -> MCT1I, my-cell-ran2 -> GLUT1I. These attrs
@@ -33,11 +43,22 @@ _HILL_EXPONENT = 1.0
 _CELL_RAN_ATTRS = {'MCT1I': '_cell_ran1', 'GLUT1I': '_cell_ran2'}
 
 
-def _hill_probability(concentration: float, threshold: float) -> float:
-    """NetLogo Hill activation probability. 0 at conc=0, saturates at 0.85."""
+def hill_probability(concentration: float, threshold: float,
+                     hill_max: float = _HILL_MAX,
+                     exponent: float = _HILL_EXPONENT) -> float:
+    """NetLogo Hill activation probability. 0 at conc=0, saturates at hill_max."""
     if threshold <= 0 or concentration <= 0:
         return 0.0
-    return _HILL_MAX - _HILL_MAX / (1.0 + (concentration / threshold) ** _HILL_EXPONENT)
+    return hill_max - hill_max / (1.0 + (concentration / threshold) ** exponent)
+
+
+def resolve_hill(hill_entry) -> tuple:
+    """(hill_max, hill_exponent) for an association, defaulting to NetLogo's."""
+    hill_entry = hill_entry or {}
+    hm = hill_entry.get('hill_max')
+    he = hill_entry.get('hill_exponent')
+    return (_HILL_MAX if hm is None else float(hm),
+            _HILL_EXPONENT if he is None else float(he))
 
 
 def _cell_random(gene_network, gene_input: str) -> float:
@@ -88,9 +109,11 @@ def apply_associations_to_inputs(
     When no simulator is available (standalone gene network), falls back to flat
     context['substances'] values applied uniformly to all cells.
 
-    Associations with "activation": "hill" (MCT1I/GLUT1I in the NetLogo model)
-    are set probabilistically: hill(conc/threshold) > persistent per-cell random,
-    instead of the deterministic conc > threshold test.
+    Inputs listed by the "Hill (Probabilistic) Input Activation" node
+    (MCT1I/GLUT1I in the NetLogo model) are set probabilistically:
+    hill(conc/threshold) > persistent per-cell random, instead of the
+    deterministic conc > threshold test. The threshold still comes from the
+    input's association; the hill node owns only the switch and coefficients.
     """
     try:
         # Population/simulator via the raw escape hatches: this reads neighbour-grid
@@ -100,22 +123,26 @@ def apply_associations_to_inputs(
         config = env.config
         simulator = env.environment.raw_simulator
 
-        # Get associations, thresholds and activation modes from context or config
+        # Get associations and thresholds from either context or config
         associations = env.raw_context.get('associations', {})
         thresholds = env.raw_context.get('thresholds', {})
-        activations = env.raw_context.get('association_activations', {})
 
         # If not in context directly, try config object
         if not associations and config:
             associations = getattr(config, 'associations', {}) or {}
             thresholds_config = getattr(config, 'thresholds', {}) or {}
-            activations = {}
             for gene_input, threshold_obj in thresholds_config.items():
                 if hasattr(threshold_obj, 'threshold'):
                     thresholds[gene_input] = threshold_obj.threshold
                 else:
                     thresholds[gene_input] = threshold_obj
-                activations[gene_input] = getattr(threshold_obj, 'activation', 'threshold')
+
+        # Probabilistic inputs: written by the "Hill (Probabilistic) Input
+        # Activation" canvas node. Presence of an input here switches it from
+        # conc > threshold to the hill law.
+        input_activations = env.raw_context.get('input_activations', {})
+        if not input_activations and config:
+            input_activations = getattr(config, 'input_activations', None) or {}
 
         if not associations:
             print("[WARNING] No associations defined")
@@ -190,9 +217,11 @@ def apply_associations_to_inputs(
                     local_conc = substance_concentrations.get(
                         substance_name, {}).get((grid_x, grid_y), 0.0)
                     threshold = thresholds.get(gene_input, 0.0)
-                    if activations.get(gene_input) == 'hill':
+                    hill_entry = input_activations.get(gene_input)
+                    if hill_entry is not None:
                         # NetLogo probabilistic activation (MCT1I/GLUT1I)
-                        is_on = (_hill_probability(local_conc, threshold)
+                        hm, he = resolve_hill(hill_entry)
+                        is_on = (hill_probability(local_conc, threshold, hm, he)
                                  > _cell_random(ran_gn, gene_input))
                     else:
                         is_on = local_conc > threshold
@@ -241,7 +270,7 @@ def apply_associations_to_inputs(
                     else:
                         conc_disp = f"{cmin:.4g}..{cmax:.4g}"
                         test_disp = f"[{cmin:.4g}..{cmax:.4g}] > {thr:g}"
-                    if activations.get(gene_input) == 'hill':
+                    if gene_input in input_activations:
                         test_disp = f"hill(conc/{thr:g}) > ran"
                     if total_cells > 0 and on == total_cells:
                         state_disp = "ON "
@@ -265,8 +294,10 @@ def apply_associations_to_inputs(
             for substance_name, gene_input in associations.items():
                 concentration = substances.get(substance_name, 0.0)
                 threshold = thresholds.get(gene_input, 0.0)
-                if activations.get(gene_input) == 'hill':
-                    prob = _hill_probability(concentration, threshold)
+                hill_entry = input_activations.get(gene_input)
+                if hill_entry is not None:
+                    hm, he = resolve_hill(hill_entry)
+                    prob = hill_probability(concentration, threshold, hm, he)
                     hill_inputs.append((gene_input, prob))
                     print(f"   {substance_name} ({concentration}) hill p={prob:.3f} "
                           f"vs per-cell ran -> {gene_input}")

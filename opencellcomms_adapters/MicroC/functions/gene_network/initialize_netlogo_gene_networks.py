@@ -22,10 +22,17 @@ PROBABILISTIC INPUT ACTIVATION (NetLogo lines 1298-1321):
         _cell_ran1 -> used for MCT1I
         _cell_ran2 -> used for GLUT1I
     - Hill function:
-        probability = 0.85 * (1 - 1 / (1 + (concentration / threshold)^1.0))
+        probability = hill_max * (1 - 1 / (1 + (concentration / threshold)^hill_exponent))
     - Activation:
         active = (probability > cell_random_value)
     - This creates CELL-TO-CELL VARIABILITY in response to the same inputs.
+    - The law's configuration is read from its canvas owners, so init-time and
+      per-step activation (apply_associations_to_inputs) share one source:
+      the threshold from the association table (Setup Associations node), the
+      probabilistic switch + hill_max / hill_exponent from the Hill
+      (Probabilistic) Input Activation node. When neither owner knows the
+      input (standalone benchmark), the legacy fallback is threshold 1.0 with
+      the NetLogo coefficients (0.85, 1.0).
 """
 
 from typing import Dict, Any, List, Optional, Union
@@ -33,9 +40,49 @@ from pathlib import Path
 import random as _random
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+from opencellcomms_adapters.common.functions.gene_network.apply_associations_to_inputs import (
+    hill_probability, resolve_hill)
 
 
 FATE_NODE_NAMES = {'Apoptosis', 'Proliferation', 'Growth_Arrest', 'Necrosis'}
+
+# Benchmark fallback threshold used only when no association targets the drug
+# input (gene_network_standalone.py behavior, where no association table exists).
+_LEGACY_DRUG_THRESHOLD = 1.0
+
+
+def _drug_activation_law(ctx: Dict[str, Any], gene_input: str) -> tuple:
+    """Resolve (threshold, hill_max, hill_exponent, mode, from_table) for a drug
+    input from its two canvas owners: the threshold from the association table
+    (Setup Associations) and the probabilistic switch + coefficients from the
+    Hill (Probabilistic) Input Activation node's `input_activations` store.
+    Checks the simple-mode context keys first, then the config object. Falls
+    back to the legacy benchmark law only when neither owner knows the input."""
+    config = ctx.get('config')
+
+    threshold = None
+    thresholds = ctx.get('thresholds') or {}
+    if gene_input in thresholds:
+        threshold = thresholds[gene_input]
+    elif config is not None:
+        threshold_obj = (getattr(config, 'thresholds', None) or {}).get(gene_input)
+        if threshold_obj is not None:
+            threshold = getattr(threshold_obj, 'threshold', threshold_obj)
+
+    input_activations = ctx.get('input_activations') or {}
+    if not input_activations and config is not None:
+        input_activations = getattr(config, 'input_activations', None) or {}
+    hill_entry = input_activations.get(gene_input)
+
+    if threshold is None and hill_entry is None:
+        hm, he = resolve_hill(None)
+        return _LEGACY_DRUG_THRESHOLD, hm, he, 'hill', False
+
+    hm, he = resolve_hill(hill_entry)
+    mode = 'hill' if hill_entry is not None else 'threshold'
+    if threshold is None:
+        threshold = _LEGACY_DRUG_THRESHOLD
+    return threshold, hm, he, mode, True
 
 
 def _to_bool(val) -> bool:
@@ -171,6 +218,19 @@ def initialize_netlogo_gene_networks(
         GLUT1I_concentration = concentrations.get('GLUT1I_concentration', 0.0)
         ctx['gene_network_init_params'] = concentrations
 
+        # Activation laws from the association table (single source of truth
+        # with the per-step apply_associations_to_inputs node).
+        mct1i_law = _drug_activation_law(ctx, 'MCT1I')
+        glut1i_law = _drug_activation_law(ctx, 'GLUT1I')
+        for name, conc, law in (('MCT1I', MCT1I_concentration, mct1i_law),
+                                ('GLUT1I', GLUT1I_concentration, glut1i_law)):
+            if conc > 0:
+                thr, hm, he, mode, from_table = law
+                src = 'associations' if from_table else 'legacy fallback'
+                rule = (f"hill(conc/{thr:g}, max={hm:g}, exp={he:g}) > cell_ran"
+                        if mode == 'hill' else f"conc > {thr:g}")
+                print(f"[GENE_NETWORK] {name} init activation ({src}): {rule}")
+
         ctx['gene_networks'] = {}
         num_cells = 0
 
@@ -212,6 +272,8 @@ def initialize_netlogo_gene_networks(
                 cell_gn, input_states,
                 MCT1I_concentration=MCT1I_concentration,
                 GLUT1I_concentration=GLUT1I_concentration,
+                mct1i_law=mct1i_law,
+                glut1i_law=glut1i_law,
             )
 
             env.set_gene_network(cell, cell_gn)
@@ -288,18 +350,30 @@ def _apply_input_states(
     input_states: Dict[str, bool],
     MCT1I_concentration: float = 0.0,
     GLUT1I_concentration: float = 0.0,
+    mct1i_law: Optional[tuple] = None,
+    glut1i_law: Optional[tuple] = None,
 ) -> None:
-    """Apply input node states with probabilistic activation for MCT1I/GLUT1I."""
+    """Apply input node states with probabilistic activation for MCT1I/GLUT1I.
+
+    The activation laws come from _drug_activation_law (association table with
+    legacy fallback); each is (threshold, hill_max, hill_exponent, mode, from_table).
+    """
     for node_name, state in input_states.items():
         if node_name in gene_network.nodes:
             gene_network.nodes[node_name].current_state = state
 
+    def _drug_state(concentration, law, cell_ran):
+        threshold, hill_max, hill_exponent, mode, _ = law
+        if mode == 'hill':
+            return hill_probability(concentration, threshold, hill_max, hill_exponent) > cell_ran
+        return concentration > threshold
+
     if MCT1I_concentration > 0 and 'MCT1I' in gene_network.nodes:
-        threshold = 1.0
-        hill_value = 0.85 * (1.0 - 1.0 / (1.0 + (MCT1I_concentration / threshold)))
-        gene_network.nodes['MCT1I'].current_state = (hill_value > gene_network._cell_ran1)
+        law = mct1i_law or (_LEGACY_DRUG_THRESHOLD, *resolve_hill(None), 'hill', False)
+        gene_network.nodes['MCT1I'].current_state = _drug_state(
+            MCT1I_concentration, law, gene_network._cell_ran1)
 
     if GLUT1I_concentration > 0 and 'GLUT1I' in gene_network.nodes:
-        threshold = 1.0
-        hill_value = 0.85 * (1.0 - 1.0 / (1.0 + (GLUT1I_concentration / threshold)))
-        gene_network.nodes['GLUT1I'].current_state = (hill_value > gene_network._cell_ran2)
+        law = glut1i_law or (_LEGACY_DRUG_THRESHOLD, *resolve_hill(None), 'hill', False)
+        gene_network.nodes['GLUT1I'].current_state = _drug_state(
+            GLUT1I_concentration, law, gene_network._cell_ran2)

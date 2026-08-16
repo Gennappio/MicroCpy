@@ -7,6 +7,7 @@ from .setup_population import setup_population
 from .generate_initial_cells import generate_initial_cells
 from .setup_gene_network import setup_gene_network
 from .setup_associations import setup_associations, add_association
+from .set_hill_input_activation import set_hill_input_activation
 from .setup_maboss import setup_maboss
 from .initialize_gene_states import initialize_gene_states
 from .load_cells_from_csv import load_cells_from_csv
@@ -18,6 +19,7 @@ __all__ = [
     'setup_gene_network',
     'setup_associations',
     'add_association',
+    'set_hill_input_activation',
     'setup_maboss',
     'initialize_gene_states',
     'load_cells_from_csv',

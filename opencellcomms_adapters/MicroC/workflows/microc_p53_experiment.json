@@ -776,6 +776,35 @@
           }
         },
         {
+          "id": "envinit-Set_hill_activation-set_hill_input_activation",
+          "function_name": "set_hill_input_activation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 2700
+          },
+          "description": "Marks gene inputs as PROBABILISTIC (NetLogo hill drug law) instead of the deterministic conc > threshold test: p = hill_max - hill_max/(1 + (conc/threshold)^hill_exponent); the input turns ON if p exceeds the cell's persistent random (drawn at creation, re-drawn at division). The threshold is the input's row in the Associations dict above — not repeated here. Inputs not listed stay deterministic. Consumed each step by apply_associations_to_inputs and at t=0 by the gene-network init.",
+          "custom_name": "set_hill_input_activation",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Set_hill_activation-param_hill_activations"
+          ],
+          "contract": {
+            "owner": {
+              "type": "world"
+            },
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
           "id": "envinit-Set_metabolism-set_metabolism_parameters",
           "function_name": "set_metabolism_parameters",
           "function_file": "",
@@ -1007,8 +1036,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "MCT1I",
-                "threshold": 0.000017,
-                "activation": "hill"
+                "threshold": 0.000017
               }
             },
             {
@@ -1024,8 +1052,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "GLUT1I",
-                "threshold": 0.000004,
-                "activation": "hill"
+                "threshold": 0.000004
               }
             }
           ],
@@ -1033,6 +1060,34 @@
           "position": {
             "x": -246,
             "y": 2062
+          }
+        },
+        {
+          "id": "envinit-Set_hill_activation-param_hill_activations",
+          "type": "dictParameterNode",
+          "label": "Hill-Activated Inputs",
+          "entries": [
+            {
+              "key": "MCT1I",
+              "valueType": "dict",
+              "value": {
+                "hill_max": 0.85,
+                "hill_exponent": 1.0
+              }
+            },
+            {
+              "key": "GLUT1I",
+              "valueType": "dict",
+              "value": {
+                "hill_max": 0.85,
+                "hill_exponent": 1.0
+              }
+            }
+          ],
+          "target_param": "hill_activations",
+          "position": {
+            "x": -246,
+            "y": 2700
           }
         },
         {
@@ -1088,7 +1143,8 @@
         "envinit-Setup_simulation-setup_domain_node",
         "envinit-Setup_population-setup_pop",
         "envinit-Setup_associations-setup_all_associations",
-        "envinit-Set_metabolism-set_metabolism_parameters"
+        "envinit-Set_metabolism-set_metabolism_parameters",
+        "envinit-Set_hill_activation-set_hill_input_activation"
       ],
       "input_parameters": []
     },
