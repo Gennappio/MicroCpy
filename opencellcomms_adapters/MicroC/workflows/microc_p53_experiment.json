@@ -1284,18 +1284,67 @@
           "function_name": "run_diffusion_solver_coupled",
           "function_file": "",
           "parameters": {},
-          "enabled": true,
+          "enabled": false,
           "position": {
             "x": 40,
             "y": 459.5
           },
-          "description": "COUPLED solver - iterative coupling with under-relaxation. Physically correct, prevents negative concentrations.",
+          "description": "COUPLED solver - iterative coupling with under-relaxation. Disabled: growth-factor uptake is evaluated explicitly here, which makes the zero-flux TGFA/FGF/GI steady states singular (fields freeze at 0 or land on an arbitrary constant). Replaced by the implicit-uptake solver node below.",
           "custom_name": "run_diffusion_solver_coupled",
           "step_count": 1,
           "parameter_nodes": [
             "diffusion_step-param_max_iterations",
             "diffusion_step-param_tolerance",
             "diffusion_step-param_solver_type",
+            "diffusion_step-param_max_coupling_iterations",
+            "diffusion_step-param_coupling_tolerance",
+            "diffusion_step-param_relaxation_factor",
+            "diffusion_step-param_oxygen_conversion_factor",
+            "diffusion_step-param_oxygen_consumption_multiplier",
+            "diffusion_step-param_lactate_conversion_factor",
+            "diffusion_step-param_glucose_conversion_factor"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "diffusion_step-run_diffusion_coupled_implicit",
+          "function_name": "run_diffusion_solver_coupled_implicit",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 900
+          },
+          "description": "COUPLED solver with IMPLICIT growth-factor uptake: the first-order uptake R = γ_C·C of TGFA/FGF/HGF/GI goes into the PDE matrix (∇·(D∇C) − k·C = −P) instead of the explicit source side, so the zero-flux growth factors get a well-posed, bounded steady state peaked around producing cells. Michaelis-Menten metabolism (Oxygen/Glucose/Lactate/H) is identical to the old node.",
+          "custom_name": "run_diffusion_solver_coupled_implicit",
+          "step_count": 1,
+          "parameter_nodes": [
             "diffusion_step-param_max_coupling_iterations",
             "diffusion_step-param_coupling_tolerance",
             "diffusion_step-param_relaxation_factor",
@@ -1447,7 +1496,8 @@
       ],
       "execution_order": [
         "diffusion_step-calculate_metabolism",
-        "diffusion_step-run_diffusion_coupled"
+        "diffusion_step-run_diffusion_coupled",
+        "diffusion_step-run_diffusion_coupled_implicit"
       ],
       "input_parameters": []
     },

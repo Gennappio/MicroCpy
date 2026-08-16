@@ -335,8 +335,19 @@ class MultiSubstanceSimulator:
         if face_mask.any():
             var.constrain(gradient_value, where=face_mask)
 
-    def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]]):
-        """Update using FiPy diffusion solver - steady state solution"""
+    def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]],
+               implicit_sinks: Optional[Dict[Tuple[float, float], Dict[str, float]]] = None):
+        """Update using FiPy diffusion solver - steady state solution.
+
+        Args:
+            substance_reactions: explicit source terms per cell position
+                (mol/s/cell; negative = consumption, positive = production).
+            implicit_sinks: optional first-order uptake coefficients per cell
+                position (mol/s/cell per mM of local concentration). These are
+                folded into the PDE matrix as an implicit sink -k(x)·c rather
+                than evaluated at the previous concentrations, which keeps
+                pure-Neumann systems with net production nonsingular.
+        """
 
         # Progress logging: show which substances are being processed
         substance_names = list(self.state.substances.keys())
@@ -475,17 +486,32 @@ class MultiSubstanceSimulator:
             # In FiPy, the equation is: ∇·(D∇c) + S = 0
             # So we need to NEGATE the source term!
             decay_rate = float(getattr(config, 'decay_rate', 0.0) or 0.0)
-            if decay_rate > 0.0:
+
+            # Optional first-order uptake -k(x)*c, implicit in the matrix.
+            # k(x) comes from per-cell uptake coefficients (mol/s/cell per mM)
+            # run through the same volumetric conversion as the sources, which
+            # turns them into 1/s — the same unit as decay_rate.
+            sink_field = None
+            if implicit_sinks:
+                candidate = self._create_source_field_from_reactions(name, implicit_sinks)
+                if np.any(candidate):
+                    sink_field = candidate
+
+            if sink_field is not None:
+                sink_var = CellVariable(mesh=self.fipy_mesh, value=sink_field + decay_rate)
+                equation = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=sink_var) == -source_var
+            elif decay_rate > 0.0:
                 # First-order decay -k*c, implicit on the current field (config.decay_rate, 1/s)
                 equation = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=decay_rate) == -source_var
             else:
                 equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
             # Direct sparse-LU solve where the matrix is nonsingular (Dirichlet
-            # boundary or an implicit decay term). A pure-Neumann steady-state
-            # system is singular — LU factorization would fail — so those keep
-            # the iterative GMRES solver.
-            if substance_state.config.boundary_type == "fixed" or decay_rate > 0.0:
+            # boundary or an implicit decay/uptake term). A pure-Neumann
+            # steady-state system is singular — LU factorization would fail —
+            # so those keep the iterative GMRES solver.
+            if (substance_state.config.boundary_type == "fixed" or decay_rate > 0.0
+                    or sink_field is not None):
                 solver = LinearLUSolver(iterations=10, tolerance=1e-6)
             else:
                 solver = LinearGMRESSolver(iterations=1000, tolerance=1e-6)
