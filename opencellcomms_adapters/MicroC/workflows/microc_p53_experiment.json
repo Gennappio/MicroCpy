@@ -1559,7 +1559,8 @@
           "function_name": "generate_quadrant_plots",
           "function_file": "",
           "parameters": {
-            "plot_interval": "1"
+            "plot_interval": "1",
+            "autorange": false
           },
           "enabled": true,
           "position": {
@@ -1593,23 +1594,39 @@
           "entries": [
             {
               "key": "Lactate",
-              "valueType": "string",
-              "value": "darkorange"
+              "valueType": "dict",
+              "value": {
+                "color": "darkorange",
+                "vmin": 1.0,
+                "vmax": 5.0
+              }
             },
             {
               "key": "Glucose",
-              "valueType": "string",
-              "value": "teal"
+              "valueType": "dict",
+              "value": {
+                "color": "teal",
+                "vmin": 0.0,
+                "vmax": 5.0
+              }
             },
             {
               "key": "TGFA",
-              "valueType": "string",
-              "value": "gold"
+              "valueType": "dict",
+              "value": {
+                "color": "gold",
+                "vmin": 0.0,
+                "vmax": 0.001
+              }
             },
             {
               "key": "Oxygen",
-              "valueType": "string",
-              "value": "mediumvioletred"
+              "valueType": "dict",
+              "value": {
+                "color": "mediumvioletred",
+                "vmin": 0.0,
+                "vmax": 0.07
+              }
             }
           ],
           "target_param": "quadrant_substances",

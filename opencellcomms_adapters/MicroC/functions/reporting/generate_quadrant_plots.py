@@ -8,11 +8,18 @@ orange, Glucose teal, TGFA yellow, H magenta — as in the Jayatilake MicroC
 figure). Cells are drawn on top across the whole domain with the usual
 metabolic-interior / phenotype-border colouring.
 
-Each quadrant carries its OWN gradient legend showing that substance's global
-min and max, and any threshold isolines (gene-association thresholds, necrosis
+Each quadrant carries its OWN gradient legend showing that substance's colour
+range, and any threshold isolines (gene-association thresholds, necrosis
 thresholds published by mark_necrotic_cells) are drawn only inside the owning
 substance's quadrant and labelled with the substance name so there is no
 ambiguity about which field they belong to.
+
+The colour range per substance is either automatic (the field's min/max at
+that iteration) or FIXED via {"color", "vmin", "vmax"} in the
+quadrant_substances dict. Fixed ranges keep shades comparable across
+iterations and give a uniform field its proportional shade — with auto-range
+a uniform field always renders at the degenerate midpoint regardless of its
+level.
 """
 
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -40,6 +47,29 @@ _PHENOTYPE_BORDER_COLORS = {
     'Growth_Arrest': 'orange',
     'growth_arrest': 'orange',
 }
+
+
+def _normalize_quadrants(raw: Dict[str, Any], autorange: bool) -> Dict[str, Dict[str, Any]]:
+    """Normalize quadrant_substances values to {"color", "vmin", "vmax"} specs.
+
+    Each raw value is either a colour string (auto-range) or a dict
+    {"color", "vmin", "vmax"} with optional fixed bounds. With autorange=True
+    any fixed bounds are ignored and every quadrant scales to its field's
+    min/max for that iteration."""
+    def _bound(value):
+        if autorange or value is None or value == "":
+            return None
+        return float(value)
+
+    quadrants = {}
+    for key, value in raw.items():
+        if isinstance(value, dict):
+            quadrants[str(key)] = {"color": str(value.get("color", "gray")),
+                                   "vmin": _bound(value.get("vmin")),
+                                   "vmax": _bound(value.get("vmax"))}
+        else:
+            quadrants[str(key)] = {"color": str(value), "vmin": None, "vmax": None}
+    return quadrants
 
 
 def _association_threshold(config, substance_name: str) -> Optional[float]:
@@ -77,12 +107,17 @@ def _label_point_in_quadrant(contour_set, bounds):
     return min(inside, key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
 
 
-def render_quadrant_plot(config, fields: Dict[str, Any], colors: Dict[str, str],
+def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[str, Any]],
                          cell_data: List[Tuple[Any, str]], cell_color_fn,
                          population, isolines: Dict[str, List[Tuple[float, str]]],
                          time_point: float, title_suffix: str,
                          output_file: Path) -> Path:
-    """Render the 2x2 quadrant figure. Pure plotting — no context access."""
+    """Render the 2x2 quadrant figure. Pure plotting — no context access.
+
+    ``specs`` maps substance name -> {"color", "vmin", "vmax"}; a None bound
+    falls back to the field's own min/max (auto-range). A fixed range keeps
+    the colour scale stable across iterations and gives a uniform field a
+    proportional shade instead of a washed-out auto-scaled one."""
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
@@ -111,19 +146,22 @@ def render_quadrant_plot(config, fields: Dict[str, Any], colors: Dict[str, str],
     ax.set_ylim(0, size_y)
     ax.set_aspect('equal')
 
-    substance_names = list(colors.keys())
+    substance_names = list(specs.keys())
     for idx, name in enumerate(substance_names):
         concentrations = np.asarray(fields[name])
         if concentrations.ndim == 3:
             concentrations = concentrations[concentrations.shape[0] // 2, :, :]
 
-        vmin, vmax = float(concentrations.min()), float(concentrations.max())
-        if vmax - vmin < 1e-10:  # uniform field: avoid a degenerate colormap
+        spec = specs[name]
+        fixed_min, fixed_max = spec.get('vmin'), spec.get('vmax')
+        vmin = fixed_min if fixed_min is not None else float(concentrations.min())
+        vmax = fixed_max if fixed_max is not None else float(concentrations.max())
+        if vmax - vmin < 1e-10:  # degenerate range (auto on a uniform field)
             eps = max(abs(vmin) * 1e-6, 1e-10)
             vmin, vmax = vmin - eps, vmax + eps
 
         cmap = LinearSegmentedColormap.from_list(f'white_to_{name}',
-                                                 ['white', colors[name]])
+                                                 ['white', spec['color']])
 
         x0, y0, x1, y1 = quadrant_bounds[idx]
         clip_rect = patches.Rectangle((x0, y0), x1 - x0, y1 - y0,
@@ -217,11 +255,23 @@ def render_quadrant_plot(config, fields: Dict[str, Any], colors: Dict[str, str],
     category="FINALIZATION",
     parameters=[
         {"name": "quadrant_substances", "type": "DICT",
-         "description": "Substance -> colour of its gradient (any matplotlib colour). "
-                        "Exactly 4 entries; entry order places them top-left, "
-                        "top-right, bottom-left, bottom-right. Empty = "
-                        "Lactate/Glucose/TGFA/H as in the MicroC reference figure.",
+         "description": "Substance -> gradient spec. Exactly 4 entries; entry order "
+                        "places them top-left, top-right, bottom-left, bottom-right. "
+                        "Value is either a matplotlib colour string (colour scale "
+                        "auto-ranges to the field's min/max each iteration) or a dict "
+                        "{color, vmin, vmax} fixing the colour range - a fixed range "
+                        "keeps shades comparable across iterations and shows a "
+                        "proportional shade even when the field is uniform. vmin/vmax "
+                        "may be given individually; an omitted bound stays automatic. "
+                        "Empty = Lactate/Glucose/TGFA/H as in the MicroC reference "
+                        "figure.",
          "default": {}},
+        {"name": "autorange", "type": "BOOL",
+         "description": "Ignore any fixed vmin/vmax in Quadrant Substances and scale "
+                        "every quadrant to its field's min/max at each iteration. "
+                        "Lets you flip between fixed and automatic colour scales "
+                        "without editing the dict.",
+         "default": False},
         {"name": "plot_interval", "type": "INT",
          "description": "Plot every N iterations (1 = every iteration).",
          "default": 1},
@@ -235,7 +285,8 @@ def render_quadrant_plot(config, fields: Dict[str, Any], colors: Dict[str, str],
 )
 def generate_quadrant_plots(
     env: BiologicalContext,
-    quadrant_substances: Union[Dict[str, str], None] = None,
+    quadrant_substances: Union[Dict[str, Any], None] = None,
+    autorange: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
     **kwargs
@@ -261,13 +312,15 @@ def generate_quadrant_plots(
         print("[WARNING] Simulator/population/config not available - skipping quadrant plot")
         return False
 
-    quadrants = {str(k): str(v) for k, v in (quadrant_substances or {}).items()}
-    if not quadrants:
-        quadrants = dict(DEFAULT_QUADRANTS)
-    if len(quadrants) != 4:
+    raw = dict(quadrant_substances or {}) or dict(DEFAULT_QUADRANTS)
+    if len(raw) != 4:
         print(f"[WORKFLOW] Quadrant plot needs exactly 4 substances, got "
-              f"{list(quadrants)} - skipping")
+              f"{list(raw)} - skipping")
         return False
+
+    if isinstance(autorange, str):
+        autorange = autorange.strip().lower() in ('true', '1', 'yes')
+    quadrants = _normalize_quadrants(raw, bool(autorange))
     missing = [s for s in quadrants if s not in simulator.state.substances]
     if missing:
         print(f"[WORKFLOW] Substances not found in simulator: {missing} - skipping quadrant plot")
