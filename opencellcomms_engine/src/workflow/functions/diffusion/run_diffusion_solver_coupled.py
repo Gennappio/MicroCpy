@@ -11,12 +11,19 @@ Algorithm (Picard iteration with reaction-term under-relaxation):
 2. Collect reaction terms from cells
 3. Blend reaction terms: r_next = α * r_new + (1-α) * r_old
 4. Solve steady-state diffusion with blended reaction rates
-5. Check convergence: if max(|new - old|) < tolerance, done
+5. Check convergence: the max change between this solve's UNRELAXED solution
+   and the previous solve's is < tolerance on two consecutive iterations
+   (the second pass confirms the solution is self-consistent — metabolism is
+   re-evaluated on the solution itself). While not converged, under-relax the
+   field; once the solution is stationary, leave the field at the solution.
 6. Repeat from step 1
 
-Under-relaxation (0 < α < 1) is applied to source/reaction terms rather than
-concentrations. This is the standard Picard fix for oscillatory instability
-in coupled PDE-ODE systems.
+Under-relaxation (0 < α < 1) is applied to source/reaction terms and to the
+concentration field. This is the standard Picard fix for oscillatory
+instability in coupled PDE-ODE systems. Convergence is deliberately NOT
+measured on the relaxed field: that change shrinks by a factor of (1-α) per
+iteration by construction, so with small α the check could never pass before
+max_coupling_iterations even when the solution stopped moving immediately.
 
 Homing note (why this is NOT a per-resource behavior): a single coupled solve
 advances ALL registered substance fields together, so it cannot be attributed to
@@ -75,7 +82,7 @@ DEBUG_COUPLED_SOLVER = False
         {
             "name": "coupling_tolerance",
             "type": "FLOAT",
-            "description": "Convergence tolerance for coupling (max concentration change)",
+            "description": "Convergence tolerance for coupling (max change of the unrelaxed solution between consecutive solves; two consecutive passes below tolerance end the loop)",
             "default": 1e-4,
             "min_value": 0.0
         },
@@ -195,11 +202,22 @@ def run_diffusion_solver_coupled(
             solver_type=solver_type
         )
 
-    # Main coupling loop with reaction-term under-relaxation
+    # Main coupling loop with reaction-term under-relaxation.
+    #
+    # Convergence is measured on the UNRELAXED steady-state solution: the loop
+    # ends when two consecutive solves agree within coupling_tolerance (the
+    # second pass confirms the solution is self-consistent, with metabolism
+    # evaluated on the solution itself). Once the solution is stationary,
+    # relaxation is skipped so the field ends at the solver's fixed point
+    # instead of crawling toward it geometrically (factor 1-α per iteration) —
+    # with heavy under-relaxation a post-relaxation convergence check would
+    # never pass, forcing every step to burn all max_coupling_iterations.
     old_reactions = None
+    prev_solution = None
+    solution_stationary = False
 
     for coupling_iter in range(max_coupling_iterations):
-        # Step 1: Store old concentrations for convergence check
+        # Step 1: Store old concentrations for the relaxation blend
         old_concentrations = _get_concentration_snapshot(simulator)
 
         # Step 2: Recalculate metabolism based on current concentrations
@@ -226,21 +244,33 @@ def run_diffusion_solver_coupled(
         # Step 5b: Clamp negatives before convergence check (prevents unphysical state propagation)
         _clamp_negative_concentrations(simulator, context, verbose=verbose)
 
-        # Step 6: Get new concentrations and check convergence
+        # Step 6: Compare the unrelaxed solution against the previous
+        # iteration's unrelaxed solution
         new_concentrations = _get_concentration_snapshot(simulator)
-        max_change = _compute_max_change(old_concentrations, new_concentrations)
+        if prev_solution is not None:
+            solution_change = _compute_max_change(prev_solution, new_concentrations)
+        else:
+            solution_change = float('inf')
+        prev_solution = new_concentrations
 
-        log_always(f"Iteration {coupling_iter + 1}: max change = {max_change:.4e}",
+        log_always(f"Iteration {coupling_iter + 1}: solution change = {solution_change:.4e}",
             prefix="[COUPLED]")
         if 'Oxygen' in simulator.state.substances:
             oxygen_conc = simulator.state.substances['Oxygen'].concentrations
             log_always(f"Oxygen after iteration {coupling_iter + 1}: min={oxygen_conc.min():.6f}, max={oxygen_conc.max():.6f} mM",
                 prefix="[COUPLED]")
 
-        if max_change < coupling_tolerance:
-            log_always(f"Converged after {coupling_iter + 1} iterations",
-                prefix="[COUPLED]")
-            break
+        if solution_change < coupling_tolerance:
+            if solution_stationary:
+                log_always(f"Converged after {coupling_iter + 1} iterations "
+                           f"(unrelaxed solution self-consistent)",
+                    prefix="[COUPLED]")
+                break
+            # Solution is stationary: leave the field at the unrelaxed solution
+            # and run one confirming iteration with metabolism evaluated on it.
+            solution_stationary = True
+            continue
+        solution_stationary = False
 
         # Step 7: Apply concentration relaxation if not converged (belt and suspenders)
         if relaxation_factor < 1.0 and coupling_iter < max_coupling_iterations - 1:
@@ -250,7 +280,7 @@ def run_diffusion_solver_coupled(
 
     else:
         log_always(f"WARNING: Did not converge after {max_coupling_iterations} iterations "
-                   f"(final max_change={max_change:.4e})",
+                   f"(final solution change={solution_change:.4e})",
             prefix="[COUPLED]")
 
     # Final check for any remaining negative values (safety clamp)

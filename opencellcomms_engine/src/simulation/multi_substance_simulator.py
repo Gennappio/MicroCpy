@@ -18,7 +18,7 @@ from pathlib import Path
 # Import FiPy for diffusion simulation
 try:
     from fipy import Grid2D, Grid3D, CellVariable, DiffusionTerm, ImplicitSourceTerm
-    from fipy.solvers.scipy import LinearGMRESSolver as Solver
+    from fipy.solvers.scipy import LinearGMRESSolver, LinearLUSolver
     FIPY_AVAILABLE = True
 except ImportError:
     FIPY_AVAILABLE = False
@@ -355,19 +355,11 @@ class MultiSubstanceSimulator:
             var = self.fipy_variables[name]
             config = substance_state.config
 
-            # Get current configuration values
-            initial_value = float(substance_state.config.initial_value.value)
-            boundary_value = float(substance_state.config.boundary_value.value)
-
-            # Use the existing FiPy variable (don't create a fresh one each time)
-            # This allows the solver to use the previous solution as initial guess
-            var = self.fipy_variables[name]
-
-            # Apply boundary conditions to fresh variable
-            if substance_state.config.boundary_type == "fixed":
-                var.constrain(boundary_value, self.fipy_mesh.facesTop |
-                             self.fipy_mesh.facesBottom | self.fipy_mesh.facesLeft |
-                             self.fipy_mesh.facesRight)
+            # Boundary conditions were applied once at variable creation
+            # (_create_fipy_variables_for_substances). Do NOT re-constrain here:
+            # FiPy appends a new constraint object on every constrain() call, so
+            # constraining per solve accumulates duplicates that are all
+            # re-evaluated at every matrix assembly.
 
             # DEBUG: Confirm fresh variable
             # if name == 'Lactate':
@@ -489,8 +481,14 @@ class MultiSubstanceSimulator:
             else:
                 equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
 
-            # Solve for steady state using the exact same approach as standalone script
-            solver = Solver(iterations=1000, tolerance=1e-6)
+            # Direct sparse-LU solve where the matrix is nonsingular (Dirichlet
+            # boundary or an implicit decay term). A pure-Neumann steady-state
+            # system is singular — LU factorization would fail — so those keep
+            # the iterative GMRES solver.
+            if substance_state.config.boundary_type == "fixed" or decay_rate > 0.0:
+                solver = LinearLUSolver(iterations=10, tolerance=1e-6)
+            else:
+                solver = LinearGMRESSolver(iterations=1000, tolerance=1e-6)
 
             try:
                 res = equation.solve(var=var, solver=solver)
