@@ -18,7 +18,7 @@ from src.workflow.logging import log, log_always
     parameters=[
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "OpenCellComms Simulation"},
         {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
-        {"name": "dimensions", "type": "INT", "description": "Domain dimensions (2 or 3)", "default": 3},
+        {"name": "dimensions", "type": "INT", "description": "Domain dimensions (2 or 3)", "default": 2},
         {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
         {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
@@ -30,7 +30,11 @@ def setup_simulation(
     context: Dict[str, Any],
     name: str = "OpenCellComms Simulation",
     dt: float = 0.1,
-    dimensions: int = 3,
+    # Default 2, matching setup_domain: workflows usually wire Dimensions only
+    # to setup_domain, and a stale default 3 here once put a 3D value in
+    # context['dimensions'] for a 2D world (cell division then stacked
+    # daughters in a phantom z-layer). 3D runs must opt in explicitly.
+    dimensions: int = 2,
     output_dir: str = "results",
     verbose: Optional[bool] = None,
     **kwargs

@@ -74,12 +74,24 @@ def setup_domain(
             return False
 
         # The domain is the authority on dimensionality. setup_simulation may
-        # have stored its own default (3) in context['dimensions'] when its
+        # have stored a different value in context['dimensions'] when its
         # dimensions parameter isn't wired; overwrite it here so consumers
         # like update_cell_division never see a 3D world for a 2D domain
         # (that mismatch made the daughter-placement search explore z = ±1
         # and stack cells on occupied 2D sites).
         context['dimensions'] = int(dimensions)
+
+        if int(dimensions) == 3:
+            log_always(
+                "[WARNING] 3D simulation is INCOMPLETE in this engine. Known gaps: "
+                "substance fields are initialized as 2D arrays (shape only becomes "
+                "3D after the first solve); get_substance_concentrations() and the "
+                "typed env.concentration() read the MIDDLE z-slice only, so "
+                "metabolism, growth-factor reactions and gene associations see one "
+                "plane for every cell; checkpoints carry x,y only; the ABM layer "
+                "(LatticeWorld) rejects 3D outright; plots project the middle "
+                "slice. Results of a 3D run are not trustworthy yet."
+            )
 
         # Setup domain configuration
         config.domain = DomainConfig(
