@@ -194,13 +194,31 @@ function ResultsExplorer() {
                 <span className="plot-category-badge">{selectedPlot.category}</span>
               )}
             </div>
-            <div className="viewer-content">
-              <img
-                src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${imageVersion}`}
-                alt={selectedPlot.name}
-                className="plot-image"
-                key={selectedPlot.path}
-              />
+            <div
+              className={
+                selectedPlot.path.endsWith('.html')
+                  ? 'viewer-content viewer-content--frame'
+                  : 'viewer-content'
+              }
+            >
+              {selectedPlot.path.endsWith('.html') ? (
+                // Interactive artifact (e.g. the 3D Plotly viewer): a full
+                // document in an iframe. Relative assets (plotly.min.js)
+                // resolve through the same sandboxed plot route.
+                <iframe
+                  src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${imageVersion}`}
+                  title={selectedPlot.name}
+                  className="plot-frame"
+                  key={selectedPlot.path}
+                />
+              ) : (
+                <img
+                  src={`${API_BASE_URL}/api/results/plot/${selectedPlot.path}?t=${imageVersion}`}
+                  alt={selectedPlot.name}
+                  className="plot-image"
+                  key={selectedPlot.path}
+                />
+              )}
             </div>
           </>
         ) : (

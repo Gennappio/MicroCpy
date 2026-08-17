@@ -1891,6 +1891,10 @@ def list_results():
             return jsonify({'success': True, 'results': []})
 
         IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp'}
+        # Viewable artifacts: images plus interactive HTML (the 3D viewer).
+        # .js is deliberately NOT listed - plotly.min.js sits beside the
+        # HTMLs and is served (see MIME_TYPES) but must not appear as a plot.
+        VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS | {'.html'}
 
         def scan_for_plots(directory, base_ref):
             """Recursively scan directory for image files, categorizing by subdirectory."""
@@ -1915,12 +1919,12 @@ def list_results():
                     for img_file in sorted(item.rglob('*')):
                         if img_file.is_symlink():
                             continue
-                        if img_file.is_file() and img_file.suffix.lower() in IMAGE_EXTENSIONS:
+                        if img_file.is_file() and img_file.suffix.lower() in VIEWABLE_EXTENSIONS:
                             try:
                                 img_file = _resolve_allowed_path(
                                     img_file,
                                     roots=(RUNS_DIR,),
-                                    suffixes=IMAGE_EXTENSIONS,
+                                    suffixes=VIEWABLE_EXTENSIONS,
                                     must_exist=True,
                                     require_file=True,
                                     allow_absolute=True,
@@ -1932,7 +1936,7 @@ def list_results():
                                 'path': str(img_file.relative_to(base_ref)),
                                 'category': item.name
                             })
-                elif item.is_file() and item.suffix.lower() in IMAGE_EXTENSIONS:
+                elif item.is_file() and item.suffix.lower() in VIEWABLE_EXTENSIONS:
                     plots.append({
                         'name': item.name,
                         'path': str(item.relative_to(base_ref)),
@@ -1968,7 +1972,7 @@ def list_results():
             if (
                 item.is_file()
                 and not item.is_symlink()
-                and item.suffix.lower() in IMAGE_EXTENSIONS
+                and item.suffix.lower() in VIEWABLE_EXTENSIONS
             ):
                 root_plots.append({
                     'name': item.name,
@@ -2014,7 +2018,11 @@ def get_plot(plot_path):
         MIME_TYPES = {
             '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
             '.gif': 'image/gif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp',
-            '.webp': 'image/webp'
+            '.webp': 'image/webp',
+            # 3D viewer artifacts: the HTML itself plus its sibling
+            # plotly.min.js (referenced relatively from the iframe URL,
+            # resolved through this same sandboxed route)
+            '.html': 'text/html', '.js': 'application/javascript'
         }
         mime = MIME_TYPES.get(full_path.suffix.lower())
         if not mime:

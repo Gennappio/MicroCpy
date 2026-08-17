@@ -194,6 +194,21 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* HTML artifacts (interactive 3D viewer): the centered flex layout would
+   collapse an iframe's height, so stretch instead and drop the padding. */
+.viewer-content--frame {
+  align-items: stretch;
+  padding: 0;
+}
+
+.plot-frame {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  border: 0;
+  background: white;
+}
+
 .viewer-empty {
   flex: 1;
   display: flex;
