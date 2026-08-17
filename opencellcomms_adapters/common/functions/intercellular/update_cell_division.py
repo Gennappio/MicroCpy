@@ -78,8 +78,13 @@ def update_cell_division(
     cell_cycle_time = _get_config_param(config, 'cell_cycle_time', 240.0)
     cell_radius = _get_config_param(config, 'cell_radius', 10.0)
 
-    # Get simulation dimensions (2D or 3D) from context
-    dimensions = context.get('dimensions', 3)
+    # Get simulation dimensions (2D or 3D). The domain config is authoritative
+    # when present; context['dimensions'] can carry setup_simulation's default
+    # (3) in workflows that only wire dimensions to setup_domain, and treating
+    # a 2D world as 3D lets the daughter search stack cells at z = ±1 on
+    # already-occupied x-y sites.
+    _domain = getattr(context.get('config'), 'domain', None)
+    dimensions = getattr(_domain, 'dimensions', None) or context.get('dimensions', 3)
 
     # Collect cells that should divide
     cells_to_divide = []

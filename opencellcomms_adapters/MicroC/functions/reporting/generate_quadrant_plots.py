@@ -220,26 +220,33 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
 
     # Cells drawn over the whole domain, MicroC colouring. Tally the colours
     # actually drawn so the legends can carry per-category counts.
+    #
+    # Colour comes from EACH CELL OBJECT DIRECTLY — never from a position
+    # lookup (get_cell_at_position). A position lookup returns the first cell
+    # matching the coordinate, so any representation drift or co-location
+    # colours a cell with a NEIGHBOUR's phenotype; this once inflated the
+    # plot's Necrosis count far above the fate census.
     cell_diameter = config.domain.cell_height.value
     spacing = config.domain.cell_height.value
     interior_counts: Dict[str, int] = {}
     border_counts: Dict[str, int] = {}
-    for position, phenotype in cell_data:
+    if population is not None:
+        draw_items = [(c.state.position, c.state.phenotype, c)
+                      for c in population.state.cells.values()]
+    else:
+        draw_items = [(position, phenotype, None) for position, phenotype in cell_data]
+    for position, phenotype, cell in draw_items:
         x, y = position[0], position[1]
         phys_x, phys_y = (x + 0.5) * spacing, (y + 0.5) * spacing
 
         interior_color, border_color = 'lightgray', _PHENOTYPE_BORDER_COLORS.get(phenotype, 'gray')
-        if cell_color_fn and population:
+        if cell_color_fn and cell is not None:
             try:
-                cell = population.get_cell_at_position((x, y))
-                if cell is None:
-                    cell = population.get_cell_at_position(position)
-                if cell is not None:
-                    gene_states = getattr(cell.state, 'gene_states', {}) or {}
-                    custom = cell_color_fn(cell=cell, gene_states=gene_states,
-                                           config=population.config)
-                    if custom and '|' in custom:
-                        interior_color, border_color = custom.split('|', 1)
+                gene_states = getattr(cell.state, 'gene_states', {}) or {}
+                custom = cell_color_fn(cell=cell, gene_states=gene_states,
+                                       config=population.config)
+                if custom and '|' in custom:
+                    interior_color, border_color = custom.split('|', 1)
             except Exception:
                 pass
         interior_counts[interior_color] = interior_counts.get(interior_color, 0) + 1
@@ -300,7 +307,7 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                               fontsize=9, title_fontsize=10, frameon=True,
                               edgecolor='black', framealpha=0.95)
     border_legend.get_title().set_fontweight('bold')
-    ax.text(1.02, 0.44, f'Total cells: {len(cell_data)}',
+    ax.text(1.02, 0.44, f'Total cells: {len(draw_items)}',
             transform=ax.transAxes, fontsize=10, fontweight='bold',
             verticalalignment='top')
     ax.text(1.02, 0.39, 'priority:\nNecrosis > Apoptosis\n> Proliferation',

@@ -73,6 +73,14 @@ def setup_domain(
             log_always("[ERROR] Config must be set up before domain (run setup_simulation first)")
             return False
 
+        # The domain is the authority on dimensionality. setup_simulation may
+        # have stored its own default (3) in context['dimensions'] when its
+        # dimensions parameter isn't wired; overwrite it here so consumers
+        # like update_cell_division never see a 3D world for a 2D domain
+        # (that mismatch made the daughter-placement search explore z = ±1
+        # and stack cells on occupied 2D sites).
+        context['dimensions'] = int(dimensions)
+
         # Setup domain configuration
         config.domain = DomainConfig(
             dimensions=dimensions,
