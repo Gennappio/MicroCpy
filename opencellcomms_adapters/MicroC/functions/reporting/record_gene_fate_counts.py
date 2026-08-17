@@ -1,19 +1,21 @@
 """
-Record and plot MicroC gene-fate statistics over scheduler iterations.
+Record and plot MicroC fate statistics over scheduler iterations.
 
 This is a reporting-only helper for test workflows. It does not update the
 gene network or cell phenotypes; it summarizes the state produced upstream by
 gene_update and fate_update.
 
 Per scheduler iteration it records, across the whole population:
-- fate-gene ON counts and % of population (NetLogo "fate node Boolean state"),
 - marked-phenotype counts and % of population (NetLogo "my-fate" distribution),
+- fate-gene ON counts and % of population as CSV/log diagnostics only,
 - fate fires and fate reverts this iteration (NetLogo "fate fires / reverts"),
   derived from the cumulative per-cell counters maintained by
   propagate_gene_networks_netlogo.
 
-The population-over-time analogue of gene_network_netlogo_faithful.py, whose
-distributions are over independent runs.
+The PNG deliberately plots actual cell phenotypes, not Boolean fate-node
+states. This matches the phenotype borders in the iteration plots: a Necrosis
+node that is ON does not count as necrosis until fate_update applies the
+environmental gate and marks the cell's phenotype.
 """
 
 import csv
@@ -57,14 +59,17 @@ DEFAULT_METABOLIC_GENES = "glycoATP,mitoATP"
 
 @register_function(
     requires=["population", "gene_networks"],
-    display_name="Record Gene Fate Counts",
-    description="Log and plot fate-gene/phenotype counts, %, and fate fires/reverts over iterations",
+    display_name="Record Actual Fate Counts",
+    description=(
+        "Plot actual marked phenotypes over time; retain gene-node counts as "
+        "CSV diagnostics"
+    ),
     category="FINALIZATION",
     parameters=[
         {
             "name": "plot_filename",
             "type": "STRING",
-            "description": "Filename for the fate-statistics line plot",
+            "description": "Filename for the actual-phenotype line plot",
             "default": "gene_fate_counts_over_time.png",
         },
         {
@@ -234,61 +239,42 @@ def _write_plot(path: Path, history, met_genes=None) -> None:
     met_genes = met_genes or []
     iterations = [row["iteration"] for row in history]
 
-    fig, (ax_gene, ax_pheno, ax_events, ax_pop) = plt.subplots(
-        4, 1, figsize=(9, 13), sharex=True
-    )
-
-    for name in FATE_GENES:
-        ax_gene.plot(
-            iterations,
-            [row[f"gene_{name}"] for row in history],
-            marker="o", linewidth=2, label=name, color=COLORS.get(name),
-        )
-    ax_gene.set_ylabel("Cells")
-    ax_gene.set_title("Fate Gene Outputs (ON cells)")
-    ax_gene.grid(True, alpha=0.3)
-    ax_gene.legend(loc="upper right", fontsize=8)
+    fig, (ax_pheno, ax_pop) = plt.subplots(2, 1, figsize=(9, 8), sharex=True)
 
     for name in PHENOTYPES:
         ax_pheno.plot(
             iterations,
             [row[f"phenotype_{name}"] for row in history],
-            marker="o", linewidth=2, label=name, color=COLORS.get(name),
+            marker="o",
+            linewidth=2,
+            label=name,
+            color=COLORS.get(name),
         )
     ax_pheno.set_ylabel("Cells")
-    ax_pheno.set_title("Marked Phenotypes After fate_update")
+    ax_pheno.set_title("Actual Cell Phenotypes After Fate Gates")
     ax_pheno.grid(True, alpha=0.3)
     ax_pheno.legend(loc="upper right", fontsize=8)
 
-    for name in FATE_GENES:
-        ax_events.plot(
-            iterations,
-            [row[f"fires_{name}"] for row in history],
-            marker="o", linewidth=2, label=f"{name} fires", color=COLORS.get(name),
-        )
-    reverts_total = [sum(row[f"reverts_{n}"] for n in FATE_GENES) for row in history]
-    ax_events.plot(
-        iterations, reverts_total,
-        marker="x", linewidth=1.5, linestyle="--", color="#9467bd",
-        label="reverts (all fates)",
-    )
-    ax_events.set_ylabel("Events / iteration")
-    ax_events.set_title("Fate Fires & Reverts per Iteration")
-    ax_events.grid(True, alpha=0.3)
-    ax_events.legend(loc="upper right", fontsize=8)
-
-    # Panel 4: total population and metabolic-gene ON-cell counts on ONE shared
+    # Panel 2: total population and metabolic-gene ON-cell counts on ONE shared
     # axis — all are cell counts, so magnitudes compare honestly (a single axis
     # avoids the dual-axis illusion of metabolic genes sitting above total cells).
     ax_pop.plot(
-        iterations, [row["total_cells"] for row in history],
-        marker="o", linewidth=2, label="total cells", color=COLORS["total_cells"],
+        iterations,
+        [row["total_cells"] for row in history],
+        marker="o",
+        linewidth=2,
+        label="total cells",
+        color=COLORS["total_cells"],
     )
     for i, name in enumerate(met_genes):
         color = COLORS.get(name, f"C{i + 3}")
         ax_pop.plot(
-            iterations, [row.get(f"gene_{name}", 0) for row in history],
-            marker="s", linewidth=2, label=f"{name} (ON)", color=color,
+            iterations,
+            [row.get(f"gene_{name}", 0) for row in history],
+            marker="s",
+            linewidth=2,
+            label=f"{name} (ON)",
+            color=color,
         )
     ax_pop.set_xlabel("Scheduler Iteration")
     ax_pop.set_ylabel("Cells")
