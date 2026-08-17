@@ -36,7 +36,10 @@ plt.rcParams.update({
 class AutoPlotter:
     """Automatic plotting for OpenCellComms simulations"""
     
-    def __init__(self, config, plots_dir: Path, cell_color_fn=None, extra_isolines=None):
+    def __init__(self, config, plots_dir: Path, cell_color_fn=None, extra_isolines=None,
+                 show_cells: bool = True, show_metabolism_colors: bool = True,
+                 show_fate_colors: bool = True, show_legends: bool = True,
+                 show_isolines: bool = True, show_info_box: bool = True):
         self.config = config
         self.plots_dir = Path(plots_dir)
         # Optional explicit per-cell colourer: callable(cell=, gene_states=, config=)
@@ -47,6 +50,18 @@ class AutoPlotter:
         # threshold: {substance_name: [(value, label), ...]} — e.g. necrosis
         # thresholds passed by the plugin's reporting functions.
         self.extra_isolines = extra_isolines or {}
+        # Substance-heatmap display flags, each removing one overlay: the cell
+        # overlay, the metabolic interior colouring (off = lightgray interiors),
+        # the phenotype border colouring (off = gray borders), the cell-colour
+        # legends, the threshold/extra isolines, and the details text box. A
+        # legend is drawn only for a colouring actually in effect, so it never
+        # describes a hidden layer.
+        self.show_cells = show_cells
+        self.show_metabolism_colors = show_metabolism_colors
+        self.show_fate_colors = show_fate_colors
+        self.show_legends = show_legends
+        self.show_isolines = show_isolines
+        self.show_info_box = show_info_box
         self.plots_dir.mkdir(parents=True, exist_ok=True)
 
         # Create subdirectories
@@ -135,8 +150,9 @@ class AutoPlotter:
                       vmin=vmin, vmax=vmax)
 
         # Add threshold isoline if this substance has a gene network association
-        threshold_value = self._get_threshold_for_substance(substance_name)
-        extra_isolines = self.extra_isolines.get(substance_name, [])
+        # (unless isolines are switched off for this plotter)
+        threshold_value = self._get_threshold_for_substance(substance_name) if self.show_isolines else None
+        extra_isolines = self.extra_isolines.get(substance_name, []) if self.show_isolines else []
         if threshold_value is not None or extra_isolines:
             # Create coordinate grids for contour
             x_coords = np.linspace(0, self.config.domain.size_x.value, plot_data.shape[1])
@@ -180,7 +196,7 @@ class AutoPlotter:
 
         # Mark cell positions with colors
         cell_colors_used = {}
-        if cell_positions and population:
+        if cell_positions and population and self.show_cells:
             # Use biological cell diameter (cell_height parameter), not grid spacing
             cell_diameter = self.config.domain.cell_height.value  # 5.0 μm for biological cells
 
@@ -292,27 +308,37 @@ class AutoPlotter:
                     border_color = phenotype_color_map.get(phenotype, 'gray')
                     interior_color = 'lightgray'
 
+                # Disabled colourings collapse to the neutral colours, so the
+                # flag removes the encoding without removing the cells, and its
+                # legend entries are skipped so the legend stays truthful.
+                if not self.show_metabolism_colors:
+                    interior_color = 'lightgray'
+                if not self.show_fate_colors:
+                    border_color = 'gray'
+
                 # Track colors used for legend - separate interior and border legends
                 # Interior colors represent metabolic states
-                interior_to_state = {
-                    'green': 'glycoATP',
-                    'blue': 'mitoATP',
-                    'violet': 'mixed',
-                    'lightgray': 'none'
-                }
-                metabolic_state = interior_to_state.get(interior_color, interior_color)
-                cell_colors_used[f"Interior: {metabolic_state}"] = interior_color
+                if self.show_metabolism_colors:
+                    interior_to_state = {
+                        'green': 'glycoATP',
+                        'blue': 'mitoATP',
+                        'violet': 'mixed',
+                        'lightgray': 'none'
+                    }
+                    metabolic_state = interior_to_state.get(interior_color, interior_color)
+                    cell_colors_used[f"Interior: {metabolic_state}"] = interior_color
 
                 # Border colors represent phenotypes
-                border_to_phenotype = {
-                    'black': 'Necrosis',
-                    'red': 'Apoptosis',
-                    'orange': 'Growth_Arrest',
-                    'lightgreen': 'Proliferation',
-                    'gray': 'Quiescent'
-                }
-                phenotype_state = border_to_phenotype.get(border_color, border_color)
-                cell_colors_used[f"Border: {phenotype_state}"] = border_color
+                if self.show_fate_colors:
+                    border_to_phenotype = {
+                        'black': 'Necrosis',
+                        'red': 'Apoptosis',
+                        'orange': 'Growth_Arrest',
+                        'lightgreen': 'Proliferation',
+                        'gray': 'Quiescent'
+                    }
+                    phenotype_state = border_to_phenotype.get(border_color, border_color)
+                    cell_colors_used[f"Border: {phenotype_state}"] = border_color
 
                 # Draw cell with interior and border colors
                 circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
@@ -320,7 +346,7 @@ class AutoPlotter:
                                       alpha=0.8, linewidth=2, fill=True)
                 ax.add_patch(circle)
 
-        elif cell_positions:
+        elif cell_positions and self.show_cells:
             # Fallback for when population is not available
             cell_diameter = self.config.domain.cell_height.value  # Biological cell diameter
             biological_cell_spacing = self.config.domain.cell_height.value  # Use biological spacing, not FiPy spacing
@@ -378,7 +404,7 @@ class AutoPlotter:
         ax.grid(True, alpha=0.2, color='gray', linestyle='--')
 
         # Add dual cell legends if cells are present - ENHANCED
-        if cell_colors_used:
+        if cell_colors_used and self.show_legends:
             from matplotlib.patches import Patch, Circle
 
             # Separate interior and border legend items
@@ -420,25 +446,26 @@ class AutoPlotter:
                 print(f"[LEG] Dual legends created - Interior: {len(interior_items)}, Border: {len(border_items)}")
 
         # Add text box with additional details including grid info
-        grid_spacing = domain_x / nx
-        cell_diameter = self.config.domain.cell_height.value
-        info_text = (f'Simulation Details:\n'
-                    f'• Config: {config_name}\n'
-                    f'• Time: {time_point:.3f}\n'
-                    f'• Substance: {substance_name}\n'
-                    f'• FiPy Grid: {nx}×{ny} cells\n'
-                    f'• Grid Spacing: {grid_spacing:.1f} μm\n'
-                    f'• Cell Diameter: {cell_diameter:.1f} μm\n'
-                    f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm\n'
-                    f'• Min: {vmin:.6f} mM\n'
-                    f'• Max: {vmax:.6f} mM\n'
-                    f'• Mean: {concentrations.mean():.6f} mM\n'
-                    f'• Std: {concentrations.std():.6f} mM\n'
-                    f'• Cells: {cell_count}')
+        if self.show_info_box:
+            grid_spacing = domain_x / nx
+            cell_diameter = self.config.domain.cell_height.value
+            info_text = (f'Simulation Details:\n'
+                        f'• Config: {config_name}\n'
+                        f'• Time: {time_point:.3f}\n'
+                        f'• Substance: {substance_name}\n'
+                        f'• FiPy Grid: {nx}×{ny} cells\n'
+                        f'• Grid Spacing: {grid_spacing:.1f} μm\n'
+                        f'• Cell Diameter: {cell_diameter:.1f} μm\n'
+                        f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm\n'
+                        f'• Min: {vmin:.6f} mM\n'
+                        f'• Max: {vmax:.6f} mM\n'
+                        f'• Mean: {concentrations.mean():.6f} mM\n'
+                        f'• Std: {concentrations.std():.6f} mM\n'
+                        f'• Cells: {cell_count}')
 
-        ax.text(0.02, 0.85, info_text, transform=ax.transAxes, fontsize=9,
-                verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5",
-                facecolor="white", alpha=0.9))
+            ax.text(0.02, 0.85, info_text, transform=ax.transAxes, fontsize=9,
+                    verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5",
+                    facecolor="white", alpha=0.9))
 
         # Save plot with unique filename to avoid overwriting
         # marker parameter takes precedence over is_initial/is_final for backwards compatibility

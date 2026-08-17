@@ -20,6 +20,12 @@ quadrant_substances dict. Fixed ranges keep shades comparable across
 iterations and give a uniform field its proportional shade — with auto-range
 a uniform field always renders at the degenerate midpoint regardless of its
 level.
+
+Every overlay is individually switchable: show_cells, show_metabolism_colors,
+show_fate_colors, show_legends, show_gradient_legends and show_isolines each
+remove one layer (the cell overlay, the metabolic interior colouring, the
+phenotype border colouring, the cell-colour key, the per-quadrant gradient
+bars, the threshold isolines) for clean figures.
 """
 
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -27,6 +33,15 @@ from pathlib import Path
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+
+
+def _to_bool(val) -> bool:
+    """Coerce a value to bool, tolerating GUI strings ("true"/"false")."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ('true', '1', 'on', 'yes')
+    return bool(val)
 
 
 # Quadrant order is the dict entry order: top-left, top-right,
@@ -111,13 +126,23 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                          cell_data: List[Tuple[Any, str]], cell_color_fn,
                          population, isolines: Dict[str, List[Tuple[float, str]]],
                          time_point: float, title_suffix: str,
-                         output_file: Path) -> Path:
+                         output_file: Path, *, show_cells: bool = True,
+                         show_metabolism_colors: bool = True,
+                         show_fate_colors: bool = True,
+                         show_legends: bool = True,
+                         show_gradient_legends: bool = True) -> Path:
     """Render the 2x2 quadrant figure. Pure plotting — no context access.
 
     ``specs`` maps substance name -> {"color", "vmin", "vmax"}; a None bound
     falls back to the field's own min/max (auto-range). A fixed range keeps
     the colour scale stable across iterations and gives a uniform field a
-    proportional shade instead of a washed-out auto-scaled one."""
+    proportional shade instead of a washed-out auto-scaled one.
+
+    The ``show_*`` flags each remove one overlay: the cell overlay, the
+    metabolic interior colouring (off = lightgray interiors), the phenotype
+    border colouring (off = gray borders), the cell-colour key right of the
+    plot, and the per-quadrant gradient bars. A legend is drawn only for a
+    colouring actually in effect, so the key never describes a hidden layer."""
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
@@ -201,22 +226,23 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                                   alpha=0.75, edgecolor='none'))
 
         # Per-quadrant gradient legend with the substance's min/max
-        lx, ly = legend_positions[idx]
-        cax = ax.inset_axes([lx, ly, 0.28, 0.035])
-        gradient = np.linspace(0, 1, 256).reshape(1, -1)
-        cax.imshow(gradient, aspect='auto', cmap=cmap)
-        cax.set_yticks([])
-        cax.set_xticks([0, 255])
-        cax.set_xticklabels([f'{vmin:.3g}', f'{vmax:.3g}'], fontsize=8)
-        cax.set_title(f'{name} (mM)', fontsize=11, fontweight='bold', pad=2)
-        # With a fixed range the ticks show the scale, not the data — add the
-        # field's actual extremes so consumption/production stays readable.
-        if fixed_min is not None or fixed_max is not None:
-            cax.set_xlabel(f'now: {float(concentrations.min()):.3g} – '
-                           f'{float(concentrations.max()):.3g}',
-                           fontsize=7, labelpad=2)
-        for spine in cax.spines.values():
-            spine.set_linewidth(0.8)
+        if show_gradient_legends:
+            lx, ly = legend_positions[idx]
+            cax = ax.inset_axes([lx, ly, 0.28, 0.035])
+            gradient = np.linspace(0, 1, 256).reshape(1, -1)
+            cax.imshow(gradient, aspect='auto', cmap=cmap)
+            cax.set_yticks([])
+            cax.set_xticks([0, 255])
+            cax.set_xticklabels([f'{vmin:.3g}', f'{vmax:.3g}'], fontsize=8)
+            cax.set_title(f'{name} (mM)', fontsize=11, fontweight='bold', pad=2)
+            # With a fixed range the ticks show the scale, not the data — add the
+            # field's actual extremes so consumption/production stays readable.
+            if fixed_min is not None or fixed_max is not None:
+                cax.set_xlabel(f'now: {float(concentrations.min()):.3g} – '
+                               f'{float(concentrations.max()):.3g}',
+                               fontsize=7, labelpad=2)
+            for spine in cax.spines.values():
+                spine.set_linewidth(0.8)
 
     # Cells drawn over the whole domain, MicroC colouring. Tally the colours
     # actually drawn so the legends can carry per-category counts.
@@ -230,7 +256,9 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     spacing = config.domain.cell_height.value
     interior_counts: Dict[str, int] = {}
     border_counts: Dict[str, int] = {}
-    if population is not None:
+    if not show_cells:
+        draw_items = []
+    elif population is not None:
         draw_items = [(c.state.position, c.state.phenotype, c)
                       for c in population.state.cells.values()]
     else:
@@ -249,6 +277,12 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                     interior_color, border_color = custom.split('|', 1)
             except Exception:
                 pass
+        # Disabled colourings collapse to the neutral colours, so the flag
+        # removes the encoding without removing the cells themselves.
+        if not show_metabolism_colors:
+            interior_color = 'lightgray'
+        if not show_fate_colors:
+            border_color = 'gray'
         interior_counts[interior_color] = interior_counts.get(interior_color, 0) + 1
         border_counts[border_color] = border_counts.get(border_color, 0) + 1
         # Fate-marked cells (non-gray border) get a thicker ring and draw on
@@ -274,45 +308,53 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
 
     # Cell-colour key, right of the plot. Fixed entries mirroring
     # jayatilake_cell_color: interior = metabolic mode, border = phenotype.
-    from matplotlib.lines import Line2D
+    # Each legend appears only when its colouring is actually drawn, so the
+    # key never describes a layer the show_* flags removed.
+    if show_legends and show_cells:
+        from matplotlib.lines import Line2D
 
-    def _cell_marker(face, edge):
-        return Line2D([], [], marker='o', linestyle='', markersize=10,
-                      markerfacecolor=face, markeredgecolor=edge, markeredgewidth=2)
+        def _cell_marker(face, edge):
+            return Line2D([], [], marker='o', linestyle='', markersize=10,
+                          markerfacecolor=face, markeredgecolor=edge, markeredgewidth=2)
 
-    interior_key = [('Quiescent', 'lightgray'), ('Mixed', 'violet'),
-                    ('mitoATP', 'blue'), ('glycoATP', 'green')]
-    interior_handles = [_cell_marker(c, 'gray') for _, c in interior_key]
-    interior_labels = [f'{label}: {interior_counts.get(c, 0)}'
-                       for label, c in interior_key]
-    interior_legend = ax.legend(interior_handles, interior_labels,
-                                title='Interior — metabolism',
-                                loc='upper left', bbox_to_anchor=(1.02, 1.0),
-                                fontsize=9, title_fontsize=10, frameon=True,
-                                edgecolor='black', framealpha=0.95)
-    interior_legend.get_title().set_fontweight('bold')
-    ax.add_artist(interior_legend)
+        interior_legend = None
+        if show_metabolism_colors:
+            interior_key = [('Quiescent', 'lightgray'), ('Mixed', 'violet'),
+                            ('mitoATP', 'blue'), ('glycoATP', 'green')]
+            interior_handles = [_cell_marker(c, 'gray') for _, c in interior_key]
+            interior_labels = [f'{label}: {interior_counts.get(c, 0)}'
+                               for label, c in interior_key]
+            interior_legend = ax.legend(interior_handles, interior_labels,
+                                        title='Interior — metabolism',
+                                        loc='upper left', bbox_to_anchor=(1.02, 1.0),
+                                        fontsize=9, title_fontsize=10, frameon=True,
+                                        edgecolor='black', framealpha=0.95)
+            interior_legend.get_title().set_fontweight('bold')
 
-    # Listed in priority order: necrosis wins over apoptosis, apoptosis over
-    # proliferation (enforced by the fate_update behaviour, shown here as a key).
-    border_key = [('Necrosis', 'black'), ('Apoptosis', 'red'),
-                  ('Proliferation', 'lightgreen'), ('Growth arrest', 'orange'),
-                  ('Quiescence', 'gray')]
-    border_handles = [_cell_marker('white', c) for _, c in border_key]
-    border_labels = [f'{label}: {border_counts.get(c, 0)}'
-                     for label, c in border_key]
-    border_legend = ax.legend(border_handles, border_labels,
-                              title='Border — phenotype',
-                              loc='upper left', bbox_to_anchor=(1.02, 0.72),
-                              fontsize=9, title_fontsize=10, frameon=True,
-                              edgecolor='black', framealpha=0.95)
-    border_legend.get_title().set_fontweight('bold')
-    ax.text(1.02, 0.44, f'Total cells: {len(draw_items)}',
-            transform=ax.transAxes, fontsize=10, fontweight='bold',
-            verticalalignment='top')
-    ax.text(1.02, 0.39, 'priority:\nNecrosis > Apoptosis\n> Proliferation',
-            transform=ax.transAxes, fontsize=8, style='italic',
-            verticalalignment='top')
+        if show_fate_colors:
+            if interior_legend is not None:
+                ax.add_artist(interior_legend)
+            # Listed in priority order: necrosis wins over apoptosis, apoptosis over
+            # proliferation (enforced by the fate_update behaviour, shown here as a key).
+            border_key = [('Necrosis', 'black'), ('Apoptosis', 'red'),
+                          ('Proliferation', 'lightgreen'), ('Growth arrest', 'orange'),
+                          ('Quiescence', 'gray')]
+            border_handles = [_cell_marker('white', c) for _, c in border_key]
+            border_labels = [f'{label}: {border_counts.get(c, 0)}'
+                             for label, c in border_key]
+            border_legend = ax.legend(border_handles, border_labels,
+                                      title='Border — phenotype',
+                                      loc='upper left', bbox_to_anchor=(1.02, 0.72),
+                                      fontsize=9, title_fontsize=10, frameon=True,
+                                      edgecolor='black', framealpha=0.95)
+            border_legend.get_title().set_fontweight('bold')
+        ax.text(1.02, 0.44, f'Total cells: {len(draw_items)}',
+                transform=ax.transAxes, fontsize=10, fontweight='bold',
+                verticalalignment='top')
+        if show_fate_colors:
+            ax.text(1.02, 0.39, 'priority:\nNecrosis > Apoptosis\n> Proliferation',
+                    transform=ax.transAxes, fontsize=8, style='italic',
+                    verticalalignment='top')
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
@@ -328,7 +370,9 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                 "(dict order = top-left, top-right, bottom-left, bottom-right). "
                 "Each quadrant gets its own min/max legend; threshold isolines are "
                 "drawn in the owning substance's quadrant and labelled with the "
-                "substance name.",
+                "substance name. Every overlay (cells, metabolism colours, fate "
+                "colours, legends, gradient bars, isolines) has its own show_* "
+                "switch for clean figures.",
     category="FINALIZATION",
     parameters=[
         {"name": "quadrant_substances", "type": "DICT",
@@ -347,6 +391,30 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
          "description": "Draw the threshold isolines (gene-association thresholds "
                         "and necrosis thresholds) in each substance's quadrant, on "
                         "top of the cells. Off = clean fields only.",
+         "default": True},
+        {"name": "show_cells", "type": "BOOL",
+         "description": "Draw the cells over the substance fields. Off = fields "
+                        "only; the cell legends and counts disappear with them.",
+         "default": True},
+        {"name": "show_metabolism_colors", "type": "BOOL",
+         "description": "Colour each cell's interior by metabolic mode (green "
+                        "glycoATP / blue mitoATP / violet mixed / lightgray none). "
+                        "Off = neutral lightgray interiors and no metabolism legend.",
+         "default": True},
+        {"name": "show_fate_colors", "type": "BOOL",
+         "description": "Colour each cell's border by marked phenotype (black "
+                        "Necrosis / red Apoptosis / lightgreen Proliferation / "
+                        "orange Growth arrest / gray Quiescence). Off = neutral "
+                        "gray borders and no phenotype legend.",
+         "default": True},
+        {"name": "show_legends", "type": "BOOL",
+         "description": "Draw the cell-colour key right of the plot (metabolism "
+                        "and phenotype legends with per-category counts, total "
+                        "cell count, fate priority note). Off = plot area only.",
+         "default": True},
+        {"name": "show_gradient_legends", "type": "BOOL",
+         "description": "Draw each quadrant's white-to-colour gradient bar with "
+                        "its min/max labels. Off = no in-plot colour scales.",
          "default": True},
         {"name": "autorange", "type": "BOOL",
          "description": "Ignore any fixed vmin/vmax in Quadrant Substances and scale "
@@ -369,6 +437,11 @@ def generate_quadrant_plots(
     env: BiologicalContext,
     quadrant_substances: Union[Dict[str, Any], None] = None,
     show_isolines: bool = True,
+    show_cells: bool = True,
+    show_metabolism_colors: bool = True,
+    show_fate_colors: bool = True,
+    show_legends: bool = True,
+    show_gradient_legends: bool = True,
     autorange: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
@@ -419,6 +492,12 @@ def generate_quadrant_plots(
     fields = {name: simulator.state.substances[name].concentrations
               for name in quadrants}
 
+    show_cells = _to_bool(show_cells)
+    show_metabolism_colors = _to_bool(show_metabolism_colors)
+    show_fate_colors = _to_bool(show_fate_colors)
+    show_legends = _to_bool(show_legends)
+    show_gradient_legends = _to_bool(show_gradient_legends)
+
     # Isolines: gene-association threshold + necrosis thresholds, per substance
     if isinstance(show_isolines, str):
         show_isolines = show_isolines.strip().lower() in ('true', '1', 'yes')
@@ -441,8 +520,15 @@ def generate_quadrant_plots(
     title_suffix = f"[Iteration {iteration}{' ' + plot_name_suffix.strip('_') if plot_name_suffix else ''}]"
     output_file = output_path / "heatmaps" / f"quadrants_heatmap_t{current_time:.3f}_{marker}.png"
 
+    hidden = [label for label, shown in [('cells', show_cells),
+                                         ('metabolism colours', show_metabolism_colors),
+                                         ('fate colours', show_fate_colors),
+                                         ('legends', show_legends),
+                                         ('gradient legends', show_gradient_legends),
+                                         ('isolines', show_isolines)] if not shown]
     print(f"[WORKFLOW] Generating quadrant plot for iteration {iteration} "
-          f"({', '.join(quadrants)})")
+          f"({', '.join(quadrants)})"
+          + (f" — hidden: {', '.join(hidden)}" if hidden else ""))
 
     try:
         from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
@@ -450,6 +536,11 @@ def generate_quadrant_plots(
             config, fields, quadrants,
             population.get_cell_positions(), jayatilake_cell_color, population,
             isolines, current_time, title_suffix, output_file,
+            show_cells=show_cells,
+            show_metabolism_colors=show_metabolism_colors,
+            show_fate_colors=show_fate_colors,
+            show_legends=show_legends,
+            show_gradient_legends=show_gradient_legends,
         )
         print(f"[WORKFLOW] Quadrant plot written: {filepath}")
         return True

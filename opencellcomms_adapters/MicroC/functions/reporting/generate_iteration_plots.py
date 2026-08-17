@@ -23,17 +23,64 @@ from src.interfaces.base import IConfig
 from src.biology.context import BiologicalContext
 
 
+def _to_bool(val) -> bool:
+    """Coerce a value to bool, tolerating GUI strings ("true"/"false")."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ('true', '1', 'on', 'yes')
+    return bool(val)
+
+
+# One shared definition of the heatmap display flags: both AutoPlotter-based
+# plot nodes (iteration and summary) expose exactly these switches, and each
+# maps 1:1 onto the AutoPlotter constructor option of the same name.
+HEATMAP_DISPLAY_FLAGS = [
+    {"name": "show_cells", "type": "BOOL",
+     "description": "Draw the cells over each substance heatmap. Off = fields "
+                    "only; the cell legends disappear with them.",
+     "default": True},
+    {"name": "show_metabolism_colors", "type": "BOOL",
+     "description": "Colour each cell's interior by metabolic mode (green "
+                    "glycoATP / blue mitoATP / violet mixed / lightgray none). "
+                    "Off = neutral lightgray interiors and no metabolism legend.",
+     "default": True},
+    {"name": "show_fate_colors", "type": "BOOL",
+     "description": "Colour each cell's border by marked phenotype (black "
+                    "Necrosis / red Apoptosis / lightgreen Proliferation / "
+                    "orange Growth_Arrest / gray Quiescent). Off = neutral gray "
+                    "borders and no phenotype legend.",
+     "default": True},
+    {"name": "show_isolines", "type": "BOOL",
+     "description": "Draw the threshold lines on each heatmap (gene-association "
+                    "threshold, solid red; necrosis thresholds, dashed). "
+                    "Off = clean fields only.",
+     "default": True},
+    {"name": "show_legends", "type": "BOOL",
+     "description": "Draw the metabolic-state and phenotype cell legends on the "
+                    "heatmaps. Off = no cell-colour key.",
+     "default": True},
+    {"name": "show_info_box", "type": "BOOL",
+     "description": "Draw the 'Simulation Details' text box (grid, domain, "
+                    "min/max/mean, cell count) on each heatmap. Off = no box.",
+     "default": True},
+]
+
+
 @register_function(
     requires=['population', 'simulator'],
     display_name="Generate Iteration Plots",
     description="Generate plots for current iteration using the same AutoPlotter as FINAL plots. "
                 "Iteration number appears in filename and title. "
-                "Output goes to config.plots_dir (timestamped results folder).",
+                "Output goes to config.plots_dir (timestamped results folder). "
+                "Every heatmap overlay (cells, metabolism colours, fate colours, "
+                "isolines, legends, info box) has its own show_* switch.",
     category="FINALIZATION",
     parameters=[
         {"name": "substances_to_plot", "type": "STRING",
          "description": "Comma-separated substances to plot (e.g. 'Oxygen,Glucose,Lactate'). "
                         "Leave empty for all substances.", "default": ""},
+        *HEATMAP_DISPLAY_FLAGS,
         {"name": "clean_directory", "type": "BOOL",
          "description": "If true, remove existing plots before writing new ones",
          "default": False},
@@ -58,6 +105,12 @@ from src.biology.context import BiologicalContext
 def generate_iteration_plots(
     env: BiologicalContext,
     substances_to_plot: str = "",
+    show_cells: bool = True,
+    show_metabolism_colors: bool = True,
+    show_fate_colors: bool = True,
+    show_isolines: bool = True,
+    show_legends: bool = True,
+    show_info_box: bool = True,
     clean_directory: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
@@ -69,7 +122,8 @@ def generate_iteration_plots(
 
     Uses exactly the same AutoPlotter code path as generate_summary_plots,
     producing identical formatting (threshold isolines, dual cell legends,
-    metabolic-state colours, etc.).
+    metabolic-state colours, etc.). The show_* display flags (see
+    HEATMAP_DISPLAY_FLAGS) each remove one heatmap overlay.
 
     The iteration number is embedded in:
       - filename  → e.g. Oxygen_heatmap_t5.000_ITER_003.png
@@ -113,6 +167,12 @@ def generate_iteration_plots(
 
     # --- coerce string parameters from JSON --------------------------------
     plot_interval = int(plot_interval)
+    show_cells = _to_bool(show_cells)
+    show_metabolism_colors = _to_bool(show_metabolism_colors)
+    show_fate_colors = _to_bool(show_fate_colors)
+    show_isolines = _to_bool(show_isolines)
+    show_legends = _to_bool(show_legends)
+    show_info_box = _to_bool(show_info_box)
     
     # Skip plotting if this iteration doesn't match the interval
     if plot_interval > 1 and iteration % plot_interval != 0:
@@ -166,7 +226,14 @@ def generate_iteration_plots(
     title_suffix = f"[Iteration {iteration}{' ' + plot_name_suffix.strip('_') if plot_name_suffix else ''}]"
 
     substance_info = f" ({', '.join(substance_list)})" if substance_list else " (all substances)"
-    print(f"[WORKFLOW] Generating iteration {iteration} plots{substance_info}")
+    hidden = [label for label, shown in [('cells', show_cells),
+                                         ('metabolism colours', show_metabolism_colors),
+                                         ('fate colours', show_fate_colors),
+                                         ('isolines', show_isolines),
+                                         ('legends', show_legends),
+                                         ('info box', show_info_box)] if not shown]
+    hidden_info = f" — hidden: {', '.join(hidden)}" if hidden else ""
+    print(f"[WORKFLOW] Generating iteration {iteration} plots{substance_info}{hidden_info}")
     print(f"[WORKFLOW]   Output path: {output_path}")
 
     # --- generate plots using the *same* AutoPlotter as FINAL plots -------
@@ -177,7 +244,13 @@ def generate_iteration_plots(
         extra_isolines = {substance: [(value, 'Necrosis')]
                           for substance, value in results.get('necrosis_thresholds', {}).items()}
         plotter = AutoPlotter(config, output_path, cell_color_fn=jayatilake_cell_color,
-                              extra_isolines=extra_isolines)
+                              extra_isolines=extra_isolines,
+                              show_cells=show_cells,
+                              show_metabolism_colors=show_metabolism_colors,
+                              show_fate_colors=show_fate_colors,
+                              show_legends=show_legends,
+                              show_isolines=show_isolines,
+                              show_info_box=show_info_box)
 
         generated_plots = plotter.generate_all_plots(
             results, simulator, population,

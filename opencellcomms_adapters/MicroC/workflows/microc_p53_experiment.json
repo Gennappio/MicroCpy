@@ -1715,14 +1715,20 @@
           "function_file": "",
           "parameters": {
             "substances_to_plot": "Oxygen,Glucose,Lactate",
-            "plot_interval": "1"
+            "plot_interval": "1",
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_isolines": true,
+            "show_legends": true,
+            "show_info_box": true
           },
           "enabled": false,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter. Disabled: replaced by the compact quadrant plot below; re-enable for one-heatmap-per-substance output.",
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter. Disabled: replaced by the compact quadrant plot below; re-enable for one-heatmap-per-substance output. Every heatmap overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_isolines (threshold lines), show_legends (cell-colour key), show_info_box (details box).",
           "custom_name": "generate_iteration_plots",
           "step_count": 1,
           "parameter_nodes": [],
@@ -1744,14 +1750,19 @@
           "parameters": {
             "plot_interval": "1",
             "autorange": false,
-            "show_isolines": true
+            "show_isolines": true,
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_legends": true,
+            "show_gradient_legends": true
           },
           "enabled": true,
           "position": {
             "x": 400,
             "y": 420
           },
-          "description": "Compact 2x2 view: one figure per iteration with the domain split into four quadrants (Lactate/Glucose/TGFA/H), each on its own white-to-colour gradient with a per-substance min/max legend; threshold isolines are drawn in the owning substance's quadrant and labelled with the substance name.",
+          "description": "Compact 2x2 view: one figure per iteration with the domain split into four quadrants (Lactate/Glucose/TGFA/H), each on its own white-to-colour gradient with a per-substance min/max legend; threshold isolines are drawn in the owning substance's quadrant and labelled with the substance name. Every overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_legends (cell-colour key), show_gradient_legends (per-quadrant scale bars), show_isolines (threshold lines).",
           "custom_name": "generate_quadrant_plots",
           "step_count": 1,
           "parameter_nodes": [
@@ -2406,14 +2417,20 @@
           "function_file": "",
           "parameters": {
             "marker": "FINAL",
-            "substances_to_plot": "Oxygen,Glucose,Lactate"
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_isolines": true,
+            "show_legends": true,
+            "show_info_box": true
           },
           "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Generate final state visualization",
+          "description": "Generate final state visualization. Every heatmap overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_isolines (threshold lines), show_legends (cell-colour key), show_info_box (details box).",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [],
