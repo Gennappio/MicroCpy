@@ -2261,8 +2261,8 @@
         "type": "controller",
         "label": "DIVISION",
         "position": {
-          "x": 100,
-          "y": 100
+          "x": 125,
+          "y": 40
         },
         "number_of_steps": 1
       },
@@ -2274,8 +2274,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 400,
-            "y": 100
+            "x": 40,
+            "y": 259
           },
           "description": "Handle cell division for proliferating cells",
           "custom_name": "update_cell_division",
@@ -2302,8 +2302,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 400,
-            "y": 200
+            "x": 40,
+            "y": 480
           },
           "description": "Remove cells with Apoptosis phenotype from population",
           "custom_name": "",
@@ -2330,8 +2330,8 @@
           "parameters": {},
           "enabled": true,
           "position": {
-            "x": 400,
-            "y": 300
+            "x": 40,
+            "y": 701
           },
           "description": "Remove cells that have stayed necrotic for necrosis_removal_delay scheduler steps",
           "custom_name": "remove_necrotic_cells",
@@ -2360,11 +2360,11 @@
           "id": "division-param_necrosis_removal_delay",
           "label": "Necrosis Removal Delay (steps)",
           "parameters": {
-            "necrosis_removal_delay": 10
+            "necrosis_removal_delay": "30"
           },
           "position": {
-            "x": 100,
-            "y": 300
+            "x": -270,
+            "y": 702.5
           }
         }
       ],
