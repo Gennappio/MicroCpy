@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Box, FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import WorkflowConsole from './WorkflowConsole';
 import { API_BASE_URL } from '../apiConfig';
 import './ResultsExplorer.css';
@@ -77,7 +77,12 @@ function ResultsExplorer() {
   const hasMultipleCategories = (plots) =>
     new Set(plots.map(plot => plot.category)).size > 1;
 
+  // Interactive 3D-viewer groups (backend labels them "… · 3D viewer") get a
+  // cube icon so they stand out from the image categories.
   const getCategoryIcon = (category) => {
+    if (category.endsWith('3D viewer')) {
+      return <Box size={14} />;
+    }
     return <Image size={14} />;
   };
 
@@ -169,7 +174,9 @@ function ResultsExplorer() {
                                 className={`plot-item ${selectedPlot?.path === plot.path ? 'selected' : ''}`}
                                 onClick={() => setSelectedPlot(plot)}
                               >
-                                <Image size={12} />
+                                {plot.path.endsWith('.html')
+                                  ? <Box size={12} />
+                                  : <Image size={12} />}
                                 <span>{plot.name}</span>
                               </div>
                             ))}

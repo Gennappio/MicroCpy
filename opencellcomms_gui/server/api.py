@@ -1920,6 +1920,15 @@ def list_results():
                         if img_file.is_symlink():
                             continue
                         if img_file.is_file() and img_file.suffix.lower() in VIEWABLE_EXTENSIONS:
+                            # Interactive 3D viewers (plots_dir/viewer3d/) get
+                            # their own sidebar group instead of drowning among
+                            # the slice PNGs of the same subworkflow.
+                            rel_parts = img_file.relative_to(item).parts
+                            category = (
+                                f"{item.name} · 3D viewer"
+                                if len(rel_parts) > 1 and rel_parts[0] == 'viewer3d'
+                                else item.name
+                            )
                             try:
                                 img_file = _resolve_allowed_path(
                                     img_file,
@@ -1934,7 +1943,7 @@ def list_results():
                             plots.append({
                                 'name': img_file.name,
                                 'path': str(img_file.relative_to(base_ref)),
-                                'category': item.name
+                                'category': category
                             })
                 elif item.is_file() and item.suffix.lower() in VIEWABLE_EXTENSIONS:
                     plots.append({
