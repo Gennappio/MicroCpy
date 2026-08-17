@@ -79,9 +79,16 @@ def propagate_gene_networks_single_gene(
 
     cells_done = 0
     cells_without_gn = 0
+    cells_frozen = 0
     clamped_seen: Dict[str, bool] = {}
 
     for cell in cell_source:
+        # NetLogo freezes the network of necrotic cells (gene updates run only
+        # while my-fate != "Necrosis"): a dead cell's genes stop moving.
+        if cell.is_necrotic:
+            cells_frozen += 1
+            continue
+
         gn = env.gene_network(cell)
         if gn is None:
             cells_without_gn += 1
@@ -124,5 +131,7 @@ def propagate_gene_networks_single_gene(
             print(f"   [+] clamped (never sampled): {clamped_seen}")
         if cells_without_gn:
             print(f"   [!] skipped {cells_without_gn} cells with no gene network")
+        if cells_frozen:
+            print(f"   [+] frozen {cells_frozen} necrotic cells (networks stop at death)")
 
     return True

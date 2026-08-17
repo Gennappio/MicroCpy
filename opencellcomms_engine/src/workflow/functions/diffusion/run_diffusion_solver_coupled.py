@@ -438,13 +438,25 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
 
     # Update metabolism for each cell
     for cell_id, cell in population.state.cells.items():
-        # Skip inactive cells
+        # NetLogo patch weighting n_cell − 0.5·n_growth_arrest − n_necrosis:
+        # necrotic cells contribute nothing, growth-arrested cells half.
         phenotype = cell.state.phenotype
         # Handle both string phenotypes and Phenotype objects with .name attribute
         phenotype_name = phenotype.name if hasattr(phenotype, 'name') else str(phenotype) if phenotype else None
-        if phenotype_name in ['Necrosis', 'Growth_Arrest']:
+        if phenotype_name == 'Necrosis':
+            # Overwrite, don't skip: a skip would leave the last pre-necrosis
+            # rates in metabolic_state and the reaction collector (no phenotype
+            # check) would keep the dead cell consuming and producing forever.
+            cell.state = cell.state.with_updates(metabolic_state={
+                'oxygen_consumption': 0.0,
+                'glucose_consumption': 0.0,
+                'lactate_production': 0.0,
+                'lactate_consumption': 0.0,
+                'h_production': 0.0,
+            })
             updated_cells[cell_id] = cell
             continue
+        fate_weight = 0.5 if phenotype_name == 'Growth_Arrest' else 1.0
 
         debug_cells_processed += 1
 
@@ -529,13 +541,13 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
             log(context, f"Cell {debug_cells_processed}: glucose_consumption={glucose_consumption:.2e}, glucose_mm={glucose_mm:.4f}, local_glucose={local_glucose:.4f}",
                 prefix="[GLUCOSE DEBUG]", node_verbose=verbose)
 
-        # Update cell's metabolic state
+        # Update cell's metabolic state (fate_weight = 0.5 for Growth_Arrest)
         new_metabolic_state = {
-            'oxygen_consumption': oxygen_consumption*oxygen_conversion_factor,
-            'glucose_consumption': glucose_consumption*glucose_conversion_factor,
-            'lactate_production': lactate_production*lactate_conversion_factor,
-            'lactate_consumption': lactate_consumption,
-            'h_production': h_production,
+            'oxygen_consumption': oxygen_consumption*oxygen_conversion_factor*fate_weight,
+            'glucose_consumption': glucose_consumption*glucose_conversion_factor*fate_weight,
+            'lactate_production': lactate_production*lactate_conversion_factor*fate_weight,
+            'lactate_consumption': lactate_consumption*fate_weight,
+            'h_production': h_production*fate_weight,
         }
 
         # Update cell state

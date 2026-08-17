@@ -22,7 +22,10 @@ HOW IT IS DRIVEN
     its internal default.
 
 WHO IS SKIPPED
-    Necrotic and growth-arrested cells do not metabolise and are left untouched.
+    Fate weighting follows the NetLogo patch count n_cell − 0.5·n_growth_arrest
+    − n_necrosis: necrotic cells get an all-zero metabolic_state (written, not
+    skipped — stale rates would otherwise keep feeding the solver) and
+    growth-arrested cells exchange at half rate.
 
 THE MODEL
     With local concentrations at the cell's grid position, the saturation terms
@@ -91,8 +94,23 @@ from src.biology.context import BiologicalContext
 
 from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import DEFAULTS
 
-# Cells in these states do not metabolise.
-_INACTIVE = ('Necrosis', 'Growth_Arrest')
+# NetLogo patch weighting (n_cell − 0.5·n_growth_arrest − n_necrosis):
+# necrotic cells contribute NOTHING to consumption/production, growth-arrested
+# cells contribute at HALF rate.
+_FATE_WEIGHTS = {'Necrosis': 0.0, 'Growth_Arrest': 0.5}
+
+# Written to necrotic cells. Overwriting matters: skipping the cell would
+# leave its last pre-necrosis rates in metabolic_state, and the reaction
+# collector (which reads metabolic_state with no phenotype check) would keep
+# the dead cell consuming and producing forever.
+_ZERO_METABOLISM = {
+    'oxygen_consumption': 0.0,
+    'glucose_consumption': 0.0,
+    'lactate_production': 0.0,
+    'lactate_consumption': 0.0,
+    'h_production': 0.0,
+    'atp_rate': 0.0,
+}
 
 
 def compute_metabolism(context: Dict[str, Any], simulator, population, config,
@@ -128,7 +146,9 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
     for cell_id, cell in population.state.cells.items():
         phenotype = cell.state.phenotype
         name = phenotype.name if hasattr(phenotype, 'name') else (str(phenotype) if phenotype else None)
-        if name in _INACTIVE:
+        weight = _FATE_WEIGHTS.get(name, 1.0)
+        if weight == 0.0:
+            cell.state = cell.state.with_updates(metabolic_state=dict(_ZERO_METABOLISM))
             updated[cell_id] = cell
             continue
 
@@ -175,12 +195,15 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
         if glyco:
             atp_rate += p['max_atp'] * (vmax / 6.0) * mm_glc
 
+        # Exchange rates carry the fate weight (0.5 for Growth_Arrest, per the
+        # NetLogo patch weighting); atp_rate stays per-cell — it feeds the
+        # proliferation gate, not the PDE.
         cell.state = cell.state.with_updates(metabolic_state={
-            'oxygen_consumption': o2_use * oxygen_conversion_factor,
-            'glucose_consumption': glc_use * glucose_conversion_factor,
-            'lactate_production': lac_prod * lactate_conversion_factor,
-            'lactate_consumption': lac_use,
-            'h_production': h_prod,
+            'oxygen_consumption': o2_use * oxygen_conversion_factor * weight,
+            'glucose_consumption': glc_use * glucose_conversion_factor * weight,
+            'lactate_production': lac_prod * lactate_conversion_factor * weight,
+            'lactate_consumption': lac_use * weight,
+            'h_production': h_prod * weight,
             'atp_rate': atp_rate,
             'atp_rate_max': p['max_atp'] * vmax / 6.0,
         })

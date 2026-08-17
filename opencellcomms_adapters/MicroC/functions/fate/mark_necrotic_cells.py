@@ -17,8 +17,17 @@ Example configuration:
    {
        "oxygen_threshold": 0.022,
        "glucose_threshold": 0.23,
-       "require_both": true
+       "require_both": true,
+       "require_gene": true
    }
+
+NETLOGO REFERENCE (microC_Metabolic_Symbiosis.nlogo3d): necrosis is
+double-gated. The gene network's Necrosis fate node firing calls
+-FATE-NECROSIS-20, which then applies the environmental gate
+(O2 < the-necrosis-threshold AND Glucose < the-necrosis-threshold-g,
+slider defaults 0.011 / 3.9) before committing my-fate = "Necrosis".
+Set "require_gene": true to reproduce that double gate; false (default)
+keeps the environment-only behavior.
 """
 
 from typing import Dict, Any
@@ -56,6 +65,9 @@ def mark_necrotic_cells(
     oxygen_threshold = params.get('oxygen_threshold', 0.022)
     glucose_threshold = params.get('glucose_threshold', 0.23)
     require_both = params.get('require_both', True)
+    require_gene = params.get('require_gene', False)
+    if isinstance(require_gene, str):
+        require_gene = require_gene.strip().lower() in ('true', '1', 'yes')
 
     # Publish the thresholds so the plotting nodes can draw necrosis isolines
     # on the Oxygen/Glucose heatmaps. Idempotent, so safe under a per-agent ask.
@@ -74,6 +86,13 @@ def mark_necrotic_cells(
         if cell.is_necrotic:
             already_necrotic += 1
             continue
+
+        # NetLogo double gate: the Necrosis fate node must fire before the
+        # environmental check is even applied.
+        if require_gene:
+            gene = cell.gene('Necrosis')
+            if not (gene and gene.is_on()):
+                continue
 
         oxygen_below = env.concentration('Oxygen', cell) < oxygen_threshold
         glucose_below = env.concentration('Glucose', cell) < glucose_threshold
