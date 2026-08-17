@@ -83,14 +83,11 @@ def setup_domain(
 
         if int(dimensions) == 3:
             log_always(
-                "[WARNING] 3D simulation is INCOMPLETE in this engine. Known gaps: "
-                "substance fields are initialized as 2D arrays (shape only becomes "
-                "3D after the first solve); get_substance_concentrations() and the "
-                "typed env.concentration() read the MIDDLE z-slice only, so "
-                "metabolism, growth-factor reactions and gene associations see one "
-                "plane for every cell; checkpoints carry x,y only; the ABM layer "
-                "(LatticeWorld) rejects 3D outright; plots project the middle "
-                "slice. Results of a 3D run are not trustworthy yet."
+                "[INFO] 3D domain: substance fields are (nz, ny, nx) arrays and "
+                "get_substance_concentrations() keys are (x, y, z) voxels — map "
+                "cell positions with src.core.coords.cell_to_solver_index. Seeds "
+                "need a z column (csv_cell_generator --dimensions 3); use "
+                "generate_3d_plots for slice figures and the interactive viewer."
             )
 
         # Setup domain configuration
