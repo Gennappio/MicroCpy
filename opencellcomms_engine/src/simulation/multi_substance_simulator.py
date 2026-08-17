@@ -722,17 +722,21 @@ class MultiSubstanceSimulator:
 
             reaction_rate = reactions[substance_name]  # mol/s/cell
 
-            # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume.
-            # The 2D adjustment coefficient (1/thickness) turns the 2D area
-            # into an effective volume — it must NOT apply in 3D, where
-            # mesh_cell_volume is already a true volume.
             if self.config.domain.dimensions == 2:
+                # Historical 2D calibration, kept bit-for-bit: divide by AREA
+                # (an effective 1 m-thick slab), apply the thickness
+                # coefficient, then a x1000 that mislabels mol/m³ -> mM
+                # (1 mol/m³ IS 1 mM). The net scaling is absorbed by the
+                # workflows' tuned *_conversion_factor parameters.
                 volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
+                final_rate = volumetric_rate * 1000.0
             else:
-                volumetric_rate = reaction_rate / mesh_cell_volume
-
-            # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
-            final_rate = volumetric_rate * 1000.0
+                # 3D uses the TRUE voxel volume and honest units:
+                # mol/s / m³ = mol/(m³·s) ≡ mM/s exactly — no extra factor.
+                # (The historical x1000 made 3D sources a thousandfold too
+                # strong: a 500-cell spheroid at reference rates drove oxygen
+                # to -14 mM where the analytic dip is ~0.006 mM.)
+                final_rate = reaction_rate / mesh_cell_volume
 
             source_field[fipy_idx] += final_rate
 
