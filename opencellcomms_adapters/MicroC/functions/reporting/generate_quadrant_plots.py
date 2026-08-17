@@ -130,7 +130,9 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                          show_metabolism_colors: bool = True,
                          show_fate_colors: bool = True,
                          show_legends: bool = True,
-                         show_gradient_legends: bool = True) -> Path:
+                         show_gradient_legends: bool = True,
+                         plane_sizes: Optional[Tuple[float, float]] = None,
+                         axis_labels: Optional[Tuple[str, str]] = None) -> Path:
     """Render the 2x2 quadrant figure. Pure plotting — no context access.
 
     ``specs`` maps substance name -> {"color", "vmin", "vmax"}; a None bound
@@ -148,8 +150,13 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     import matplotlib.patches as patches
     from matplotlib.colors import LinearSegmentedColormap
 
-    size_x = config.domain.size_x.value
-    size_y = config.domain.size_y.value
+    # plane_sizes/axis_labels let a 3D slice caller relabel the plane
+    # (e.g. an x-z slice); defaults reproduce the 2D figure exactly.
+    if plane_sizes is not None:
+        size_x, size_y = plane_sizes
+    else:
+        size_x = config.domain.size_x.value
+        size_y = config.domain.size_y.value
     mid_x, mid_y = size_x / 2.0, size_y / 2.0
 
     # (x0, y0, x1, y1) of each quadrant, in dict-entry order TL, TR, BL, BR
@@ -262,7 +269,11 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         draw_items = [(c.state.position, c.state.phenotype, c)
                       for c in population.state.cells.values()]
     else:
-        draw_items = [(position, phenotype, None) for position, phenotype in cell_data]
+        # cell_data entries are (pos, phenotype) pairs or (pos, phenotype,
+        # cell_obj) triples; a triple carries the cell so cell_color_fn can
+        # colour interiors even without a population (the 3D slice path).
+        draw_items = [(entry[0], entry[1], entry[2] if len(entry) > 2 else None)
+                      for entry in cell_data]
     for position, phenotype, cell in draw_items:
         x, y = position[0], position[1]
         phys_x, phys_y = (x + 0.5) * spacing, (y + 0.5) * spacing
@@ -272,7 +283,8 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
             try:
                 gene_states = getattr(cell.state, 'gene_states', {}) or {}
                 custom = cell_color_fn(cell=cell, gene_states=gene_states,
-                                       config=population.config)
+                                       config=(population.config
+                                               if population is not None else config))
                 if custom and '|' in custom:
                     interior_color, border_color = custom.split('|', 1)
             except Exception:
@@ -301,8 +313,12 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         spine.set_linewidth(3)
         spine.set_color('black')
 
-    ax.set_xlabel(f'X Position ({config.domain.size_x.unit})')
-    ax.set_ylabel(f'Y Position ({config.domain.size_y.unit})')
+    if axis_labels is not None:
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+    else:
+        ax.set_xlabel(f'X Position ({config.domain.size_x.unit})')
+        ax.set_ylabel(f'Y Position ({config.domain.size_y.unit})')
     ax.set_title(f'{" / ".join(substance_names)} at t = {time_point:.3f} {title_suffix}',
                  fontsize=13, pad=12)
 
