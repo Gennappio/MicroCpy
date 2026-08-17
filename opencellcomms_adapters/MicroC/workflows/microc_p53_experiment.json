@@ -2680,7 +2680,7 @@
           "id": "steps_param-__scheduler__",
           "label": "Simulation Steps",
           "parameters": {
-            "steps": 100
+            "steps": 1000
           },
           "position": {
             "x": 100,
