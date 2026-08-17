@@ -32,6 +32,24 @@ from src.core.domain import MeshManager
 # Global debug switch - set to True to enable detailed logging
 DEBUG_DIFFUSION_SOLVER = True
 
+
+def field_to_fipy_order(field: np.ndarray) -> np.ndarray:
+    """Flatten a concentration field to FiPy's flat cell ordering.
+
+    3D fields are stored (nz, ny, nx) in FiPy's native x-fastest order, so a
+    C-order ravel matches cell ids. 2D fields keep the engine's historical
+    transposed labeling (deposit x*ny + y, reshape order='F') — exact on the
+    square grids 2D uses — so they flatten with order='F'. Every setValue()
+    on a whole field must go through this helper.
+    """
+    if field.ndim == 3:
+        return np.ascontiguousarray(field).ravel()
+    return field.flatten(order='F')
+
+
+# Backwards-compatible private alias used inside this module.
+_field_to_fipy = field_to_fipy_order
+
 @dataclass
 class SubstanceState:
     """State of a single substance"""
@@ -170,9 +188,15 @@ class MultiSubstanceSimulator:
         nx, ny = self.config.domain.nx, self.config.domain.ny
 
         for name, substance_config in self.config.substances.items():
-            # Initialize concentration field
+            # Initialize concentration field. Shape must match what update()
+            # writes back — (nz, ny, nx) for 3D — or the state flips shape
+            # after the first solve and pre-solve readers see a 2D array.
             initial_conc = substance_config.initial_value.value
-            concentrations = np.full((ny, nx), initial_conc, dtype=float)
+            if self.config.domain.dimensions == 3:
+                concentrations = np.full((self.config.domain.nz, ny, nx),
+                                         initial_conc, dtype=float)
+            else:
+                concentrations = np.full((ny, nx), initial_conc, dtype=float)
 
             # Create substance state
             self.state.substances[name] = SubstanceState(
@@ -560,10 +584,18 @@ class MultiSubstanceSimulator:
             #     else:
             #         print(f"   [INFO] SMALL GRADIENTS detected")
 
-            # Update our state
+            # Update our state.
+            #
+            # Index convention: FiPy orders cells x-fastest (flat id =
+            # k*nx*ny + j*nx + i). The 3D path uses that NATIVE ordering
+            # (C-order reshape to (nz, ny, nx) gives arr[z, y, x]), correct on
+            # any grid shape. The 2D path keeps its historical transposed
+            # labeling (deposit x*ny+y, reshape order='F') — a relabeling that
+            # is exact on the square grids 2D always uses, and changing it
+            # would perturb bit-for-bit 2D results for no benefit.
             if self.config.domain.dimensions == 3:
                 substance_state.concentrations = np.array(var.value).reshape(
-                    (self.config.domain.nz, self.config.domain.ny, self.config.domain.nx), order='F'
+                    (self.config.domain.nz, self.config.domain.ny, self.config.domain.nx), order='C'
                 )
             else:
                 substance_state.concentrations = np.array(var.value).reshape(
@@ -572,7 +604,7 @@ class MultiSubstanceSimulator:
 
             # CRITICAL: Update the FiPy variable so CSV export gets the correct values
             # The CSV export reads from self.fipy_variables[name], not from substance_state.concentrations
-            self.fipy_variables[name].setValue(substance_state.concentrations.flatten(order='F'))
+            self.fipy_variables[name].setValue(_field_to_fipy(substance_state.concentrations))
     
     def _create_source_field_from_reactions(self, substance_name: str,
                                           substance_reactions: Dict[Tuple[float, float], Dict[str, float]]) -> np.ndarray:
@@ -643,31 +675,42 @@ class MultiSubstanceSimulator:
                 # Biological grid indices - scale to FiPy grid
                 x = int(x_pos * scale_x)
                 y = int(y_pos * scale_y)
+                position_unit = 'bio'
             elif x_pos < domain_x_um and y_pos < domain_y_um:
                 # Positions in micrometers - convert to grid indices
                 x = int(x_pos / (domain_x_um / nx))
                 y = int(y_pos / (domain_y_um / ny))
+                position_unit = 'um'
             else:
                 # Positions in meters - convert to grid indices
                 dx = domain_x_m / nx
                 dy = domain_y_m / ny
                 x = int(x_pos / dx)
                 y = int(y_pos / dy)
+                position_unit = 'm'
 
             z = 0  # Default for 2D
 
-            if 0 <= x < nx and 0 <= y < ny:
-                # Convert to FiPy index - use correct formula based on domain dimensions
-                if self.config.domain.dimensions == 3:
-                    # For 3D mesh: x * ny * nz + y * nz + z
-                    if z_pos is not None:
-                        # 3D position for 3D domain
-                        dz = self.config.domain.size_z.meters / nz
-                        z = int(z_pos / dz)
-                    # else: z already set to 0
-                    fipy_idx = x * ny * nz + y * nz + z
+            if self.config.domain.dimensions == 3 and z_pos is not None:
+                # Convert z in the SAME unit the x/y heuristic decided on —
+                # historically z was always treated as meters, which turned a
+                # bio-grid z index into a huge voxel index.
+                domain_z_um = self.config.domain.size_z.micrometers
+                if position_unit == 'bio':
+                    bio_grid_nz = max(1, int(domain_z_um / cell_height_um))
+                    z = int(z_pos * (nz / bio_grid_nz))
+                elif position_unit == 'um':
+                    z = int(z_pos / (domain_z_um / nz))
                 else:
-                    # For 2D mesh: x * ny + y (ignore z even if provided)
+                    z = int(z_pos / (self.config.domain.size_z.meters / nz))
+
+            if 0 <= x < nx and 0 <= y < ny and 0 <= z < nz:
+                # Convert to FiPy flat index (see update() for the convention)
+                if self.config.domain.dimensions == 3:
+                    # Native FiPy ordering: x varies fastest
+                    fipy_idx = z * (nx * ny) + y * nx + x
+                else:
+                    # Historical transposed 2D labeling (kept for bit-for-bit)
                     fipy_idx = x * ny + y
             else:
                 continue
@@ -679,9 +722,14 @@ class MultiSubstanceSimulator:
 
             reaction_rate = reactions[substance_name]  # mol/s/cell
 
-            # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume
-            # Apply 2D adjustment coefficient (1/thickness) to account for 2D simulation of 3D system
-            volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
+            # Convert mol/s/cell to mol/(m³⋅s) by dividing by mesh cell volume.
+            # The 2D adjustment coefficient (1/thickness) turns the 2D area
+            # into an effective volume — it must NOT apply in 3D, where
+            # mesh_cell_volume is already a true volume.
+            if self.config.domain.dimensions == 2:
+                volumetric_rate = reaction_rate / mesh_cell_volume * self.config.diffusion.twodimensional_adjustment_coefficient
+            else:
+                volumetric_rate = reaction_rate / mesh_cell_volume
 
             # Convert to mM/s for FiPy (1 mol/m³ = 1000 mM)
             final_rate = volumetric_rate * 1000.0
@@ -713,27 +761,33 @@ class MultiSubstanceSimulator:
         """DEPRECATED: Create source/sink field for FiPy simulation using config values"""
         raise NotImplementedError("This method is deprecated. Use _create_source_field_from_reactions instead.")
     
-    def get_substance_concentrations(self) -> Dict[str, Dict[Tuple[int, int], float]]:
-        """Get all substance concentrations for cell updates"""
+    def get_substance_concentrations(self) -> Dict[str, Dict[Tuple[int, ...], float]]:
+        """Get all substance concentrations for cell updates.
+
+        Key scheme: 2D fields are keyed by solver-voxel ``(x, y)``; 3D fields
+        by ``(x, y, z)`` with the value taken from ``concentrations[z, y, x]``.
+        Consumers build their key with ``cell_to_solver_index`` so the same
+        lookup works in both dimensionalities. (Historically 3D collapsed to
+        the middle z-slice, so every cell sensed one plane.)
+        """
         concentrations = {}
 
         for name, substance_state in self.state.substances.items():
             substance_concentrations = {}
+            field = substance_state.concentrations
 
-            # Handle both 2D and 3D concentration arrays
-            if len(substance_state.concentrations.shape) == 3:
-                # 3D case: take middle slice in Z direction
-                nz = substance_state.concentrations.shape[0]
-                middle_z = nz // 2
-                conc_slice = substance_state.concentrations[middle_z, :, :]
+            if field.ndim == 3:
+                nz, ny, nx = field.shape
+                for z in range(nz):
+                    plane = field[z]
+                    for y in range(ny):
+                        for x in range(nx):
+                            substance_concentrations[(x, y, z)] = plane[y, x]
             else:
-                # 2D case: use as-is
-                conc_slice = substance_state.concentrations
-
-            ny, nx = conc_slice.shape
-            for y in range(ny):
-                for x in range(nx):
-                    substance_concentrations[(x, y)] = conc_slice[y, x]
+                ny, nx = field.shape
+                for y in range(ny):
+                    for x in range(nx):
+                        substance_concentrations[(x, y)] = field[y, x]
 
             # Use original name case to match workflow associations (e.g., "Oxygen" not "oxygen")
             concentrations[name] = substance_concentrations

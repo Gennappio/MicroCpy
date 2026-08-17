@@ -802,9 +802,11 @@ def _apply_relaxation(simulator, old: Dict[str, np.ndarray], new: Dict[str, np.n
 
             substance_state.concentrations = blended
 
-            # Update FiPy variable if it exists
+            # Update FiPy variable if it exists (field_to_fipy_order handles
+            # the 2D-vs-3D flat ordering difference)
             if hasattr(simulator, 'fipy_variables') and name in simulator.fipy_variables:
-                simulator.fipy_variables[name].setValue(blended.flatten(order='F'))
+                from src.simulation.multi_substance_simulator import field_to_fipy_order
+                simulator.fipy_variables[name].setValue(field_to_fipy_order(blended))
 
 
 def _clamp_negative_concentrations(simulator, context: Dict[str, Any], verbose: Optional[bool] = None) -> None:
@@ -821,7 +823,8 @@ def _clamp_negative_concentrations(simulator, context: Dict[str, Any], verbose: 
                 prefix="[COUPLED]", node_verbose=verbose)
 
             if hasattr(simulator, 'fipy_variables') and name in simulator.fipy_variables:
+                from src.simulation.multi_substance_simulator import field_to_fipy_order
                 simulator.fipy_variables[name].setValue(
-                    substance_state.concentrations.flatten(order='F')
+                    field_to_fipy_order(substance_state.concentrations)
                 )
 
