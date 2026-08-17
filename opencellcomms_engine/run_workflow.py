@@ -101,6 +101,10 @@ Examples:
                        help='Domain size in micrometers (default: 500.0)')
     parser.add_argument('--genes', metavar='BND_FILE',
                        help='Path to .bnd file to read gene network nodes for complete gene state initialization')
+    parser.add_argument('--dimensions', type=int, choices=[2, 3], default=2,
+                       help='Seed dimensionality for --generate-csv (3 adds a z column; default: 2)')
+    parser.add_argument('--center_z', type=int,
+                       help='Spheroid center Z for --generate-csv --dimensions 3 (auto if omitted)')
 
     # CSV plotting for post-simulation visualization
     parser.add_argument('--plot-csv', action='store_true',
@@ -186,6 +190,11 @@ Examples:
         # Add genes file if specified
         if args.genes:
             csv_args.extend(['--genes', args.genes])
+
+        if args.dimensions == 3:
+            csv_args.extend(['--dimensions', '3'])
+            if args.center_z is not None:
+                csv_args.extend(['--center_z', str(args.center_z)])
 
         if run_tool(tools_dir / "csv_cell_generator.py", csv_args):
             success_count += 1

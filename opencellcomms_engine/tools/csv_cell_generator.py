@@ -68,6 +68,32 @@ def generate_spheroid_pattern(center_x: int, center_y: int, cell_count: int, max
     return positions[:cell_count]
 
 
+def generate_spheroid_pattern_3d(center_x: int, center_y: int, center_z: int,
+                                 cell_count: int, max_radius: int = None) -> List[Tuple[int, int, int]]:
+    """Generate cells in a true Euclidean ball around the center.
+
+    Same algorithm as generate_initial_cells._sphere_positions (the modern 3D
+    seeding path): over-estimate the radius from the sphere volume, enumerate
+    the surrounding cube, sort by distance to the center, take the N closest.
+    """
+    radius = int(np.ceil((3.0 * cell_count / (4.0 * np.pi)) ** (1.0 / 3.0))) + 2
+    if max_radius is not None:
+        radius = min(radius, max_radius)
+
+    candidates = []
+    for x in range(center_x - radius, center_x + radius + 1):
+        for y in range(center_y - radius, center_y + radius + 1):
+            for z in range(center_z - radius, center_z + radius + 1):
+                if x < 0 or y < 0 or z < 0:
+                    continue
+                d = np.sqrt((x - center_x) ** 2 + (y - center_y) ** 2 + (z - center_z) ** 2)
+                if d <= radius:
+                    candidates.append((d, (x, y, z)))
+
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return [pos for _, pos in candidates[:cell_count]]
+
+
 def generate_grid_pattern(grid_width: int, grid_height: int, start_x: int = 0, start_y: int = 0) -> List[Tuple[int, int]]:
     """Generate cells in a regular grid pattern"""
     positions = []
@@ -108,12 +134,12 @@ def assign_phenotypes_and_genes(positions: List[Tuple[int, int]], pattern: str, 
     # Identify phenotype nodes (common output nodes)
     phenotype_nodes = {'Proliferation', 'Apoptosis', 'Growth_Arrest', 'Necrosis', 'Quiescent'}
 
-    for i, (x, y) in enumerate(positions):
-        cell = {
-            'x': x,
-            'y': y,
-            'phenotype': 'Proliferation'  # Default phenotype
-        }
+    for i, pos in enumerate(positions):
+        x, y = pos[0], pos[1]
+        cell = {'x': x, 'y': y}
+        if len(pos) > 2:
+            cell['z'] = pos[2]
+        cell['phenotype'] = 'Proliferation'  # Default phenotype
 
         # Initialize all gene nodes randomly (true/false)
         for gene_node in sorted(gene_nodes):  # Sort for consistent ordering
@@ -127,9 +153,13 @@ def assign_phenotypes_and_genes(positions: List[Tuple[int, int]], pattern: str, 
         # Pattern-specific adjustments
         if pattern == 'spheroid':
             # Inner cells are proliferative, outer cells are quiescent
-            center_x = np.mean([pos[0] for pos in positions])
-            center_y = np.mean([pos[1] for pos in positions])
-            distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+            center_x = np.mean([p[0] for p in positions])
+            center_y = np.mean([p[1] for p in positions])
+            distance_sq = (x - center_x) ** 2 + (y - center_y) ** 2
+            if len(pos) > 2:
+                center_z = np.mean([p[2] for p in positions])
+                distance_sq += (pos[2] - center_z) ** 2
+            distance = np.sqrt(distance_sq)
 
             if distance <= 2:  # Core cells
                 cell['phenotype'] = 'Proliferation'
@@ -189,6 +219,9 @@ def main():
     parser.add_argument('--domain_size_um', type=float, default=500.0, help='Domain size in micrometers')
     parser.add_argument('--center_x', type=int, help='Center X coordinate (auto-calculated if not specified)')
     parser.add_argument('--center_y', type=int, help='Center Y coordinate (auto-calculated if not specified)')
+    parser.add_argument('--center_z', type=int, help='Center Z coordinate (3D only; auto-calculated if not specified)')
+    parser.add_argument('--dimensions', type=int, choices=[2, 3], default=2,
+                       help='2 for a flat seed (x,y), 3 for a Euclidean-ball spheroid with a z column')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducible results')
     parser.add_argument('--genes', type=str, help='Path to .bnd file to read all gene network nodes')
     
@@ -201,8 +234,14 @@ def main():
     if args.pattern == 'spheroid':
         center_x = args.center_x if args.center_x is not None else args.domain_size // 2
         center_y = args.center_y if args.center_y is not None else args.domain_size // 2
-        positions = generate_spheroid_pattern(center_x, center_y, args.count, args.domain_size // 2)
-        description = f"Spheroid pattern with {len(positions)} cells"
+        if args.dimensions == 3:
+            center_z = args.center_z if args.center_z is not None else args.domain_size // 2
+            positions = generate_spheroid_pattern_3d(center_x, center_y, center_z,
+                                                     args.count, args.domain_size // 2)
+            description = f"3D spheroid pattern with {len(positions)} cells"
+        else:
+            positions = generate_spheroid_pattern(center_x, center_y, args.count, args.domain_size // 2)
+            description = f"Spheroid pattern with {len(positions)} cells"
         
     elif args.pattern == 'grid':
         grid_parts = args.grid_size.split('x')

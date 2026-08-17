@@ -53,6 +53,7 @@ class CSVCellStateExporter:
                 'cell_id': cell_id,
                 'x': cell.state.position[0],
                 'y': cell.state.position[1],
+                **({'z': cell.state.position[2]} if len(cell.state.position) > 2 else {}),
                 'phenotype': cell.state.phenotype,
                 'age': getattr(cell.state, 'age', 0.0),
                 'generation': getattr(cell.state, 'generation', 0)

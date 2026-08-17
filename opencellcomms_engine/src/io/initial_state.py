@@ -305,9 +305,10 @@ class CSVCellLoader:
         if not all(col in reader.fieldnames for col in required_cols):
             raise ValueError(f"CSV must contain columns: {required_cols}. Found: {reader.fieldnames}")
 
-        # Optional columns
+        # Optional columns ('z' makes the seed 3D; absent = 2D, unchanged)
         has_phenotype = 'phenotype' in reader.fieldnames
         has_age = 'age' in reader.fieldnames
+        has_z = 'z' in reader.fieldnames
 
         # Parse gene state columns (any column starting with 'gene_')
         gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
@@ -319,7 +320,10 @@ class CSVCellLoader:
                 y_logical = float(row['y'])
 
                 # Store as logical coordinates (same as VTK system)
-                self.cell_positions.append((x_logical, y_logical))
+                if has_z:
+                    self.cell_positions.append((x_logical, y_logical, float(row['z'])))
+                else:
+                    self.cell_positions.append((x_logical, y_logical))
 
                 # Parse phenotype if available
                 phenotype = row.get('phenotype', 'Quiescent').strip()
@@ -377,6 +381,7 @@ class CSVCellLoader:
         # Check if checkpoint has age and generation columns
         has_age = 'age' in reader.fieldnames
         has_generation = 'generation' in reader.fieldnames
+        has_z = 'z' in reader.fieldnames
 
         # Parse gene state columns (any column starting with 'gene_')
         gene_columns = [col for col in reader.fieldnames if col.startswith('gene_')]
@@ -388,7 +393,10 @@ class CSVCellLoader:
                 y_logical = float(row['y'])
 
                 # Store as logical coordinates
-                self.cell_positions.append((x_logical, y_logical))
+                if has_z:
+                    self.cell_positions.append((x_logical, y_logical, float(row['z'])))
+                else:
+                    self.cell_positions.append((x_logical, y_logical))
 
                 # Parse phenotype
                 phenotype = row.get('phenotype', 'Quiescent').strip()
@@ -508,7 +516,7 @@ class InitialStateManager:
         elif file_path.suffix.lower() == '.vtk':
             return self.load_initial_state_from_vtk(file_path)
         else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}. Use .csv for 2D or .vtk for 2D/3D")
+            raise ValueError(f"Unsupported file format: {file_path.suffix}. Use .csv or .vtk (both 2D/3D; 3D CSV needs a z column)")
 
     def load_initial_state_from_csv(self, file_path: Union[str, Path]) -> Tuple[List[Dict[str, Any]], float]:
         """
@@ -522,8 +530,7 @@ class InitialStateManager:
         Returns:
             Tuple of (cell_init_data, cell_size_um)
         """
-        if self.config.domain.dimensions != 2:
-            raise ValueError("CSV loading is only supported for 2D simulations. Use VTK for 3D.")
+        is_3d = self.config.domain.dimensions == 3
 
         # Get cell size from YAML config
         yaml_cell_height = getattr(self.config.domain, 'cell_height', 20.0)
@@ -553,6 +560,16 @@ class InitialStateManager:
         # Calculate biological grid bounds for validation
         bio_grid_x = int(self.config.domain.size_x.micrometers / self.config.domain.cell_height.micrometers)
         bio_grid_y = int(self.config.domain.size_y.micrometers / self.config.domain.cell_height.micrometers)
+        if is_3d:
+            # A 3D domain needs a z coordinate per cell — a z-less CSV would
+            # silently squash the whole seed onto one plane.
+            if positions and len(positions[0]) < 3:
+                raise ValueError(
+                    "3D simulation requires a 'z' column in the seed CSV "
+                    f"(file '{file_path}' has x,y only). Regenerate the seed "
+                    "with csv_cell_generator --dimensions 3."
+                )
+            bio_grid_z = int(self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers)
 
         for i, pos in enumerate(positions):
             # Read logical coordinates and round to nearest integer grid index
@@ -563,8 +580,12 @@ class InitialStateManager:
             x_log = max(0, min(bio_grid_x - 1, x_log))
             y_log = max(0, min(bio_grid_y - 1, y_log))
 
-            # Create 2D position tuple
-            logical_pos = (x_log, y_log)
+            if is_3d:
+                z_log = max(0, min(bio_grid_z - 1, int(round(pos[2]))))
+                logical_pos = (x_log, y_log, z_log)
+            else:
+                # Create 2D position tuple (a stray z column is ignored)
+                logical_pos = (x_log, y_log)
 
             # Generate unique cell ID
             cell_id = f"cell_{i:06d}"
@@ -583,7 +604,7 @@ class InitialStateManager:
             original_physical_pos = (
                 logical_pos[0] * cell_size_um,
                 logical_pos[1] * cell_size_um,
-                0.0  # Z coordinate is 0 for 2D
+                (logical_pos[2] * cell_size_um) if is_3d else 0.0
             )
 
             # Create cell with loaded data
