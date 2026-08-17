@@ -224,10 +224,13 @@ class ContextSnapshotManager:
 
         context_dir = self.results_dir / "observability" / "context"
 
-        # Clear old snapshots from previous runs
+        # Clear old snapshots from previous runs. ignore_errors: the tree can
+        # be half-written by a killed run or races with a concurrent cleanup,
+        # and a FileNotFoundError mid-rmtree must not abort a fresh simulation
+        # over leftover DEBUG artifacts.
         if context_dir.exists():
             import shutil
-            shutil.rmtree(context_dir)
+            shutil.rmtree(context_dir, ignore_errors=True)
 
         context_dir.mkdir(parents=True, exist_ok=True)
         self._versions.clear()
