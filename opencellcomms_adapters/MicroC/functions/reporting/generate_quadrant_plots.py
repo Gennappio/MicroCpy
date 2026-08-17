@@ -184,14 +184,21 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                             colors=['red'], linewidths=2.5, linestyles=style,
                             zorder=5)
             _clip_contour(cs, clip_rect)
-            # Label manually at a point inside this quadrant so the label
-            # cannot land in another substance's quadrant.
+            # Label placed by hand at a contour vertex inside this quadrant,
+            # nudged toward the quadrant centre. Deliberately NOT clabel
+            # (inline=True cuts the line under the label — a short clipped
+            # arc, e.g. an oxygen-threshold loop hugging the domain centre,
+            # would be swallowed entirely and the contour become invisible).
             label_at = _label_point_in_quadrant(cs, (x0, y0, x1, y1))
             if label_at:
-                labels = ax.clabel(cs, inline=True, fontsize=11, manual=[label_at],
-                                   fmt=f'{name} {iso_label}: {iso_value:.3g}')
-                for text in labels:
-                    text.set_zorder(6)
+                cx_q, cy_q = (x0 + x1) / 2, (y0 + y1) / 2
+                tx = label_at[0] + 0.25 * (cx_q - label_at[0])
+                ty = label_at[1] + 0.25 * (cy_q - label_at[1])
+                ax.text(tx, ty, f'{name} {iso_label}: {iso_value:.3g}',
+                        color='red', fontsize=11, ha='center', va='center',
+                        zorder=6,
+                        bbox=dict(boxstyle='round,pad=0.25', facecolor='white',
+                                  alpha=0.75, edgecolor='none'))
 
         # Per-quadrant gradient legend with the substance's min/max
         lx, ly = legend_positions[idx]
