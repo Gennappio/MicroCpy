@@ -29,6 +29,17 @@ take up TGFA, FGF, HGF, GI (generic first-order reaction term) and produce H
 keep their Michaelis-Menten metabolism and are unchanged from the prior golden;
 the previous reference froze those four signalling fields as inert.
 
+**Re-blessed again** after the NetLogo-alignment batch that intentionally
+changed MicroC behaviour: split metabolic/growth-factor solver nodes with
+implicit growth-factor uptake, necrosis double gate (Necrosis gene AND
+environment, glucose threshold 3.9), fate-weighted metabolism
+(necrotic cells zeroed, growth-arrest ×0.5, networks frozen at death), and
+the phantom z-layer division fix. The prior reference predated those commits,
+so the guard was failing on unchanged code. Captured at that point (952 cells
+after 3 steps); the 3D-support work that followed was separately proven
+bit-for-bit against this behaviour by an A/B run of this harness before and
+after each change.
+
 Regenerate / verify:
 
 ```
