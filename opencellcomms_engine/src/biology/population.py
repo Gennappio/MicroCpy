@@ -6,12 +6,14 @@ Provides spatial population management with immutable state tracking.
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set, Union, Any
+import math
 import numpy as np
 import os
 import time
 from pathlib import Path
 
 from src.interfaces.base import ICellPopulation
+from src.core.coords import cell_to_solver_index
 from .cell import Cell, CellState
 from .gene_network import BooleanNetwork
 import importlib.util
@@ -254,7 +256,9 @@ class CellPopulation(ICellPopulation):
             'max_cells_per_position': 1,  # Spatial exclusion
             'migration_probability': 0.1,
             'division_success_rate': 0.8,
-            'max_population_size': grid_size[0] * grid_size[1] * 2  # Prevent runaway growth
+            # Prevent runaway growth. math.prod covers 2D and 3D grid_size
+            # tuples alike (the old [0]*[1] form capped 3D runs at one layer).
+            'max_population_size': math.prod(grid_size) * 2
         }
 
     def _load_custom_functions(self, custom_functions_module):
@@ -803,7 +807,13 @@ class CellPopulation(ICellPopulation):
                 # Ensure coordinates are within FiPy grid bounds
                 fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
                 fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
-                fipy_pos = (fipy_x, fipy_y)
+                if getattr(self.config.domain, 'dimensions', 2) == 3:
+                    # 3D fields are keyed (x, y, z); the shared law owns the
+                    # mapping (bio_z was previously read and discarded here,
+                    # so every cell sensed the z=0 plane's dict keys).
+                    fipy_pos = cell_to_solver_index(self.config, cell.state.position)
+                else:
+                    fipy_pos = (fipy_x, fipy_y)
 
                 for substance_name, conc_field in substance_concentrations.items():
                     if fipy_pos in conc_field:
@@ -880,7 +890,13 @@ class CellPopulation(ICellPopulation):
                 # Ensure coordinates are within FiPy grid bounds
                 fipy_x = max(0, min(self.config.domain.nx - 1, fipy_x))
                 fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
-                fipy_pos = (fipy_x, fipy_y)
+                if getattr(self.config.domain, 'dimensions', 2) == 3:
+                    # 3D fields are keyed (x, y, z); the shared law owns the
+                    # mapping (bio_z was previously read and discarded here,
+                    # so every cell sensed the z=0 plane's dict keys).
+                    fipy_pos = cell_to_solver_index(self.config, cell.state.position)
+                else:
+                    fipy_pos = (fipy_x, fipy_y)
 
                 for substance_name, conc_field in substance_concentrations.items():
                     if fipy_pos in conc_field:
@@ -932,9 +948,8 @@ class CellPopulation(ICellPopulation):
             fipy_y = max(0, min(self.config.domain.ny - 1, fipy_y))
 
             if self.config.domain.dimensions == 3:
-                fipy_z = int(bio_z * self.config.domain.nz / (self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers))
-                fipy_z = max(0, min(self.config.domain.nz - 1, fipy_z))
-                fipy_pos = (fipy_x, fipy_y, fipy_z)
+                # 3D fields are keyed (x, y, z); the shared law owns the mapping
+                fipy_pos = cell_to_solver_index(self.config, cell.state.position)
             else:
                 fipy_pos = (fipy_x, fipy_y)
 
@@ -1354,7 +1369,7 @@ class CellPopulation(ICellPopulation):
             'phenotype_counts': phenotype_counts,
             'average_age': total_age / self.state.total_cells,
             'generation_count': self.state.generation_count,
-            'grid_occupancy': len(self.state.spatial_grid) / (self.grid_size[0] * self.grid_size[1])
+            'grid_occupancy': len(self.state.spatial_grid) / math.prod(self.grid_size)
         }
     
     def get_cell_positions(self) -> List[Tuple[Union[Tuple[int, int], Tuple[int, int, int]], str]]:

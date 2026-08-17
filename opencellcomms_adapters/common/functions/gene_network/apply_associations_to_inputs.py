@@ -15,6 +15,7 @@ import random as _random
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+from src.core.coords import cell_to_solver_index
 
 
 # NetLogo probabilistic activation (microC_Metabolic_Symbiosis.nlogo3d,
@@ -188,21 +189,15 @@ def apply_associations_to_inputs(
             conc_max = {gene_input: None for gene_input in associations.values()}
 
             for cell_id, cell in cells_iter:
-                # Get cell grid position
+                # Bio-grid position -> solver voxel key via the shared law
+                # ((gx, gy) in 2D, (gx, gy, gz) in 3D — matches the
+                # concentrations dict keys).
                 pos = cell.state.position
-                if len(pos) == 2:
-                    cell_x, cell_y = pos
-                else:
-                    cell_x, cell_y = pos[0], pos[1]
-                phys_x = cell_x * cell_size_um
-                phys_y = cell_y * cell_size_um
-                grid_x = int(phys_x / grid_spacing_x)
-                grid_y = int(phys_y / grid_spacing_y)
-
-                # Clamp to valid grid bounds
                 if config and hasattr(config, 'domain'):
-                    grid_x = max(0, min(config.domain.nx - 1, grid_x))
-                    grid_y = max(0, min(config.domain.ny - 1, grid_y))
+                    grid_key = cell_to_solver_index(config, pos)
+                else:
+                    grid_key = (int(pos[0] * cell_size_um / grid_spacing_x),
+                                int(pos[1] * cell_size_um / grid_spacing_y))
 
                 # This cell's gene network: write target (new pattern) and the
                 # holder of the persistent per-cell randoms for hill inputs.
@@ -215,7 +210,7 @@ def apply_associations_to_inputs(
                 cell_input_states = {}
                 for substance_name, gene_input in associations.items():
                     local_conc = substance_concentrations.get(
-                        substance_name, {}).get((grid_x, grid_y), 0.0)
+                        substance_name, {}).get(grid_key, 0.0)
                     threshold = thresholds.get(gene_input, 0.0)
                     hill_entry = input_activations.get(gene_input)
                     if hill_entry is not None:

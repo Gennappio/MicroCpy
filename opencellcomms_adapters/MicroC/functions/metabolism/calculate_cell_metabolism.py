@@ -93,6 +93,7 @@ from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
 
 from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import DEFAULTS
+from src.core.coords import cell_to_solver_index
 
 # NetLogo patch weighting (n_cell − 0.5·n_growth_arrest − n_necrosis):
 # necrotic cells contribute NOTHING to consumption/production, growth-arrested
@@ -133,13 +134,8 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
     p = dict(DEFAULTS)
     p.update({k: v for k, v in (context.get('custom_parameters') or {}).items() if k in DEFAULTS})
 
+    has_domain = config is not None and getattr(config, 'domain', None) is not None
     cell_size_um = 20.0
-    if config is not None and getattr(config, 'domain', None) is not None:
-        dom = config.domain
-        gsx = dom.size_x.micrometers / dom.nx
-        gsy = dom.size_y.micrometers / dom.ny
-    else:
-        gsx = gsy = 30.0
 
     updated, n_mito, n_glyco = {}, 0, 0
 
@@ -153,15 +149,17 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
             continue
 
         pos = cell.state.position
-        gx = int((pos[0] * cell_size_um) / gsx)
-        gy = int((pos[1] * cell_size_um) / gsy)
-        if config is not None and getattr(config, 'domain', None) is not None:
-            gx = max(0, min(config.domain.nx - 1, gx))
-            gy = max(0, min(config.domain.ny - 1, gy))
+        if has_domain:
+            # Shared bio-grid -> solver-voxel law; (gx, gy) in 2D,
+            # (gx, gy, gz) in 3D, matching the concentrations dict keys.
+            key = cell_to_solver_index(config, pos)
+        else:
+            key = (int((pos[0] * cell_size_um) / 30.0),
+                   int((pos[1] * cell_size_um) / 30.0))
 
-        o2 = max(0.0, conc.get('Oxygen', {}).get((gx, gy), 0.0))
-        glc = max(0.0, conc.get('Glucose', {}).get((gx, gy), 0.0))
-        lac = max(0.0, conc.get('Lactate', {}).get((gx, gy), 0.0))
+        o2 = max(0.0, conc.get('Oxygen', {}).get(key, 0.0))
+        glc = max(0.0, conc.get('Glucose', {}).get(key, 0.0))
+        lac = max(0.0, conc.get('Lactate', {}).get(key, 0.0))
 
         genes = cell.state.gene_states or {}
         mito = bool(genes.get('mitoATP', False))

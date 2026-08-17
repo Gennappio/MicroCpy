@@ -39,6 +39,7 @@ import numpy as np
 from src.workflow.decorators import register_function
 from src.interfaces.base import IConfig
 from src.workflow.logging import log, log_always
+from src.core.coords import cell_to_solver_index
 
 # Global debug switch - DEPRECATED: Use verbose parameter instead
 DEBUG_COUPLED_SOLVER = False
@@ -460,35 +461,28 @@ def _recalculate_metabolism(context: Dict[str, Any], simulator, population, conf
 
         debug_cells_processed += 1
 
-        # Get cell position and convert to grid coordinates (support both 2D and 3D)
-        if len(cell.state.position) == 2:
-            cell_x, cell_y = cell.state.position
-        else:
-            cell_x, cell_y, _ = cell.state.position  # 3D: extract x, y, ignore z
-        phys_x = cell_x * cell_size_um
-        phys_y = cell_y * cell_size_um
-        grid_x = int(phys_x / grid_spacing_x)
-        grid_y = int(phys_y / grid_spacing_y)
-
-        # Clamp to valid grid bounds
+        # Bio-grid position -> solver voxel key ((gx, gy) in 2D,
+        # (gx, gy, gz) in 3D), via the shared law in src/core/coords.
         if config and hasattr(config, 'domain'):
-            grid_x = max(0, min(config.domain.nx - 1, grid_x))
-            grid_y = max(0, min(config.domain.ny - 1, grid_y))
+            grid_key = cell_to_solver_index(config, cell.state.position)
+        else:
+            grid_key = (int(cell.state.position[0] * cell_size_um / grid_spacing_x),
+                        int(cell.state.position[1] * cell_size_um / grid_spacing_y))
 
         # DEBUG: Log first cell's coordinate conversion
         if not debug_first_cell_logged:
             oxygen_dict = substance_concentrations.get('Oxygen', {})
-            lookup_result = oxygen_dict.get((grid_x, grid_y), "NOT_FOUND")
-            log(context, f"First cell: pos=({cell_x}, {cell_y}), phys=({phys_x}, {phys_y}) μm, grid=({grid_x}, {grid_y})",
+            lookup_result = oxygen_dict.get(grid_key, "NOT_FOUND")
+            log(context, f"First cell: pos={cell.state.position}, grid={grid_key}",
                 prefix="[METABOLISM DEBUG]", node_verbose=verbose)
-            log(context, f"Lookup (grid_x, grid_y)=({grid_x}, {grid_y}) -> {lookup_result}",
+            log(context, f"Lookup {grid_key} -> {lookup_result}",
                 prefix="[METABOLISM DEBUG]", node_verbose=verbose)
             debug_first_cell_logged = True
 
         # Get local concentrations (clamped to non-negative)
-        local_oxygen = max(0.0, substance_concentrations.get('Oxygen', {}).get((grid_x, grid_y), 0.0))
-        local_glucose = max(0.0, substance_concentrations.get('Glucose', {}).get((grid_x, grid_y), 0.0))
-        local_lactate = max(0.0, substance_concentrations.get('Lactate', {}).get((grid_x, grid_y), 0.0))
+        local_oxygen = max(0.0, substance_concentrations.get('Oxygen', {}).get(grid_key, 0.0))
+        local_glucose = max(0.0, substance_concentrations.get('Glucose', {}).get(grid_key, 0.0))
+        local_lactate = max(0.0, substance_concentrations.get('Lactate', {}).get(grid_key, 0.0))
 
         debug_total_local_oxygen += local_oxygen
         if local_oxygen == 0.0:
@@ -692,14 +686,7 @@ def _add_growth_factor_reactions(position_reactions, population, simulator,
         return
 
     cell_size_um = 20.0
-    if config and hasattr(config, 'domain'):
-        dom = config.domain
-        gsx = dom.size_x.micrometers / dom.nx
-        gsy = dom.size_y.micrometers / dom.ny
-        nx, ny = dom.nx, dom.ny
-    else:
-        gsx = gsy = 30.0
-        nx = ny = None
+    has_domain = bool(config and hasattr(config, 'domain'))
 
     for cell in population.state.cells.values():
         phenotype = cell.state.phenotype
@@ -709,12 +696,11 @@ def _add_growth_factor_reactions(position_reactions, population, simulator,
             continue  # necrotic cells neither secrete nor take up
 
         pos = cell.state.position
-        cx, cy = pos[0], pos[1]
-        gx = int(cx * cell_size_um / gsx)
-        gy = int(cy * cell_size_um / gsy)
-        if nx is not None:
-            gx = max(0, min(nx - 1, gx))
-            gy = max(0, min(ny - 1, gy))
+        if has_domain:
+            grid_key = cell_to_solver_index(config, pos)
+        else:
+            grid_key = (int(pos[0] * cell_size_um / 30.0),
+                        int(pos[1] * cell_size_um / 30.0))
 
         gene_states = cell.state.gene_states or {}
         bucket = position_reactions.setdefault(pos, {})
@@ -726,7 +712,7 @@ def _add_growth_factor_reactions(position_reactions, population, simulator,
                     sink_bucket[name] = sink_bucket.get(name, 0.0) + uptake_rate * weight
                 rate = 0.0
             else:
-                local = max(0.0, concentrations.get(name, {}).get((gx, gy), 0.0))
+                local = max(0.0, concentrations.get(name, {}).get(grid_key, 0.0))
                 rate = -uptake_rate * local * weight
             if production_rate > 0.0 and gene_states.get(name):
                 rate += production_rate * weight

@@ -303,8 +303,8 @@ class EnvironmentView:
         grid_pos = self._to_grid_index(position, grid)
         if grid_pos in grid:
             return grid[grid_pos]
-        # Fallback: try raw position
-        raw = tuple(position[:2])
+        # Fallback: try raw position (arity follows the grid's keys)
+        raw = tuple(position[:len(grid_pos)])
         return grid.get(raw, 0.0)
 
     def concentrations_at(self,
@@ -322,7 +322,7 @@ class EnvironmentView:
             if grid_pos in grid:
                 out[substance_name] = grid[grid_pos]
             else:
-                raw = tuple(position[:2])
+                raw = tuple(position[:len(grid_pos)])
                 out[substance_name] = grid.get(raw, 0.0)
         return out
 
@@ -354,14 +354,31 @@ class EnvironmentView:
 
     def _to_grid_index(self,
                        position: Tuple[float, ...],
-                       reference_grid: Dict[Tuple[int, int], float]) -> Tuple[int, int]:
+                       reference_grid: Dict[Tuple[int, ...], float]) -> Tuple[int, ...]:
         """Convert cell logical position → grid index.
 
-        Logic lifted from MicroC mark_necrotic_cells._get_local_environment.
-        Uses config.domain when available; otherwise heuristic scaling.
+        Key arity follows the reference grid: 2-tuples for 2D fields,
+        3-tuples for 3D fields (per-voxel keys). With a config present the
+        shared law in ``src.core.coords`` does the mapping; without one a
+        heuristic scaling is used (2D only — the no-config path never sees
+        3D grids in practice).
         """
         if not reference_grid:
             return (0, 0)
+
+        first_key = next(iter(reference_grid))
+        is_3d_grid = len(first_key) == 3
+
+        config = self._config()
+        if config is not None and hasattr(config, 'domain'):
+            from src.core.coords import cell_to_solver_index
+            key = cell_to_solver_index(config, position)
+            # Follow the grid's arity even if config disagrees (defensive)
+            if is_3d_grid and len(key) == 2:
+                key = (key[0], key[1], 0)
+            elif not is_3d_grid and len(key) == 3:
+                key = key[:2]
+            return key
 
         max_grid_x = max(pos[0] for pos in reference_grid.keys())
         max_grid_y = max(pos[1] for pos in reference_grid.keys())
@@ -371,35 +388,21 @@ class EnvironmentView:
         cell_x = position[0]
         cell_y = position[1]
 
-        config = self._config()
-        if config is not None and hasattr(config, 'domain'):
-            domain = config.domain
-            domain_size_um = (
-                domain.size_x.micrometers
-                if hasattr(domain.size_x, 'micrometers')
-                else domain.size_x
-            )
-            cell_size_um = 20.0
-            if hasattr(domain, 'cell_height'):
-                ch = domain.cell_height
-                cell_size_um = ch.micrometers if hasattr(ch, 'micrometers') else float(ch)
-            phys_x = cell_x * cell_size_um
-            phys_y = cell_y * cell_size_um
-            grid_spacing = domain_size_um / nx if nx > 0 else 1.0
-            grid_x = int(phys_x / grid_spacing) if grid_spacing > 0 else int(cell_x)
-            grid_y = int(phys_y / grid_spacing) if grid_spacing > 0 else int(cell_y)
+        if cell_x > nx or cell_y > ny:
+            scale = max(cell_x, cell_y) / max(nx, ny) if max(cell_x, cell_y) > 0 else 1.0
+            scale = max(1.0, scale)
+            grid_x = int(cell_x / scale)
+            grid_y = int(cell_y / scale)
         else:
-            if cell_x > nx or cell_y > ny:
-                scale = max(cell_x, cell_y) / max(nx, ny) if max(cell_x, cell_y) > 0 else 1.0
-                scale = max(1.0, scale)
-                grid_x = int(cell_x / scale)
-                grid_y = int(cell_y / scale)
-            else:
-                grid_x = int(cell_x)
-                grid_y = int(cell_y)
+            grid_x = int(cell_x)
+            grid_y = int(cell_y)
 
         grid_x = max(0, min(nx - 1, grid_x))
         grid_y = max(0, min(ny - 1, grid_y))
+        if is_3d_grid:
+            nz = max(pos[2] for pos in reference_grid.keys()) + 1
+            bio_z = position[2] if len(position) > 2 else 0
+            return (grid_x, grid_y, max(0, min(nz - 1, int(bio_z))))
         return (grid_x, grid_y)
 
 
