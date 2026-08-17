@@ -22,11 +22,16 @@ at 750 µm / 15 voxels / 20 µm cells).
 3D VIEWER. With ``html_enabled``, every ``html_interval`` iterations a
 self-contained interactive HTML is written to ``plots_dir/viewer3d/``
 (``include_plotlyjs='directory'`` — plotly.min.js written once beside the
-HTMLs). Cells are 3D markers; a marker has ONE colour, so metabolism and fate
+HTMLs). The scene is the FIXED domain box — axis ranges pinned to the domain
+size with a proportional aspect ratio and a faint wireframe — never
+autoranged to the occupied region. Cells are true-size spheres (radius
+``cell_height/2`` µm, one instanced Mesh3d per category) so their scale
+matches the 2D circles; a sphere has ONE colour, so metabolism and fate
 cannot be shown together in 3D: the two encodings are separate toggleable
 views (buttons), included per ``html_metabolism_view`` / ``html_fate_view``.
-Substances appear as legend-toggleable isosurfaces at their gene-association
-threshold (plus the necrosis threshold when published).
+Every configured substance threshold (gene-association + necrosis) is a
+legend-toggleable isosurface from iteration 1 — a threshold outside the
+field's current range renders nothing and is named "... (not crossed)".
 """
 
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -163,6 +168,74 @@ def _cell_view_colors(cell, cell_color_fn, config):
 # Plotly viewer
 # --------------------------------------------------------------------------
 
+def _sphere_template(kind: str = 'uv'):
+    """Unit-sphere mesh (vertices, faces) used to instance one Mesh3d per
+    cell category. 'uv': 8 segments x 6 rings = 42 verts / 80 triangles;
+    'octa': octahedron (6 verts / 8 triangles) for very populous traces."""
+    import numpy as np
+    if kind == 'octa':
+        verts = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0],
+                          [0, -1, 0], [0, 0, 1], [0, 0, -1]], dtype=float)
+        faces = np.array([[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4],
+                          [2, 0, 5], [1, 2, 5], [3, 1, 5], [0, 3, 5]])
+        return verts, faces
+    n_seg, n_rings = 8, 6
+    verts = [(0.0, 0.0, 1.0)]
+    for r in range(1, n_rings):
+        phi = np.pi * r / n_rings
+        for s in range(n_seg):
+            theta = 2 * np.pi * s / n_seg
+            verts.append((np.sin(phi) * np.cos(theta),
+                          np.sin(phi) * np.sin(theta), np.cos(phi)))
+    verts.append((0.0, 0.0, -1.0))
+
+    def ring(r, s):
+        return 1 + (r - 1) * n_seg + s % n_seg
+
+    faces = []
+    for s in range(n_seg):
+        faces.append((0, ring(1, s), ring(1, s + 1)))
+    for r in range(1, n_rings - 1):
+        for s in range(n_seg):
+            faces.append((ring(r, s), ring(r + 1, s), ring(r + 1, s + 1)))
+            faces.append((ring(r, s), ring(r + 1, s + 1), ring(r, s + 1)))
+    bottom = 1 + (n_rings - 1) * n_seg
+    for s in range(n_seg):
+        faces.append((bottom, ring(n_rings - 1, s + 1), ring(n_rings - 1, s)))
+    return np.array(verts), np.array(faces)
+
+
+def _instanced_spheres(centers, radius: float, template):
+    """Translate copies of the unit-sphere template to every centre and
+    concatenate them into one Mesh3d vertex/face soup: (x, y, z, i, j, k)."""
+    import numpy as np
+    verts, faces = template
+    centers = np.asarray(centers, dtype=float)
+    pts = (verts[None, :, :] * radius + centers[:, None, :]).reshape(-1, 3)
+    offsets = (np.arange(len(centers)) * len(verts))[:, None, None]
+    tris = (faces[None, :, :] + offsets).reshape(-1, 3)
+    return pts[:, 0], pts[:, 1], pts[:, 2], tris[:, 0], tris[:, 1], tris[:, 2]
+
+
+def _domain_wireframe(sx: float, sy: float, sz: float):
+    """The 12 box edges of [0,sx]x[0,sy]x[0,sz] as one None-separated
+    polyline (x, y, z) for a Scatter3d lines trace."""
+    corners = [(x, y, z) for x in (0.0, sx) for y in (0.0, sy) for z in (0.0, sz)]
+    xs, ys, zs = [], [], []
+    for ai, a in enumerate(corners):
+        for b in corners[ai + 1:]:
+            if sum(u != v for u, v in zip(a, b)) == 1:  # edge, not diagonal
+                xs += [a[0], b[0], None]
+                ys += [a[1], b[1], None]
+                zs += [a[2], b[2], None]
+    return xs, ys, zs
+
+
+# Above this many cells in one category trace, instance octahedra instead of
+# uv-spheres to cap the vertex count the browser has to push around.
+_SPHERE_DETAIL_LIMIT = 4000
+
+
 def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str, Any]],
                       cells, cell_color_fn, isolines: Dict[str, List[Tuple[float, str]]],
                       substances_3d: List[str], metabolism_view: bool,
@@ -179,6 +252,8 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
 
     dom = config.domain
     cell_um = dom.cell_height.micrometers
+    sx, sy, sz = (dom.size_x.micrometers, dom.size_y.micrometers,
+                  dom.size_z.micrometers)
 
     def phys(p, i):
         return (float(p[i]) + 0.5) * cell_um if len(p) > i else 0.5 * cell_um
@@ -200,13 +275,18 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
     trace_views = []  # 'metabolism' / 'fate' / 'always'
     both_views = metabolism_view and fate_view
     for (view, label), entries in sorted(groups.items()):
-        xs, ys, zs = zip(*(e[0] for e in entries))
+        centers = [e[0] for e in entries]
         color = entries[0][1]
-        traces.append(go.Scatter3d(
-            x=xs, y=ys, z=zs, mode='markers',
-            marker=dict(size=3, color=color,
-                        line=dict(width=0.5, color='dimgray')),
+        # True-size cells: spheres of radius cell_height/2 in data um, the
+        # same physical footprint as the 2D figure's circles.
+        template = _sphere_template(
+            'octa' if len(centers) > _SPHERE_DETAIL_LIMIT else 'uv')
+        x, y, z, i, j, k = _instanced_spheres(centers, cell_um / 2.0, template)
+        traces.append(go.Mesh3d(
+            x=x, y=y, z=z, i=i, j=j, k=k,
+            color=color, hoverinfo='skip',
             name=f"{label}: {len(entries)}",
+            showlegend=True,
             legendgroup=view,
             legendgrouptitle_text=('Metabolism' if view == 'metabolism' else 'Fate'),
             visible=True if (view == 'metabolism' or not metabolism_view) else False,
@@ -214,7 +294,11 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         trace_views.append(view)
 
     # --- substance isosurfaces at their thresholds -------------------------
-    nz, ny, nx = None, None, None
+    # Every configured (substance, threshold) is listed in the legend so it
+    # can be shown/hidden from iteration 1; a threshold the field does not
+    # cross yet renders nothing and says so in its name. The first crossed
+    # surface starts visible.
+    iso_visible_seen = False
     for name in substances_3d:
         field = fields.get(name)
         if field is None:
@@ -223,21 +307,25 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         if arr.ndim != 3:
             continue
         nz, ny, nx = arr.shape
-        xs = (np.arange(nx) + 0.5) * (dom.size_x.micrometers / nx)
-        ys = (np.arange(ny) + 0.5) * (dom.size_y.micrometers / ny)
-        zs = (np.arange(nz) + 0.5) * (dom.size_z.micrometers / nz)
+        xs = (np.arange(nx) + 0.5) * (sx / nx)
+        ys = (np.arange(ny) + 0.5) * (sy / ny)
+        zs = (np.arange(nz) + 0.5) * (sz / nz)
         Z, Y, X = np.meshgrid(zs, ys, xs, indexing='ij')
         color = specs.get(name, {}).get('color', 'gray')
         for iso_value, iso_label in isolines.get(name, []):
-            if not (arr.min() < iso_value < arr.max()):
-                continue  # threshold outside the field: no surface exists
+            crossed = bool(arr.min() < iso_value < arr.max())
+            visible = True if (crossed and not iso_visible_seen) else 'legendonly'
+            iso_visible_seen = iso_visible_seen or crossed
             traces.append(go.Isosurface(
                 x=X.ravel(), y=Y.ravel(), z=Z.ravel(), value=arr.ravel(),
                 isomin=iso_value, isomax=iso_value, surface_count=1,
                 opacity=0.25, showscale=False,
+                caps=dict(x=dict(show=False), y=dict(show=False),
+                          z=dict(show=False)),
                 colorscale=[[0, color], [1, color]],
-                name=f"{name} {iso_label}: {iso_value:.3g}",
-                showlegend=True, visible='legendonly',
+                name=f"{name} {iso_label}: {iso_value:.3g}"
+                     + ('' if crossed else ' (not crossed)'),
+                showlegend=True, visible=visible,
             ))
             trace_views.append('always')
 
@@ -245,27 +333,48 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         print("[WORKFLOW] 3D viewer: nothing to draw - skipping HTML")
         return None
 
+    # Faint wireframe of the full domain box, so the fixed extent reads even
+    # where nothing lives. Added after the empty-check: a wireframe alone is
+    # not worth an HTML.
+    wx, wy, wz = _domain_wireframe(sx, sy, sz)
+    traces.insert(0, go.Scatter3d(
+        x=wx, y=wy, z=wz, mode='lines',
+        line=dict(color='rgba(120,120,120,0.45)', width=1.5),
+        hoverinfo='skip', showlegend=False,
+    ))
+    trace_views.insert(0, 'always')
+
     fig = go.Figure(data=traces)
+    max_size = max(sx, sy, sz)
     fig.update_layout(
         title=f"MicroC 3D at t = {time_point:.3f} {title_suffix}",
         scene=dict(
-            xaxis_title='X (um)', yaxis_title='Y (um)', zaxis_title='Z (um)',
-            aspectmode='data',
+            # Fixed domain box, never autoranged to the occupied region.
+            xaxis=dict(title='X (um)', range=[0, sx]),
+            yaxis=dict(title='Y (um)', range=[0, sy]),
+            zaxis=dict(title='Z (um)', range=[0, sz]),
+            aspectmode='manual',
+            aspectratio=dict(x=sx / max_size, y=sy / max_size, z=sz / max_size),
         ),
         legend=dict(groupclick='togglegroup'),
         margin=dict(l=0, r=0, t=40, b=0),
     )
 
     if both_views:
+        # Restyle only the cell traces: wireframe and isosurfaces keep the
+        # show/hide state the user set via the legend across view switches.
+        cell_idx = [idx for idx, view in enumerate(trace_views)
+                    if view in ('metabolism', 'fate')]
+
         def mask(active):
-            return [view == active or view == 'always' for view in trace_views]
+            return [trace_views[idx] == active for idx in cell_idx]
         fig.update_layout(updatemenus=[dict(
             type='buttons', direction='right', x=0.0, y=1.08,
             buttons=[
-                dict(label='Metabolism view', method='update',
-                     args=[{'visible': mask('metabolism')}]),
-                dict(label='Fate view', method='update',
-                     args=[{'visible': mask('fate')}]),
+                dict(label='Metabolism view', method='restyle',
+                     args=[{'visible': mask('metabolism')}, cell_idx]),
+                dict(label='Fate view', method='restyle',
+                     args=[{'visible': mask('fate')}, cell_idx]),
             ],
         )])
 
@@ -331,8 +440,8 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         {"name": "substances_3d", "type": "LIST",
          "description": "Substances shown as threshold isosurfaces in the HTML "
                         "viewer (colours from Quadrant Substances when listed "
-                        "there).",
-         "default": ["Oxygen", "Glucose"]},
+                        "there). Empty = all four quadrant substances.",
+         "default": []},
         {"name": "html_metabolism_view", "type": "BOOL",
          "description": "Include the metabolism-coloured cell view in the HTML.",
          "default": True},
@@ -477,7 +586,7 @@ def generate_3d_plots(
             written = write_viewer_html(
                 config, fields, specs, list(population.state.cells.values()),
                 jayatilake_cell_color, isolines,
-                list(substances_3d) if substances_3d else ["Oxygen", "Glucose"],
+                list(substances_3d) if substances_3d else list(specs),
                 _to_bool(html_metabolism_view), _to_bool(html_fate_view),
                 current_time, base_suffix, html_out)
             if written:

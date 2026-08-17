@@ -128,8 +128,28 @@ def test_render_slice_smoke_with_triples(tmp_path):
     assert out.exists() and out.stat().st_size > 10_000
 
 
+def test_sphere_template_and_instancing():
+    from opencellcomms_adapters.MicroC.functions.reporting.generate_3d_plots import (
+        _instanced_spheres,
+        _sphere_template,
+    )
+
+    verts, faces = _sphere_template('uv')
+    assert len(verts) == 42 and len(faces) == 80
+    assert faces.min() == 0 and faces.max() == len(verts) - 1
+    overts, ofaces = _sphere_template('octa')
+    assert len(overts) == 6 and len(ofaces) == 8
+
+    x, y, z, i, j, k = _instanced_spheres(
+        [(0.0, 0.0, 0.0), (100.0, 0.0, 0.0)], 10.0, (verts, faces))
+    assert len(x) == 2 * 42 and len(i) == 2 * 80
+    assert abs(max(x) - 110.0) < 1e-9  # second sphere: centre 100 + radius 10
+    assert max(i.max(), j.max(), k.max()) == 2 * 42 - 1  # faces reach 2nd copy
+
+
 def test_viewer_html_smoke(tmp_path):
     pytest.importorskip("plotly")
+    import re
     from opencellcomms_adapters.MicroC.functions.reporting.generate_3d_plots import (
         write_viewer_html,
     )
@@ -139,7 +159,8 @@ def test_viewer_html_smoke(tmp_path):
     arr[7, 7, 7] = 0.001  # dip so the 0.022 isosurface exists
     fields = {"Oxygen": arr}
     specs = {"Oxygen": {"color": "mediumvioletred", "vmin": None, "vmax": None}}
-    isolines = {"Oxygen": [(0.022, 'threshold')]}
+    # 0.022 crossed; 0.5 above the field max -> listed but "(not crossed)"
+    isolines = {"Oxygen": [(0.022, 'threshold'), (0.5, 'Necrosis')]}
     cells = [_cell(18, 18, 18), _cell(19, 18, 18, "Necrosis")]
 
     def color_fn(cell=None, gene_states=None, config=None):
@@ -152,3 +173,11 @@ def test_viewer_html_smoke(tmp_path):
     text = out.read_text()
     assert "plotly.min.js" in text
     assert (tmp_path / "viewer3d" / "plotly.min.js").exists()
+    # cells are true-size instanced spheres, not scatter markers
+    assert '"mesh3d"' in text
+    # fixed domain box: manual aspect, axes pinned to [0, 750] um
+    assert re.search(r'"aspectmode"\s*:\s*"manual"', text)
+    assert re.search(r'"range"\s*:\s*\[0(\.0)?,\s*750(\.0)?\]', text)
+    # every configured threshold is a legend entry; uncrossed ones say so
+    assert "Oxygen threshold: 0.022" in text
+    assert "Oxygen Necrosis: 0.5 (not crossed)" in text

@@ -1860,12 +1860,9 @@
         {
           "id": "iteration_plots-param_substances_3d",
           "type": "listParameterNode",
-          "label": "Isosurface Substances",
+          "label": "Isosurface Substances (empty = all quadrant substances)",
           "listType": "string",
-          "items": [
-            "Oxygen",
-            "Glucose"
-          ],
+          "items": [],
           "target_param": "substances_3d",
           "position": {
             "x": 100,
