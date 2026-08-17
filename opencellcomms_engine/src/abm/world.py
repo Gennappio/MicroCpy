@@ -193,3 +193,136 @@ class LatticeWorld(World):
         if not free:
             return None
         return free[int(rng.integers(0, len(free)))]
+
+
+class LatticeWorld3D(World):
+    """A discrete 3D grid in integer tile coordinates (ti, tj, tk).
+
+    The 3D sibling of ``LatticeWorld`` (which is deliberately 2D-only). No
+    ``TileGrid`` underneath — topology strings are held directly per axis.
+    Field shape follows the engine's (nz, ny, nx) convention, so
+    ``np.full(world.shape, ...)`` resources and ``interpolate`` agree with the
+    solver's 3D arrays.
+    """
+
+    def __init__(
+        self,
+        size_x: float,
+        size_y: float,
+        size_z: float,
+        tile_size: float,
+        topology_x: str = "bounded",
+        topology_y: str = "bounded",
+        topology_z: str = "bounded",
+    ) -> None:
+        self.nx = max(1, int(round(size_x / tile_size)))
+        self.ny = max(1, int(round(size_y / tile_size)))
+        self.nz = max(1, int(round(size_z / tile_size)))
+        self.tile_size = tile_size
+        self._topology = (topology_x, topology_y, topology_z)
+        self.dimension = 3
+        self._occ: Dict[Position, str] = {}
+
+    # geometry / topology -----------------------------------------------------
+
+    def _sizes(self) -> Tuple[int, int, int]:
+        return (self.nx, self.ny, self.nz)
+
+    def _is_toroidal(self, axis: int) -> bool:
+        return self._topology[axis] == TOROIDAL
+
+    @property
+    def shape(self) -> Tuple[int, int, int]:
+        """Numpy field shape (nz, ny, nx), matching the solver convention."""
+        return (self.nz, self.ny, self.nx)
+
+    def bounds(self) -> Tuple[Position, Position]:
+        return ((0, 0, 0), (self.nx, self.ny, self.nz))
+
+    def contains(self, pos: Position) -> bool:
+        for axis, n in enumerate(self._sizes()):
+            if not self._is_toroidal(axis) and not (0 <= pos[axis] < n):
+                return False
+        return True
+
+    def normalize(self, pos: Position) -> Position:
+        out = []
+        for axis, n in enumerate(self._sizes()):
+            t = int(pos[axis]) if len(pos) > axis else 0
+            out.append(t % n if self._is_toroidal(axis) else max(0, min(n - 1, t)))
+        return tuple(out)
+
+    def iter_positions(self) -> Iterator[Position]:
+        for tk in range(self.nz):
+            for tj in range(self.ny):
+                for ti in range(self.nx):
+                    yield (ti, tj, tk)
+
+    def _offsets(self, radius: int, pattern: str) -> List[Tuple[int, int, int]]:
+        offs: List[Tuple[int, int, int]] = []
+        if pattern == "axial":
+            # the six rays, out to radius (2D "axial" generalized per axis)
+            for r in range(1, radius + 1):
+                offs.extend([(r, 0, 0), (-r, 0, 0), (0, r, 0),
+                             (0, -r, 0), (0, 0, r), (0, 0, -r)])
+            return offs
+        for dk in range(-radius, radius + 1):
+            for dj in range(-radius, radius + 1):
+                for di in range(-radius, radius + 1):
+                    if di == 0 and dj == 0 and dk == 0:
+                        continue
+                    if pattern == "vonneumann" and abs(di) + abs(dj) + abs(dk) > radius:
+                        continue
+                    offs.append((di, dj, dk))
+        return offs
+
+    def neighbors(self, pos: Position, radius: int = 1, pattern: str = "moore") -> List[Position]:
+        base = tuple(int(pos[axis]) if len(pos) > axis else 0 for axis in range(3))
+        out: List[Position] = []
+        seen = set()
+        for off in self._offsets(radius, pattern):
+            cand = []
+            valid = True
+            for axis, n in enumerate(self._sizes()):
+                v = base[axis] + off[axis]
+                if self._is_toroidal(axis):
+                    v %= n
+                elif not (0 <= v < n):
+                    valid = False
+                    break
+                cand.append(v)
+            if not valid:
+                continue
+            cand_t = tuple(cand)
+            if cand_t not in seen:
+                seen.add(cand_t)
+                out.append(cand_t)
+        return out
+
+    def distance(self, a: Position, b: Position) -> float:
+        deltas = []
+        for axis, n in enumerate(self._sizes()):
+            d = abs(a[axis] - b[axis])
+            if self._is_toroidal(axis):
+                d = min(d, n - d)
+            deltas.append(d)
+        return math.sqrt(sum(d * d for d in deltas))
+
+    def direction(self, a: Position, b: Position) -> Tuple[float, float, float]:
+        d = tuple(b[axis] - a[axis] for axis in range(3))
+        norm = math.sqrt(sum(v * v for v in d)) or 1.0
+        return (d[0] / norm, d[1] / norm, d[2] / norm)
+
+    def interpolate(self, values: np.ndarray, pos: Position) -> float:
+        ti, tj, tk = self.normalize(pos)
+        return float(values[tk, tj, ti])  # nearest-tile lookup, (nz, ny, nx)
+
+    def random_position(self, rng: np.random.Generator, empty: bool = False) -> Optional[Position]:
+        if not empty:
+            return (int(rng.integers(0, self.nx)),
+                    int(rng.integers(0, self.ny)),
+                    int(rng.integers(0, self.nz)))
+        free = [p for p in self.iter_positions() if p not in self._occ]
+        if not free:
+            return None
+        return free[int(rng.integers(0, len(free)))]

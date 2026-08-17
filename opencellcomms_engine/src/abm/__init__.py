@@ -22,11 +22,12 @@ from src.abm.resource import (
     Resource,
     add_diffusing_resources,
 )
-from src.abm.world import LatticeWorld, World
+from src.abm.world import LatticeWorld, LatticeWorld3D, World
 
 __all__ = [
     "World",
     "LatticeWorld",
+    "LatticeWorld3D",
     "Resource",
     "FieldResource",
     "DiffusingResource",

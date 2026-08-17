@@ -15,7 +15,7 @@ builds an ``abm.Population`` that shares the SAME CellPopulation object, so:
 
 See docs/MICROC_MIGRATION_NEXT_STEPS.md (Stage 4).
 """
-from src.abm import Domain, LatticeWorld, Population
+from src.abm import Domain, LatticeWorld, LatticeWorld3D, Population
 from src.biology.context import BiologicalContext
 from src.workflow.decorators import register_function
 
@@ -36,11 +36,17 @@ def build_tumor_cell_abm_population(env: BiologicalContext, **kwargs) -> bool:
     config = ctx["config"]
     legacy = ctx["population"]            # MicroC's filled CellPopulation
 
-    # Cells live on the bio-grid: nx = size_um / cell_height_um (= 75 for MicroC),
-    # tile_size = cell_height, so agent.position == cell.state.position.
-    size_um = config.domain.size_x.micrometers
+    # Cells live on the bio-grid: nx = size_um / cell_height_um (= 75 for 2D
+    # MicroC), tile_size = cell_height, so agent.position == cell.state.position.
+    size_x_um = config.domain.size_x.micrometers
+    size_y_um = config.domain.size_y.micrometers
     cell_um = config.domain.cell_height.micrometers
-    world = LatticeWorld(size_um, size_um, cell_um, "bounded", "bounded")
+    if getattr(config.domain, 'dimensions', 2) == 3:
+        world = LatticeWorld3D(size_x_um, size_y_um,
+                               config.domain.size_z.micrometers, cell_um,
+                               "bounded", "bounded", "bounded")
+    else:
+        world = LatticeWorld(size_x_um, size_y_um, cell_um, "bounded", "bounded")
     domain = Domain(world)
 
     pop = Population(world, config=config, context=ctx,
@@ -58,6 +64,7 @@ def build_tumor_cell_abm_population(env: BiologicalContext, **kwargs) -> bool:
 
     ctx["domain"] = domain
     ctx["abm_population"] = pop
+    grid_desc = f"{world.nx}x{world.ny}" + (f"x{world.nz}" if hasattr(world, 'nz') else "")
     print(f"[build_tumor_cell_abm_population] wrapped {len(legacy.state.cells)} "
-          f"cells on a {world.nx}x{world.ny} bio-grid world")
+          f"cells on a {grid_desc} bio-grid world")
     return True

@@ -51,7 +51,15 @@ class Resource:
         if ax is None:
             _fig, ax = plt.subplots(figsize=(5, 5))
         imshow_kw.setdefault("aspect", "equal")
-        ax.imshow(self.values(), origin=origin, cmap=cmap, **imshow_kw)
+        field = self.values()
+        if field.ndim == 3:
+            # 3D field: show the mid-z plane (a full 3D render is the 3D
+            # plot node's job, not this quick-look helper).
+            mid = field.shape[0] // 2
+            ax.imshow(field[mid], origin=origin, cmap=cmap, **imshow_kw)
+            ax.set_title(f"{self.name} (z-slice {mid}/{field.shape[0] - 1})")
+        else:
+            ax.imshow(field, origin=origin, cmap=cmap, **imshow_kw)
         return ax
 
 
@@ -82,13 +90,13 @@ class FieldResource(Resource):
 
     # write: self / deferred --------------------------------------------------
     def set_at(self, pos: Position, value: float) -> None:
-        ti, tj = self.world.normalize(pos)
-        self._values[tj, ti] = float(value)
+        # Reversed tile tuple indexes the array in either dimensionality:
+        # (ti, tj) -> [tj, ti]; (ti, tj, tk) -> [tk, tj, ti].
+        self._values[tuple(reversed(self.world.normalize(pos)))] = float(value)
 
     def deposit(self, pos: Position, amount: float) -> None:
         """Accumulate a source(+)/sink(-) term to be applied this step."""
-        ti, tj = self.world.normalize(pos)
-        self._sources[tj, ti] += float(amount)
+        self._sources[tuple(reversed(self.world.normalize(pos)))] += float(amount)
 
     def apply_sources(self) -> None:
         if self._sources.any():

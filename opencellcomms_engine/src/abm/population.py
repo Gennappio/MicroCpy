@@ -39,7 +39,9 @@ class Population:
         self.params: dict = {}
         self._rng = np.random.default_rng(seed if seed else None)
         self.cellpop = CellPopulation(
-            grid_size=(world.nx, world.ny),
+            grid_size=((world.nx, world.ny, world.nz)
+                       if getattr(world, 'dimension', 2) == 3
+                       else (world.nx, world.ny)),
             gene_network=None,
             custom_functions_module=None,
             config=config,
@@ -68,7 +70,8 @@ class Population:
         """Place up to n agents of ``kind`` on random empty tiles. Trait values
         may be callables ``f(rng) -> value`` or constants."""
         placed = 0
-        for _ in range(min(int(n), self.world.nx * self.world.ny)):
+        capacity = self.world.nx * self.world.ny * getattr(self.world, 'nz', 1)
+        for _ in range(min(int(n), capacity)):
             pos = self.world.random_position(self._rng, empty=True)
             if pos is None:
                 break
@@ -115,17 +118,21 @@ class Population:
         return {"count": self.count(), "by_kind": self.count_by_kind()}
 
     def snapshot(self) -> Dict[str, tuple]:
-        """Agent positions grouped by kind: ``{kind: (xs, ys)}`` (parallel lists).
+        """Agent positions grouped by kind: ``{kind: (xs, ys)}`` (parallel
+        lists), with a third ``zs`` list appended for agents on a 3D world.
         The structured form a plotter needs to scatter agents by kind without
         re-iterating and unpacking positions by hand."""
-        out: Dict[str, list] = {}
+        is_3d = getattr(self.world, 'dimension', 2) == 3
+        out: Dict[str, tuple] = {}
         for c in self.cellpop.state.cells.values():
             kind = c.state.metabolic_state.get("_kind", "?")
-            xs_ys = out.setdefault(kind, ([], []))
+            lists = out.setdefault(kind, ([], [], []) if is_3d else ([], []))
             pos = c.state.position
-            xs_ys[0].append(pos[0])
-            xs_ys[1].append(pos[1])
-        return {k: (list(xs), list(ys)) for k, (xs, ys) in out.items()}
+            lists[0].append(pos[0])
+            lists[1].append(pos[1])
+            if is_3d:
+                lists[2].append(pos[2] if len(pos) > 2 else 0)
+        return {k: tuple(list(axis) for axis in lists) for k, lists in out.items()}
 
     def record_census(self, step: Optional[int] = None) -> Dict:
         """Append the current census to ``self.history`` and return it. Opt-in —
