@@ -1749,7 +1749,7 @@
           "function_file": "",
           "parameters": {
             "plot_interval": "1",
-            "autorange": false,
+            "autorange": "true",
             "show_isolines": true,
             "show_cells": true,
             "show_metabolism_colors": true,
