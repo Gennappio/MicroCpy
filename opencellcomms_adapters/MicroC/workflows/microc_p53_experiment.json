@@ -1778,6 +1778,33 @@
             "writes": [],
             "emits": []
           }
+        },
+        {
+          "id": "iteration_plots-save_state_checkpoint",
+          "function_name": "save_state_checkpoint",
+          "function_file": "",
+          "parameters": {
+            "interval": "1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 760
+          },
+          "description": "Save the full per-iteration state next to the plots (all substance fields as npz, cells with gene/metabolic state as json, resolved thresholds, domain geometry, time) so every iteration plot can be re-rendered offline with opencellcomms_engine/tools/replot_checkpoint.py.",
+          "custom_name": "save_state_checkpoint",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
         }
       ],
       "subworkflow_calls": [],
@@ -1833,7 +1860,8 @@
       ],
       "execution_order": [
         "iteration_plots-gen_loop_plots",
-        "iteration_plots-gen_quadrant_plots"
+        "iteration_plots-gen_quadrant_plots",
+        "iteration_plots-save_state_checkpoint"
       ],
       "input_parameters": []
     },
