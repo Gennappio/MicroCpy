@@ -25,7 +25,8 @@ from src.io.state_checkpoint import write_state_checkpoint
                 "plots: all substance fields (compressed npz) + every cell's "
                 "position, phenotype/fate, gene network states, metabolic "
                 "state, age and division count (json), plus the resolved "
-                "isoline thresholds, domain geometry and time. Sufficient to "
+                "isoline thresholds, the proliferation ATP gate if one ran, "
+                "domain geometry and time. Sufficient to "
                 "re-render every iteration plot offline via "
                 "tools/replot_checkpoint.py, in 2D and 3D.",
     category="FINALIZATION",
@@ -97,6 +98,7 @@ def save_state_checkpoint(
             cells=population.state.cells.values(),
             config=config,
             necrosis_thresholds=results.get('necrosis_thresholds', {}),
+            proliferation_gate=results.get('proliferation_gate', {}),
             time=iteration * dt,
             render_time=render_time,
             dt=dt,

@@ -92,8 +92,43 @@ from typing import Any, Dict, Optional
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
 
-from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import DEFAULTS
+from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import (
+    resolve_metabolism_parameters,
+)
 from src.core.coords import cell_to_solver_index
+
+
+def michaelis_saturation(concentration, k):
+    """Michaelis-Menten saturation term c/(k+c); 0 where the denominator is
+    not positive. Elementwise on numpy arrays as well as on plain floats (the
+    ATP-gate isolines evaluate it over the whole O2/Glucose grids)."""
+    denom = k + concentration
+    if hasattr(denom, 'shape'):  # numpy array path (grid evaluation)
+        import numpy as np
+        return np.divide(concentration, denom,
+                         out=np.zeros_like(denom, dtype=float), where=denom > 0)
+    return concentration / denom if denom > 0 else 0.0
+
+
+def atp_rate_terms(o2, glc, params):
+    """The two terms of the ATP production law, in mol ATP/s/cell:
+
+        mito term  = max_atp * (oxygen_vmax/6) * mm_O2 * mm_Glc
+        glyco term = max_atp * (oxygen_vmax/6) * mm_Glc
+
+    with R_ATP = mito_term [if mitoATP ON] + glyco_term [if glycoATP ON].
+    THE statement of the ATP law (R2.1): ``compute_metabolism`` sums these
+    per cell, and the quadrant plot's ATP-gate panel contours them (as
+    fractions of atp_rate_max) over the O2/Glucose grids at the
+    proliferation threshold — one law, two readers. Elementwise on numpy
+    arrays as well as floats. The multiplication order is the historical
+    per-cell one, so the refactor to this helper is bit-identical.
+    Returns ``(mito_term, glyco_term)``.
+    """
+    mm_o2 = michaelis_saturation(o2, params['KO2'])
+    mm_glc = michaelis_saturation(glc, params['KG'])
+    pre = params['max_atp'] * (params['oxygen_vmax'] / 6.0)
+    return pre * mm_o2 * mm_glc, pre * mm_glc
 
 # NetLogo patch weighting (n_cell − 0.5·n_growth_arrest − n_necrosis):
 # necrotic cells contribute NOTHING to consumption/production, growth-arrested
@@ -131,8 +166,7 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
         print(f"[METABOLISM] could not read concentrations: {exc}")
         return
 
-    p = dict(DEFAULTS)
-    p.update({k: v for k, v in (context.get('custom_parameters') or {}).items() if k in DEFAULTS})
+    p = resolve_metabolism_parameters(context)
 
     has_domain = config is not None and getattr(config, 'domain', None) is not None
     cell_size_um = 20.0
@@ -167,9 +201,9 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
         n_mito += mito
         n_glyco += glyco
 
-        mm_o2 = o2 / (p['KO2'] + o2) if (p['KO2'] + o2) > 0 else 0.0
-        mm_glc = glc / (p['KG'] + glc) if (p['KG'] + glc) > 0 else 0.0
-        mm_lac = lac / (p['KL'] + lac) if (p['KL'] + lac) > 0 else 0.0
+        mm_o2 = michaelis_saturation(o2, p['KO2'])
+        mm_glc = michaelis_saturation(glc, p['KG'])
+        mm_lac = michaelis_saturation(lac, p['KL'])
 
         vmax = p['oxygen_vmax']
         o2_use = glc_use = lac_prod = lac_use = 0.0
@@ -187,11 +221,14 @@ def compute_metabolism(context: Dict[str, Any], simulator, population, config,
 
         h_prod = (vmax * 2.0 / 6.0) * p['proton_coefficient'] * (p['max_atp'] / 2.0) * mm_glc
 
+        # Same law the ATP-gate isolines contour (atp_rate_terms), gated by
+        # this cell's ATP genes.
+        t_mito, t_glyco = atp_rate_terms(o2, glc, p)
         atp_rate = 0.0
         if mito:
-            atp_rate += p['max_atp'] * (vmax / 6.0) * mm_o2 * mm_glc
+            atp_rate += t_mito
         if glyco:
-            atp_rate += p['max_atp'] * (vmax / 6.0) * mm_glc
+            atp_rate += t_glyco
 
         # Exchange rates carry the fate weight (0.5 for Growth_Arrest, per the
         # NetLogo patch weighting); atp_rate stays per-cell — it feeds the

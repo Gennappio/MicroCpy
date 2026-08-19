@@ -1844,13 +1844,9 @@
               }
             },
             {
-              "key": "TGFA",
-              "valueType": "dict",
-              "value": {
-                "color": "gold",
-                "vmin": 0,
-                "vmax": 0.001
-              }
+              "key": "ATP_gate",
+              "valueType": "string",
+              "value": "isolines panel (value ignored)"
             },
             {
               "key": "Oxygen",

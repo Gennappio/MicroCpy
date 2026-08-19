@@ -26,6 +26,22 @@ show_fate_colors, show_legends, show_gradient_legends and show_isolines each
 remove one layer (the cell overlay, the metabolic interior colouring, the
 phenotype border colouring, the cell-colour key, the per-quadrant gradient
 bars, the threshold isolines) for clean figures.
+
+THE ATP-GATE QUADRANT
+    The reserved entry name ``ATP_gate`` in quadrant_substances renders a
+    blank-background panel instead of a substance field: one isoline per ATP
+    pathway (mitoATP dark-cyan solid, glycoATP brown dashed, mixed dark-magenta
+    dash-dot — hues used by no cell colour or substance isoline, so a gate line
+    never reads as cells) marking where the proliferation ATP gate ``atp_rate >
+    atp_threshold1
+    * atp_rate_max`` passes for a cell of that pathway. The lines contour the
+    metabolism module's own ATP law (``atp_rate_terms``) evaluated over the
+    Oxygen/Glucose fields, at the threshold published by Mark Proliferating
+    Cells (gated) in results['proliferation_gate'] — no publication, no lines
+    (the panel says why). A pathway whose gate is passed everywhere or
+    nowhere has no contour to draw; its key line states which. The lines show
+    the ATP clause only — the gene-ON and cell-cycle-age clauses of the gate
+    are not spatial.
 """
 
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -52,6 +68,19 @@ DEFAULT_QUADRANTS: Dict[str, str] = {
     "TGFA": "gold",
     "H": "mediumvioletred",
 }
+
+# Reserved quadrant_substances entry: not a substance — a blank panel with the
+# proliferation ATP-gate isolines (see THE ATP-GATE QUADRANT above).
+ATP_GATE_KEY = "ATP_gate"
+
+# Gate-line colours are deliberately NOT the cell colours (blue/green/violet
+# interiors, red/orange/black rings) or the substance-isoline red, so a gate
+# line can never be misread as cells or as a substance threshold. Each pathway
+# also gets its own linestyle as a colour-independent channel.
+_ATP_GATE_COLORS = {"mitoATP": "darkcyan", "glycoATP": "saddlebrown",
+                    "mixed": "darkmagenta"}
+_ATP_GATE_STYLES = {"mitoATP": "solid", "glycoATP": "dashed",
+                    "mixed": "dashdot"}
 
 _PHENOTYPE_BORDER_COLORS = {
     'Proliferation': 'lightgreen',
@@ -122,6 +151,101 @@ def _label_point_in_quadrant(contour_set, bounds):
     return min(inside, key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
 
 
+def atp_gate_payload(gate_record, oxygen_field, glucose_field):
+    """Render payload for the ATP-gate quadrant: the proliferation ATP gate
+    (published by mark_proliferating_cells_gated, which snapshots the KO2/KG
+    in effect alongside its threshold) evaluated over the raw Oxygen/Glucose
+    arrays via the metabolism module's own ATP law.
+
+    Returns {'threshold', 'terms': {'mitoATP','glycoATP','mixed'}} with the
+    term arrays as fractions of atp_rate_max, or {'note': str} explaining why
+    there is nothing to contour. Shared by the 2D node, the 3D slice node and
+    the checkpoint replot tool, so all three draw provably the same rule."""
+    record = dict(gate_record or {})
+    threshold = record.get('atp_threshold1')
+    if threshold is None:
+        return {'note': "ATP gate inactive\n(no gated proliferation node ran)"}
+    constants = ('KO2', 'KG', 'max_atp', 'oxygen_vmax')
+    if any(record.get(k) is None for k in constants):
+        return {'note': "ATP gate: gate record\ncarries no metabolic constants"}
+    if oxygen_field is None or glucose_field is None:
+        return {'note': "ATP gate: Oxygen/Glucose\nfields unavailable"}
+
+    import numpy as np
+    from opencellcomms_adapters.MicroC.functions.metabolism.calculate_cell_metabolism import (
+        atp_rate_terms,
+    )
+    p = {k: float(record[k]) for k in constants}
+    # Same ceiling the gate compares against (cell.metabolic_state's
+    # atp_rate_max = max_atp * vmax / 6), so ratio > threshold is exactly the
+    # gate's atp_rate > threshold * atp_rate_max.
+    rate_max = p['max_atp'] * p['oxygen_vmax'] / 6.0
+    if rate_max <= 0:
+        return {'note': "ATP gate: atp_rate_max is 0\n(max_atp or oxygen_vmax is 0)"}
+    o2 = np.maximum(np.asarray(oxygen_field, dtype=float), 0.0)
+    glc = np.maximum(np.asarray(glucose_field, dtype=float), 0.0)
+    t_mito, t_glyco = atp_rate_terms(o2, glc, p)
+    return {'threshold': float(threshold),
+            'terms': {'mitoATP': t_mito / rate_max,
+                      'glycoATP': t_glyco / rate_max,
+                      'mixed': (t_mito + t_glyco) / rate_max}}
+
+
+def _draw_atp_gate_quadrant(ax, payload, bounds, legend_pos, size_x, size_y,
+                            show_key: bool) -> None:
+    """Blank-background quadrant with one isoline per ATP pathway at the
+    published gate threshold. A gate that is passed everywhere or nowhere in
+    the domain has no contour; its key line states which, so an absent line is
+    never ambiguous. ``payload`` is atp_gate_payload's result (None = draw
+    nothing, the isolines-off case)."""
+    import numpy as np
+    import matplotlib.patches as patches
+    from matplotlib.lines import Line2D
+
+    if not payload:
+        return
+    x0, y0, x1, y1 = bounds
+    if 'note' in payload:
+        ax.text((x0 + x1) / 2, (y0 + y1) / 2, payload['note'], color='dimgray',
+                fontsize=10, style='italic', ha='center', va='center', zorder=4)
+        return
+
+    threshold = payload['threshold']
+    clip_rect = patches.Rectangle((x0, y0), x1 - x0, y1 - y0,
+                                  transform=ax.transData)
+    handles, labels = [], []
+    for key in ('mitoATP', 'glycoATP', 'mixed'):
+        color = _ATP_GATE_COLORS[key]
+        style = _ATP_GATE_STYLES[key]
+        arr = np.asarray(payload['terms'][key], dtype=float)
+        if arr.ndim == 3:
+            arr = arr[arr.shape[0] // 2, :, :]
+        if float(arr.min()) > threshold:
+            status = 'everywhere ✓'
+        elif float(arr.max()) < threshold:
+            status = 'nowhere ✗'
+        else:
+            xs = np.linspace(0, size_x, arr.shape[1])
+            ys = np.linspace(0, size_y, arr.shape[0])
+            X, Y = np.meshgrid(xs, ys)
+            cs = ax.contour(X, Y, arr, levels=[threshold], colors=[color],
+                            linewidths=2.5, linestyles=style, zorder=5)
+            _clip_contour(cs, clip_rect)
+            status = None
+        handles.append(Line2D([], [], color=color, linewidth=2.5,
+                              linestyle=style))
+        labels.append(key if status is None else f'{key}: {status}')
+
+    if show_key:
+        leg = ax.legend(handles, labels,
+                        title=f'ATP gate: rate > {threshold:g} × max',
+                        loc='lower left', bbox_to_anchor=legend_pos,
+                        fontsize=8, title_fontsize=9, frameon=True,
+                        edgecolor='black', framealpha=0.9)
+        leg.get_title().set_fontweight('bold')
+        ax.add_artist(leg)
+
+
 def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[str, Any]],
                          cell_data: List[Tuple[Any, str]], cell_color_fn,
                          population, isolines: Dict[str, List[Tuple[float, str]]],
@@ -132,7 +256,8 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                          show_legends: bool = True,
                          show_gradient_legends: bool = True,
                          plane_sizes: Optional[Tuple[float, float]] = None,
-                         axis_labels: Optional[Tuple[str, str]] = None) -> Path:
+                         axis_labels: Optional[Tuple[str, str]] = None,
+                         atp_gate: Optional[Dict[str, Any]] = None) -> Path:
     """Render the 2x2 quadrant figure. Pure plotting — no context access.
 
     ``specs`` maps substance name -> {"color", "vmin", "vmax"}; a None bound
@@ -180,6 +305,12 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
 
     substance_names = list(specs.keys())
     for idx, name in enumerate(substance_names):
+        if name == ATP_GATE_KEY:
+            # Blank-background panel: proliferation ATP-gate isolines only.
+            _draw_atp_gate_quadrant(ax, atp_gate, quadrant_bounds[idx],
+                                    legend_positions[idx], size_x, size_y,
+                                    show_gradient_legends)
+            continue
         concentrations = np.asarray(fields[name])
         if concentrations.ndim == 3:
             concentrations = concentrations[concentrations.shape[0] // 2, :, :]
@@ -319,7 +450,8 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     else:
         ax.set_xlabel(f'X Position ({config.domain.size_x.unit})')
         ax.set_ylabel(f'Y Position ({config.domain.size_y.unit})')
-    ax.set_title(f'{" / ".join(substance_names)} at t = {time_point:.3f} {title_suffix}',
+    display_names = ['ATP gate' if n == ATP_GATE_KEY else n for n in substance_names]
+    ax.set_title(f'{" / ".join(display_names)} at t = {time_point:.3f} {title_suffix}',
                  fontsize=13, pad=12)
 
     # Cell-colour key, right of the plot. Fixed entries mirroring
@@ -386,9 +518,11 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                 "(dict order = top-left, top-right, bottom-left, bottom-right). "
                 "Each quadrant gets its own min/max legend; threshold isolines are "
                 "drawn in the owning substance's quadrant and labelled with the "
-                "substance name. Every overlay (cells, metabolism colours, fate "
-                "colours, legends, gradient bars, isolines) has its own show_* "
-                "switch for clean figures.",
+                "substance name. The reserved entry 'ATP_gate' shows the "
+                "proliferation ATP-gate isolines per pathway on a blank panel "
+                "instead of a field. Every overlay (cells, metabolism colours, "
+                "fate colours, legends, gradient bars, isolines) has its own "
+                "show_* switch for clean figures.",
     category="FINALIZATION",
     parameters=[
         {"name": "quadrant_substances", "type": "DICT",
@@ -401,12 +535,19 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                         "proportional shade even when the field is uniform. vmin/vmax "
                         "may be given individually; an omitted bound stays automatic. "
                         "Empty = Lactate/Glucose/TGFA/H as in the MicroC reference "
-                        "figure.",
+                        "figure. The reserved entry 'ATP_gate' (its colour value is "
+                        "ignored) renders a blank panel with the proliferation "
+                        "ATP-gate isolines instead of a field: one line per ATP "
+                        "pathway (mitoATP dark-cyan solid, glycoATP brown dashed, "
+                        "mixed dark-magenta dash-dot) where atp_rate crosses the "
+                        "atp_threshold1 x atp_rate_max gate published by Mark "
+                        "Proliferating Cells (gated).",
          "default": {}},
         {"name": "show_isolines", "type": "BOOL",
-         "description": "Draw the threshold isolines (gene-association thresholds "
-                        "and necrosis thresholds) in each substance's quadrant, on "
-                        "top of the cells. Off = clean fields only.",
+         "description": "Draw the threshold isolines (gene-association thresholds, "
+                        "necrosis thresholds, and the ATP_gate panel's pathway "
+                        "lines) in each owning quadrant, on top of the cells. "
+                        "Off = clean fields only (the ATP_gate panel goes blank).",
          "default": True},
         {"name": "show_cells", "type": "BOOL",
          "description": "Draw the cells over the substance fields. Off = fields "
@@ -493,7 +634,8 @@ def generate_quadrant_plots(
     if isinstance(autorange, str):
         autorange = autorange.strip().lower() in ('true', '1', 'yes')
     quadrants = _normalize_quadrants(raw, bool(autorange))
-    missing = [s for s in quadrants if s not in simulator.state.substances]
+    missing = [s for s in quadrants
+               if s != ATP_GATE_KEY and s not in simulator.state.substances]
     if missing:
         print(f"[WORKFLOW] Substances not found in simulator: {missing} - skipping quadrant plot")
         return False
@@ -506,7 +648,7 @@ def generate_quadrant_plots(
         output_path = Path('results/plots')
 
     fields = {name: simulator.state.substances[name].concentrations
-              for name in quadrants}
+              for name in quadrants if name != ATP_GATE_KEY}
 
     show_cells = _to_bool(show_cells)
     show_metabolism_colors = _to_bool(show_metabolism_colors)
@@ -528,6 +670,19 @@ def generate_quadrant_plots(
             entries.append((necrosis, 'Necrosis'))
         if entries:
             isolines[name] = entries
+
+    # ATP-gate panel data: the published gate contoured over the live
+    # Oxygen/Glucose fields. None when isolines are off (blank panel).
+    atp_gate = None
+    if ATP_GATE_KEY in quadrants and show_isolines:
+        subs = simulator.state.substances
+        atp_gate = atp_gate_payload(
+            results.get('proliferation_gate'),
+            getattr(subs.get('Oxygen'), 'concentrations', None),
+            getattr(subs.get('Glucose'), 'concentrations', None))
+        if 'note' in atp_gate:
+            print(f"[WORKFLOW] ATP-gate quadrant: "
+                  f"{atp_gate['note'].replace(chr(10), ' ')}")
 
     time_points = results.get('time', [])
     current_time = time_points[-1] if time_points else getattr(simulator, 'current_time', 0.0) or 0.0
@@ -557,6 +712,7 @@ def generate_quadrant_plots(
             show_fate_colors=show_fate_colors,
             show_legends=show_legends,
             show_gradient_legends=show_gradient_legends,
+            atp_gate=atp_gate,
         )
         print(f"[WORKFLOW] Quadrant plot written: {filepath}")
         return True

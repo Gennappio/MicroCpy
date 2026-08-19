@@ -175,6 +175,7 @@ def write_state_checkpoint(
     cells: Iterable[Any],
     config: Any,
     necrosis_thresholds: Optional[Dict[str, float]] = None,
+    proliferation_gate: Optional[Dict[str, float]] = None,
     time: float = 0.0,
     render_time: float = 0.0,
     dt: float = 1.0,
@@ -217,6 +218,12 @@ def write_state_checkpoint(
             name: _json_safe(threshold) for name in substances
             if (threshold := resolve_association_threshold(config, name)) is not None},
         "necrosis_thresholds": necrosis,
+        # Resolved proliferation ATP gate (threshold + the KO2/KG snapshot the
+        # publisher included), stored verbatim so a replot contours the exact
+        # rule the run applied. Empty dict when no gated node ran.
+        "proliferation_gate": {str(k): _json_safe(v)
+                               for k, v in (proliferation_gate or {}).items()
+                               if v is not None},
         "isolines": {name: [[_json_safe(value), label] for value, label in entries]
                      for name, entries in
                      resolve_isolines(config, substances, necrosis).items()},
@@ -312,6 +319,12 @@ class StateCheckpoint:
         # replot serializes plot data byte-identically to the live run.
         return {name: [(value, str(label)) for value, label in entries]
                 for name, entries in self.meta.get("isolines", {}).items()}
+
+    @property
+    def proliferation_gate(self) -> Optional[Dict[str, float]]:
+        """The resolved ATP gate stored at save time, or None when the run
+        had no gated proliferation node."""
+        return self.meta.get("proliferation_gate") or None
 
 
 def read_state_checkpoint(path: Union[str, Path]) -> StateCheckpoint:

@@ -74,6 +74,21 @@ DEFAULTS: Dict[str, float] = {
 }
 
 
+def resolve_metabolism_parameters(context: Dict[str, Any]) -> Dict[str, float]:
+    """The metabolic constants in effect: DEFAULTS overlaid with whatever this
+    node stored in ``context['custom_parameters']`` (unknown keys ignored).
+
+    The single resolution rule (R2.2): ``compute_metabolism`` and every other
+    reader of these constants (e.g. the ATP-gate snapshot published by
+    ``mark_proliferating_cells_gated``) resolve through here, so the values a
+    plot or checkpoint reports are provably the ones the solver ran with.
+    """
+    values = dict(DEFAULTS)
+    values.update({k: v for k, v in (context.get('custom_parameters') or {}).items()
+                   if k in DEFAULTS})
+    return values
+
+
 @register_function(
     requires=[],
     display_name="Set Metabolism Parameters",

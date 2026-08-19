@@ -42,10 +42,12 @@ from src.biology.context import BiologicalContext
 from src.core.coords import cell_to_solver_index
 
 from opencellcomms_adapters.MicroC.functions.reporting.generate_quadrant_plots import (
+    ATP_GATE_KEY,
     DEFAULT_QUADRANTS,
     _association_threshold,
     _normalize_quadrants,
     _to_bool,
+    atp_gate_payload,
     render_quadrant_plot,
 )
 
@@ -407,7 +409,10 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
          "description": "Substance -> gradient spec, exactly as on the 2D "
                         "quadrant node: a colour string (auto-range) or "
                         "{color, vmin, vmax}. Entry order = TL, TR, BL, BR. "
-                        "Empty = Lactate/Glucose/TGFA/H.",
+                        "Empty = Lactate/Glucose/TGFA/H. The reserved entry "
+                        "'ATP_gate' renders the proliferation ATP-gate "
+                        "isolines per pathway on a blank panel (slice "
+                        "figures; not in the HTML viewer).",
          "default": {}},
         {"name": "cell_band", "type": "STRING",
          "description": "Cells drawn on a slice: 'layer' = the single bio cell "
@@ -508,13 +513,27 @@ def generate_3d_plots(
               f"{list(raw)} - skipping")
         return False
     specs = _normalize_quadrants(raw, _to_bool(autorange))
-    missing = [s for s in specs if s not in simulator.state.substances]
+    missing = [s for s in specs
+               if s != ATP_GATE_KEY and s not in simulator.state.substances]
     if missing:
         print(f"[WORKFLOW] Substances not found in simulator: {missing} - skipping 3D plots")
         return False
 
     fields = {name: simulator.state.substances[name].concentrations
-              for name in specs}
+              for name in specs if name != ATP_GATE_KEY}
+
+    # ATP-gate panel data over the full 3D O2/Glucose grids; the term arrays
+    # are sliced per plane below, exactly like the substance fields.
+    atp_gate = None
+    if ATP_GATE_KEY in specs and _to_bool(show_isolines):
+        subs = simulator.state.substances
+        atp_gate = atp_gate_payload(
+            results.get('proliferation_gate'),
+            getattr(subs.get('Oxygen'), 'concentrations', None),
+            getattr(subs.get('Glucose'), 'concentrations', None))
+        if 'note' in atp_gate:
+            print(f"[WORKFLOW] ATP-gate quadrant: "
+                  f"{atp_gate['note'].replace(chr(10), ' ')}")
 
     # Isolines per substance (association + necrosis), as on the 2D node
     isolines: Dict[str, List[Tuple[float, str]]] = {}
@@ -554,6 +573,13 @@ def generate_3d_plots(
             try:
                 plane_fields = {name: slice_field(np.asarray(arr), axis, index)
                                 for name, arr in fields.items()}
+                plane_gate = atp_gate
+                if atp_gate is not None and 'terms' in atp_gate:
+                    plane_gate = {
+                        'threshold': atp_gate['threshold'],
+                        'terms': {k: slice_field(np.asarray(t), axis, index)
+                                  for k, t in atp_gate['terms'].items()},
+                    }
                 triples, layers = select_band_cells(
                     population.state.cells.values(), config, axis, index,
                     cell_band=str(cell_band))
@@ -571,6 +597,7 @@ def generate_3d_plots(
                     show_legends=_to_bool(show_legends),
                     show_gradient_legends=_to_bool(show_gradient_legends),
                     plane_sizes=plane_sizes, axis_labels=axis_labels,
+                    atp_gate=plane_gate,
                 )
                 print(f"[WORKFLOW] 3D slice figure written: {out.name}")
             except Exception as e:
@@ -583,10 +610,17 @@ def generate_3d_plots(
         try:
             html_out = output_path / "viewer3d" / (
                 f"spheroid3d_t{current_time:.3f}_{marker}.html")
+            # The interactive viewer renders substance volumes only; the
+            # ATP-gate panel is a slice-figure feature for now.
+            viewer_specs = {k: v for k, v in specs.items() if k != ATP_GATE_KEY}
+            wanted_3d = list(substances_3d) if substances_3d else list(viewer_specs)
+            if ATP_GATE_KEY in wanted_3d:
+                print("[WORKFLOW] 3D viewer: ATP_gate has no volume - skipped there")
+                wanted_3d = [n for n in wanted_3d if n != ATP_GATE_KEY]
             written = write_viewer_html(
-                config, fields, specs, list(population.state.cells.values()),
+                config, fields, viewer_specs, list(population.state.cells.values()),
                 jayatilake_cell_color, isolines,
-                list(substances_3d) if substances_3d else list(specs),
+                wanted_3d,
                 _to_bool(html_metabolism_view), _to_bool(html_fate_view),
                 current_time, base_suffix, html_out)
             if written:

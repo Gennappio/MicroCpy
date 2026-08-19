@@ -49,6 +49,10 @@ from typing import Any, Dict, Union
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext, Phenotype
 
+from opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters import (
+    resolve_metabolism_parameters,
+)
+
 
 _PROTECTED_FATES = {Phenotype.APOPTOSIS.value, Phenotype.GROWTH_ARREST.value,
                     Phenotype.NECROSIS.value}
@@ -113,7 +117,9 @@ def _flush(env: BiologicalContext, tally: Dict[str, int]) -> None:
     description="Mark a cell as proliferating only if its Proliferation gene is ON, "
                 "its ATP production rate exceeds atp_threshold1 x atp_rate_max, and it "
                 "has aged past cell_cycle_time steps since its last division. Requires "
-                "the Calculate Cell Metabolism and Advance Cell Age nodes.",
+                "the Calculate Cell Metabolism and Advance Cell Age nodes. Publishes "
+                "the resolved gate to results['proliferation_gate'] so the plots' "
+                "ATP-gate isolines draw the threshold actually in effect.",
     category="INTERCELLULAR",
     parameters=[
         {"name": "proliferation_gate", "type": "DICT",
@@ -133,6 +139,19 @@ def mark_proliferating_cells_gated(
     gate = _resolve(proliferation_gate)
     atp_threshold1 = gate['atp_threshold1']
     cell_cycle_time = gate['cell_cycle_time']
+
+    # Publish the gate actually in effect so the plots can draw the ATP-gate
+    # isolines and the checkpoints can replay them (same pattern as
+    # necrosis_thresholds). The metabolic constants are NOT owned here — they
+    # are a run-time snapshot of the Set Metabolism Parameters owner, included
+    # so the record is self-contained for offline replay. Idempotent under a
+    # per-agent ask.
+    metab = resolve_metabolism_parameters(env.raw_context)
+    env.results.store('proliferation_gate', {
+        **gate,
+        'KO2': metab['KO2'], 'KG': metab['KG'],
+        'max_atp': metab['max_atp'], 'oxygen_vmax': metab['oxygen_vmax'],
+    })
 
     # Per-cell when the executor's per-cell ask bound a cell (env.cell); else
     # fall back to the whole-population loop.

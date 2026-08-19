@@ -86,11 +86,13 @@ def _common(ckpt: StateCheckpoint, params: Dict[str, Any], q, use_true_time: boo
     if len(raw) != 4:
         raise ValueError(f"Need exactly 4 quadrant substances, got {list(raw)}")
     specs = q._normalize_quadrants(raw, q._to_bool(params.get('autorange', False)))
-    missing = [name for name in specs if name not in ckpt.fields]
+    missing = [name for name in specs
+               if name != q.ATP_GATE_KEY and name not in ckpt.fields]
     if missing:
         raise KeyError(f"Substances {missing} not in checkpoint "
                        f"(available: {ckpt.substances})")
-    fields = {name: ckpt.fields[name] for name in specs}
+    fields = {name: ckpt.fields[name] for name in specs
+              if name != q.ATP_GATE_KEY}
 
     show = {key: q._to_bool(params.get(key, True))
             for key in ('show_isolines', 'show_cells', 'show_metabolism_colors',
@@ -98,19 +100,27 @@ def _common(ckpt: StateCheckpoint, params: Dict[str, Any], q, use_true_time: boo
     isolines = ({name: entries for name, entries in ckpt.isolines().items()
                  if name in specs} if show['show_isolines'] else {})
 
+    # ATP-gate panel: same shared builder as the live nodes, fed from the
+    # checkpoint's stored gate record and saved O2/Glucose fields.
+    atp_gate = None
+    if q.ATP_GATE_KEY in specs and show['show_isolines']:
+        atp_gate = q.atp_gate_payload(ckpt.proliferation_gate,
+                                      ckpt.fields.get('Oxygen'),
+                                      ckpt.fields.get('Glucose'))
+
     suffix = str(params.get('plot_name_suffix', '') or '')
     t = ckpt.time if use_true_time else ckpt.render_time
     marker = f"ITER_{ckpt.iteration:03d}{suffix}"
     title_suffix = (f"[Iteration {ckpt.iteration}"
                     f"{' ' + suffix.strip('_') if suffix else ''}]")
-    return specs, fields, isolines, show, t, marker, title_suffix
+    return specs, fields, isolines, show, t, marker, title_suffix, atp_gate
 
 
 def replot_2d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
               use_true_time: bool = False) -> List[Path]:
     """Regenerate the 2D quadrant figure from a checkpoint."""
     q, _, cell_color = _adapter()
-    specs, fields, isolines, show, t, marker, title_suffix = _common(
+    specs, fields, isolines, show, t, marker, title_suffix, atp_gate = _common(
         ckpt, params, q, use_true_time)
 
     cfg = ckpt.config_stub()
@@ -125,6 +135,7 @@ def replot_2d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
         show_fate_colors=show['show_fate_colors'],
         show_legends=show['show_legends'],
         show_gradient_legends=show['show_gradient_legends'],
+        atp_gate=atp_gate,
     )
     return [out]
 
@@ -135,7 +146,7 @@ def replot_3d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
     """Regenerate the 3D slice figures and viewer HTML from a checkpoint."""
     import numpy as np
     q, p3, cell_color = _adapter()
-    specs, fields, isolines, show, t, marker, title_suffix = _common(
+    specs, fields, isolines, show, t, marker, title_suffix, atp_gate = _common(
         ckpt, params, q, use_true_time)
 
     cfg = ckpt.config_stub()
@@ -147,6 +158,13 @@ def replot_3d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
         axis, index = p3.parse_slice_spec(spec, grid_dims)
         plane_fields = {name: p3.slice_field(np.asarray(arr), axis, index)
                         for name, arr in fields.items()}
+        plane_gate = atp_gate
+        if atp_gate is not None and 'terms' in atp_gate:
+            plane_gate = {
+                'threshold': atp_gate['threshold'],
+                'terms': {k: p3.slice_field(np.asarray(v), axis, index)
+                          for k, v in atp_gate['terms'].items()},
+            }
         triples, layers = p3.select_band_cells(
             cells, cfg, axis, index,
             cell_band=str(params.get('cell_band', 'layer')))
@@ -163,6 +181,7 @@ def replot_3d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
             show_legends=show['show_legends'],
             show_gradient_legends=show['show_gradient_legends'],
             plane_sizes=plane_sizes, axis_labels=axis_labels,
+            atp_gate=plane_gate,
         )
         written.append(out)
 
@@ -171,7 +190,10 @@ def replot_3d(ckpt: StateCheckpoint, params: Dict[str, Any], out_root: Path,
     do_html = (not no_html) and (
         force_html or (html_enabled and ckpt.iteration % html_interval == 0))
     if do_html:
-        substances_3d = list(params.get('substances_3d') or []) or list(specs)
+        # As on the live node: the viewer renders substance volumes only.
+        substances_3d = [n for n in
+                         (list(params.get('substances_3d') or []) or list(specs))
+                         if n != q.ATP_GATE_KEY]
         html_out = p3.write_viewer_html(
             cfg, fields, specs, cells, cell_color, isolines, substances_3d,
             q._to_bool(params.get('html_metabolism_view', True)),
