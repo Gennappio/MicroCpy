@@ -8,6 +8,7 @@ import {
   Workflow,
   Users,
   Globe,
+  Boxes,
   PlayCircle,
   Sparkles,
   Plus,
@@ -26,6 +27,8 @@ const PARAM_NODE_TYPES = new Set(['parameterNode', 'listParameterNode', 'dictPar
 const KIND_META = {
   agent_create: { label: 'Agent Creation', accent: '#10b981', icon: <Globe size={16} /> },
   agent_behavior: { label: 'Agent Behaviors', accent: '#06b6d4', icon: <Users size={16} /> },
+  resource_init: { label: 'Resource Setup', accent: '#f59e0b', icon: <Boxes size={16} /> },
+  resource_behavior: { label: 'Resource Behaviors', accent: '#f59e0b', icon: <Boxes size={16} /> },
   world: { label: 'World Setup', accent: '#10b981', icon: <Globe size={16} /> },
   world_behavior: { label: 'World Behaviors', accent: '#10b981', icon: <Globe size={16} /> },
   init_sequence: { label: 'Initialization', accent: '#94a3b8', icon: <PlayCircle size={16} /> },
@@ -38,6 +41,8 @@ const KIND_META = {
 const KIND_ORDER = [
   'agent_create',
   'agent_behavior',
+  'resource_init',
+  'resource_behavior',
   'world',
   'world_behavior',
   'init_sequence',
