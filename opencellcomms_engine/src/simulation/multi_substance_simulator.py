@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Import FiPy for diffusion simulation
 try:
-    from fipy import Grid2D, Grid3D, CellVariable, DiffusionTerm, ImplicitSourceTerm
+    from fipy import Grid2D, Grid3D, CellVariable, DiffusionTerm, ImplicitSourceTerm, TransientTerm
     from fipy.solvers.scipy import LinearGMRESSolver, LinearLUSolver
     FIPY_AVAILABLE = True
 except ImportError:
@@ -361,8 +361,9 @@ class MultiSubstanceSimulator:
 
     def update(self, substance_reactions: Dict[Tuple[float, float], Dict[str, float]],
                implicit_sinks: Optional[Dict[Tuple[float, float], Dict[str, float]]] = None,
-               substance_filter: Optional[List[str]] = None):
-        """Update using FiPy diffusion solver - steady state solution.
+               substance_filter: Optional[List[str]] = None,
+               transient_dt: Optional[float] = None):
+        """Update using FiPy diffusion solver - steady state solution by default.
 
         Args:
             substance_reactions: explicit source terms per cell position
@@ -375,6 +376,12 @@ class MultiSubstanceSimulator:
             substance_filter: optional list of substance names to solve;
                 substances not listed keep their current field untouched
                 (None = solve all).
+            transient_dt: optional timestep in SECONDS. When set, each field
+                takes ONE backward (implicit) Euler step of
+                ∂c/∂t = ∇·(D∇c) − k(x)·c + S(x) starting from its current
+                values (the writeback below keeps the FiPy variable in sync,
+                so consecutive calls integrate the field in time). When None
+                (default), the historical steady-state solve runs unchanged.
         """
 
         # Progress logging: show which substances are being processed
@@ -529,25 +536,40 @@ class MultiSubstanceSimulator:
 
             if sink_field is not None:
                 sink_var = CellVariable(mesh=self.fipy_mesh, value=sink_field + decay_rate)
-                equation = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=sink_var) == -source_var
+                steady_terms = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=sink_var)
             elif decay_rate > 0.0:
                 # First-order decay -k*c, implicit on the current field (config.decay_rate, 1/s)
-                equation = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=decay_rate) == -source_var
+                steady_terms = DiffusionTerm(coeff=config.diffusion_coeff) - ImplicitSourceTerm(coeff=decay_rate)
             else:
-                equation = DiffusionTerm(coeff=config.diffusion_coeff) == -source_var
+                steady_terms = DiffusionTerm(coeff=config.diffusion_coeff)
+
+            if transient_dt is not None:
+                # One implicit (backward) Euler step of ∂c/∂t = ∇·(D∇c) − k·c + S.
+                # equation.solve() performs a single assembly+solve, and without
+                # hasOld the variable's pre-solve value is c^n at assembly time,
+                # so no updateOld() machinery is needed for a one-sweep step.
+                equation = TransientTerm() == steady_terms + source_var
+            else:
+                equation = steady_terms == -source_var
 
             # Direct sparse-LU solve where the matrix is nonsingular (Dirichlet
-            # boundary or an implicit decay/uptake term). A pure-Neumann
-            # steady-state system is singular — LU factorization would fail —
-            # so those keep the iterative GMRES solver.
-            if (substance_state.config.boundary_type == "fixed" or decay_rate > 0.0
+            # boundary, an implicit decay/uptake term, or a transient step —
+            # TransientTerm puts V/dt on the diagonal, so the transient matrix
+            # is nonsingular even with pure-Neumann boundaries). Only the
+            # pure-Neumann STEADY-STATE system is singular — LU factorization
+            # would fail — so that case keeps the iterative GMRES solver.
+            if (transient_dt is not None
+                    or substance_state.config.boundary_type == "fixed" or decay_rate > 0.0
                     or sink_field is not None):
                 solver = LinearLUSolver(iterations=10, tolerance=1e-6)
             else:
                 solver = LinearGMRESSolver(iterations=1000, tolerance=1e-6)
 
             try:
-                res = equation.solve(var=var, solver=solver)
+                if transient_dt is not None:
+                    res = equation.solve(var=var, solver=solver, dt=float(transient_dt))
+                else:
+                    res = equation.solve(var=var, solver=solver)
                 # Print completion with residual if available
             #     if DEBUG_DIFFUSION_SOLVER:
             #         if res is not None:

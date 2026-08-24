@@ -171,3 +171,26 @@ def setup_simulation(
         traceback.print_exc()
         return False
 
+
+def get_simulation_dt_hours(context: Dict[str, Any]) -> float:
+    """dt (hours) as owned by the Setup Simulation node (R2.2: one value, one owner).
+
+    setup_simulation stores its GUI ``dt`` parameter in ``config.time.dt``;
+    every per-step consumer (the transient diffusion solves, the MaBoSS window)
+    resolves it here at run time instead of declaring a second dt parameter.
+
+    Deliberately NOT ``env.dt``: in the v2.0 executor path no clock is seeded
+    and no flat ``context['dt']`` exists, so ``env.dt`` silently returns its
+    1.0 fallback and would discard the configured value. And deliberately no
+    fallback here (R2.3): ``setup_simulation`` always runs first in
+    ``__world__``, so a missing owner is a wiring bug — fail loudly.
+    """
+    config = context.get('config')
+    dt = getattr(getattr(config, 'time', None), 'dt', None)
+    if dt is None:
+        raise ValueError(
+            "dt is owned by the Setup Simulation node (config.time.dt) and is "
+            "not set — ensure setup_simulation runs in __world__ before any "
+            "transient-diffusion or MaBoSS node")
+    return float(dt)  # GUI may deliver "0.01" as a string
+
