@@ -16,6 +16,7 @@ import opencellcomms_adapters.MicroC.functions.initialization.build_tumor_cell_a
 import opencellcomms_adapters.MicroC.functions.gene_network.initialize_netlogo_gene_networks  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_netlogo  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_single_gene  # noqa: F401,E501
+import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_maboss  # noqa: F401,E501
 import opencellcomms_adapters.MicroC.functions.gene_network.fix_gene_nodes  # noqa: F401
 
 # Metabolism
