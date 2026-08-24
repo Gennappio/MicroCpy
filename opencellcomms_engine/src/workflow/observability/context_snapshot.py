@@ -224,13 +224,39 @@ class ContextSnapshotManager:
 
         context_dir = self.results_dir / "observability" / "context"
 
-        # Clear old snapshots from previous runs. ignore_errors: the tree can
-        # be half-written by a killed run or races with a concurrent cleanup,
-        # and a FileNotFoundError mid-rmtree must not abort a fresh simulation
-        # over leftover DEBUG artifacts.
+        # Clear old snapshots from previous runs WITHOUT blocking startup.
+        # Snapshots are taken around every subworkflow execution — including
+        # per-agent asks — so a long run leaves a tree of millions of files,
+        # and deleting it inline has stalled a fresh simulation for ~1 hour
+        # inside os.unlink before the first function ran. Instead, rename the
+        # tree aside (atomic and instant on the same filesystem) and delete it
+        # in a daemon thread; also sweep trash left by earlier runs that died
+        # mid-delete. ignore_errors / broad fallbacks: the tree can be
+        # half-written by a killed run or race with a concurrent cleanup, and
+        # leftover DEBUG artifacts must never abort a fresh simulation.
         if context_dir.exists():
             import shutil
-            shutil.rmtree(context_dir, ignore_errors=True)
+            trash_parent = context_dir.parent
+            try:
+                import tempfile
+                trash_root = Path(tempfile.mkdtemp(prefix=".context.trash-",
+                                                   dir=trash_parent))
+                context_dir.rename(trash_root / "context")
+            except OSError:
+                # Rename failed (e.g. concurrent deletion) — fall back to the
+                # old inline removal rather than leaving the tree in place.
+                shutil.rmtree(context_dir, ignore_errors=True)
+
+        trash_parent = context_dir.parent
+        if trash_parent.exists() and any(trash_parent.glob(".context.trash-*")):
+            def _sweep_trash(parent: Path = trash_parent) -> None:
+                import shutil
+                for stale in parent.glob(".context.trash-*"):
+                    shutil.rmtree(stale, ignore_errors=True)
+
+            threading.Thread(target=_sweep_trash,
+                             name="occ-observability-trash-sweep",
+                             daemon=True).start()
 
         context_dir.mkdir(parents=True, exist_ok=True)
         self._versions.clear()
