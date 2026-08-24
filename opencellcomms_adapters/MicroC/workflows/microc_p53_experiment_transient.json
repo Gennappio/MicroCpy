@@ -1,0 +1,2920 @@
+{
+  "version": "2.0",
+  "name": "MicroC p53 (Transient + MaBoSS)",
+  "description": "MicroC p53 with PhysiBoSS-style transient dynamics. Derived from microc_p53_experiment.json -- keeps its clamp experiment, ATP-gated fates and reporting untouched so the two can be compared; replaces the steady-state physics with time integration. Four defining features:\n(1) each scheduler step advances time by dt (owned by Setup Simulation, 0.01 h): first one implicit (backward) Euler TRANSIENT step of the reaction-diffusion PDEs -- the metabolic group (Oxygen, Glucose, Lactate, H) with Michaelis-Menten sources evaluated once at start-of-step concentrations (PhysiCell operator splitting, no Picard loop) and the growth factors (TGFA, FGF, HGF, GI) with gene-gated production explicit and first-order uptake implicit in the matrix -- then a per-cell MaBoSS continuous-time Gillespie advance of the gene network over window = dt x maboss_time_scale (engine-native BooleanNetwork.step_maboss; jaya.bnd's '@logic ? 1 : 0' rates are exactly the engine defaults 1.0), the PhysiBoSS event check for that same t. Fate nodes are ordinary Boolean nodes, read directly by the fate functions.\n(2) fix_gene_nodes clamps genes for the whole run, heritably across division. p53 has a logic rule, so without a clamp it is recomputed every step and reactivates from growth-factor signalling. With p53 held OFF, Apoptosis = !BCL2 & !ERK & FOXO3 & p53 is unsatisfiable, so the tumour proliferates; with it ON, apoptosis and growth arrest dominate. Both the knockout table and the MaBoSS time scale are wired parameter nodes, so they appear in the Planner.\n(3) a fate_summary behavior records the per-iteration fate, phenotype and population census, tracking p53 and p38 so the clamp can be seen holding.\n(4) proliferation is ATP- and cell-cycle-gated. microc.json promotes a cell on the Proliferation gene alone; here mark_proliferating_cells_gated also requires atp_rate > atp_threshold1 * atp_rate_max (default 0.8) and age > cell_cycle_time (default 2 scheduler steps). calculate_cell_metabolism now computes the per-cell ATP production rate R_ATP = A0*(vmax/6)*mm_O2*mm_Glc (mitoATP) + A0*(vmax/6)*mm_Glc (glycoATP) with A0 = max_atp = 30, and publishes the single-pathway ceiling atp_rate_max = A0*vmax/6 = 1.5e-16 alongside it, so the threshold is a fraction of ONE saturated pathway (both pathways saturated scores 2.0). A new advance_cell_age node supplies the clock: nothing else in MicroC increments cell age, and update_cell_division already resets it to 0 on parent and daughter, so age is steps since the last division.\nmaboss_time_scale defaults to 1.0 (one MaBoSS time unit per simulated hour): with dt = 0.01 h each step advances every cell's CTMC by a 0.01 window, so an unsatisfied node flips with probability ~1% per step and gene trajectories track simulation time t. Raise the scale to accelerate the network relative to diffusion.",
+  "metadata": {
+    "author": "MicroC p53 transient variant",
+    "created": "2026-08-20",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "tumor_cell",
+          "create_subworkflow": "tumor_cell_create",
+          "behavior_subworkflows": [
+            "gene_update",
+            "fate_update",
+            "fate_summary",
+            "symbiosis_summary"
+          ]
+        }
+      ],
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": [
+          "final_summary"
+        ]
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "resource_kinds": [
+        {
+          "name": "Oxygen",
+          "init_subworkflow": "oxygen_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "Glucose",
+          "init_subworkflow": "glucose_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "Lactate",
+          "init_subworkflow": "lactate_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "H",
+          "init_subworkflow": "h_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "TGFA",
+          "init_subworkflow": "tgfa_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "FGF",
+          "init_subworkflow": "fgf_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "HGF",
+          "init_subworkflow": "hgf_init",
+          "behavior_subworkflows": []
+        },
+        {
+          "name": "GI",
+          "init_subworkflow": "gi_init",
+          "behavior_subworkflows": []
+        }
+      ],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": [
+          "diffusion_step",
+          "division",
+          "iteration_plots"
+        ]
+      },
+      "contract_enforcement": "warn",
+      "planner": {
+        "tabs": [
+          {
+            "id": "tab-p53-mutant",
+            "name": "WT",
+            "enabled": false,
+            "parameterOverrides": {
+              "agentinit-Setup_population-param_checkpoint_file": {
+                "label": "Checkpoint File",
+                "parameters": {
+                  "file_path": "../data/initial_cells_200_center_1500.csv"
+                }
+              },
+              "diffusion_step-param_lactate_conversion_factor": {
+                "label": "Lactate Production Scale",
+                "parameters": {
+                  "lactate_conversion_factor": "2000"
+                }
+              },
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "2000"
+                }
+              },
+              "diffusion_step-param_oxygen_conversion_factor": {
+                "label": "Oxygen Consumption Scale",
+                "parameters": {
+                  "oxygen_conversion_factor": "2000"
+                }
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1786647516606-1",
+            "name": "p53on",
+            "enabled": false,
+            "parameterOverrides": {
+              "tumor_cell_create-param_fixed_nodes": {
+                "label": "Gene Knockouts",
+                "entries": [
+                  {
+                    "key": "p53",
+                    "value": "true",
+                    "valueType": "string"
+                  }
+                ],
+                "targetParam": "fixed_nodes"
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1786647651198-2",
+            "name": "p53off",
+            "enabled": false,
+            "parameterOverrides": {
+              "tumor_cell_create-param_fixed_nodes": {
+                "label": "Gene Knockouts",
+                "entries": [
+                  {
+                    "key": "p53",
+                    "value": "false",
+                    "valueType": "string"
+                  }
+                ],
+                "targetParam": "fixed_nodes"
+              }
+            }
+          },
+          {
+            "id": "planner-tab-1786647663848-3",
+            "name": "MCT1off",
+            "enabled": true,
+            "parameterOverrides": {
+              "tumor_cell_create-param_fixed_nodes": {
+                "label": "Gene Knockouts",
+                "entries": [
+                  {
+                    "key": "MCT1",
+                    "value": "false",
+                    "valueType": "string"
+                  },
+                  {
+                    "key": "p53",
+                    "value": "false",
+                    "valueType": "string"
+                  }
+                ],
+                "targetParam": "fixed_nodes"
+              },
+              "diffusion_step-param_oxygen_conversion_factor": {
+                "label": "Oxygen Consumption Scale",
+                "parameters": {
+                  "oxygen_conversion_factor": 20
+                }
+              },
+              "diffusion_step-param_lactate_conversion_factor": {
+                "label": "Lactate Production Scale",
+                "parameters": {
+                  "lactate_conversion_factor": "20"
+                }
+              },
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "20"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "workflow_source_path": "microc_p53_experiment_transient.json"
+  },
+  "subworkflows": {
+    "oxygen_init": {
+      "description": "Oxygen resource - configures the Oxygen substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-oxygen_init",
+        "type": "controller",
+        "label": "OXYGEN INIT",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "oxygen_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 240
+          },
+          "description": "Configure the Oxygen substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "oxygen_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "oxygen_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Oxygen\",\"diffusion_coeff\":1.0e-09,\"production_rate\":0.0,\"uptake_rate\":3.0e-19,\"initial_value\":0.07,\"boundary_value\":0.07,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": -243,
+            "y": 242
+          }
+        }
+      ],
+      "execution_order": [
+        "oxygen_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "glucose_init": {
+      "description": "Glucose resource - configures the Glucose substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-glucose_init",
+        "type": "controller",
+        "label": "GLUCOSE INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "glucose_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Glucose substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "glucose_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "glucose_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"production_rate\":0.0,\"uptake_rate\":3.0e-18,\"initial_value\":5.0,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "glucose_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "lactate_init": {
+      "description": "Lactate resource - configures the Lactate substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-lactate_init",
+        "type": "controller",
+        "label": "LACTATE INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "lactate_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Lactate substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "lactate_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "lactate_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Lactate\",\"diffusion_coeff\":6.70e-11,\"production_rate\":3.0e-13,\"uptake_rate\":0.0,\"initial_value\":5.0,\"boundary_value\":1.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 242.40788346186798
+          }
+        }
+      ],
+      "execution_order": [
+        "lactate_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "h_init": {
+      "description": "H resource - configures the H substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-h_init",
+        "type": "controller",
+        "label": "H INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "h_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the H substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "h_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "h_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"H\",\"diffusion_coeff\":1.0e-9,\"production_rate\":2.0e-20,\"uptake_rate\":3.0e-15,\"initial_value\":4.0e-5,\"boundary_value\":4.0e-5,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "h_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "tgfa_init": {
+      "description": "TGFA resource - configures the TGFA substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-tgfa_init",
+        "type": "controller",
+        "label": "TGFA INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "tgfa_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the TGFA substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "tgfa_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "tgfa_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"TGFA\",\"diffusion_coeff\":5.18e-11,\"production_rate\":2.0e-20,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "tgfa_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "fgf_init": {
+      "description": "FGF resource - configures the FGF substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-fgf_init",
+        "type": "controller",
+        "label": "FGF INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fgf_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the FGF substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fgf_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "fgf_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"FGF\",\"diffusion_coeff\":2.2e-10,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "fgf_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "hgf_init": {
+      "description": "HGF resource - configures the HGF substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-hgf_init",
+        "type": "controller",
+        "label": "HGF INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "hgf_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the HGF substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "hgf_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "hgf_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"HGF\",\"diffusion_coeff\":8.50e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-18,\"initial_value\":2.0e-6,\"boundary_value\":2.0e-6,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "hgf_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "gi_init": {
+      "description": "GI resource - configures the GI substance field (diffusion coefficient, boundary condition, initial concentration) on the shared diffusion simulator. Runs once during initialization.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-gi_init",
+        "type": "controller",
+        "label": "GI INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gi_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the GI substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "gi_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "gi_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"GI\",\"diffusion_coeff\":5.18e-11,\"production_rate\":0.0,\"uptake_rate\":2.0e-17,\"initial_value\":0.0,\"boundary_value\":0.0,\"boundary_type\":\"neumann\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "gi_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "__world__": {
+      "description": "MicroC: __world__ (sets up the world: simulation, domain, the empty population container bound to the domain grid, substances, associations)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "world"
+        },
+        "reads": [
+          "simulation.parameters"
+        ],
+        "writes": [
+          "simulation.config",
+          "world.self",
+          "agent.collection",
+          "resource.collection",
+          "associations"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "envinit-Setup_simulation-setup_sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 340
+          },
+          "description": "Initialize simulation infrastructure",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_simulation-param_sim_name",
+            "envinit-Setup_simulation-param_sim_dt",
+            "envinit-Setup_simulation-param_sim_output_dir"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "simulation.config",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-setup_domain_node",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1082
+          },
+          "description": "Define 2D spatial domain",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_simulation-param_domain_dimensions",
+            "envinit-Setup_simulation-param_domain_size_x",
+            "envinit-Setup_simulation-param_domain_size_y",
+            "envinit-Setup_simulation-param_domain_nx",
+            "envinit-Setup_simulation-param_domain_ny",
+            "envinit-Setup_simulation-param_domain_cell_height",
+            "envinit-Setup_simulation-param_1771966627094"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "world.self",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_population-setup_pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1820
+          },
+          "description": "Create the (empty) cell population container bound to the domain grid. Cells are placed later by the agent init (read_checkpoint).",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Setup_associations-setup_all_associations",
+          "function_name": "setup_associations",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 2113
+          },
+          "description": "Configure all substance-to-gene associations",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Setup_associations-param_associations_dict"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "associations",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Set_hill_activation-set_hill_input_activation",
+          "function_name": "set_hill_input_activation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 2700
+          },
+          "description": "Marks gene inputs as PROBABILISTIC (NetLogo hill drug law) instead of the deterministic conc > threshold test: p = hill_max - hill_max/(1 + (conc/threshold)^hill_exponent); the input turns ON if p exceeds the cell's persistent random (drawn at creation, re-drawn at division). The threshold is the input's row in the Associations dict above \u2014 not repeated here. Inputs not listed stay deterministic. Consumed each step by apply_associations_to_inputs and at t=0 by the gene-network init.",
+          "custom_name": "set_hill_input_activation",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Set_hill_activation-param_hill_activations"
+          ],
+          "contract": {
+            "owner": {
+              "type": "world"
+            },
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "envinit-Set_metabolism-set_metabolism_parameters",
+          "function_name": "set_metabolism_parameters",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 2400
+          },
+          "description": "Metabolism model constants (Michaelis-Menten laws evaluated once per step by the TRANSIENT diffusion solve). Equations documented in the node source.",
+          "custom_name": "set_metabolism_parameters",
+          "step_count": 1,
+          "parameter_nodes": [
+            "envinit-Set_metabolism-param_metabolism"
+          ],
+          "contract": {
+            "owner": {
+              "type": "world"
+            },
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "envinit-Setup_simulation-param_sim_name",
+          "label": "Simulation Name",
+          "parameters": {
+            "name": "MicroC Simulation"
+          },
+          "position": {
+            "x": -220,
+            "y": 240
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_sim_dt",
+          "label": "Time Step (dt)",
+          "parameters": {
+            "dt": "0.01"
+          },
+          "position": {
+            "x": -220,
+            "y": 378
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_sim_output_dir",
+          "label": "Output Directory",
+          "parameters": {
+            "output_dir": "results"
+          },
+          "position": {
+            "x": -220,
+            "y": 516
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_dimensions",
+          "label": "Dimensions",
+          "parameters": {
+            "dimensions": 2
+          },
+          "position": {
+            "x": -220,
+            "y": 754
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_size_x",
+          "label": "Size X (\u03bcm)",
+          "parameters": {
+            "size_x": "1500"
+          },
+          "position": {
+            "x": -220,
+            "y": 892
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_size_y",
+          "label": "Size Y (\u03bcm)",
+          "parameters": {
+            "size_y": "1500"
+          },
+          "position": {
+            "x": -220,
+            "y": 1030
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_nx",
+          "label": "Grid NX",
+          "parameters": {
+            "nx": "30"
+          },
+          "position": {
+            "x": -220,
+            "y": 1168
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_ny",
+          "label": "Grid NY",
+          "parameters": {
+            "ny": "30"
+          },
+          "position": {
+            "x": -220,
+            "y": 1306
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_domain_cell_height",
+          "label": "Cell Height (\u03bcm)",
+          "parameters": {
+            "cell_height": 20
+          },
+          "position": {
+            "x": -220,
+            "y": 1444
+          }
+        },
+        {
+          "id": "envinit-Setup_simulation-param_1771966627094",
+          "label": "verbose",
+          "parameters": {
+            "verbose": "false"
+          },
+          "position": {
+            "x": -220,
+            "y": 1582
+          }
+        },
+        {
+          "id": "envinit-Setup_associations-param_associations_dict",
+          "type": "dictParameterNode",
+          "label": "Associations (Dict)",
+          "entries": [
+            {
+              "key": "Oxygen",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Oxygen_supply",
+                "threshold": 0.022
+              }
+            },
+            {
+              "key": "Glucose",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Glucose_supply",
+                "threshold": 4
+              }
+            },
+            {
+              "key": "Lactate",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT1_stimulus",
+                "threshold": 1.5
+              }
+            },
+            {
+              "key": "HGF",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "cMET_stimulus",
+                "threshold": 1e-06
+              }
+            },
+            {
+              "key": "TGFA",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "EGFR_stimulus",
+                "threshold": 1e-06
+              }
+            },
+            {
+              "key": "FGF",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "FGFR_stimulus",
+                "threshold": 1e-06
+              }
+            },
+            {
+              "key": "GI",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Growth_Inhibitor",
+                "threshold": 5e-05
+              }
+            },
+            {
+              "key": "EGFRD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "EGFRI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "FGFRD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "FGFRI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "cMETD",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "cMETI",
+                "threshold": 0.005
+              }
+            },
+            {
+              "key": "MCT1D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT1I",
+                "threshold": 1.7e-05
+              }
+            },
+            {
+              "key": "MCT4D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "MCT4I",
+                "threshold": 1
+              }
+            },
+            {
+              "key": "GLUT1D",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "GLUT1I",
+                "threshold": 4e-06
+              }
+            }
+          ],
+          "target_param": "associations",
+          "position": {
+            "x": -246,
+            "y": 2062
+          }
+        },
+        {
+          "id": "envinit-Set_hill_activation-param_hill_activations",
+          "type": "dictParameterNode",
+          "label": "Hill-Activated Inputs",
+          "entries": [
+            {
+              "key": "MCT1I",
+              "valueType": "dict",
+              "value": {
+                "hill_max": 0.85,
+                "hill_exponent": 1
+              }
+            },
+            {
+              "key": "GLUT1I",
+              "valueType": "dict",
+              "value": {
+                "hill_max": 0.85,
+                "hill_exponent": 1
+              }
+            }
+          ],
+          "target_param": "hill_activations",
+          "position": {
+            "x": -246,
+            "y": 2700
+          }
+        },
+        {
+          "id": "envinit-Set_metabolism-param_metabolism",
+          "type": "dictParameterNode",
+          "label": "Metabolism Parameters",
+          "entries": [
+            {
+              "key": "oxygen_vmax",
+              "valueType": "float",
+              "value": 3e-17
+            },
+            {
+              "key": "KO2",
+              "valueType": "float",
+              "value": 0.005
+            },
+            {
+              "key": "KG",
+              "valueType": "float",
+              "value": 0.5
+            },
+            {
+              "key": "KL",
+              "valueType": "float",
+              "value": 1
+            },
+            {
+              "key": "max_atp",
+              "valueType": "float",
+              "value": 30
+            },
+            {
+              "key": "glyco_oxygen_ratio",
+              "valueType": "float",
+              "value": 0.5
+            },
+            {
+              "key": "proton_coefficient",
+              "valueType": "float",
+              "value": 0.001
+            }
+          ],
+          "target_param": "metabolism_parameters",
+          "position": {
+            "x": -246,
+            "y": 2400
+          }
+        }
+      ],
+      "execution_order": [
+        "envinit-Setup_simulation-setup_sim",
+        "envinit-Setup_simulation-setup_domain_node",
+        "envinit-Setup_population-setup_pop",
+        "envinit-Setup_associations-setup_all_associations",
+        "envinit-Set_metabolism-set_metabolism_parameters",
+        "envinit-Set_hill_activation-set_hill_input_activation"
+      ],
+      "input_parameters": []
+    },
+    "tumor_cell_create": {
+      "description": "MicroC: tumor_cell_create (seeds the tumor_cell agents into the world: load cells from checkpoint, then build per-cell gene networks)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "checkpoint",
+          "simulation.config",
+          "agent.collection"
+        ],
+        "writes": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-tumor_cell_create",
+        "type": "controller",
+        "label": "TUMOR CELL CREATE",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "agentinit-Setup_population-read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 250
+          },
+          "description": "Read checkpoint file with cell positions and gene states. If gene states are present, initializes them.",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "agentinit-Setup_population-param_checkpoint_file"
+          ],
+          "contract": {
+            "reads": [
+              "checkpoint",
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "agentinit-Init_gene_networks-init_netlogo_gn",
+          "function_name": "initialize_netlogo_gene_networks",
+          "function_file": "",
+          "parameters": {
+            "bnd_file": "../data/jaya.bnd",
+            "random_initialization": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 478
+          },
+          "description": "Initialize NetLogo-faithful gene networks for all cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "gene_network.definition"
+            ],
+            "writes": [
+              "gene_networks",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "tumor_cell_create-fix_gene_nodes",
+          "function_name": "fix_gene_nodes",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 806
+          },
+          "description": "Clamp genes for the whole run (heritable across division). p53 OFF = tumour.",
+          "custom_name": "fix_gene_nodes",
+          "step_count": 1,
+          "parameter_nodes": [
+            "tumor_cell_create-param_fixed_nodes"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "writes": [
+              "gene_networks",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "agentinit-Build_abm_population-build_abm",
+          "function_name": "build_tumor_cell_abm_population",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1046
+          },
+          "description": "Wrap the loaded cells in an abm_population so MicroC runs on the ABM motor",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "simulation.config"
+            ],
+            "writes": [
+              "abm_population"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "agentinit-Setup_population-param_checkpoint_file",
+          "label": "Checkpoint File",
+          "parameters": {
+            "file_path": "../data/initial_cells_1000_center_1500.csv"
+          },
+          "position": {
+            "x": -269,
+            "y": 240
+          }
+        },
+        {
+          "id": "tumor_cell_create-param_fixed_nodes",
+          "type": "dictParameterNode",
+          "label": "Gene Knockouts",
+          "entries": [],
+          "target_param": "fixed_nodes",
+          "position": {
+            "x": -240,
+            "y": 784
+          }
+        }
+      ],
+      "execution_order": [
+        "agentinit-Setup_population-read_checkpoint",
+        "agentinit-Init_gene_networks-init_netlogo_gn",
+        "tumor_cell_create-fix_gene_nodes",
+        "agentinit-Build_abm_population-build_abm"
+      ],
+      "input_parameters": []
+    },
+    "diffusion_step": {
+      "description": "MicroC diffusion (SPECIAL CASE): two collective TRANSIENT solves advance all substance fields by one implicit-Euler dt step each scheduler step -- the metabolic group (Oxygen, Glucose, Lactate, H; Michaelis-Menten sources evaluated once at start-of-step, no Picard loop) and the growth factors (TGFA, FGF, HGF, GI; production explicit, uptake implicit). dt is owned by the Setup Simulation node. Each solve spans several substances at once, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          },
+          {
+            "type": "world"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.config"
+        ],
+        "writes": [
+          "resource.fields",
+          "simulation.results"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-diffusion_step",
+        "type": "controller",
+        "label": "DIFFUSION STEP",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "diffusion_step-calculate_metabolism",
+          "function_name": "calculate_cell_metabolism",
+          "function_file": "",
+          "parameters": {
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": -60
+          },
+          "description": "MicroC metabolic model \u2014 per-cell O2/glucose consumption and lactate/proton production. The transient solve calls this once per step, at start-of-step concentrations.",
+          "custom_name": "calculate_cell_metabolism",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "diffusion_step-run_transient_metabolic",
+          "function_name": "run_diffusion_solver_transient_metabolic",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 900
+          },
+          "description": "TRANSIENT METABOLIC solve: one implicit (backward) Euler step of \u2202c/\u2202t = \u2207\u00b7(D\u2207c) + S per scheduler step over dt from Setup Simulation, for Oxygen/Glucose/Lactate/H with Michaelis-Menten cell metabolism evaluated once at start-of-step concentrations (operator splitting -- no coupling loop). Growth factors are excluded -- handled by the TRANSIENT Growth Factor Solver node below.",
+          "custom_name": "run_diffusion_solver_transient_metabolic",
+          "step_count": 1,
+          "parameter_nodes": [
+            "diffusion_step-param_metabolic_substances",
+            "diffusion_step-param_oxygen_conversion_factor",
+            "diffusion_step-param_oxygen_consumption_multiplier",
+            "diffusion_step-param_lactate_conversion_factor",
+            "diffusion_step-param_glucose_conversion_factor"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "diffusion_step-run_transient_growth_factors",
+          "function_name": "run_diffusion_solver_transient_growth_factors",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1340
+          },
+          "description": "TRANSIENT GROWTH FACTOR solve: one implicit (backward) Euler step of \u2202C/\u2202t = \u2207\u00b7(D\u2207C) \u2212 k\u00b7C + P per scheduler step over dt from Setup Simulation, for TGFA/FGF/HGF/GI with per-cell production \u03b3_P where the substance's gene node is ON (explicit, at current gene states) and first-order uptake \u03b3_C\u00b7C folded into the PDE matrix as an implicit sink. Rates come from each substance's uptake_rate/production_rate in its Resources configuration.",
+          "custom_name": "run_diffusion_solver_transient_growth_factors",
+          "step_count": 1,
+          "parameter_nodes": [
+            "diffusion_step-param_growth_factor_substances"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "diffusion_step-param_oxygen_conversion_factor",
+          "label": "Oxygen Consumption Scale",
+          "parameters": {
+            "oxygen_conversion_factor": "200"
+          },
+          "position": {
+            "x": -250,
+            "y": 1068
+          }
+        },
+        {
+          "id": "diffusion_step-param_oxygen_consumption_multiplier",
+          "label": "mitoATP Oxygen Multiplier",
+          "parameters": {
+            "oxygen_consumption_multiplier": "1"
+          },
+          "position": {
+            "x": -250,
+            "y": 1206
+          }
+        },
+        {
+          "id": "diffusion_step-param_lactate_conversion_factor",
+          "label": "Lactate Production Scale",
+          "parameters": {
+            "lactate_conversion_factor": "200"
+          },
+          "position": {
+            "x": -250,
+            "y": 1344
+          }
+        },
+        {
+          "id": "diffusion_step-param_glucose_conversion_factor",
+          "label": "Glucose Consumption Scale",
+          "parameters": {
+            "glucose_conversion_factor": "200"
+          },
+          "position": {
+            "x": -250,
+            "y": 1482
+          }
+        },
+        {
+          "id": "diffusion_step-param_metabolic_substances",
+          "label": "Metabolic Substances",
+          "parameters": {
+            "substances": "Oxygen,Glucose,Lactate,H"
+          },
+          "position": {
+            "x": -250,
+            "y": 1620
+          }
+        },
+        {
+          "id": "diffusion_step-param_growth_factor_substances",
+          "label": "Growth Factor Substances",
+          "parameters": {
+            "substances": "TGFA,FGF,HGF,GI"
+          },
+          "position": {
+            "x": -250,
+            "y": 1758
+          }
+        }
+      ],
+      "execution_order": [
+        "diffusion_step-calculate_metabolism",
+        "diffusion_step-run_transient_metabolic",
+        "diffusion_step-run_transient_growth_factors"
+      ],
+      "input_parameters": []
+    },
+    "iteration_plots": {
+      "description": "MicroC: iteration_plots",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-iteration_plots",
+        "type": "controller",
+        "label": "ITERATION PLOTS",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "iteration_plots-gen_loop_plots",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "plot_interval": "1",
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_isolines": true,
+            "show_legends": true,
+            "show_info_box": true
+          },
+          "enabled": false,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Generate iteration-specific plots (Oxygen, Glucose, Lactate) using AutoPlotter. Disabled: replaced by the compact quadrant plot below; re-enable for one-heatmap-per-substance output. Every heatmap overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_isolines (threshold lines), show_legends (cell-colour key), show_info_box (details box).",
+          "custom_name": "generate_iteration_plots",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        },
+        {
+          "id": "iteration_plots-gen_quadrant_plots",
+          "function_name": "generate_quadrant_plots",
+          "function_file": "",
+          "parameters": {
+            "plot_interval": "1",
+            "autorange": "true",
+            "show_isolines": true,
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_legends": true,
+            "show_gradient_legends": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 420
+          },
+          "description": "Compact 2x2 view: one figure per iteration with the domain split into four quadrants (Lactate/Glucose/TGFA/H), each on its own white-to-colour gradient with a per-substance min/max legend; threshold isolines are drawn in the owning substance's quadrant and labelled with the substance name. Every overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_legends (cell-colour key), show_gradient_legends (per-quadrant scale bars), show_isolines (threshold lines).",
+          "custom_name": "generate_quadrant_plots",
+          "step_count": 1,
+          "parameter_nodes": [
+            "iteration_plots-param_quadrant_substances"
+          ],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        },
+        {
+          "id": "iteration_plots-save_state_checkpoint",
+          "function_name": "save_state_checkpoint",
+          "function_file": "",
+          "parameters": {
+            "interval": "1"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 760
+          },
+          "description": "Save the full per-iteration state next to the plots (all substance fields as npz, cells with gene/metabolic state as json, resolved thresholds, domain geometry, time) so every iteration plot can be re-rendered offline with opencellcomms_engine/tools/replot_checkpoint.py.",
+          "custom_name": "save_state_checkpoint",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "iteration_plots-param_quadrant_substances",
+          "type": "dictParameterNode",
+          "label": "Quadrant Substances",
+          "entries": [
+            {
+              "key": "Lactate",
+              "valueType": "dict",
+              "value": {
+                "color": "darkorange",
+                "vmin": 1,
+                "vmax": 5
+              }
+            },
+            {
+              "key": "Glucose",
+              "valueType": "dict",
+              "value": {
+                "color": "teal",
+                "vmin": 0,
+                "vmax": 5
+              }
+            },
+            {
+              "key": "ATP_gate",
+              "valueType": "string",
+              "value": "isolines panel (value ignored)"
+            },
+            {
+              "key": "Oxygen",
+              "valueType": "dict",
+              "value": {
+                "color": "mediumvioletred",
+                "vmin": 0,
+                "vmax": 0.07
+              }
+            }
+          ],
+          "target_param": "quadrant_substances",
+          "position": {
+            "x": 100,
+            "y": 420
+          }
+        }
+      ],
+      "execution_order": [
+        "iteration_plots-gen_loop_plots",
+        "iteration_plots-gen_quadrant_plots",
+        "iteration_plots-save_state_checkpoint"
+      ],
+      "input_parameters": []
+    },
+    "gene_update": {
+      "description": "MicroC: gene_update (associations -> gene inputs, then MaBoSS CTMC advance over window = dt x maboss_time_scale)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "associations",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-gene_update",
+        "type": "controller",
+        "label": "GENE UPDATE",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "gene_update-apply_associations",
+          "function_name": "apply_associations_to_inputs",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 240
+          },
+          "description": "Translate substance concentrations \u2192 gene input states via associations",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "associations",
+              "gene_networks"
+            ],
+            "writes": [
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "gene_update-propagate_maboss",
+          "function_name": "propagate_gene_networks_maboss",
+          "function_file": "",
+          "parameters": {
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 446
+          },
+          "description": "MaBoSS continuous-time Gillespie advance over window = dt x maboss_time_scale -- the PhysiBoSS event check for the step's window; honours gene clamps set by Fix Gene Nodes; necrotic cells frozen",
+          "custom_name": "propagate_gene_networks_maboss",
+          "step_count": 1,
+          "parameter_nodes": [
+            "gene_update-param_maboss_time_scale"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "gene_update-param_maboss_time_scale",
+          "label": "MaBoSS Time Scale",
+          "parameters": {
+            "maboss_time_scale": 1.0
+          },
+          "position": {
+            "x": -220,
+            "y": 452
+          }
+        }
+      ],
+      "execution_order": [
+        "gene_update-apply_associations",
+        "gene_update-propagate_maboss"
+      ],
+      "input_parameters": []
+    },
+    "fate_update": {
+      "description": "MicroC: fate_update",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "resource.fields",
+          "gene_networks"
+        ],
+        "writes": [
+          "agent.self.phenotype",
+          "simulation.results"
+        ],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-fate_update",
+        "type": "controller",
+        "label": "FATE UPDATE",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fate_update-advance_age",
+          "function_name": "advance_cell_age",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 40
+          },
+          "description": "Advance each cell's age by one scheduler step. Age counts steps since the cell last divided (division resets it to 0), and feeds the cell_cycle_time gate below.",
+          "custom_name": "advance_cell_age",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_necrotic",
+          "function_name": "mark_necrotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 279
+          },
+          "description": "Mark cells as necrotic based on user-defined conditions",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fate_update-param_necrosis_params"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_growth_arrest",
+          "function_name": "mark_growth_arrest_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 546
+          },
+          "description": "Track cells in Growth_Arrest state with time limit",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fate_update-param_max_growth_arrest_steps"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_apoptotic",
+          "function_name": "mark_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 774
+          },
+          "description": "Mark cells as apoptotic based on gene network Apoptosis output",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "fate_update-mark_proliferating",
+          "function_name": "mark_proliferating_cells_gated",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 964
+          },
+          "description": "Mark cells as Proliferation only if the Proliferation gene is ON, atp_rate > atp_threshold1 x atp_rate_max, and age > cell_cycle_time steps. Everything else that is not already Apoptosis/Growth_Arrest resets to Quiescence.",
+          "custom_name": "mark_proliferating_cells_gated",
+          "step_count": 1,
+          "parameter_nodes": [
+            "fate_update-param_proliferation_gate"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "fate_update-param_max_growth_arrest_steps",
+          "label": "Max Growth Arrest Steps",
+          "parameters": {
+            "max_growth_arrest_steps": 100
+          },
+          "position": {
+            "x": -258,
+            "y": 536
+          }
+        },
+        {
+          "id": "fate_update-param_necrosis_params",
+          "type": "dictParameterNode",
+          "label": "Necrosis Parameters",
+          "entries": [
+            {
+              "key": "oxygen_threshold",
+              "valueType": "float",
+              "value": 0.011
+            },
+            {
+              "key": "glucose_threshold",
+              "valueType": "float",
+              "value": 3.9
+            },
+            {
+              "key": "require_both",
+              "valueType": "bool",
+              "value": true
+            },
+            {
+              "key": "require_gene",
+              "valueType": "bool",
+              "value": true
+            }
+          ],
+          "target_param": "necrosis_params",
+          "position": {
+            "x": -257,
+            "y": 240
+          }
+        },
+        {
+          "id": "fate_update-param_proliferation_gate",
+          "type": "dictParameterNode",
+          "label": "Proliferation Gate",
+          "entries": [
+            {
+              "key": "atp_threshold1",
+              "valueType": "float",
+              "value": 0.8
+            },
+            {
+              "key": "cell_cycle_time",
+              "valueType": "float",
+              "value": 2
+            }
+          ],
+          "target_param": "proliferation_gate",
+          "position": {
+            "x": -257,
+            "y": 954
+          }
+        }
+      ],
+      "execution_order": [
+        "fate_update-advance_age",
+        "fate_update-mark_necrotic",
+        "fate_update-mark_growth_arrest",
+        "fate_update-mark_apoptotic",
+        "fate_update-mark_proliferating"
+      ],
+      "input_parameters": []
+    },
+    "division": {
+      "description": "MicroC: division",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "agent.self.phenotype",
+          "gene_networks",
+          "world.self"
+        ],
+        "writes": [
+          "agent.collection",
+          "gene_networks",
+          "simulation.results"
+        ],
+        "consumes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-division",
+        "type": "controller",
+        "label": "DIVISION",
+        "position": {
+          "x": 125,
+          "y": 40
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "division-cell_division",
+          "function_name": "update_cell_division",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 259
+          },
+          "description": "Handle cell division for proliferating cells",
+          "custom_name": "update_cell_division",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks",
+              "world.self"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "division-remove_apoptotic",
+          "function_name": "remove_apoptotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 480
+          },
+          "description": "Remove cells with Apoptosis phenotype from population",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "division-remove_necrotic",
+          "function_name": "remove_necrotic_cells",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 701
+          },
+          "description": "Remove cells that have stayed necrotic for necrosis_removal_delay scheduler steps",
+          "custom_name": "remove_necrotic_cells",
+          "step_count": 1,
+          "parameter_nodes": [
+            "division-param_necrosis_removal_delay"
+          ],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "agent.self.phenotype",
+              "gene_networks"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "division-param_necrosis_removal_delay",
+          "label": "Necrosis Removal Delay (steps)",
+          "parameters": {
+            "necrosis_removal_delay": "30"
+          },
+          "position": {
+            "x": -270,
+            "y": 702.5
+          }
+        }
+      ],
+      "execution_order": [
+        "division-cell_division",
+        "division-remove_apoptotic",
+        "division-remove_necrotic"
+      ],
+      "input_parameters": []
+    },
+    "final_summary": {
+      "description": "MicroC: final_summary",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.results"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-final_summary",
+        "type": "controller",
+        "label": "FINAL SUMMARY",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "final_summary-gen_final_plots",
+          "function_name": "generate_summary_plots",
+          "function_file": "",
+          "parameters": {
+            "marker": "FINAL",
+            "substances_to_plot": "Oxygen,Glucose,Lactate",
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_isolines": true,
+            "show_legends": true,
+            "show_info_box": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Generate final state visualization. Every heatmap overlay is switchable: show_cells, show_metabolism_colors (interior colouring), show_fate_colors (border colouring), show_isolines (threshold lines), show_legends (cell-colour key), show_info_box (details box).",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "final_summary-gen_final_plots"
+      ],
+      "input_parameters": []
+    },
+    "symbiosis_summary": {
+      "description": "MicroC: symbiosis_summary (per-iteration CSV for the metabolic-symbiosis figures -- cells by ATP pathway, cells by oxygen region, and the metabolic symbiosis index)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "resource.fields"
+        ],
+        "writes": [],
+        "emits": [],
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        }
+      },
+      "controller": {
+        "id": "controller-symbiosis_summary",
+        "type": "controller",
+        "label": "SYMBIOSIS SUMMARY",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "symbiosis_summary-record_symbiosis",
+          "function_name": "record_metabolic_symbiosis",
+          "function_file": "",
+          "parameters": {
+            "csv_filename": "metabolic_symbiosis_over_time.csv"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "One CSV row per iteration: cells by ATP pathway (glycoATP / mitoATP / total), cells by oxygen region (oxygenated / hypoxic), and the metabolic symbiosis index. MSI is emitted twice because 'lactate metabolic' has two defensible readings in jaya.bnd: msi_mct1 counts only cells importing lactate (MCT1 ON), msi_mito counts any oxidative cell (mitoATP ON, which includes glucose-fed ones).",
+          "custom_name": "record_metabolic_symbiosis",
+          "step_count": 1,
+          "parameter_nodes": [
+            "symbiosis_summary-param_hypoxia_threshold"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "symbiosis_summary-param_hypoxia_threshold",
+          "label": "Hypoxia Threshold (mM)",
+          "parameters": {
+            "hypoxia_threshold": 0.022
+          },
+          "position": {
+            "x": 100,
+            "y": 240
+          }
+        }
+      ],
+      "execution_order": [
+        "symbiosis_summary-record_symbiosis"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "MicroC main simulation loop",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ]
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sched-call-diffusion_step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "diffusion_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "diffusion_step",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-gene_update",
+          "type": "subworkflow_call",
+          "subworkflow_name": "gene_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 230
+          },
+          "description": "gene_update",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent"
+          }
+        },
+        {
+          "id": "sched-call-fate_update",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fate_update",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "fate_update",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent"
+          }
+        },
+        {
+          "id": "sched-call-symbiosis_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "symbiosis_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 500
+          },
+          "description": "symbiosis_summary (placed before division, so the census matches the fates just marked). Must NOT carry for_each: record_metabolic_symbiosis is a whole-population reporter that writes one row per iteration.",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-division",
+          "type": "subworkflow_call",
+          "subworkflow_name": "division",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 450
+          },
+          "description": "division",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-iteration_plots",
+          "type": "subworkflow_call",
+          "subworkflow_name": "iteration_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "iteration_plots (before division, like fate_summary: division consumes the marked fates - remove_apoptotic_cells deletes Apoptosis cells and update_cell_division resets divided cells to Quiescent - so plotting after it would show every border as quiescent)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-fate_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fate_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 420
+          },
+          "description": "fate_summary (before division, so marked phenotypes are still visible). Must NOT carry for_each: record_gene_fate_counts is collective=True, so the executor runs it once per step; a per-agent ask would instead write one duplicate census row per cell and zero out the fires/reverts deltas.",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "label": "Simulation Steps",
+          "parameters": {
+            "steps": 1000
+          },
+          "position": {
+            "x": 100,
+            "y": 341.04181818181826
+          }
+        }
+      ],
+      "execution_order": [
+        "sched-call-diffusion_step",
+        "sched-call-gene_update",
+        "sched-call-fate_update",
+        "sched-call-fate_summary",
+        "sched-call-symbiosis_summary",
+        "sched-call-iteration_plots",
+        "sched-call-division"
+      ],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main workflow (do not edit \u2014 managed by ABM structure)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "main-call-__init_sequence__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-final_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "final_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 440
+          },
+          "description": "Processing: final_summary",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__",
+        "main-call-final_summary"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order \u2014 env init + agent inits",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-__world__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "__world__",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-oxygen_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "oxygen_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "oxygen_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-glucose_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "glucose_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "glucose_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-lactate_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "lactate_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 280
+          },
+          "description": "lactate_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-h_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "h_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "h_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tgfa_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tgfa_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 400
+          },
+          "description": "tgfa_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-fgf_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fgf_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "fgf_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-hgf_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "hgf_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 520
+          },
+          "description": "hgf_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-gi_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "gi_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "gi_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tumor_cell_create",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tumor_cell_create",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "tumor_cell_create",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-__world__",
+        "init-call-oxygen_init",
+        "init-call-glucose_init",
+        "init-call-lactate_init",
+        "init-call-h_init",
+        "init-call-tgfa_init",
+        "init-call-fgf_init",
+        "init-call-hgf_init",
+        "init-call-gi_init",
+        "init-call-tumor_cell_create"
+      ],
+      "input_parameters": []
+    },
+    "fate_summary": {
+      "description": "MicroC: fate_summary (per-iteration fate, phenotype and population census)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-fate_summary",
+        "type": "controller",
+        "label": "FATE SUMMARY",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fate_summary-record_counts",
+          "function_name": "record_gene_fate_counts",
+          "function_file": "",
+          "parameters": {
+            "plot_filename": "gene_fate_counts_over_time.png",
+            "csv_filename": "gene_fate_counts_over_time.csv",
+            "metabolic_genes": "p53,p38,glycoATP,mitoATP"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Record fate-gene counts, phenotypes and population for this iteration",
+          "custom_name": "record_gene_fate_counts",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "fate_summary-record_counts"
+      ],
+      "input_parameters": []
+    }
+  }
+}
