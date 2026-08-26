@@ -160,7 +160,7 @@
           },
           {
             "id": "planner-tab-1786647663848-3",
-            "name": "MCT1off",
+            "name": "MCT1off_stab_close_boundary",
             "enabled": true,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
