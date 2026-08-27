@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+DEFAULT_MAX_EVENT_BYTES = 16 * 1024 * 1024
+DEFAULT_RETAINED_EVENT_BYTES = 8 * 1024 * 1024
+DEFAULT_EVENT_SIZE_CHECK_INTERVAL = 1000
+
+
 class NodeEventEmitter:
     """
     Emits structured events for node execution observability.
@@ -20,19 +25,39 @@ class NodeEventEmitter:
     Thread-safe: uses a lock for file writes.
     """
     
-    def __init__(self, results_dir: Path, enabled: bool = True):
+    def __init__(
+        self,
+        results_dir: Path,
+        enabled: bool = True,
+        max_event_bytes: int = DEFAULT_MAX_EVENT_BYTES,
+        retained_event_bytes: int = DEFAULT_RETAINED_EVENT_BYTES,
+        size_check_interval: int = DEFAULT_EVENT_SIZE_CHECK_INTERVAL,
+    ):
         """
         Initialize the event emitter.
         
         Args:
             results_dir: Base results directory (e.g., Path('results'))
             enabled: Whether event emission is enabled (default True)
+            max_event_bytes: Compact the event stream after it exceeds this size.
+            retained_event_bytes: Approximate newest tail retained on compaction.
+            size_check_interval: Number of events between file-size checks.
         """
+        if retained_event_bytes <= 0 or retained_event_bytes >= max_event_bytes:
+            raise ValueError(
+                "retained_event_bytes must be positive and smaller than max_event_bytes"
+            )
+        if size_check_interval < 1:
+            raise ValueError("size_check_interval must be at least 1")
         self.results_dir = Path(results_dir)
         self.enabled = enabled
+        self.max_event_bytes = max_event_bytes
+        self.retained_event_bytes = retained_event_bytes
+        self.size_check_interval = size_check_interval
         self._lock = threading.Lock()
         self._events_file: Optional[Path] = None
         self._initialized = False
+        self._events_since_size_check = 0
         
     def initialize(self) -> None:
         """
@@ -50,6 +75,7 @@ class NodeEventEmitter:
         # Clear and create events file
         self._events_file = obs_dir / "events.jsonl"
         self._events_file.write_text("")  # Clear previous content
+        self._events_since_size_check = 0
         
         # Write run metadata
         meta_file = obs_dir / "run_meta.json"
@@ -88,8 +114,46 @@ class NodeEventEmitter:
             event["ts"] = datetime.now(timezone.utc).isoformat()
             
         with self._lock:
-            with open(self._events_file, "a") as f:
-                f.write(json.dumps(event) + "\n")
+            encoded_event = (json.dumps(event) + "\n").encode("utf-8")
+            with open(self._events_file, "ab") as f:
+                f.write(encoded_event)
+
+            self._events_since_size_check += 1
+            if self._events_since_size_check >= self.size_check_interval:
+                self._events_since_size_check = 0
+                self._compact_if_oversized(encoded_event)
+
+    def _compact_if_oversized(self, latest_event: bytes) -> None:
+        """Atomically retain only the newest complete events when oversized."""
+        if self._events_file is None:
+            return
+
+        try:
+            size = self._events_file.stat().st_size
+            if size <= self.max_event_bytes:
+                return
+
+            start = max(0, size - self.retained_event_bytes)
+            with open(self._events_file, "rb") as f:
+                f.seek(start)
+                retained = f.read()
+
+            if start:
+                first_newline = retained.find(b"\n")
+                retained = (
+                    retained[first_newline + 1:]
+                    if first_newline >= 0
+                    else latest_event
+                )
+
+            temp_file = self._events_file.with_name(
+                f".{self._events_file.name}.compact"
+            )
+            temp_file.write_bytes(retained)
+            temp_file.replace(self._events_file)
+        except OSError as exc:
+            # A debugger must never make the scientific run fail.
+            print(f"[OBSERVABILITY] Warning: Failed to compact event history: {exc}")
     
     def emit_node_start(
         self,
@@ -244,4 +308,3 @@ class NodeEventEmitter:
                 "key": key,
             }
         })
-

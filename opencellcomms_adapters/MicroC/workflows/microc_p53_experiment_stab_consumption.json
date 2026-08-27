@@ -1820,14 +1820,15 @@
           "function_name": "save_state_checkpoint",
           "function_file": "",
           "parameters": {
-            "interval": "1"
+            "interval": "1",
+            "max_checkpoints": "10"
           },
           "enabled": true,
           "position": {
             "x": 400,
             "y": 760
           },
-          "description": "Save the full per-iteration state next to the plots (all substance fields as npz, cells with gene/metabolic state as json, resolved thresholds, domain geometry, time) so every iteration plot can be re-rendered offline with opencellcomms_engine/tools/replot_checkpoint.py.",
+          "description": "Save replayable state next to the plots (fields as npz; cells, thresholds, geometry and time as json). Keeps the latest 10 complete checkpoint pairs; set max_checkpoints to 0 only when every iteration must remain replayable offline.",
           "custom_name": "save_state_checkpoint",
           "step_count": 1,
           "parameter_nodes": [],

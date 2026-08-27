@@ -297,18 +297,23 @@ Use **explicit tracking** (wrapped dictionary) rather than heuristics:
 - Wrap the context dict with a `TrackedContext` class that logs all `__getitem__` calls.
 - This provides accurate read tracking without parsing source code.
 
-### 6.5 Snapshot frequency
-Default: **snapshot before and after every node execution**.
-- Provides maximum debuggability.
-- If too heavy, user can disable via workflow settings or use manual logging.
-- Phase B+: configurable per-node or per-subworkflow.
+### 6.5 Snapshot frequency and retention
+The executor snapshots before and after node execution, but persistence is a
+**rolling history of the latest 20 versions per subworkflow scope**. This keeps
+the current context and its preceding diff available to the inspector without
+creating an unbounded file tree for per-agent behaviors. The event stream is
+likewise compacted from 16 MiB to its newest approximately 8 MiB when full.
+Observability can be disabled entirely for batch runs where this debugging aid
+is not needed.
 
-### 6.6 Storage layout (results directory)
-Observability artifacts are stored in a **fixed location** (overwritten each run):
+### 6.6 Storage layout (engine debugger directory)
+Observability artifacts are ephemeral debugger data, not scientific results.
+They are stored in one **fixed location** shared by GUI and CLI and overwritten
+for each run:
 ```
-results/observability/
+opencellcomms_engine/results/observability/
 ├── run_meta.json                           # { startedAt, status, entrySubworkflow }
-├── events.jsonl                            # All NodeEvents, append-only during run
+├── events.jsonl                            # Rolling tail of recent NodeEvents
 ├── context/
 │   ├── composer:main/
 │   │   ├── v000001.json                    # Snapshot version 1

@@ -178,3 +178,42 @@ def test_node_gating_and_paths(tmp_path):
            'results': {}, 'plots_dir': str(tmp_path / "off"), 'loop_iteration': 5}
     assert save_state_checkpoint(BiologicalContext(ctx), interval=0)
     assert not (tmp_path / "off").exists()
+
+
+def test_node_keeps_only_newest_checkpoint_pairs(tmp_path):
+    from src.biology.context import BiologicalContext
+    from src.workflow.functions.output.save_state_checkpoint import (
+        save_state_checkpoint,
+    )
+
+    cfg = _cfg(2)
+    cells = {"a": _cell("a", (1, 2), genes={"p53": True})}
+    population = SimpleNamespace(state=SimpleNamespace(cells=cells))
+    simulator = SimpleNamespace(state=SimpleNamespace(substances={
+        "Oxygen": SimpleNamespace(concentrations=np.ones((4, 4)))
+    }))
+
+    for iteration in range(1, 6):
+        context = {
+            "population": population,
+            "simulator": simulator,
+            "config": cfg,
+            "results": {},
+            "plots_dir": str(tmp_path),
+            "loop_iteration": iteration,
+        }
+        assert save_state_checkpoint(
+            BiologicalContext(context),
+            interval=1,
+            max_checkpoints=2,
+        )
+
+    checkpoint_dir = tmp_path / "checkpoints"
+    assert sorted(path.name for path in checkpoint_dir.glob("*.json")) == [
+        "checkpoint_ITER_000004.json",
+        "checkpoint_ITER_000005.json",
+    ]
+    assert sorted(path.name for path in checkpoint_dir.glob("*_fields.npz")) == [
+        "checkpoint_ITER_000004_fields.npz",
+        "checkpoint_ITER_000005_fields.npz",
+    ]

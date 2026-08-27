@@ -79,8 +79,8 @@ Examples:
     parser.add_argument('--no-planner', action='store_true',
                        help='Ignore the Planner and run the values on the canvas')
     parser.add_argument('--no-observability', action='store_true',
-                       help='Skip the per-node context snapshots under '
-                            'results/observability (hundreds of MB on a long run)')
+                       help='Skip the rolling per-node debugger data under '
+                            'opencellcomms_engine/results/observability')
 
     # CSV generation for 2D simulations
     parser.add_argument('--generate-csv', action='store_true',

@@ -243,7 +243,13 @@ class WorkflowExecutor:
                 self._workflow_dir = source_dir
 
         # Observability setup
-        self._results_dir = results_dir or Path('results')
+        # Observability has one stable location regardless of the caller's cwd.
+        # GUI runs already serve this engine-local directory; using the same
+        # absolute default for CLI runs prevents a second results/observability
+        # tree from appearing at the repository root.
+        self._results_dir = (
+            Path(results_dir) if results_dir is not None else self._engine_root / 'results'
+        )
         self._observability_enabled = observability_enabled and OBSERVABILITY_AVAILABLE
         self._context_enforcement = context_enforcement
         self._event_emitter: Optional['NodeEventEmitter'] = None

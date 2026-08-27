@@ -202,9 +202,8 @@ Examples:
     parser.add_argument(
         '--no-observability',
         action='store_true',
-        help='Skip the per-node context snapshots under results/observability. '
-             'They are a debugging aid and cost hundreds of MB across tens of '
-             'thousands of files on a long run.'
+        help='Skip the rolling per-node debugger data under '
+             'opencellcomms_engine/results/observability.'
     )
 
     return parser.parse_args(argv)

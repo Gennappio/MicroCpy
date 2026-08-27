@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Size limits for inline values
 INLINE_VALUE_LIMIT = 10 * 1024  # 10KB
 MAX_ARTIFACT_SIZE = 1024 * 1024  # 1MB
+DEFAULT_SNAPSHOTS_PER_SCOPE = 20
 
 
 class ValueSummary:
@@ -203,16 +204,28 @@ class ContextSnapshotManager:
     Snapshots are saved as JSON files, diffs are computed and saved separately.
     """
 
-    def __init__(self, results_dir: Path, enabled: bool = True):
+    def __init__(
+        self,
+        results_dir: Path,
+        enabled: bool = True,
+        max_snapshots_per_scope: int = DEFAULT_SNAPSHOTS_PER_SCOPE,
+    ):
         """
         Initialize the snapshot manager.
 
         Args:
             results_dir: Base results directory (e.g., Path('results'))
             enabled: Whether snapshotting is enabled
+            max_snapshots_per_scope: Rolling number of context versions kept
+                for each subworkflow. The GUI only reads the latest version and
+                its immediately preceding diff, so older versions are discarded
+                instead of accumulating one file per node execution forever.
         """
+        if max_snapshots_per_scope < 2:
+            raise ValueError("max_snapshots_per_scope must be at least 2")
         self.results_dir = Path(results_dir)
         self.enabled = enabled
+        self.max_snapshots_per_scope = max_snapshots_per_scope
         self._lock = threading.Lock()
         self._versions: Dict[str, int] = {}  # scope_key -> current version
         self._initialized = False
@@ -225,13 +238,13 @@ class ContextSnapshotManager:
         context_dir = self.results_dir / "observability" / "context"
 
         # Clear old snapshots from previous runs WITHOUT blocking startup.
-        # Snapshots are taken around every subworkflow execution — including
-        # per-agent asks — so a long run leaves a tree of millions of files,
-        # and deleting it inline has stalled a fresh simulation for ~1 hour
-        # inside os.unlink before the first function ran. Instead, rename the
-        # tree aside (atomic and instant on the same filesystem) and delete it
-        # in a daemon thread; also sweep trash left by earlier runs that died
-        # mid-delete. ignore_errors / broad fallbacks: the tree can be
+        # Older releases kept every snapshot around subworkflow execution —
+        # including per-agent asks — and could leave millions of files. Deleting
+        # such a legacy tree inline stalled fresh simulations for ~1 hour inside
+        # os.unlink before the first function ran. Instead, rename the tree aside
+        # (atomic and instant on the same filesystem) and delete it in a daemon
+        # thread; also sweep trash left by earlier runs that died mid-delete.
+        # ignore_errors / broad fallbacks: the tree can be
         # half-written by a killed run or race with a concurrent cleanup, and
         # leftover DEBUG artifacts must never abort a fresh simulation.
         if context_dir.exists():
@@ -334,7 +347,28 @@ class ContextSnapshotManager:
             if current_version > 0:
                 self._compute_and_save_diff(scope_key, current_version, new_version, scope_dir)
 
+            self._prune_expired_version(new_version, scope_dir)
+
             return new_version
+
+    def _prune_expired_version(self, current_version: int, scope_dir: Path) -> None:
+        """Keep a rolling, bounded history for one subworkflow scope."""
+        expired_version = current_version - self.max_snapshots_per_scope
+        if expired_version < 1:
+            return
+
+        snapshot_file = scope_dir / f"v{expired_version:06d}.json"
+        diff_file = (
+            scope_dir
+            / "diff"
+            / f"v{expired_version:06d}_to_v{expired_version + 1:06d}.json"
+        )
+        try:
+            snapshot_file.unlink(missing_ok=True)
+            diff_file.unlink(missing_ok=True)
+        except OSError as exc:
+            # Observability is a debugging aid and must never fail a simulation.
+            print(f"[OBSERVABILITY] Warning: Failed to prune old snapshot: {exc}")
 
     def _compute_and_save_diff(
         self,
@@ -391,4 +425,3 @@ class ContextSnapshotManager:
         except Exception as e:
             # Don't fail the snapshot if diff computation fails
             print(f"[OBSERVABILITY] Warning: Failed to compute diff: {e}")
-

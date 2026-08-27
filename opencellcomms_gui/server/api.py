@@ -2199,11 +2199,11 @@ def get_observability_meta():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# Incremental cache for /api/observability/nodes. The GUI polls that endpoint,
-# and events.jsonl grows without bound during a run — re-parsing the whole file
-# on every poll once froze the GUI (six multi-minute requests saturated the
+# Incremental cache for /api/observability/nodes. The GUI polls that endpoint;
+# even the bounded event tail should not be re-parsed on every request. A legacy
+# unbounded log once froze the GUI (six multi-minute requests saturated the
 # browser's 6-connections-per-host limit, starving every other /api call).
-# Instead, remember the aggregate and only parse bytes appended since last poll.
+# Remember the aggregate and only parse bytes appended since the last poll.
 _node_stats_cache = {'inode': None, 'offset': 0, 'stats': {}}
 _node_stats_lock = threading.Lock()
 

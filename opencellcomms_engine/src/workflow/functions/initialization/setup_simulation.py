@@ -5,7 +5,6 @@ This function initializes the basic simulation parameters like name, duration, t
 """
 
 from typing import Dict, Any, Optional
-from datetime import datetime
 from pathlib import Path
 from src.workflow.decorators import register_function
 from src.workflow.logging import log, log_always
@@ -13,13 +12,13 @@ from src.workflow.logging import log, log_always
 
 @register_function(
     display_name="Setup Simulation",
-    description="Initialize simulation infrastructure (name, timestep, output directory)",
+    description="Initialize simulation infrastructure. Workflow outputs use the executor-managed runs/<run name> folder; output_dir is only the standalone-call fallback.",
     category="INITIALIZATION",
     parameters=[
         {"name": "name", "type": "STRING", "description": "Simulation name", "default": "OpenCellComms Simulation"},
         {"name": "dt", "type": "FLOAT", "description": "Timestep size (hours)", "default": 0.1},
         {"name": "dimensions", "type": "INT", "description": "Domain dimensions (2 or 3)", "default": 2},
-        {"name": "output_dir", "type": "STRING", "description": "Base output directory", "default": "results"},
+        {"name": "output_dir", "type": "STRING", "description": "Fallback output directory only when this function is called outside the workflow executor", "default": "results"},
         {"name": "verbose", "type": "BOOL", "description": "Enable detailed logging", "default": None},
     ],
     inputs=["context"],
@@ -42,7 +41,8 @@ def setup_simulation(
     """
     Setup simulation infrastructure.
 
-    This function creates the minimal config object and output directories.
+    This function creates the minimal config object. In a workflow, output
+    paths are owned by the executor and writers create directories lazily.
 
     Note: The following parameters are intentionally NOT included here because
     they are controlled elsewhere in the granular workflow:
@@ -65,13 +65,19 @@ def setup_simulation(
     print(f"[WORKFLOW] Setting up simulation: {name}")
 
     try:
-        # Create timestamped output directory
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base_output_dir = Path(output_dir)
-        timestamped_dir = base_output_dir / timestamp
-        timestamped_dir.mkdir(parents=True, exist_ok=True)
-        plots_dir = timestamped_dir / "plots"
-        plots_dir.mkdir(parents=True, exist_ok=True)
+        # The executor is the single owner of workflow output paths. It places
+        # real artifacts under runs/<run name>/<subworkflow> before this node
+        # executes. The parameter remains a supported fallback for direct
+        # standalone calls, where no executor-managed path exists.
+        managed_output_dir = context.get('output_dir')
+        if managed_output_dir is not None:
+            resolved_output_dir = Path(managed_output_dir)
+            plots_dir = Path(context.get('plots_dir') or resolved_output_dir)
+            output_source = "workflow run folder"
+        else:
+            resolved_output_dir = Path(output_dir)
+            plots_dir = resolved_output_dir / "plots"
+            output_source = "standalone output_dir parameter"
 
         # Store dimensions in context so other functions can use them.
         # Note: dt is intentionally NOT written as a flat key here — it lives on
@@ -83,7 +89,7 @@ def setup_simulation(
             'name': name,
             'dt': dt,
             'dimensions': dimensions,
-            'output_dir': timestamped_dir,
+            'output_dir': resolved_output_dir,
             'plots_dir': plots_dir,
         }
 
@@ -107,9 +113,9 @@ def setup_simulation(
         class MinimalConfig:
             """Minimal config object that can be built up by granular setup functions"""
             def __init__(self):
-                self.output_dir = timestamped_dir
+                self.output_dir = resolved_output_dir
                 self.plots_dir = plots_dir
-                self.data_dir = timestamped_dir / "data"
+                self.data_dir = resolved_output_dir / "data"
                 self.custom_parameters = {}
                 self.debug_phenotype_detailed = False
                 self.log_simulation_status = False
@@ -161,7 +167,12 @@ def setup_simulation(
 
         log(context, f"Simulation name: {name}", prefix="[+]", node_verbose=verbose)
         log(context, f"Timestep: {dt}", prefix="[+]", node_verbose=verbose)
-        log(context, f"Output directory: {timestamped_dir}", prefix="[+]", node_verbose=verbose)
+        log(
+            context,
+            f"Output directory ({output_source}): {resolved_output_dir}",
+            prefix="[+]",
+            node_verbose=verbose,
+        )
 
         return True
 
@@ -193,4 +204,3 @@ def get_simulation_dt_hours(context: Dict[str, Any]) -> float:
             "not set — ensure setup_simulation runs in __world__ before any "
             "transient-diffusion or MaBoSS node")
     return float(dt)  # GUI may deliver "0.01" as a string
-
