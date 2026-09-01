@@ -143,7 +143,7 @@
           {
             "id": "planner-tab-1786647651198-2",
             "name": "p53off",
-            "enabled": false,
+            "enabled": true,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
                 "label": "Gene Knockouts",
@@ -161,7 +161,7 @@
           {
             "id": "planner-tab-1786647663848-3",
             "name": "MCT1off",
-            "enabled": true,
+            "enabled": false,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
                 "label": "Gene Knockouts",
