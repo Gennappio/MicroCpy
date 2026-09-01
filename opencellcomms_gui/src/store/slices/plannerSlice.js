@@ -43,6 +43,31 @@ export const createPlannerSlice = (set, get) => ({
   },
 
   /**
+   * Duplicate a planner tab. The clone carries a deep copy of the source
+   * tab's overrides and is inserted right after it, so the two start
+   * identical and can then diverge.
+   */
+  duplicatePlannerTab: (tabId) => {
+    const { plannerTabs } = get();
+    const index = plannerTabs.findIndex((t) => t.id === tabId);
+    if (index === -1) return;
+    const source = plannerTabs[index];
+
+    const clone = {
+      id: `planner-tab-${Date.now()}-${nextTabCounter}`,
+      name: `${source.name} (copy)`,
+      enabled: source.enabled,
+      parameterOverrides: JSON.parse(JSON.stringify(source.parameterOverrides)),
+    };
+    nextTabCounter++;
+
+    const tabs = [...plannerTabs];
+    tabs.splice(index + 1, 0, clone);
+
+    set({ plannerTabs: tabs, activePlannerTabId: clone.id });
+  },
+
+  /**
    * Remove a planner tab. Switches active if needed.
    */
   removePlannerTab: (tabId) => {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, X, Eye, EyeOff, ListChecks } from 'lucide-react';
+import { Plus, X, Eye, EyeOff, Copy, ListChecks } from 'lucide-react';
 import useWorkflowStore from '../store/workflowStore';
 import ParametersDashboard from './ParametersDashboard';
 import './PlannerView.css';
@@ -15,6 +15,7 @@ const PlannerView = () => {
     plannerTabs,
     activePlannerTabId,
     addPlannerTab,
+    duplicatePlannerTab,
     removePlannerTab,
     renamePlannerTab,
     togglePlannerTab,
@@ -57,6 +58,14 @@ const PlannerView = () => {
       removePlannerTabParam(activePlannerTabId, paramNodeId);
     },
     [activePlannerTabId, removePlannerTabParam]
+  );
+
+  const handleClone = useCallback(
+    (e, tabId) => {
+      e.stopPropagation();
+      duplicatePlannerTab(tabId);
+    },
+    [duplicatePlannerTab]
   );
 
   const handleDelete = useCallback(
@@ -122,6 +131,15 @@ const PlannerView = () => {
                   {tab.name}
                 </span>
               )}
+
+              {/* Clone button */}
+              <button
+                className="planner-tab-clone"
+                onClick={(e) => handleClone(e, tab.id)}
+                title="Duplicate this configuration next to it"
+              >
+                <Copy size={12} />
+              </button>
 
               {/* Delete button */}
               <button
