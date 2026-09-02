@@ -5,8 +5,6 @@
  * toggle enabled/verbose states, and stage nodes/edges management.
  */
 
-import { controllerLabel } from '../subworkflowKinds';
-
 /**
  * Creates the node actions slice
  * @param {Function} set - Zustand set function
@@ -196,59 +194,5 @@ export const createNodeActionsSlice = (set, get) => ({
         ),
       },
     })),
-
-  // Clear all workflow data
-  clearWorkflow: () =>
-    set({
-      workflow: {
-        version: '2.0',
-        name: 'Untitled Workflow',
-        description: '',
-        metadata: {
-          author: '',
-          created: new Date().toISOString().split('T')[0],
-          gui: {
-            subworkflow_kinds: {
-              main: 'composer'
-            }
-          }
-        },
-        subworkflows: {
-          main: {
-            description: 'Main composer workflow',
-            enabled: true,
-            deletable: false,
-            controller: {
-              id: 'controller-main',
-              type: 'controller',
-              label: controllerLabel('main'),
-              position: { x: 100, y: 100 },
-              number_of_steps: 1
-            },
-            functions: [],
-            subworkflow_calls: [],
-            parameters: [],
-            execution_order: [],
-            input_parameters: []
-          }
-        }
-      },
-      currentStage: 'main',
-      stageNodes: {
-        main: [{
-          id: 'controller-main',
-          type: 'controllerNode',
-          position: { x: 100, y: 100 },
-          data: {
-            label: controllerLabel('main'),
-            numberOfSteps: 1
-          },
-          deletable: false
-        }]
-      },
-      stageEdges: {
-        main: []
-      },
-    }),
 });
 

@@ -13,6 +13,7 @@
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   createObservabilitySlice,
   createSubworkflowSlice,
@@ -25,6 +26,7 @@ import {
 } from './slices';
 import { SCHEDULER_NAME, INIT_SEQUENCE_NAME } from './subworkflowKinds';
 import { computeSubworkflowKinds } from './computeSubworkflowKinds';
+import { workflowPersistStorage } from './persistStorage';
 
 /**
  * Workflow Store - Manages the entire workflow state
@@ -76,9 +78,9 @@ const _defaultSubworkflows = {
   ),
 };
 
-const useWorkflowStore = create((set, get) => ({
-  // ===== Core Workflow State =====
-
+// The project being edited. `clearWorkflow` resets to this; `persist` (below)
+// restores it after a page reload.
+const _initialCoreState = () => ({
   // Workflow metadata
   workflow: {
     version: '2.0',  // V2-only: no backward compatibility
@@ -111,8 +113,27 @@ const useWorkflowStore = create((set, get) => ({
     [INIT_SEQUENCE_NAME]: [],
     [SCHEDULER_NAME]: [],
   },
+});
+
+// Keys saved to localStorage so the project survives a page reload (a Vite
+// dev-server reconnect or a browser tab discard reloads the page while the
+// simulation keeps running in the backend). Logs, node selection, and badge
+// stats are transient and stay in memory only.
+const PERSIST_KEY = 'opencellcomms-workflow';
+const PERSISTED_KEYS = [
+  'workflow', 'currentStage', 'currentMainTab', 'stageNodes', 'stageEdges',
+  'plannerTabs', 'activePlannerTabId', 'workflowFilePath',
+];
+
+const useWorkflowStore = create(persist((set, get) => ({
+  // ===== Core Workflow State =====
+  ..._initialCoreState(),
 
   // ===== Core Actions =====
+
+  // Start an empty project: also drops planner tabs and the file path.
+  clearWorkflow: () =>
+    set({ ..._initialCoreState(), plannerTabs: [], activePlannerTabId: null, workflowFilePath: null }),
 
   setCurrentStage: (stage) => set({ currentStage: stage }),
 
@@ -151,6 +172,15 @@ const useWorkflowStore = create((set, get) => ({
 
   // ABM: agent kinds, world, scheduler, processing
   ...createAbmSlice(set, get),
+}), {
+  name: PERSIST_KEY,
+  version: 1,
+  storage: workflowPersistStorage,
+  partialize: (state) =>
+    Object.fromEntries(PERSISTED_KEYS.map((key) => [key, state[key]])),
+  // Ignore a snapshot with no workflow document (corrupt or from another shape).
+  merge: (persisted, current) =>
+    persisted?.workflow?.subworkflows ? { ...current, ...persisted } : current,
 }));
 
 export default useWorkflowStore;

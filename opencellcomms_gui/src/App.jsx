@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, FileJson, Save, Settings } from 'lucide-react';
+import { Download, Upload, FileJson, FilePlus, Save, Settings } from 'lucide-react';
 import MainTabSelector from './components/MainTabSelector';
 import AgentSettings from './components/AgentSettings';
 import ResultsExplorer from './components/ResultsExplorer';
@@ -24,6 +24,7 @@ function App() {
     exportWorkflow,
     setWorkflowFilePath,
     workflowFilePath,
+    clearWorkflow,
   } = useWorkflowStore();
 
   // Resizable panel widths
@@ -95,6 +96,14 @@ function App() {
 
   // When main tab changes, switch to first available subworkflow of that kind
   // Stage switching is handled inside each tab view component.
+
+  // The project is restored from localStorage after a reload, so an explicit
+  // reset is the only way to get an empty canvas.
+  const handleNewWorkflow = () => {
+    if (window.confirm('Start a new empty project?\n\nUnsaved changes to the current workflow will be lost.')) {
+      clearWorkflow();
+    }
+  };
 
   const handleImportWorkflow = () => {
     const input = document.createElement('input');
@@ -271,6 +280,10 @@ function App() {
         </div>
 
         <div className="header-actions">
+          <button className="btn btn-secondary" onClick={handleNewWorkflow} title="Start an empty project">
+            <FilePlus size={16} />
+            New
+          </button>
           <button className="btn btn-secondary" onClick={handleImportWorkflow}>
             <Upload size={16} />
             Import Project
