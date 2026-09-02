@@ -104,6 +104,17 @@ Other seeding sources exist if you want to replace `read_checkpoint`:
 `load_cells_from_csv`, `load_cells_from_vtk` — all in
 `opencellcomms_adapters/common/functions/initialization/`.
 
+### Seed coordinates
+
+A seed CSV's `x,y` (and `z`) are **centre-relative** biological-grid indices:
+`(0,0)` is the middle of the domain and coordinates run negative to positive.
+The loader shifts them onto the engine's corner-origin grid, so **one seed file
+works at any Cell Height** — raising it grows the colony about the domain centre
+(that is the `..._stab_close_boundary.json` experiment) instead of sliding it
+toward a corner. Files carry `origin=center` in their header comment; a seed
+without it is read the same way but logs a warning, since a pre-2026-09
+corner-origin file needs half the biological grid subtracted from every index.
+
 ### BND filename
 
 The gene model lives at `data/jaya.bnd`. Both `workflows/microc.json` and

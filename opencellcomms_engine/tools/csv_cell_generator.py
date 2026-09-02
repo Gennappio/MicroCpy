@@ -191,14 +191,24 @@ def assign_phenotypes_and_genes(positions: List[Tuple[int, int]], pattern: str, 
     return cells
 
 
-def write_csv_file(cells: List[Dict[str, Any]], output_path: Path, cell_size_um: float = 20.0, 
+def recenter_positions(positions: List[Tuple[int, ...]], center: Tuple[int, ...]) -> List[Tuple[int, ...]]:
+    """Rebase absolute grid positions onto the centre-relative seed convention.
+
+    Seed files store coordinates measured from the domain centre, so the same
+    file stays centred at any Cell Height (the loader shifts them onto the
+    corner-origin biological grid).
+    """
+    return [tuple(p[i] - center[i] for i in range(len(p))) for p in positions]
+
+
+def write_csv_file(cells: List[Dict[str, Any]], output_path: Path, cell_size_um: float = 20.0,
                    domain_size_um: float = 500.0, description: str = "Generated cell positions"):
     """Write cells to CSV file with metadata"""
-    
+
     with open(output_path, 'w', newline='', encoding='utf-8') as f:
         # Write metadata comment
-        f.write(f'# cell_size_um={cell_size_um}, domain_size_um={domain_size_um}, description="{description}"\n')
-        
+        f.write(f'# origin=center, cell_size_um={cell_size_um}, domain_size_um={domain_size_um}, description="{description}"\n')
+
         # Write CSV data
         if cells:
             fieldnames = list(cells[0].keys())
@@ -257,7 +267,12 @@ def main():
     elif args.pattern == 'random':
         positions = generate_random_pattern(args.count, args.domain_size, args.seed)
         description = f"Random pattern with {len(positions)} cells"
-    
+
+    # Patterns are laid out on the absolute grid; seed files store coordinates
+    # relative to the domain centre so they stay centred at any Cell Height.
+    domain_center = args.domain_size // 2
+    positions = recenter_positions(positions, (domain_center,) * len(positions[0]))
+
     # Parse gene nodes from BND file if provided
     gene_nodes = None
     if args.genes:

@@ -523,9 +523,15 @@ class InitialStateManager:
         Load initial cell state from CSV file (2D only, human-readable format).
 
         CSV Format:
-        - Required columns: x, y (logical grid coordinates)
+        - Required columns: x, y (CENTRE-RELATIVE grid coordinates: (0,0) is the
+          middle of the domain, so coordinates run negative to positive)
         - Optional columns: phenotype, age, gene_<name> (for gene states)
-        - Optional metadata comment line: # cell_size_um=20.0, description="..."
+        - Optional metadata comment line: # origin=center, cell_size_um=20.0, description="..."
+
+        Because coordinates are centre-relative, a seed file is independent of
+        the domain's Cell Height: raising it grows the colony in place instead of
+        sliding it toward a corner. The shift onto the engine's corner-origin
+        biological grid happens here, at load time.
 
         Returns:
             Tuple of (cell_init_data, cell_size_um)
@@ -571,17 +577,30 @@ class InitialStateManager:
                 )
             bio_grid_z = int(self.config.domain.size_z.micrometers / self.config.domain.cell_height.micrometers)
 
+        # Seed coordinates are centre-relative; the biological grid is
+        # corner-origin. Shifting by the grid's midpoint is what keeps a seed
+        # centred whatever the Cell Height.
+        offset_x = bio_grid_x // 2
+        offset_y = bio_grid_y // 2
+        offset_z = bio_grid_z // 2 if is_3d else 0
+
+        if csv_loader.get_metadata().get('origin') != 'center':
+            print(f"[!] {Path(file_path).name} has no 'origin=center' marker: reading it as "
+                  f"centre-relative anyway. A pre-2026-09 seed (indices measured from the "
+                  f"domain corner) must have {offset_x} subtracted from x and {offset_y} from y.")
+
         for i, pos in enumerate(positions):
-            # Read logical coordinates and round to nearest integer grid index
-            x_log = int(round(pos[0]))
-            y_log = int(round(pos[1]))
+            # Read centre-relative coordinates, round to the nearest integer and
+            # shift onto the corner-origin biological grid
+            x_log = int(round(pos[0])) + offset_x
+            y_log = int(round(pos[1])) + offset_y
 
             # Clamp to valid biological grid bounds
             x_log = max(0, min(bio_grid_x - 1, x_log))
             y_log = max(0, min(bio_grid_y - 1, y_log))
 
             if is_3d:
-                z_log = max(0, min(bio_grid_z - 1, int(round(pos[2]))))
+                z_log = max(0, min(bio_grid_z - 1, int(round(pos[2])) + offset_z))
                 logical_pos = (x_log, y_log, z_log)
             else:
                 # Create 2D position tuple (a stray z column is ignored)
