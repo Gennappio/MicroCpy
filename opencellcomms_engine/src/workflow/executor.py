@@ -117,6 +117,38 @@ def _wants_typed_env(func: Callable) -> bool:
     return False
 
 
+def _locate_workflow_dir(source_path: Path, project_root: Path) -> Optional[Path]:
+    """Find the directory a workflow was authored in, given its recorded source path.
+
+    The GUI executes a copy written to a temp directory and records only the
+    original file's name, so the workflow's own directory has to be recovered
+    before relative paths ("../data/seed.csv") can resolve against it.
+
+    Returns None when the path cannot be placed unambiguously; the caller then
+    keeps whatever directory it already had.
+    """
+    if source_path.is_absolute():
+        return source_path.parent if source_path.exists() else None
+
+    direct = project_root / source_path
+    if direct.exists():
+        return direct.parent
+
+    name = source_path.name
+    matches = sorted({
+        found.parent
+        for found in (project_root / 'opencellcomms_adapters').glob(f'*/workflows/{name}')
+        if found.is_file()
+    })
+    if len(matches) == 1:
+        return matches[0]
+    if matches:
+        print(f"[!] '{name}' names a workflow in several adapters "
+              f"({', '.join(str(m) for m in matches)}); cannot tell which one owns "
+              f"this run, so its relative paths are resolved by file name alone.")
+    return None
+
+
 def create_path_resolver(engine_root: Path, workflow_dir: Optional[Path] = None):
     """
     Create a path resolver function that resolves relative paths.
@@ -172,13 +204,21 @@ def create_path_resolver(engine_root: Path, workflow_dir: Optional[Path] = None)
             if resolved.exists():
                 return resolved
 
-        # Strategy 6: Search in opencellcomms_adapters/ by filename
+        # Strategy 6: Search in opencellcomms_adapters/ by filename.
+        # Last resort: the file name alone says nothing about which adapter owns
+        # it, and several adapters ship same-named seeds and .bnd files, so an
+        # ambiguous match is announced rather than silently picked.
         adapters_dir = engine_root.parent / "opencellcomms_adapters"
         if adapters_dir.exists():
             filename = Path(file_path).name
-            for found in adapters_dir.rglob(filename):
-                if found.is_file():
-                    return found
+            found = sorted(p for p in adapters_dir.rglob(filename) if p.is_file())
+            if found:
+                if len(found) > 1:
+                    print(f"[!] '{file_path}' did not resolve against this workflow's own "
+                          f"directory and {len(found)} adapters contain a file named "
+                          f"'{filename}'. Using {found[0]}. Others: "
+                          f"{', '.join(str(p) for p in found[1:])}")
+                return found[0]
 
         # Return as-is (caller should handle non-existence)
         return path
@@ -235,11 +275,15 @@ class WorkflowExecutor:
         self._running_from_gui = gui_results_dir is not None
 
         # If the workflow was saved to a temp file by the GUI, use the original
-        # workflow source path for resolving relative paths (e.g. custom_functions)
+        # workflow source path for resolving relative paths (e.g. custom_functions).
+        # The GUI records only the workflow's file name, so a bare or repo-relative
+        # name is located under the project; without this the workflow's own
+        # directory is lost and every "../data/..." path falls through to the
+        # by-filename search below, which can pick another adapter's copy.
         source_path = (workflow.metadata or {}).get('workflow_source_path')
-        if source_path and Path(source_path).is_absolute():
-            source_dir = Path(source_path).parent
-            if source_dir.exists():
+        if source_path:
+            source_dir = _locate_workflow_dir(Path(source_path), self._project_root)
+            if source_dir is not None:
                 self._workflow_dir = source_dir
 
         # Observability setup
