@@ -86,61 +86,6 @@
       "planner": {
         "tabs": [
           {
-            "id": "tab-p53-mutant",
-            "name": "WT",
-            "enabled": false,
-            "parameterOverrides": {
-              "agentinit-Setup_population-param_checkpoint_file": {
-                "label": "Checkpoint File",
-                "parameters": {
-                  "file_path": "../data/initial_cells_200_center_1500.csv"
-                }
-              },
-              "diffusion_step-param_lactate_conversion_factor": {
-                "label": "Lactate Production Scale",
-                "parameters": {
-                  "lactate_conversion_factor": "2000"
-                }
-              },
-              "diffusion_step-param_glucose_conversion_factor": {
-                "label": "Glucose Consumption Scale",
-                "parameters": {
-                  "glucose_conversion_factor": "2000"
-                }
-              },
-              "diffusion_step-param_oxygen_conversion_factor": {
-                "label": "Oxygen Consumption Scale",
-                "parameters": {
-                  "oxygen_conversion_factor": "2000"
-                }
-              },
-              "gene_update-param_propagation_steps": {
-                "label": "Propagation Steps",
-                "parameters": {
-                  "propagation_steps": "1"
-                }
-              }
-            }
-          },
-          {
-            "id": "planner-tab-1786647516606-1",
-            "name": "p53on",
-            "enabled": false,
-            "parameterOverrides": {
-              "tumor_cell_create-param_fixed_nodes": {
-                "label": "Gene Knockouts",
-                "entries": [
-                  {
-                    "key": "p53",
-                    "value": "true",
-                    "valueType": "string"
-                  }
-                ],
-                "targetParam": "fixed_nodes"
-              }
-            }
-          },
-          {
             "id": "planner-tab-1786647651198-2",
             "name": "p53off",
             "enabled": true,
@@ -159,18 +104,13 @@
             }
           },
           {
-            "id": "planner-tab-1786647663848-3",
-            "name": "MCT1off",
-            "enabled": false,
+            "id": "planner-tab-1788279618803-1",
+            "name": "p53off2",
+            "enabled": true,
             "parameterOverrides": {
               "tumor_cell_create-param_fixed_nodes": {
                 "label": "Gene Knockouts",
                 "entries": [
-                  {
-                    "key": "MCT1",
-                    "value": "false",
-                    "valueType": "string"
-                  },
                   {
                     "key": "p53",
                     "value": "false",
@@ -178,36 +118,6 @@
                   }
                 ],
                 "targetParam": "fixed_nodes"
-              },
-              "diffusion_step-param_oxygen_conversion_factor": {
-                "label": "Oxygen Consumption Scale",
-                "parameters": {
-                  "oxygen_conversion_factor": 20
-                }
-              },
-              "diffusion_step-param_lactate_conversion_factor": {
-                "label": "Lactate Production Scale",
-                "parameters": {
-                  "lactate_conversion_factor": "20"
-                }
-              },
-              "diffusion_step-param_glucose_conversion_factor": {
-                "label": "Glucose Consumption Scale",
-                "parameters": {
-                  "glucose_conversion_factor": "20"
-                }
-              },
-              "gene_update-param_propagation_steps": {
-                "label": "Propagation Steps",
-                "parameters": {
-                  "propagation_steps": "1"
-                }
-              },
-              "diffusion_step-param_max_iterations": {
-                "label": "Max Iterations",
-                "parameters": {
-                  "max_iterations": "100"
-                }
               }
             }
           }
@@ -2741,7 +2651,7 @@
           "id": "steps_param-__scheduler__",
           "label": "Simulation Steps",
           "parameters": {
-            "steps": 1000
+            "steps": 50
           },
           "position": {
             "x": 100,
