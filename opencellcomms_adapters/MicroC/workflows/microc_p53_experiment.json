@@ -100,24 +100,52 @@
                   }
                 ],
                 "targetParam": "fixed_nodes"
-              }
-            }
-          },
-          {
-            "id": "planner-tab-1788279618803-1",
-            "name": "p53off2",
-            "enabled": true,
-            "parameterOverrides": {
-              "tumor_cell_create-param_fixed_nodes": {
-                "label": "Gene Knockouts",
+              },
+              "envinit-Setup_simulation-param_domain_cell_height": {
+                "label": "Cell Height (μm)",
+                "parameters": {
+                  "cell_height": "15"
+                }
+              },
+              "diffusion_step-param_oxygen_conversion_factor": {
+                "label": "Oxygen Consumption Scale",
+                "parameters": {
+                  "oxygen_conversion_factor": "11"
+                }
+              },
+              "diffusion_step-param_lactate_conversion_factor": {
+                "label": "Lactate Production Scale",
+                "parameters": {
+                  "lactate_conversion_factor": "11"
+                }
+              },
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "7"
+                }
+              },
+              "gene_update-param_propagation_steps": {
+                "label": "Propagation Steps",
+                "parameters": {
+                  "propagation_steps": "5"
+                }
+              },
+              "fate_update-param_proliferation_gate": {
+                "label": "Proliferation Gate",
                 "entries": [
                   {
-                    "key": "p53",
-                    "value": "false",
-                    "valueType": "string"
+                    "key": "atp_threshold1",
+                    "valueType": "float",
+                    "value": 0.5
+                  },
+                  {
+                    "key": "cell_cycle_time",
+                    "valueType": "float",
+                    "value": 2
                   }
                 ],
-                "targetParam": "fixed_nodes"
+                "targetParam": "proliferation_gate"
               }
             }
           }
@@ -2651,7 +2679,7 @@
           "id": "steps_param-__scheduler__",
           "label": "Simulation Steps",
           "parameters": {
-            "steps": 50
+            "steps": 500
           },
           "position": {
             "x": 100,
