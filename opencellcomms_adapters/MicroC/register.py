@@ -39,3 +39,4 @@ import opencellcomms_adapters.MicroC.functions.reporting.generate_3d_plots  # no
 import opencellcomms_adapters.MicroC.functions.reporting.generate_summary_plots  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.record_gene_fate_counts  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.reporting.record_metabolic_symbiosis  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.reporting.record_sensitivity_metrics  # noqa: F401
