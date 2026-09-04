@@ -16,6 +16,10 @@
 #
 #   sbatch run_microc_slurm.sh            # every enabled Planner tab, as the GUI does
 #   sbatch run_microc_slurm.sh p53on      # one named arm
+#   MICROC_EXTRA_ARGS=--no-observability sbatch run_microc_slurm.sh   # extra run_workflow.py flags
+#
+# run_sensitivity_slurm.sh submits the sensitivity suite as a job array and
+# delegates each arm here, so the install and run logic live in this file only.
 #
 # Each arm writes to runs/<workflow stem>_<arm>/, with a copy of the exact
 # workflow that produced it at the run root. Results are never mixed.
@@ -38,6 +42,7 @@ WORKFLOW="${MICROC_WORKFLOW:-$REPO_ROOT/opencellcomms_adapters/MicroC/workflows/
 VENV="${MICROC_VENV:-$REPO_ROOT/.venv-hpc}"
 PYTHON="${MICROC_PYTHON:-python3}"
 ARM="${1:-${MICROC_ARM:-}}"
+EXTRA_ARGS="${MICROC_EXTRA_ARGS:-}"   # appended verbatim to run_workflow.py, e.g. --no-observability
 
 # Cluster-specific. Uncomment and adapt if python3 is not on PATH by default.
 # module load python/3.11
@@ -50,6 +55,7 @@ echo "  host      : $(hostname)"
 echo "  repo      : $REPO_ROOT"
 echo "  workflow  : $WORKFLOW"
 echo "  arm       : ${ARM:-<all enabled Planner tabs>}"
+echo "  extra     : ${EXTRA_ARGS:-<none>}"
 echo "  job       : ${SLURM_JOB_ID:-<interactive>}"
 
 [ -f "$WORKFLOW" ] || { echo "ERROR: workflow not found: $WORKFLOW" >&2; exit 1; }
@@ -101,8 +107,9 @@ export MKL_NUM_THREADS="$OMP_NUM_THREADS"
 # workflow file, and results land under the engine tree.
 # --------------------------------------------------------------------------
 cd "$REPO_ROOT/opencellcomms_engine"
+# shellcheck disable=SC2086  # EXTRA_ARGS is a list of flags, split on purpose
 if [ -n "$ARM" ]; then
-    python run_workflow.py --workflow "$WORKFLOW" --planner-tab "$ARM"
+    python run_workflow.py --workflow "$WORKFLOW" --planner-tab "$ARM" $EXTRA_ARGS
 else
-    python run_workflow.py --workflow "$WORKFLOW"
+    python run_workflow.py --workflow "$WORKFLOW" $EXTRA_ARGS
 fi

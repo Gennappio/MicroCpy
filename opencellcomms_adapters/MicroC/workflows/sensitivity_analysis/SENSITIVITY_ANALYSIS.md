@@ -90,13 +90,22 @@ next to `fate_summary/`, `iteration_plots/` and the executed `workflow.json`
 names are unique across the suite so the four files never overwrite each
 other.
 
-SLURM, one job per workflow (all its tabs) with the existing launcher:
+SLURM: `run_sensitivity_slurm.sh` (repo root) submits the whole suite as a
+job array, one task per arm, each delegating to `run_microc_slurm.sh` with
+`--no-observability`:
 
 ```bash
-for f in opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_*.json; do
-  MICROC_WORKFLOW="$PWD/$f" sbatch --job-name="sa_$(basename "$f" .json)" run_microc_slurm.sh
-done
-# or one job per arm:
+mkdir -p slurm_logs
+bash run_microc_slurm.sh --install-only      # build .venv-hpc once, before the array
+bash run_sensitivity_slurm.sh --list         # index -> workflow, tab
+sbatch run_sensitivity_slurm.sh              # all 12 arms in parallel
+sbatch --array=0-11%4 run_sensitivity_slurm.sh   # at most four at a time
+```
+
+Logs go to `slurm_logs/microc_p53_sa_<jobid>_<index>.out`. A single arm can
+still be run through the plain launcher:
+
+```bash
 MICROC_WORKFLOW="$PWD/opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_glucose_consumption.json" \
   sbatch --job-name=sa_glc_cons_5.6 run_microc_slurm.sh glc_cons_5.6
 ```
