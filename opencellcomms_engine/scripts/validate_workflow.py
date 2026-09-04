@@ -42,7 +42,7 @@ scientist can actually find and edit a behaviour in the GUI:
 
 Usage:
     python scripts/validate_workflow.py <workflow.json> [<workflow.json> ...]
-    python scripts/validate_workflow.py --all   # scan opencellcomms_adapters/*/workflows/*.json
+    python scripts/validate_workflow.py --all   # scan opencellcomms_adapters/*/workflows/**/*.json
 
 Exit codes:
     0: no errors (warnings are allowed)
@@ -521,7 +521,7 @@ def resolve_paths(argv):
     if argv == ["--all"]:
         return sorted(
             str(p)
-            for p in (REPO_ROOT / "opencellcomms_adapters").glob("*/workflows/*.json")
+            for p in (REPO_ROOT / "opencellcomms_adapters").glob("*/workflows/**/*.json")
         )
     return argv
 

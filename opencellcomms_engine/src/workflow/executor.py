@@ -122,7 +122,10 @@ def _locate_workflow_dir(source_path: Path, project_root: Path) -> Optional[Path
 
     The GUI executes a copy written to a temp directory and records only the
     original file's name, so the workflow's own directory has to be recovered
-    before relative paths ("../data/seed.csv") can resolve against it.
+    before relative paths ("../data/seed.csv") can resolve against it. A bare
+    name is searched in every adapter's workflows/ folder and its subfolders
+    (an experiment suite such as MicroC/workflows/sensitivity_analysis/ keeps
+    its files one level down).
 
     Returns None when the path cannot be placed unambiguously; the caller then
     keeps whatever directory it already had.
@@ -137,7 +140,7 @@ def _locate_workflow_dir(source_path: Path, project_root: Path) -> Optional[Path
     name = source_path.name
     matches = sorted({
         found.parent
-        for found in (project_root / 'opencellcomms_adapters').glob(f'*/workflows/{name}')
+        for found in (project_root / 'opencellcomms_adapters').glob(f'*/workflows/**/{name}')
         if found.is_file()
     })
     if len(matches) == 1:
