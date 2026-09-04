@@ -44,7 +44,7 @@ FATE PRECEDENCE
     phenotypes from previous iterations keeping a cell dividing.
 """
 
-from typing import Any, Dict, Union
+from typing import Any, Dict, Mapping, Tuple, Union
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext, Phenotype
@@ -76,6 +76,30 @@ def _resolve(proliferation_gate: Union[Dict[str, Any], None]) -> Dict[str, float
             print(f"[PROLIF_GATE] WARNING: '{key}={raw!r}' is not a number — "
                   f"keeping default {DEFAULTS[key]}")
     return values
+
+
+def atp_gate_passes(metabolic_state: Mapping[str, Any],
+                    atp_threshold1: float) -> Tuple[bool, bool]:
+    """The ATP half of the proliferation gate, as ``(has_atp, atp_ok)``.
+
+    The one implementation (docs/READABILITY.md R2.1) of the energy test in
+    NetLogo's -FATE-PROLIFERATION-102 rule:
+
+        atp_ok = atp_rate > atp_threshold1 * atp_rate_max
+
+    ``atp_rate`` and ``atp_rate_max`` are the per-cell numbers Calculate Cell
+    Metabolism publishes in ``metabolic_state``. ``atp_threshold1`` is owned by
+    this node's Proliferation Gate table, which it also publishes to
+    ``results['proliferation_gate']`` for read-only consumers such as Record
+    Sensitivity Metrics. ``has_atp`` is False when the cell carries no usable ATP
+    data (no metabolism node ran, or the cell was zeroed as necrotic); the gate
+    then fails closed.
+    """
+    atp_rate = metabolic_state.get('atp_rate')
+    atp_rate_max = metabolic_state.get('atp_rate_max')
+    has_atp = atp_rate is not None and bool(atp_rate_max)
+    atp_ok = has_atp and atp_rate > atp_threshold1 * atp_rate_max
+    return has_atp, atp_ok
 
 
 _COUNTERS = ('cells', 'gene_on', 'atp_ok', 'age_ok', 'prolif', 'has_atp')
@@ -167,17 +191,12 @@ def mark_proliferating_cells_gated(
         if cell.is_necrotic:
             continue
 
-        metabolic_state = cell.metabolic_state
-        atp_rate = metabolic_state.get('atp_rate')
-        atp_rate_max = metabolic_state.get('atp_rate_max')
-
-        # A cell can legitimately lack ATP data: calculate_cell_metabolism skips
-        # Necrosis and Growth_Arrest, and an earlier marker in this cycle may have
-        # since moved such a cell to another fate. So judge it per cell as simply
-        # "cannot afford to divide", and diagnose a missing metabolism node from
-        # the whole pass instead (see _flush).
-        has_atp = atp_rate is not None and bool(atp_rate_max)
-        atp_ok = has_atp and atp_rate > atp_threshold1 * atp_rate_max
+        # A cell can legitimately lack ATP data: calculate_cell_metabolism
+        # zeroes a necrotic cell (atp_rate 0, no atp_rate_max) and a cell born
+        # since the last metabolism pass has none yet. So judge it per cell as
+        # simply "cannot afford to divide", and diagnose a missing metabolism
+        # node from the whole pass instead (see _flush).
+        has_atp, atp_ok = atp_gate_passes(cell.metabolic_state, atp_threshold1)
 
         gene_on = cell.gene_states.get(Phenotype.PROLIFERATION.value, False)
         age_ok = cell.age > cell_cycle_time

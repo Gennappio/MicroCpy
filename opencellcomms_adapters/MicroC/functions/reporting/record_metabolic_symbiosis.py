@@ -45,6 +45,11 @@ WHAT COUNTS AS A LACTATE-METABOLIC CELL: TWO COLUMNS, YOU CHOOSE
     normalised difference and `gate_*` carries the condition, so a zero in the
     MSI column can be read as "gate closed" rather than "no signal".
 
+SHARED LAWS (docs/READABILITY.md R2.1)
+    The oxygen-region census (oxygen_region_census) and the MSI law
+    (symbiosis_index) live here once; Record Sensitivity Metrics imports them
+    rather than re-implementing either.
+
 WHY raw_context FOR THE ITERATION NUMBER
     `env.step` is the engine clock, which MicroC's workflow scheduler does not
     advance -- the loop counter is `loop_iteration`, set by the executor. The
@@ -55,7 +60,7 @@ WHY raw_context FOR THE ITERATION NUMBER
 
 import csv
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, NamedTuple, Tuple
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
@@ -107,30 +112,10 @@ def record_metabolic_symbiosis(
     if history and history[-1]["iteration"] == iteration:
         return True
 
-    counts = {
-        ('oxy', 'glyco'): 0, ('oxy', 'mito'): 0, ('oxy', 'mct1'): 0,
-        ('hypo', 'glyco'): 0, ('hypo', 'mito'): 0, ('hypo', 'mct1'): 0,
-    }
-    n_region = {'oxy': 0, 'hypo': 0}
-    n_glyco = n_mito = n_mct1 = n_mct4 = 0
-
-    for cell in env.cells:
-        oxygen = env.concentration('Oxygen', cell)
-        region = 'oxy' if oxygen >= hypoxia_threshold else 'hypo'
-        n_region[region] += 1
-
-        states = cell.gene_states
-        if states.get('glycoATP', False):
-            counts[(region, 'glyco')] += 1
-            n_glyco += 1
-        if states.get('mitoATP', False):
-            counts[(region, 'mito')] += 1
-            n_mito += 1
-        if states.get('MCT1', False):
-            counts[(region, 'mct1')] += 1
-            n_mct1 += 1
-        if states.get('MCT4', False):
-            n_mct4 += 1
+    census = oxygen_region_census(env, hypoxia_threshold)
+    counts, n_region = census.counts, census.n_region
+    n_glyco, n_mito, n_mct1, n_mct4 = (census.n_glyco, census.n_mito,
+                                       census.n_mct1, census.n_mct4)
 
     dt_hours = env.dt
     row: Dict[str, Any] = {
@@ -158,7 +143,7 @@ def record_metabolic_symbiosis(
 
     # panel C, both readings of phi_L
     for label, key in (("mct1", "mct1"), ("mito", "mito")):
-        msi, raw, gate, phis = _symbiosis_index(
+        msi, raw, gate, phis = symbiosis_index(
             l_oxy=counts[('oxy', key)], g_oxy=counts[('oxy', 'glyco')],
             l_hypo=counts[('hypo', key)], g_hypo=counts[('hypo', 'glyco')],
             n_oxy=n_region['oxy'], n_hypo=n_region['hypo'],
@@ -175,7 +160,7 @@ def record_metabolic_symbiosis(
 
     output_dir = env.plots_dir / "timeseries"
     output_dir.mkdir(parents=True, exist_ok=True)
-    _write_csv(output_dir / csv_filename, history)
+    write_history_csv(output_dir / csv_filename, history)
 
     print(
         f"[SYMBIOSIS] Iteration {iteration} (n={row['total_cells']}): "
@@ -186,9 +171,57 @@ def record_metabolic_symbiosis(
     return True
 
 
-def _symbiosis_index(l_oxy: int, g_oxy: int, l_hypo: int, g_hypo: int,
-                     n_oxy: int, n_hypo: int):
-    """MSI plus the fractions and gate that produced it.
+class RegionCensus(NamedTuple):
+    """Cells by oxygen region and ATP pathway (see oxygen_region_census)."""
+    counts: Dict[Tuple[str, str], int]  # (region, 'glyco'|'mito'|'mct1') -> cells
+    n_region: Dict[str, int]            # 'oxy' / 'hypo' -> cells in that region
+    n_glyco: int
+    n_mito: int
+    n_mct1: int
+    n_mct4: int
+
+
+def oxygen_region_census(env: BiologicalContext,
+                         hypoxia_threshold: float) -> RegionCensus:
+    """Count every cell by oxygen region and by ATP-pathway gene.
+
+    Region law, implemented once: a cell is oxygenated when the Oxygen
+    concentration at its position is >= hypoxia_threshold, hypoxic otherwise.
+    The pathway flags are the cell's glycoATP / mitoATP / MCT1 / MCT4 gene
+    states. Both this reporter and Record Sensitivity Metrics read their region
+    and pathway counts from here.
+    """
+    counts = {
+        ('oxy', 'glyco'): 0, ('oxy', 'mito'): 0, ('oxy', 'mct1'): 0,
+        ('hypo', 'glyco'): 0, ('hypo', 'mito'): 0, ('hypo', 'mct1'): 0,
+    }
+    n_region = {'oxy': 0, 'hypo': 0}
+    n_glyco = n_mito = n_mct1 = n_mct4 = 0
+
+    for cell in env.cells:
+        oxygen = env.concentration('Oxygen', cell)
+        region = 'oxy' if oxygen >= hypoxia_threshold else 'hypo'
+        n_region[region] += 1
+
+        states = cell.gene_states
+        if states.get('glycoATP', False):
+            counts[(region, 'glyco')] += 1
+            n_glyco += 1
+        if states.get('mitoATP', False):
+            counts[(region, 'mito')] += 1
+            n_mito += 1
+        if states.get('MCT1', False):
+            counts[(region, 'mct1')] += 1
+            n_mct1 += 1
+        if states.get('MCT4', False):
+            n_mct4 += 1
+
+    return RegionCensus(counts, n_region, n_glyco, n_mito, n_mct1, n_mct4)
+
+
+def symbiosis_index(l_oxy: int, g_oxy: int, l_hypo: int, g_hypo: int,
+                    n_oxy: int, n_hypo: int):
+    """MSI plus the fractions and gate that produced it (the law, implemented once).
 
     Returns (msi, raw, gate, (phi_L_oxy, phi_G_oxy, phi_L_hypo, phi_G_hypo)).
     """
@@ -210,7 +243,8 @@ def _symbiosis_index(l_oxy: int, g_oxy: int, l_hypo: int, g_hypo: int,
                                                phi_l_hypo, phi_g_hypo)
 
 
-def _write_csv(path: Path, history: List[Dict[str, Any]]) -> None:
+def write_history_csv(path: Path, history: List[Dict[str, Any]]) -> None:
+    """Rewrite the whole per-iteration history as one CSV (header from row 0)."""
     if not history:
         return
     with path.open("w", newline="") as f:
