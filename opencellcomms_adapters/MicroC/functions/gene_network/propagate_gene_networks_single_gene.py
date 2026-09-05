@@ -46,6 +46,10 @@ from typing import Dict
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
 
+from opencellcomms_adapters.MicroC.functions.gene_network.gene_propagation_record import (
+    publish_propagation_steps,
+)
+
 
 @register_function(
     requires=['gene_networks', 'population'],
@@ -73,6 +77,10 @@ def propagate_gene_networks_single_gene(
     verbose: bool = False,
     **kwargs
 ) -> bool:
+    # Publish the step count in effect so the reporters can put time on the
+    # gene-update axis (iteration x propagation_steps). Idempotent per call.
+    publish_propagation_steps(env, propagation_steps, updater="single_gene")
+
     # Per-cell when the executor's per-agent ask bound a cell, else the whole
     # population. Each cell's walk is independent, so the two are equivalent.
     cell_source = [env.cell] if env.cell is not None else list(env.cells)

@@ -6,6 +6,12 @@ record_gene_fate_counts and record_metabolic_symbiosis.
 
 COLUMNS
     iteration            scheduler loop counter (loop_iteration; env.step stays 0)
+    gene_steps           iteration x propagation_steps: gene-network updates per
+                         cell so far, the clock on which runs with different
+                         propagation step counts are comparable
+    propagation_steps    single-gene updates per scheduler step in effect
+                         (provenance; blank, with gene_steps, if no updater
+                         published it)
     N_total              every cell in the population
     N_viable             cells whose phenotype is neither Necrosis nor Apoptosis
     N_proliferating, N_quiescent, N_growth_arrest, N_apoptotic, N_necrotic
@@ -52,6 +58,9 @@ LAWS AND THEIR OWNERS (docs/READABILITY.md R2)
                   loader places index offset bio_grid//2 there.
     Field minima  the solver arrays of the Glucose and Oxygen substances over
                   the whole domain.
+    Gene clock    propagation_steps is read from results['gene_propagation'],
+                  published by the Propagate Gene Networks node from its
+                  Propagation Steps parameter (gene_propagation_record).
 
 WHY raw_context FOR THE ITERATION NUMBER
     As in the sibling reporters: MicroC's scheduler does not advance the engine
@@ -66,6 +75,9 @@ from src.biology.context import BiologicalContext, Phenotype
 
 from opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells_gated import (
     atp_gate_passes,
+)
+from opencellcomms_adapters.MicroC.functions.gene_network.gene_propagation_record import (
+    published_propagation_steps,
 )
 from opencellcomms_adapters.MicroC.functions.reporting.record_metabolic_symbiosis import (
     oxygen_region_census,
@@ -154,8 +166,9 @@ def record_sensitivity_metrics(
     atp_threshold1: Optional[float] = None
     if isinstance(gate, dict) and gate.get('atp_threshold1') is not None:
         atp_threshold1 = float(gate['atp_threshold1'])
+    propagation_steps = published_propagation_steps(env)
 
-    _announce_sources(env, ctx, hypoxia_threshold, atp_threshold1,
+    _announce_sources(env, ctx, hypoxia_threshold, atp_threshold1, propagation_steps,
                       size_x_um, size_y_um, cell_height_um, csv_filename)
 
     # Oxygen regions, pathway counts and MSI: the shared census and law.
@@ -197,6 +210,8 @@ def record_sensitivity_metrics(
     have_gate = atp_threshold1 is not None
     row: Dict[str, Any] = {
         "iteration": iteration,
+        "gene_steps": iteration * propagation_steps if propagation_steps is not None else "",
+        "propagation_steps": propagation_steps if propagation_steps is not None else "",
         "N_total": n_total,
         "N_viable": n_viable,
     }
@@ -234,7 +249,8 @@ def record_sensitivity_metrics(
     write_history_csv(output_dir / csv_filename, history)
 
     print(
-        f"[SENSITIVITY] Iteration {iteration} (n={n_total}): viable={n_viable}, "
+        f"[SENSITIVITY] Iteration {iteration} (gene_steps={row['gene_steps']}, n={n_total}): "
+        f"viable={n_viable}, "
         f"prolif={n_prolif}, quiescent={row['N_quiescent']}, GA={row['N_growth_arrest']}, "
         f"apo={row['N_apoptotic']}, necro={row['N_necrotic']} | "
         f"mito={census.n_mito}, glyco={census.n_glyco}, R_MG={row['R_MG']} | "
@@ -262,6 +278,7 @@ def _field_min(env: BiologicalContext, ctx: Dict[str, Any], name: str) -> Any:
 
 def _announce_sources(env: BiologicalContext, ctx: Dict[str, Any],
                       hypoxia_threshold: float, atp_threshold1: Optional[float],
+                      propagation_steps: Optional[int],
                       size_x_um: float, size_y_um: float, cell_height_um: float,
                       csv_filename: str) -> None:
     """Once per run, name every value source this node reads (READABILITY R1.5)."""
@@ -287,10 +304,17 @@ def _announce_sources(env: BiologicalContext, ctx: Dict[str, Any],
                     "Cells (ATP + cell cycle gated) did not run before this node): "
                     "N_atp_ok, F_ATP, atp_threshold1 left blank")
 
+    if propagation_steps is not None:
+        clock_txt = (f"gene_steps = iteration x {propagation_steps} from "
+                     f"results['gene_propagation'] (Propagate Gene Networks, Propagation Steps)")
+    else:
+        clock_txt = ("results['gene_propagation'] not published (no Propagate Gene "
+                     "Networks node ran before this node): gene_steps, propagation_steps left blank")
+
     print(
         "[SENSITIVITY] sources in effect: "
         f"hypoxia_threshold={hypoxia_threshold:g} mM (this node's Hypoxia Threshold "
-        f"parameter); ATP gate {gate_txt}; domain {size_x_um:g}x{size_y_um:g} um, "
+        f"parameter); ATP gate {gate_txt}; {clock_txt}; domain {size_x_um:g}x{size_y_um:g} um, "
         f"cell_height {cell_height_um:g} um (Setup Domain via config.domain); "
         f"{bounds('Glucose')}; {bounds('Oxygen')} (Substance (JSON) nodes via "
         "config.substances); viable = phenotype not in {Necrosis, Apoptosis}; "

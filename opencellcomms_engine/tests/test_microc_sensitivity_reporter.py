@@ -82,13 +82,16 @@ def _fields(config):
     return {"Oxygen": oxygen, "Glucose": glucose}
 
 
-def _context(tmp_path, cells=None, gate=0.5, iteration=1):
+def _context(tmp_path, cells=None, gate=0.5, iteration=1, propagation=5):
     domain = DomainConfig(Length(1500.0, "um"), Length(1500.0, "um"), 30, 30,
                           cell_height=Length(15.0, "um"))
     config = SimpleNamespace(domain=domain, substances={})
     cells = _population() if cells is None else cells
-    results = {} if gate is None else {
-        "proliferation_gate": {"atp_threshold1": gate, "cell_cycle_time": 2.0}}
+    results = {}
+    if gate is not None:
+        results["proliferation_gate"] = {"atp_threshold1": gate, "cell_cycle_time": 2.0}
+    if propagation is not None:
+        results["gene_propagation"] = {"propagation_steps": propagation, "updater": "single_gene"}
     return {
         "population": SimpleNamespace(state=SimpleNamespace(
             cells={c.state.id: c for c in cells})),
@@ -112,6 +115,7 @@ def test_row_metrics(tmp_path):
     assert len(rows) == 1
     row = rows[0]
     assert row["iteration"] == "1"
+    assert (row["gene_steps"], row["propagation_steps"]) == ("5", "5")
     assert (row["N_total"], row["N_viable"]) == ("5", "3")
     assert (row["N_proliferating"], row["N_quiescent"], row["N_growth_arrest"],
             row["N_apoptotic"], row["N_necrotic"]) == ("1", "1", "1", "1", "1")
@@ -152,6 +156,15 @@ def test_one_row_per_iteration(tmp_path):
     ctx["loop_iteration"] = 2
     record_sensitivity_metrics(BiologicalContext(ctx))
     assert [r["iteration"] for r in _rows(tmp_path)] == ["1", "2"]
+    assert [r["gene_steps"] for r in _rows(tmp_path)] == ["5", "10"]
+
+
+def test_gene_clock_blank_without_a_published_step_count(tmp_path, capsys):
+    ctx = _context(tmp_path, propagation=None)
+    record_sensitivity_metrics(BiologicalContext(ctx))
+    row = _rows(tmp_path)[0]
+    assert (row["gene_steps"], row["propagation_steps"]) == ("", "")
+    assert "gene_propagation" in capsys.readouterr().out
 
 
 def test_blank_r_mg_without_glycolytic_cells(tmp_path):

@@ -54,6 +54,10 @@ import random
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
 
+from opencellcomms_adapters.MicroC.functions.gene_network.gene_propagation_record import (
+    publish_propagation_steps,
+)
+
 # =============================================================================
 # OSCILLATION CONSTANTS (mirrors gene_network_workflow_oscillation_simulator.py)
 # =============================================================================
@@ -113,6 +117,10 @@ def propagate_gene_networks_netlogo(
     reset_fate: bool = False,
     **kwargs
 ) -> bool:
+    # Publish the step count in effect so the reporters can put time on the
+    # gene-update axis (iteration x propagation_steps). Idempotent per call.
+    publish_propagation_steps(env, propagation_steps, updater="netlogo")
+
     if verbose:
         flags = []
         if oscillation:

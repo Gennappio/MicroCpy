@@ -50,6 +50,12 @@ SHARED LAWS (docs/READABILITY.md R2.1)
     (symbiosis_index) live here once; Record Sensitivity Metrics imports them
     rather than re-implementing either.
 
+TIME AXIS
+    `gene_steps` = iteration x propagation steps (as published by the gene
+    updater, see gene_propagation_record) is the clock on which runs with
+    different propagation step counts are comparable; blank when no updater
+    published a count.
+
 WHY raw_context FOR THE ITERATION NUMBER
     `env.step` is the engine clock, which MicroC's workflow scheduler does not
     advance -- the loop counter is `loop_iteration`, set by the executor. The
@@ -64,6 +70,10 @@ from typing import Any, Dict, List, NamedTuple, Tuple
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+
+from opencellcomms_adapters.MicroC.functions.gene_network.gene_propagation_record import (
+    gene_steps,
+)
 
 
 @register_function(
@@ -118,8 +128,10 @@ def record_metabolic_symbiosis(
                                        census.n_mct1, census.n_mct4)
 
     dt_hours = env.dt
+    steps_total = gene_steps(env, iteration)
     row: Dict[str, Any] = {
         "iteration": iteration,
+        "gene_steps": steps_total if steps_total is not None else "",
         "time_hours": round(iteration * dt_hours, 6),
         "dt_hours": dt_hours,
         "total_cells": n_region['oxy'] + n_region['hypo'],

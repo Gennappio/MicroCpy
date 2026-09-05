@@ -16,6 +16,13 @@ The PNG deliberately plots actual cell phenotypes, not Boolean fate-node
 states. This matches the phenotype borders in the iteration plots: a Necrosis
 node that is ON does not count as necrosis until fate_update applies the
 environmental gate and marks the cell's phenotype.
+
+Time axis: each row also carries ``gene_steps`` = iteration x propagation
+steps, read from what the gene updater published (see
+gene_propagation_record), and the plot uses it as its x axis so runs with
+different propagation step counts line up on the number of gene-network
+updates. When no updater published a step count the plot falls back to
+scheduler iterations and its axis label says so.
 """
 
 import csv
@@ -24,6 +31,10 @@ from typing import Dict, Any, List
 
 from src.biology.context import BiologicalContext, Phenotype
 from src.workflow.decorators import register_function
+
+from opencellcomms_adapters.MicroC.functions.gene_network.gene_propagation_record import (
+    gene_steps,
+)
 
 
 FATE_GENES = [
@@ -119,8 +130,10 @@ def record_gene_fate_counts(
         return True
 
     total_cells = len(env.cells)
+    steps_total = gene_steps(env, iteration)
     row: Dict[str, Any] = {
         "iteration": iteration,
+        "gene_steps": steps_total if steps_total is not None else "",
         "total_cells": total_cells,
     }
 
@@ -229,6 +242,22 @@ def _write_csv(path: Path, history) -> None:
         writer.writerows(history)
 
 
+GENE_STEPS_AXIS_LABEL = "Gene-network updates (scheduler iterations x propagation steps)"
+ITERATION_AXIS_LABEL = "Scheduler iteration (propagation steps not published)"
+
+
+def time_axis(history):
+    """x values and axis label for a per-iteration history.
+
+    Gene-network updates when every row carries a numeric ``gene_steps``,
+    otherwise scheduler iterations, with a label that says which (R1.5).
+    """
+    steps = [row.get("gene_steps") for row in history]
+    if steps and all(isinstance(s, int) and not isinstance(s, bool) for s in steps):
+        return steps, GENE_STEPS_AXIS_LABEL
+    return [row["iteration"] for row in history], ITERATION_AXIS_LABEL
+
+
 def _write_plot(path: Path, history, met_genes=None) -> None:
     try:
         import matplotlib.pyplot as plt
@@ -237,13 +266,13 @@ def _write_plot(path: Path, history, met_genes=None) -> None:
         return
 
     met_genes = met_genes or []
-    iterations = [row["iteration"] for row in history]
+    x, xlabel = time_axis(history)
 
     fig, (ax_pheno, ax_pop) = plt.subplots(2, 1, figsize=(9, 8), sharex=True)
 
     for name in PHENOTYPES:
         ax_pheno.plot(
-            iterations,
+            x,
             [row[f"phenotype_{name}"] for row in history],
             marker="o",
             linewidth=2,
@@ -259,7 +288,7 @@ def _write_plot(path: Path, history, met_genes=None) -> None:
     # axis — all are cell counts, so magnitudes compare honestly (a single axis
     # avoids the dual-axis illusion of metabolic genes sitting above total cells).
     ax_pop.plot(
-        iterations,
+        x,
         [row["total_cells"] for row in history],
         marker="o",
         linewidth=2,
@@ -269,14 +298,14 @@ def _write_plot(path: Path, history, met_genes=None) -> None:
     for i, name in enumerate(met_genes):
         color = COLORS.get(name, f"C{i + 3}")
         ax_pop.plot(
-            iterations,
+            x,
             [row.get(f"gene_{name}", 0) for row in history],
             marker="s",
             linewidth=2,
             label=f"{name} (ON)",
             color=color,
         )
-    ax_pop.set_xlabel("Scheduler Iteration")
+    ax_pop.set_xlabel(xlabel)
     ax_pop.set_ylabel("Cells")
     ax_pop.set_ylim(bottom=0)
     ax_pop.set_title("Population & Metabolic Genes (ON cells)")
