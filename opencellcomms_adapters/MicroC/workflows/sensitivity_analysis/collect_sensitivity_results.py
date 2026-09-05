@@ -39,6 +39,7 @@ CONTROL_NODES = {
     "nx": ("envinit-Setup_simulation-param_domain_nx", "nx"),
     "ny": ("envinit-Setup_simulation-param_domain_ny", "ny"),
     "cell_height_um": ("envinit-Setup_simulation-param_domain_cell_height", "cell_height"),
+    "propagation_steps": ("gene_update-param_propagation_steps", "propagation_steps"),
     "steps_planned": ("steps_param-__scheduler__", "steps"),
 }
 GLUCOSE_NODE = "glucose_init-param_substances"
@@ -47,12 +48,13 @@ LEVEL_COLUMN = {
     "oxygen_consumption": "oxygen_conversion_factor",
     "glucose_boundary": "glucose_boundary_mM",
     "relative_tumor_size": "relative_tumor_size_initial",
+    "propagation_steps": "propagation_steps",
 }
 LEAD_COLUMNS = ["run_dir", "axis", "level", "workflow_source_path",
                 "glucose_conversion_factor", "oxygen_conversion_factor",
                 "glucose_boundary_mM", "glucose_initial_mM",
                 "domain_size_x_um", "domain_size_y_um", "nx", "ny", "cell_height_um",
-                "steps_planned", "n_iterations",
+                "propagation_steps", "steps_planned", "n_iterations",
                 "tumor_radius_um_initial", "relative_tumor_size_initial"]
 
 

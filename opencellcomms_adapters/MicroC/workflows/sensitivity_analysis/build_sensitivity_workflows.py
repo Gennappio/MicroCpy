@@ -4,6 +4,13 @@
 One workflow per control variable, each a full copy of the baseline with:
   * the baseline's ``p53off`` Planner arm baked into the canvas (so every tab
     below is a sparse, single-parameter diff -- docs/READABILITY.md R2.2);
+  * the run length and the plot cadence derived from one gene-step budget:
+    every arm runs GENE_STEPS_TOTAL single-gene updates per cell (scheduler
+    steps = budget / propagation steps) and draws a quadrant plot plus a
+    checkpoint every PLOT_EVERY_GENE_STEPS gene updates, so arms with
+    different propagation step counts share the same x axis and the same
+    number of snapshots; the two intervals become parameter nodes on the
+    iteration_plots canvas so a Planner tab can set them;
   * ``symbiosis_summary`` replaced by ``sensitivity_summary`` running
     ``record_sensitivity_metrics`` (``fate_summary`` is kept);
   * the two ``../data/`` paths rewritten for this subfolder;
@@ -40,7 +47,20 @@ BAKED_TAB = "p53off"
 SOURCE_DIR = "opencellcomms_adapters/MicroC/workflows/sensitivity_analysis"
 SOLVER_SPACING_UM = 50  # size / nx of the baseline; kept constant across domain sizes
 
+# The gene-step budget every arm covers, and the snapshot cadence, both in
+# single-gene updates per cell. Scheduler steps and plot/checkpoint intervals
+# are derived from these per propagation step count (2000 steps, one snapshot
+# every 10 iterations at the baseline's 5 steps). --steps overrides the run
+# length for throwaway smoke copies only.
+GENE_STEPS_TOTAL = 10_000
+PLOT_EVERY_GENE_STEPS = 50
+
 STEPS_NODE = "steps_param-__scheduler__"
+PROPAGATION_NODE = "gene_update-param_propagation_steps"
+PLOT_INTERVAL_NODE = "iteration_plots-param_plot_interval"
+CHECKPOINT_INTERVAL_NODE = "iteration_plots-param_checkpoint_interval"
+QUADRANT_PLOT_FUNCTION = "iteration_plots-gen_quadrant_plots"
+CHECKPOINT_FUNCTION = "iteration_plots-save_state_checkpoint"
 GLUCOSE_NODE = "glucose_init-param_substances"
 DOMAIN_NODES = {
     "size_x": "envinit-Setup_simulation-param_domain_size_x",
@@ -77,6 +97,33 @@ def _domain(level: int, doc: Dict[str, Any]) -> Dict[str, Any]:
         **_scalar(DOMAIN_NODES["size_y"], "Size Y (μm)", "size_y", str(level)),
         **_scalar(DOMAIN_NODES["nx"], "Grid NX", "nx", n),
         **_scalar(DOMAIN_NODES["ny"], "Grid NY", "ny", n),
+    }
+
+
+def _per_step(total_gene_steps: int, propagation_steps: int, what: str) -> int:
+    if propagation_steps <= 0 or total_gene_steps % propagation_steps:
+        raise SystemExit(f"{what}: {total_gene_steps} gene steps is not a whole number of "
+                         f"scheduler steps at propagation_steps={propagation_steps}")
+    return total_gene_steps // propagation_steps
+
+
+def _clock_overrides(propagation_steps: int, doc: Dict[str, Any]) -> Dict[str, Any]:
+    """A propagation step count and everything that follows from it.
+
+    The run length and the snapshot intervals are fixed in gene updates, not
+    scheduler iterations, so an arm with more updates per iteration runs fewer
+    iterations and plots less often per iteration: same x axis, same number of
+    snapshots.
+    """
+    steps = _per_step(GENE_STEPS_TOTAL, propagation_steps, "run length")
+    interval = str(_per_step(PLOT_EVERY_GENE_STEPS, propagation_steps, "plot cadence"))
+    return {
+        **_scalar(PROPAGATION_NODE, "Propagation Steps", "propagation_steps",
+                  str(propagation_steps)),
+        STEPS_NODE: {"label": "Simulation Steps", "parameters": {"steps": steps}},
+        **_scalar(PLOT_INTERVAL_NODE, "Plot Interval (iterations)", "plot_interval", interval),
+        **_scalar(CHECKPOINT_INTERVAL_NODE, "Checkpoint Interval (iterations)", "interval",
+                  interval),
     }
 
 
@@ -117,6 +164,14 @@ AXES: List[Dict[str, Any]] = [
         "label": lambda v: str(v),
         "overrides": _domain,
     },
+    {
+        "file": "p53_sa_propagation_steps",
+        "title": "gene propagation steps per scheduler step",
+        "tab_prefix": "prop",
+        "levels": [1, 10, 50], "baseline": 5,   # the baked value is not a level: no override-free tab
+        "label": lambda v: str(v),
+        "overrides": _clock_overrides,
+    },
 ]
 
 
@@ -145,6 +200,39 @@ def _rewrite_relative_paths(doc: Dict[str, Any]) -> int:
                     params[key] = "../" + value
                     rewritten += 1
     return rewritten
+
+
+def _function_node(doc: Dict[str, Any], subworkflow: str, node_id: str) -> Dict[str, Any]:
+    for fn in doc["subworkflows"][subworkflow]["functions"]:
+        if fn.get("id") == node_id:
+            return fn
+    raise SystemExit(f"function node '{node_id}' not found in '{subworkflow}'")
+
+
+def _expose_snapshot_cadence(doc: Dict[str, Any], interval: int) -> None:
+    """Turn the inline plot/checkpoint intervals into wired parameter nodes.
+
+    Inline function parameters win over parameter nodes when the executor
+    merges them, so the inline keys are removed, not just shadowed. Both nodes
+    start at ``interval`` (the baseline propagation's cadence); the propagation
+    tabs override them.
+    """
+    plots = doc["subworkflows"]["iteration_plots"]
+    for fn_id, key, node_id, label in (
+        (QUADRANT_PLOT_FUNCTION, "plot_interval", PLOT_INTERVAL_NODE, "Plot Interval (iterations)"),
+        (CHECKPOINT_FUNCTION, "interval", CHECKPOINT_INTERVAL_NODE, "Checkpoint Interval (iterations)"),
+    ):
+        fn = _function_node(doc, "iteration_plots", fn_id)
+        if key not in fn["parameters"]:
+            raise SystemExit(f"'{fn_id}' carries no inline '{key}' to expose")
+        del fn["parameters"][key]
+        fn["parameter_nodes"].append(node_id)
+    plots["parameters"] += [
+        {"id": PLOT_INTERVAL_NODE, "label": "Plot Interval (iterations)",
+         "parameters": {"plot_interval": str(interval)}, "position": {"x": 100, "y": 560}},
+        {"id": CHECKPOINT_INTERVAL_NODE, "label": "Checkpoint Interval (iterations)",
+         "parameters": {"interval": str(interval)}, "position": {"x": 100, "y": 760}},
+    ]
 
 
 def _sensitivity_summary() -> Dict[str, Any]:
@@ -264,19 +352,38 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
 
     _replace_reporter(doc)
 
+    # Run length and snapshot cadence on the gene-step clock of the baked arm.
+    baked_propagation = int(_param_node(doc, PROPAGATION_NODE)["parameters"]["propagation_steps"])
+    canvas_steps = _per_step(GENE_STEPS_TOTAL, baked_propagation, "run length")
+    _param_node(doc, STEPS_NODE)["parameters"]["steps"] = (
+        canvas_steps if steps is None else int(steps))
+    _expose_snapshot_cadence(
+        doc, _per_step(PLOT_EVERY_GENE_STEPS, baked_propagation, "plot cadence"))
+
     label: Callable[[Any], str] = axis["label"]
     names = [f"{axis['tab_prefix']}_{label(v)}" for v in axis["levels"]]
+    if axis["baseline"] in axis["levels"]:
+        baseline_txt = f"the baseline level {axis['baseline']} carries no override"
+    else:
+        baseline_txt = (f"the baseline value {axis['baseline']} is the canvas value and is run "
+                        f"by the other suite files' baseline tabs")
     doc["name"] = f"MicroC p53 SA: {axis['title']}"
     doc["description"] = (
         f"Sensitivity analysis of the p53-knockout MicroC model, one factor at a time. This "
         f"file sweeps the {axis['title']} over {axis['levels']} (Planner tabs "
-        f"{', '.join(names)}; the baseline level {axis['baseline']} carries no override). The "
-        f"canvas holds the microc_p53_experiment.json '{BAKED_TAB}' arm baked in: p53 clamped "
-        f"OFF, cell height 15 um, consumption scales O2 11 / lactate 11 / glucose 7, gene "
-        f"propagation 5 steps, ATP gate 0.5 with cell cycle 2, 500 steps. symbiosis_summary is "
-        f"replaced by sensitivity_summary (record_sensitivity_metrics); fate_summary is kept. "
-        f"Generated by sensitivity_analysis/build_sensitivity_workflows.py -- regenerate, do not "
-        f"hand-edit.\n\nBaseline description follows.\n\n" + baseline.get("description", ""))
+        f"{', '.join(names)}; {baseline_txt}). The canvas holds the "
+        f"microc_p53_experiment.json '{BAKED_TAB}' arm baked in: p53 clamped OFF, cell height "
+        f"15 um, consumption scales O2 11 / lactate 11 / glucose 7, gene propagation "
+        f"{baked_propagation} steps, ATP gate 0.5 with cell cycle 2. Every arm covers "
+        f"{GENE_STEPS_TOTAL} single-gene updates per cell (scheduler steps = "
+        f"{GENE_STEPS_TOTAL} / propagation steps, {canvas_steps} here) and draws a quadrant "
+        f"plot plus a checkpoint every {PLOT_EVERY_GENE_STEPS} gene updates (Plot Interval and "
+        f"Checkpoint Interval nodes on the iteration_plots canvas), so arms with different "
+        f"propagation step counts share the same gene_steps axis and the same number of "
+        f"snapshots. symbiosis_summary is replaced by sensitivity_summary "
+        f"(record_sensitivity_metrics); fate_summary is kept. Generated by "
+        f"sensitivity_analysis/build_sensitivity_workflows.py -- regenerate, do not hand-edit."
+        f"\n\nBaseline description follows.\n\n" + baseline.get("description", ""))
     doc["metadata"]["author"] = (
         f"build_sensitivity_workflows.py from microc_p53_experiment.json ({BAKED_TAB} arm)")
     doc["metadata"]["workflow_source_path"] = f"{SOURCE_DIR}/{axis['file']}.json"
@@ -285,6 +392,8 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
     tab_list = []
     for level, name in zip(axis["levels"], names):
         overrides = {} if level == axis["baseline"] else axis["overrides"](level, doc)
+        if steps is not None:
+            overrides.pop(STEPS_NODE, None)   # smoke copies keep the forced short run
         unknown = set(overrides) - param_ids
         if unknown:
             raise SystemExit(f"override targets unknown parameter nodes: {sorted(unknown)}")
@@ -295,9 +404,6 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
             "parameterOverrides": overrides,
         })
     doc["metadata"]["gui"]["planner"] = {"tabs": tab_list}
-
-    if steps is not None:
-        _param_node(doc, STEPS_NODE)["parameters"]["steps"] = int(steps)
 
     structure = {k: v for k, v in doc.items() if k != "description"}
     if "symbiosis_summary" in json.dumps(structure):

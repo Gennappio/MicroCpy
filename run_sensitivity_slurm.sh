@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name="microc_p53_sa"
-#SBATCH --array=0-11
+#SBATCH --array=0-14
 #SBATCH --mem=80000
 #SBATCH --account=abbruzzese
 #SBATCH --partition=medium_gpunew
@@ -13,18 +13,18 @@
 #
 # Run the p53 sensitivity suite as a SLURM job array: one task per Planner arm
 # of the workflows in opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/
-# (four files x three levels = 12 arms, array indices 0-11).
+# (five files x three levels = 15 arms, array indices 0-14).
 #
 #   mkdir -p slurm_logs                        # SLURM will not create the log dir
 #   bash run_microc_slurm.sh --install-only    # build .venv-hpc ONCE, before the array
 #   bash run_sensitivity_slurm.sh --list       # index -> workflow, tab (no SLURM needed)
 #   sbatch run_sensitivity_slurm.sh            # all arms, in parallel
-#   sbatch --array=0-11%4 run_sensitivity_slurm.sh   # at most four at a time
+#   sbatch --array=0-14%4 run_sensitivity_slurm.sh   # at most four at a time
 #   sbatch --array=2,7 run_sensitivity_slurm.sh      # a subset, by index from --list
 #
 # Each task delegates to run_microc_slurm.sh with the arm's workflow and tab,
 # so venv activation, the headless settings and the run itself are shared with
-# the single-workflow launcher; --no-observability is passed because twelve
+# the single-workflow launcher; --no-observability is passed because fifteen
 # concurrent runs must not write the rolling debugger snapshots into the same
 # engine-local folder. Results land in runs/<workflow stem>_<tab>/ with the
 # executed workflow copied at the run root. Collect them afterwards with:
@@ -82,7 +82,7 @@ INDEX="${SLURM_ARRAY_TASK_ID:-}"
 [ -n "$INDEX" ] || { echo "ERROR: submit this script as a job array (sbatch run_sensitivity_slurm.sh) or run it with --list" >&2; exit 1; }
 [ "$INDEX" -lt "$N" ] || { echo "ERROR: array index $INDEX but only $N arm(s) (0-$((N - 1))); see --list" >&2; exit 1; }
 
-# The venv is built by run_microc_slurm.sh on its first run. Twelve tasks
+# The venv is built by run_microc_slurm.sh on its first run. Fifteen tasks
 # starting at once would race to create it, so an array task refuses to be the
 # one that installs: prebuild with `bash run_microc_slurm.sh --install-only`.
 [ -d "$VENV" ] || { echo "ERROR: venv not found at $VENV -- run 'bash run_microc_slurm.sh --install-only' before submitting the array" >&2; exit 1; }
