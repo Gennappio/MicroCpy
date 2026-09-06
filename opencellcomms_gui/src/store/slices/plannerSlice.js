@@ -9,6 +9,11 @@
 
 import { snapshotAllParamNodeData, overrideMatchesBase } from '../../utils/extractConnectedParams';
 
+export const defaultReplication = (seed = 42) => ({
+  replicates: 1, seedMode: seed === 0 ? 'fresh' : 'generated', masterSeed: String(seed || 42),
+  pairing: 'shared', pairingGroup: 'default', seeds: [],
+});
+
 let nextTabCounter = 1;
 
 /**
@@ -20,6 +25,17 @@ let nextTabCounter = 1;
 export const createPlannerSlice = (set, get) => ({
   // Array of { id, name, enabled, parameterOverrides: { paramNodeId: paramNodeData } }
   plannerTabs: [],
+  plannerReplication: defaultReplication(),
+  setPlannerReplication: (settings) => set({ plannerReplication: settings }),
+  updatePlannerReplication: (patch) => set((state) => ({
+    plannerReplication: { ...state.plannerReplication, ...patch },
+  })),
+  setPlannerTabReplication: (id, count) => set((state) => ({
+    plannerTabs: state.plannerTabs.map((t) => t.id === id ? { ...t, replicationOverride: count } : t),
+  })),
+  setPlannerReference: (id) => set((state) => ({
+    plannerTabs: state.plannerTabs.map((t) => ({ ...t, role: t.id === id ? 'reference' : 'configuration' })),
+  })),
 
   // Currently viewed tab id
   activePlannerTabId: null,
@@ -57,6 +73,8 @@ export const createPlannerSlice = (set, get) => ({
       id: `planner-tab-${Date.now()}-${nextTabCounter}`,
       name: `${source.name} (copy)`,
       enabled: source.enabled,
+      replicationOverride: source.replicationOverride ?? null,
+      role: 'configuration',
       parameterOverrides: JSON.parse(JSON.stringify(source.parameterOverrides)),
     };
     nextTabCounter++;

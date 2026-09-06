@@ -76,18 +76,28 @@ def _read_rows(path: Path) -> List[Dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def collect_run(run_dir: Path) -> Optional[Dict[str, Any]]:
+def collect_run(run_dir: Path, source_override=None) -> Optional[Dict[str, Any]]:
     wf_path = run_dir / "workflow.json"
     if not wf_path.is_file():
         return None
     doc = json.loads(wf_path.read_text(encoding="utf-8"))
-    source = str((doc.get("metadata") or {}).get("workflow_source_path") or "")
+    execution_path = run_dir / 'execution.json'
+    execution = json.loads(execution_path.read_text()) if execution_path.is_file() else {}
+    if execution.get('status') != 'completed' or execution.get('numerical_valid') is not True:
+        print(f'[collect] excluding {run_dir}: completion/numerical validity not verified')
+        return None
+    source = str(source_override or (doc.get("metadata") or {}).get("workflow_source_path") or "")
     stem = Path(source).stem
     if not stem.startswith(SUITE_PREFIX):
         return None
 
     nodes = _param_nodes(doc)
-    row: Dict[str, Any] = {"run_dir": run_dir.name, "axis": stem[len(SUITE_PREFIX):],
+    replicate = doc.get("metadata", {}).get("replicate", {})
+    row: Dict[str, Any] = {"batch_id": replicate.get("batch_id", ""),
+                           "run_id": replicate.get("id", ""), "seed": execution.get("seed", ""),
+                           "replicate": replicate.get("replicate", ""),
+                           "status": execution["status"], "numerical_valid": True,
+                           "run_dir": str(run_dir), "axis": stem[len(SUITE_PREFIX):],
                            "workflow_source_path": source}
     for column, (node_id, key) in CONTROL_NODES.items():
         row[column] = (nodes.get(node_id, {}).get("parameters") or {}).get(key, "")
@@ -107,6 +117,8 @@ def collect_run(run_dir: Path) -> Optional[Dict[str, Any]]:
             rows = _read_rows(csv_path)
         if not rows:
             print(f"[collect] {run_dir.name}: no rows in {csv_path}")
+    if not rows:
+        return None
     if rows:
         first, last = rows[0], rows[-1]
         row["n_iterations"] = last.get("iteration", "")
@@ -125,8 +137,30 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     out = args.out or (args.runs / "sensitivity_summary.csv")
 
-    collected = [r for r in (collect_run(d) for d in sorted(args.runs.iterdir())
-                             if d.is_dir()) if r]
+    sys.path.insert(0, str(REPO_ROOT / 'opencellcomms_engine'))
+    from src.workflow.replication import batch_status
+    collected = []
+    for directory in sorted(args.runs.iterdir()):
+        if not directory.is_dir():
+            continue
+        if (directory / 'manifest.json').is_file():
+            batch = batch_status(directory)
+            for run in batch['runs']:
+                if run['status'] != 'completed' or run.get('numerical_valid') is not True:
+                    print(f"[collect] excluding {run['id']}: {run['status']}")
+                    continue
+                # Shared baselines appear on every requested axis, with the
+                # SAME run ID. They are never extra independent observations.
+                sources = {spec.get('source') for spec in batch['requests']
+                           if spec['configuration_id'] == run['configuration_id']}
+                for source in sorted(sources, key=str):
+                    row = collect_run(directory / run['attempt_dir'], source)
+                    if row:
+                        collected.append(row)
+        else:
+            row = collect_run(directory)
+            if row:
+                collected.append(row)
     if not collected:
         print(f"[collect] no {SUITE_PREFIX}* runs under {args.runs}")
         return 1

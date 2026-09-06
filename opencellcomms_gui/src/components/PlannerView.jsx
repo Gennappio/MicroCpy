@@ -8,11 +8,13 @@ import './PlannerView.css';
  * PlannerView - Multiple named parameter configurations (tabs).
  * Each tab stores only the parameter values edited in it (a sparse diff);
  * everything else follows the canvas base values.
- * When "Run" is pressed in the console, all active tabs execute sequentially.
+ * Replicate identities and execution live in a saved backend batch.
  */
 const PlannerView = () => {
   const {
     plannerTabs,
+    plannerReplication, updatePlannerReplication,
+    setPlannerTabReplication,
     activePlannerTabId,
     addPlannerTab,
     duplicatePlannerTab,
@@ -27,6 +29,7 @@ const PlannerView = () => {
   const [renamingTabId, setRenamingTabId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
 
+  const replicateCount = plannerReplication.seedMode === 'explicit' ? plannerReplication.seeds.length : plannerReplication.replicates;
   const activeTab = plannerTabs.find((t) => t.id === activePlannerTabId);
 
   const handleStartRename = useCallback((tab) => {
@@ -128,7 +131,7 @@ const PlannerView = () => {
                   className="planner-tab-name"
                   onDoubleClick={() => handleStartRename(tab)}
                 >
-                  {tab.name}
+                  {tab.name} · n={tab.replicationOverride ?? replicateCount}
                 </span>
               )}
 
@@ -154,6 +157,40 @@ const PlannerView = () => {
         </div>
       </div>
 
+      <section className="planner-replication">
+        <div className="planner-settings-row">
+          <strong>Replication</strong>
+          <label>Replicates per configuration
+            <input aria-label="Replicates per configuration" type="number" min="1" max="10000"
+              value={replicateCount} disabled={plannerReplication.seedMode === 'explicit'}
+              onChange={(e) => updatePlannerReplication({ replicates: e.target.value })} />
+          </label>
+          <label>Seed assignment <select value={plannerReplication.seedMode}
+            onChange={(e) => updatePlannerReplication({ seedMode: e.target.value, ...(e.target.value === 'explicit' ? { pairing: 'shared' } : {}) })}>
+            <option value="generated">From saved master seed</option><option value="explicit">Explicit seed list</option>
+            <option value="fresh">Generate and save fresh seeds</option>
+          </select></label>
+          {plannerReplication.seedMode === 'generated' && <label>Master seed
+            <input aria-label="Master seed" type="text" inputMode="numeric" value={plannerReplication.masterSeed}
+              onChange={(e) => updatePlannerReplication({ masterSeed: e.target.value })} /></label>}
+          <label>Across configurations <select value={plannerReplication.pairing} disabled={plannerReplication.seedMode === 'explicit'}
+            onChange={(e) => updatePlannerReplication({ pairing: e.target.value })}>
+            <option value="shared">Shared seeds (paired comparisons)</option><option value="independent">Independent seed sets</option>
+          </select></label>
+        </div>
+        {plannerReplication.seedMode === 'explicit' && <label>Positive integer seeds, separated by commas
+          <input className="planner-explicit-seeds" aria-label="Explicit seeds" type="text"
+            value={plannerReplication.seeds.join(',')}
+            onChange={(e) => updatePlannerReplication({ seeds: e.target.value.split(',') })} />
+        </label>}
+        <div className="planner-settings-row">
+          {activeTab && <label>Replicates for {activeTab.name}
+            <input aria-label="Configuration replicate override" type="number" min="1" max="10000"
+              placeholder="Use default" value={activeTab.replicationOverride ?? ''}
+              onChange={(e) => setPlannerTabReplication(activeTab.id, e.target.value === '' ? null : e.target.value)} />
+          </label>}
+        </div>
+      </section>
       {/* Content area */}
       <div className="planner-content">
         {plannerTabs.length === 0 ? (
@@ -164,7 +201,7 @@ const PlannerView = () => {
               Click <strong>+ New</strong> to create a parameter configuration.
               Each configuration stores only the values you change; everything else
               follows the canvas. Active configurations run sequentially when
-              you press Run.
+              you press Run in Results.
             </p>
           </div>
         ) : activeTab ? (

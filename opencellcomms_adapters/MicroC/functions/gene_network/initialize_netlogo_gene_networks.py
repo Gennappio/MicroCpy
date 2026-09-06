@@ -37,7 +37,6 @@ PROBABILISTIC INPUT ACTIVATION (NetLogo lines 1298-1321):
 
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
-import random as _random
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
 from opencellcomms_adapters.common.functions.gene_network.apply_associations_to_inputs import (
@@ -249,7 +248,7 @@ def initialize_netlogo_gene_networks(
                     node.current_state = False
                     node.next_state = False
                 else:
-                    state = _random.choice([True, False]) if random_initialization else False
+                    state = bool(env.rng.integers(2)) if random_initialization else False
                     node.current_state = state
                     node.next_state = state
 
@@ -257,14 +256,14 @@ def initialize_netlogo_gene_networks(
             cell_gn._output_links_built = True
 
             # Per-cell random thresholds and graph-walking state
-            cell_gn._cell_ran1 = _random.random()
-            cell_gn._cell_ran2 = _random.random()
+            cell_gn._cell_ran1 = float(env.rng.random())
+            cell_gn._cell_ran2 = float(env.rng.random())
 
             input_node_names = [n for n, nd in cell_gn.nodes.items() if nd.is_input]
             if input_node_names:
-                cell_gn._last_node = _random.choice(input_node_names)
+                cell_gn._last_node = str(env.rng.choice(input_node_names))
             else:
-                cell_gn._last_node = _random.choice(list(cell_gn.nodes.keys()))
+                cell_gn._last_node = str(env.rng.choice(list(cell_gn.nodes.keys())))
 
             cell_gn._fate = None
 

@@ -1,3 +1,4 @@
+import { defaultReplication } from './slices/plannerSlice';
 /**
  * Workflow Store - Manages the entire workflow state
  *
@@ -122,7 +123,7 @@ const _initialCoreState = () => ({
 const PERSIST_KEY = 'opencellcomms-workflow';
 const PERSISTED_KEYS = [
   'workflow', 'currentStage', 'currentMainTab', 'stageNodes', 'stageEdges',
-  'plannerTabs', 'activePlannerTabId', 'workflowFilePath',
+  'plannerTabs', 'activePlannerTabId', 'workflowFilePath', 'plannerReplication',
 ];
 
 const useWorkflowStore = create(persist((set, get) => ({
@@ -133,7 +134,7 @@ const useWorkflowStore = create(persist((set, get) => ({
 
   // Start an empty project: also drops planner tabs and the file path.
   clearWorkflow: () =>
-    set({ ..._initialCoreState(), plannerTabs: [], activePlannerTabId: null, workflowFilePath: null }),
+    set({ ..._initialCoreState(), plannerTabs: [], activePlannerTabId: null, workflowFilePath: null, plannerReplication: defaultReplication() }),
 
   setCurrentStage: (stage) => set({ currentStage: stage }),
 

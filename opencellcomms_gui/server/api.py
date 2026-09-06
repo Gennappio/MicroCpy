@@ -15,6 +15,7 @@ import queue
 import time
 import shutil
 import ast
+from functools import wraps
 import inspect
 import tempfile
 import tomllib
@@ -58,6 +59,7 @@ log_queue = queue.Queue()
 is_running = False
 last_run_status = "idle"
 last_exit_code = None
+simulation_launch_lock = threading.Lock()
 
 # PID file for cross-refresh / cross-restart recovery
 PID_FILE = Path(__file__).parent / ".current_process.pid"
@@ -205,6 +207,8 @@ def stream_output(process, log_queue):
     
     # Wait for process to complete
     process.wait()
+    stdout_thread.join()
+    stderr_thread.join()
     
     # Signal completion
     if process.returncode == 0:
@@ -219,7 +223,7 @@ def stream_output(process, log_queue):
     PID_FILE.unlink(missing_ok=True)
 
 
-def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=None):
+def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=None, batch_options=None):
     """Run OpenCellComms workflow in background thread (workflow-only mode)"""
     global simulation_process, is_running, last_run_status, last_exit_code
 
@@ -237,7 +241,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
         engine_dir = engine_path.parent
 
         # Build command - GUI runs workflows only
-        if not workflow_path:
+        if not workflow_path and not batch_options:
             log_queue.put(f"[ERROR] Workflow path must be provided\n")
             is_running = False
             last_run_status = "failed"
@@ -251,6 +255,7 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             str(engine_path),
             "--workflow",
             workflow_path,
+            "--no-planner",
         ]
         if gui_results_dir:
             cmd += ["--gui-results-dir", str(Path(gui_results_dir).absolute())]
@@ -262,6 +267,12 @@ def run_simulation_async(workflow_path, entry_subworkflow=None, gui_results_dir=
             cmd.extend(["--entry-subworkflow", entry_subworkflow])
         else:
             log_queue.put(f"[START] Running workflow-only mode: {workflow_path}\n")
+
+        if batch_options:
+            cmd = [sys.executable, str(engine_dir / 'tools/run_planner_batch.py'),
+                   '--manifest', str(batch_options['manifest']), '--action', batch_options['action']]
+            if batch_options.get('run_id'):
+                cmd += ['--run-id', batch_options['run_id']]
 
         log_queue.put(f"[INFO] Command: {' '.join(cmd)}\n")
         log_queue.put(f"[INFO] Working directory: {engine_dir}\n")
@@ -320,18 +331,22 @@ def get_status():
     })
 
 
+def _serialize_launch(function):
+    @wraps(function)
+    def locked(*args, **kwargs):
+        with simulation_launch_lock:
+            return function(*args, **kwargs)
+    return locked
+
+
 @app.route('/api/run', methods=['POST'])
+@_serialize_launch
 def run_simulation():
     """Start a new simulation (Section 9.2: supports entry_subworkflow parameter)"""
     global simulation_thread, is_running, last_run_status, last_exit_code
 
-    # Check if the process is actually still alive; reset stale flag if not
     if is_running:
-        if simulation_process is not None and simulation_process.poll() is not None:
-            # Process has already exited but flag was not cleared
-            is_running = False
-        else:
-            return jsonify({'error': 'Simulation already running'}), 400
+        return jsonify({'error': 'Simulation already running'}), 400
 
     data = request.json
     workflow_data = data.get('workflow')   # Workflow definition is required
@@ -405,7 +420,7 @@ def run_simulation():
 
         log_queue.put(f"[INFO] Entry subworkflow: {entry_subworkflow} (composer)\n")
 
-    # Set up this run's output directory: runs/<label>/, overwrite same label.
+    # Preserve previous results, including results from renamed Planner tabs.
     # Planner runs pass run_label (WT, KO, ...); standard runs default to the
     # workflow name. Both write into the same top-level runs/ tree.
     try:
@@ -419,35 +434,15 @@ def run_simulation():
             roots=(RUNS_DIR,),
             allow_absolute=True,
         )
-        if run_dir.exists():
-            shutil.rmtree(run_dir)
-            log_queue.put(f"[INFO] Cleared runs/{safe_label} directory\n")
-        run_dir.mkdir(parents=True, exist_ok=True)
-        log_queue.put(f"[INFO] runs/{safe_label} directory ready\n")
-
-        # Planner multi-run: the GUI sends keep_labels = all current planner tabs.
-        # Prune run folders for tabs that were removed/renamed so the Results tab
-        # mirrors the planner. Only runs when keep_labels is provided.
-        keep_labels = data.get('keep_labels')
-        if keep_labels is not None:
-            keep = {
-                safe_run_label(l)
-                for l in keep_labels
-            } | {safe_label}
-            for item in RUNS_DIR.iterdir():
-                if (
-                    item.is_dir()
-                    and not item.is_symlink()
-                    and not item.name.startswith('.')
-                    and item.name not in keep
-                ):
-                    stale_dir = _resolve_allowed_path(
-                        item,
-                        roots=(RUNS_DIR,),
-                        allow_absolute=True,
-                    )
-                    shutil.rmtree(stale_dir, ignore_errors=True)
-                    log_queue.put(f"[INFO] Removed stale results folder '{item.name}'\n")
+        suffix = 1
+        while True:
+            try:
+                run_dir.mkdir(parents=True, exist_ok=False)
+                break
+            except FileExistsError:
+                suffix += 1
+                run_dir = RUNS_DIR / f'{safe_label}_{suffix}'
+        log_queue.put(f"[INFO] Results saved in {run_dir}\n")
     except PathPolicyError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -455,10 +450,7 @@ def run_simulation():
         log_queue.put(f"[ERROR] {error_msg}\n")
         return jsonify({'error': error_msg}), 500
 
-    # Save workflow to a temp file (planner runs get a per-label temp file so
-    # concurrent conditions don't collide).
-    temp_label = safe_run_label(run_label) if run_label else ''
-    workflow_path = str(Path(tempfile.gettempdir()) / (f"opencellcomms_workflow_{temp_label}.json" if run_label else "opencellcomms_workflow.json"))
+    workflow_path = str(run_dir / 'workflow.json')
     try:
         with open(workflow_path, 'w') as f:
             json.dump(workflow_data, f, indent=2)
@@ -488,6 +480,142 @@ def run_simulation():
         'workflow': workflow_path,
         'entry_subworkflow': entry_subworkflow
     })
+
+
+def _planner_module():
+    if str(ENGINE_DIR) not in sys.path:
+        sys.path.insert(0, str(ENGINE_DIR))
+    from src.workflow import replication
+    return replication
+
+
+def _planner_batch(batch_id):
+    if not re.fullmatch(r'[A-Za-z0-9_-]+', batch_id):
+        raise PathPolicyError('Invalid batch ID')
+    batch = _resolve_allowed_path(RUNS_DIR / batch_id, roots=(RUNS_DIR,),
+                                  allow_absolute=True, must_exist=True)
+    _resolve_allowed_path(batch / 'manifest.json', roots=(RUNS_DIR,),
+                          allow_absolute=True, must_exist=True, require_file=True)
+    return batch
+
+
+def _planner_documents(data):
+    workflow = data.get('workflow')
+    if not isinstance(workflow, dict):
+        raise ValueError('Workflow is required')
+    from src.workflow.schema import WorkflowDefinition
+    validation = WorkflowDefinition.from_dict(workflow).validate()
+    if not validation['valid']:
+        raise ValueError('; '.join(validation['errors']))
+    return [{'workflow': workflow, 'source': workflow.get('metadata', {}).get('workflow_source_path', '')}]
+
+
+def _start_planner(batch, action='continue', run_id=None):
+    global simulation_thread, is_running, last_run_status, last_exit_code
+    while not log_queue.empty():
+        log_queue.get_nowait()
+    is_running, last_run_status, last_exit_code = True, 'running', None
+    simulation_thread = threading.Thread(target=run_simulation_async,
+        args=(None,), kwargs={'batch_options': {'manifest': batch / 'manifest.json',
+        'action': action, 'run_id': run_id}}, daemon=True)
+    simulation_thread.start()
+
+
+@app.route('/api/planner/preview', methods=['POST'])
+def planner_preview():
+    try:
+        module = _planner_module()
+        plan = module.compile_plan(_planner_documents(request.get_json() or {}))
+        for config in plan['configurations']:
+            config.pop('workflow', None)
+        return jsonify(plan)
+    except (ValueError, OSError, TypeError, KeyError) as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.route('/api/planner/batches', methods=['GET', 'POST'])
+def planner_batches():
+    module = _planner_module()
+    if request.method == 'GET':
+        batches = []
+        for path in sorted(RUNS_DIR.glob('*/manifest.json'), reverse=True):
+            try:
+                batch = _planner_batch(path.parent.name)
+                state = module.batch_status(batch)
+                batches.append({key: state[key] for key in
+                    ('batch_id', 'created_at', 'unique_runs', 'completed', 'failed')})
+            except (ValueError, OSError, KeyError):
+                continue
+        return jsonify(batches=batches)
+    with simulation_launch_lock:
+        if is_running:
+            return jsonify(error='A simulation is already running'), 409
+        try:
+            documents = _planner_documents(request.get_json() or {})
+            batch = module.create_batch(documents, RUNS_DIR)
+            _start_planner(batch)
+            return jsonify(batch_id=batch.name, status='started'), 201
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            return jsonify(error=str(exc)), 400
+
+
+@app.route('/api/planner/batches/<batch_id>', methods=['GET'])
+def planner_batch_status(batch_id):
+    try:
+        module = _planner_module()
+        batch = _planner_batch(batch_id)
+        return jsonify(**module.batch_status(batch), summary=module.summarize_batch(batch, request.args.get('metric')))
+    except (ValueError, OSError, KeyError) as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.route('/api/planner/batches/<batch_id>/action', methods=['POST'])
+def planner_batch_action(batch_id):
+    with simulation_launch_lock:
+        if is_running:
+            return jsonify(error='A simulation is already running'), 409
+        try:
+            module = _planner_module()
+            batch = _planner_batch(batch_id)
+            data = request.get_json() or {}
+            action = data.get('action')
+            run_id = data.get('run_id')
+            if action not in ('continue', 'retry', 'replay', 'add'):
+                raise ValueError('Unknown batch action')
+            state = module.batch_status(batch)
+            if any(a['status'] == 'running' for r in state['runs'] for a in r['attempts']):
+                raise ValueError('This batch has running workers')
+            if action == 'replay' and not run_id:
+                raise ValueError('Select a replicate to replay')
+            if run_id and run_id not in {r['id'] for r in state['runs']}:
+                raise ValueError('Unknown replicate identity')
+            if state['code_hash'] != module.code_fingerprint():
+                raise ValueError('Model code changed. Restore the saved source or create a new batch.')
+            if action == 'add':
+                module.add_replicates(batch, data.get('replicates'))
+                action = 'continue'
+            _start_planner(batch, action, run_id)
+            return jsonify(status='started', batch_id=batch_id)
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            return jsonify(error=str(exc)), 400
+
+
+@app.route('/api/planner/batches/<batch_id>/export', methods=['GET'])
+def planner_batch_export(batch_id):
+    try:
+        batch = _planner_batch(batch_id)
+        # Zip in memory so downloading never mutates a saved experiment.
+        import zipfile
+        output = tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024)
+        with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for path in sorted(batch.rglob('*')):
+                if path.is_file() and not path.is_symlink():
+                    safe = _resolve_allowed_path(path, roots=(RUNS_DIR,), allow_absolute=True, require_file=True)
+                    archive.write(safe, arcname=str(path.relative_to(batch)))
+        output.seek(0)
+        return send_file(output, mimetype='application/zip', as_attachment=True, download_name=batch_id + '.zip')
+    except (ValueError, OSError) as exc:
+        return jsonify(error=str(exc)), 400
 
 
 @app.route('/api/stop', methods=['POST'])
@@ -1965,6 +2093,21 @@ def list_results():
         if has_subdirs:
             for item in sorted(results_dir.iterdir()):
                 if item.is_dir() and not item.is_symlink() and not item.name.startswith('.'):
+                    if (item / 'manifest.json').is_file():
+                        replication = _planner_module()
+                        state = replication.batch_status(item)
+                        batch_name = replication.batch_display_name(state)
+                        configs = {c['id']: c['name'] for c in state['configurations']}
+                        for run in state['runs']:
+                            for attempt in run['attempts']:
+                                attempt_dir = item / attempt['attempt_dir']
+                                results.append({
+                                    'name': f"{batch_name} / {configs[run['configuration_id']]} / Replicate {run.get('output_index', run['replicate'])} / {attempt_dir.name}",
+                                    'timestamp': attempt.get('started_at', ''),
+                                    'seed': run['seed'], 'status': attempt['status'],
+                                    'numerical_valid': attempt.get('numerical_valid'),
+                                    'plots': scan_for_plots(attempt_dir, RUNS_DIR)})
+                        continue
                     plots = scan_for_plots(item, RUNS_DIR)
                     if plots:
                         # Try to extract timestamp from directory name

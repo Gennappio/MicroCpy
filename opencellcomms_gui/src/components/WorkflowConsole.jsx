@@ -30,7 +30,6 @@ const WorkflowConsole = ({ workflowName }) => {
   // Ref to hold the true current buffer - avoids stale closure issues in SSE handler
   const bufferedLogsRef = useRef([]);
   // Ref for resolving per-tab run completion (used in sequential planner runs)
-  const completionResolverRef = useRef(null);
   // Ref to track whether a flush is already scheduled (throttle state updates)
   const flushScheduledRef = useRef(false);
 
@@ -81,9 +80,11 @@ const WorkflowConsole = ({ workflowName }) => {
   useEffect(() => {
     connectToLogStream();
     checkStatus();
+    const statusPoll = setInterval(checkStatus, 2000);
     fetchCliInfo();
 
     return () => {
+      clearInterval(statusPoll);
       disconnectFromLogStream();
     };
   }, []);
@@ -174,7 +175,7 @@ const WorkflowConsole = ({ workflowName }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/status`);
       const data = await res.json();
-      if (data.running) setIsRunning(true);
+      setIsRunning(Boolean(data.running));
     } catch (err) {
       // Server may not be available yet
     }
@@ -220,14 +221,8 @@ const WorkflowConsole = ({ workflowName }) => {
           }
 
           // Check for completion - fetch final badge stats
-          if (data.type === 'complete' || data.type === 'error') {
-            if (completionResolverRef.current) {
-              // Sequential planner run: resolve the per-tab promise
-              completionResolverRef.current(data.type);
-              completionResolverRef.current = null;
-            } else {
-              setIsRunning(false);
-            }
+          if (data.type === 'complete' || data.message?.startsWith('[FAILED]') || data.message?.startsWith('[STOP]')) {
+            setIsRunning(false);
             // Auto-flush buffered logs so the run's output (including the
             // function's own print() lines) is visible without a manual Refresh.
             handleRefresh();
@@ -269,81 +264,6 @@ const WorkflowConsole = ({ workflowName }) => {
     }
   };
 
-  /**
-   * Apply planner tab overrides to an exported workflow JSON.
-   * Replaces parameter node data in subworkflows[*].parameters[] with override values.
-   */
-  const applyOverridesToWorkflow = (workflow, overrides) => {
-    const patched = JSON.parse(JSON.stringify(workflow));
-    for (const swName of Object.keys(patched.subworkflows)) {
-      const sw = patched.subworkflows[swName];
-      if (!sw.parameters) continue;
-      sw.parameters = sw.parameters.map((param) => {
-        const override = overrides[param.id];
-        if (!override) return param;
-        // Merge override data into the parameter node
-        const merged = { ...param };
-        if (override.parameters !== undefined) merged.parameters = override.parameters;
-        if (override.items !== undefined) merged.items = override.items;
-        if (override.entries !== undefined) merged.entries = override.entries;
-        if (override.listType !== undefined) merged.listType = override.listType;
-        return merged;
-      });
-    }
-
-    // Loop counts need no propagation: the executor resolves the steps
-    // parameter node wired to a controller directly, so overriding that
-    // node is enough.
-    return patched;
-  };
-
-  /**
-   * Wait for the current run to finish (complete or error).
-   *
-   * Resolves on the SSE terminal event, OR on the backend reporting itself idle.
-   * The poll is not belt-and-braces: a planner run waits here between arms, and
-   * a single missed SSE event -- a dropped stream during a long arm, or a
-   * terminal event arriving before this resolver was installed -- would leave
-   * the loop waiting forever. The remaining arms are then never submitted, with
-   * no error anywhere: the backend goes idle, the first arm's folder is the only
-   * one on disk, and the GUI just sits there. Asking the backend directly is the
-   * only way to be sure a run is over.
-   */
-  const waitForRunCompletion = () => {
-    return new Promise((resolve) => {
-      let settled = false;
-      let poll = null;
-
-      const finish = (result) => {
-        if (settled) return;
-        settled = true;
-        completionResolverRef.current = null;
-        if (poll) clearInterval(poll);
-        resolve(result);
-      };
-
-      completionResolverRef.current = finish;
-
-      // Give the run a moment to register before believing "not running": /run
-      // sets the flag before it responds, but the fetch and this call are not
-      // one atomic step.
-      const startedAt = Date.now();
-      poll = setInterval(async () => {
-        if (Date.now() - startedAt < 3000) return;
-        try {
-          const response = await fetch(`${API_BASE_URL}/status`);
-          if (!response.ok) return;
-          const status = await response.json();
-          if (!status.running) {
-            finish(status.status === 'completed' ? 'complete' : 'error');
-          }
-        } catch {
-          // Transient network error: keep waiting rather than declaring the arm done.
-        }
-      }, 2000);
-    });
-  };
-
   const handleRun = async () => {
     if (isRunning) return;
 
@@ -365,7 +285,7 @@ const WorkflowConsole = ({ workflowName }) => {
       const activeTabs = getActivePlannerTabs();
       setIsRunning(true);
 
-      if (activeTabs.length === 0) {
+      if (plannerTabs.length === 0) {
         // No planner tabs: run once with current canvas values (backward compat)
         const timestamp = new Date().toLocaleTimeString();
         setDisplayedLogsStore(workflowName, [{ type: 'info', message: `🚀 Starting simulation...`, timestamp }]);
@@ -392,73 +312,16 @@ const WorkflowConsole = ({ workflowName }) => {
         // isRunning will be set to false by SSE handler on complete/error
 
       } else {
-        // Sequential planner run: execute each active tab.
-        // Names of all current planner tabs — the backend keeps only these
-        // result folders and prunes orphans from removed/renamed tabs.
-        const keepLabels = plannerTabs.map((t) => t.name);
-        const failedTabs = [];
-        const timestamp = new Date().toLocaleTimeString();
-        setDisplayedLogsStore(workflowName, [{
-          type: 'info',
-          message: `🚀 Starting ${activeTabs.length} planner configuration(s)...`,
-          timestamp,
-        }]);
-
-        for (let i = 0; i < activeTabs.length; i++) {
-          const tab = activeTabs[i];
-          const tabWorkflow = applyOverridesToWorkflow(fullWorkflow, tab.parameterOverrides);
-
-          appendDisplayedLogs(workflowName, [{
-            type: 'info',
-            message: `▶ [${i + 1}/${activeTabs.length}] Running "${tab.name}"...`,
-            timestamp: new Date().toLocaleTimeString(),
-          }]);
-
-          const response = await fetch(`${API_BASE_URL}/run`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workflow: tabWorkflow,
-              entry_subworkflow: 'main',
-              run_label: tab.name,
-              keep_labels: keepLabels,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            appendDisplayedLogs(workflowName, [{
-              type: 'error',
-              message: `❌ "${tab.name}" failed to start: ${errorData.error || 'Unknown error'}`,
-              timestamp: new Date().toLocaleTimeString(),
-            }]);
-            failedTabs.push(tab.name);
-            continue; // Try next tab
-          }
-
-          // Wait for this run to complete via SSE
-          const result = await waitForRunCompletion();
-
-          if (result !== 'complete') failedTabs.push(tab.name);
-          appendDisplayedLogs(workflowName, [{
-            type: result === 'complete' ? 'info' : 'error',
-            message: result === 'complete'
-              ? `✓ "${tab.name}" completed`
-              : `✗ "${tab.name}" finished with errors`,
-            timestamp: new Date().toLocaleTimeString(),
-          }]);
-        }
-
-        // Say what actually happened. Reporting "all finished" after arms failed
-        // reads as success and hides missing experiments.
-        appendDisplayedLogs(workflowName, [{
-          type: failedTabs.length ? 'error' : 'info',
-          message: failedTabs.length
-            ? `✗ ${activeTabs.length - failedTabs.length}/${activeTabs.length} planner configurations completed — failed: ${failedTabs.join(', ')}`
-            : `✓ All ${activeTabs.length} planner configurations finished`,
-          timestamp: new Date().toLocaleTimeString(),
-        }]);
-        setIsRunning(false);
+        if (!activeTabs.length) throw new Error('Enable at least one Planner configuration');
+        const response = await fetch(`${API_BASE_URL}/planner/batches`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workflow: fullWorkflow }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to start batch');
+        appendDisplayedLogs(workflowName, [{ type: 'info',
+          message: 'Planned configurations started. Each replicate has its own results folder; seeds and settings are saved automatically.',
+          timestamp: new Date().toLocaleTimeString() }]);
       }
 
     } catch (err) {

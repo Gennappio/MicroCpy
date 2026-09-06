@@ -1,3 +1,4 @@
+import { defaultReplication } from './plannerSlice';
 /**
  * Workflow I/O Slice
  *
@@ -485,6 +486,8 @@ export const createWorkflowIOSlice = (set, get) => ({
     // Always sync planner tabs: restore from loaded workflow, or seed a default
     // so the Planner is never empty (an empty "Run 1" diff tab that follows the
     // canvas values).
+    const savedReplication = workflowJson.metadata?.gui?.planner?.replication;
+    get().setPlannerReplication({ ...defaultReplication(workflowJson.seed), ...savedReplication });
     const plannerData = workflowJson.metadata?.gui?.planner?.tabs;
     if (Array.isArray(plannerData) && plannerData.length > 0) {
       // Tabs are sparse diffs from the canvas base values. Older files carry
@@ -601,16 +604,20 @@ export const createWorkflowIOSlice = (set, get) => ({
     };
 
     // Include planner tabs in exported metadata
-    const { plannerTabs } = state;
+    const { plannerTabs, plannerReplication } = state;
     if (plannerTabs && plannerTabs.length > 0) {
       exportedMetadata.gui = {
         ...exportedMetadata.gui,
         planner: {
+          version: 2,
+          replication: plannerReplication,
           tabs: plannerTabs.map((t) => ({
             id: t.id,
             name: t.name,
             enabled: t.enabled,
             parameterOverrides: t.parameterOverrides,
+            role: t.role || 'configuration',
+            replicationOverride: t.replicationOverride ?? null,
           })),
         },
       };

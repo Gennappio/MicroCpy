@@ -40,7 +40,6 @@ HOW MANY STEPS
     cell is in, and apoptosis wins regardless of the biology.
 """
 
-import random
 from typing import Dict
 
 from src.workflow.decorators import register_function
@@ -124,7 +123,7 @@ def propagate_gene_networks_single_gene(
 
         if genes:
             for _ in range(propagation_steps):
-                selected = random.choice(genes)
+                selected = str(env.rng.choice(genes))
                 states[selected] = bool(gn.nodes[selected].update_function(states))
 
         for name, value in states.items():

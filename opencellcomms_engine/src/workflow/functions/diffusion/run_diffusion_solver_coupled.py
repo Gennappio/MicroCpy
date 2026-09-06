@@ -261,6 +261,8 @@ def _run_coupled(
     old_reactions = None
     prev_solution = None
     solution_stationary = False
+    diagnostics = context.setdefault("numerical_diagnostics", {})
+    diagnostics["coupling_solves"] = diagnostics.get("coupling_solves", 0) + 1
 
     for coupling_iter in range(max_coupling_iterations):
         # Step 1: Store old concentrations for the relaxation blend
@@ -329,6 +331,7 @@ def _run_coupled(
                 prefix="[COUPLED]")
 
     else:
+        diagnostics["coupling_failures"] = diagnostics.get("coupling_failures", 0) + 1
         log_always(f"WARNING: Did not converge after {max_coupling_iterations} iterations "
                    f"(final solution change={solution_change:.4e})",
             prefix="[COUPLED]")

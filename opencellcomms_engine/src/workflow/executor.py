@@ -409,11 +409,13 @@ class WorkflowExecutor:
         if self._workflow_file and not getattr(self, '_provenance_copied', False):
             try:
                 run_base.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(self._workflow_file, run_base / 'workflow.json')
+                if self._workflow_file.resolve() != (run_base / 'workflow.json').resolve():
+                    shutil.copyfile(self._workflow_file, run_base / 'workflow.json')
                 self._provenance_copied = True
             except OSError as exc:
                 print(f"[WORKFLOW] WARNING: could not copy workflow into run folder: {exc}")
 
+        context['_run_output_root'] = run_base
         subworkflow_dir = run_base / subworkflow_name
 
         context['gui_root'] = self._gui_results_dir.parent if self._gui_results_dir else None
@@ -1449,15 +1451,9 @@ class WorkflowExecutor:
         # Initialize observability at the start
         self.initialize_observability()
 
-        # Resolve the run-level RNG seed (workflow JSON top-level "seed").
-        # Absent → 42 (reproducible default); 0 → fresh entropy each run. This is
-        # the single source for the random iteration order of agents/resources
-        # (see _run_for_each_entity), so it must be set before any subworkflow runs.
-        import numpy as np
-        resolved_seed = 42 if getattr(self.workflow, "seed", None) is None else int(self.workflow.seed)
-        context["seed"] = resolved_seed
-        context["_rng"] = np.random.default_rng(resolved_seed if resolved_seed else None)
-        print(f"[WORKFLOW] Run seed = {resolved_seed if resolved_seed else 'entropy (0)'}")
+        from .randomness import seed_run
+        resolved_seed = seed_run(context, getattr(self.workflow, "seed", None))
+        print(f"[WORKFLOW] Run seed = {resolved_seed} (env.rng + legacy generators)")
 
         status = "completed"
         try:
@@ -1481,10 +1477,20 @@ class WorkflowExecutor:
                 # For version 1.0, execute initialization as the entry point
                 result = self.execute_initialization(context)
             return result
-        except Exception as e:
+        except BaseException:
             status = "failed"
             raise
         finally:
+            root = context.get("_run_output_root")
+            if root:
+                from .replication import write_json
+                diagnostics = context.get("numerical_diagnostics", {})
+                write_json(Path(root) / "execution.json", {
+                    "status": status, "seed": str(resolved_seed),
+                    "numerical_valid": not diagnostics.get("coupling_failures", 0),
+                    "numerical_diagnostics": diagnostics,
+                    "last_iteration": context.get("loop_iteration"),
+                })
             # Finalize observability at the end
             self.finalize_observability(status)
 
