@@ -439,7 +439,18 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
             "enabled": True,
             "parameterOverrides": overrides,
         })
-    doc["metadata"]["gui"]["planner"] = {"tabs": tab_list}
+    doc["metadata"]["gui"]["planner"] = {
+        "version": 2,
+        "replication": {
+            "replicates": 10,
+            "seedMode": "generated",
+            "masterSeed": "42",
+            "pairing": "shared",
+            "pairingGroup": "default",
+            "seeds": [],
+        },
+        "tabs": tab_list,
+    }
 
     structure = {k: v for k, v in doc.items() if k != "description"}
     if "symbiosis_summary" in json.dumps(structure):

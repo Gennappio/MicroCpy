@@ -84,6 +84,15 @@
       },
       "contract_enforcement": "warn",
       "planner": {
+        "version": 2,
+        "replication": {
+          "replicates": 10,
+          "seedMode": "generated",
+          "masterSeed": "42",
+          "pairing": "shared",
+          "pairingGroup": "default",
+          "seeds": []
+        },
         "tabs": [
           {
             "id": "sa-tab-glucose_consumption-5.6",

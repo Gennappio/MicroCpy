@@ -31,7 +31,7 @@ def seeds(planned):
     return {(x['configuration_id'], x['replicate']): x['seed'] for x in planned['runs']}
 
 
-def test_stable_identity_pairing_and_extension(tmp_path):
+def test_stable_identity_pairing_and_workflow_owned_plan(tmp_path):
     doc = workflow()
     original = plan(doc)
     assert len({x['seed'] for x in original['runs']}) == 3
@@ -41,10 +41,13 @@ def test_stable_identity_pairing_and_extension(tmp_path):
     tabs[0]['name'] = 'Renamed tab'
     assert seeds(plan(doc)) == seeds(original)
     batch = r.create_batch([], tmp_path, original)
-    extended = r.add_replicates(batch, 2)
-    assert len(extended['runs']) == 10
-    assert all(seeds(extended)[key] == value for key, value in seeds(original).items())
-    assert len(r.read_json(batch / 'plan-001.json')['runs']) == 6
+    receipt = r.read_json(batch / 'manifest.json')
+    assert len(receipt['runs']) == 6
+    assert not list(batch.glob('plan-*.json'))
+    for config in receipt['configurations']:
+        frozen = r.read_json(batch / config['workflow_file'])
+        planned = next(item for item in original['configurations'] if item['id'] == config['id'])
+        assert frozen['metadata']['gui']['planner'] == planned['workflow']['metadata']['gui']['planner']
     assert (batch / 'source.tar.gz').is_file()
 
 
@@ -83,7 +86,7 @@ def test_readable_folders_are_unique_and_do_not_change_seeds(tmp_path, monkeypat
     assert r.run_status(batch, saved['runs'][0])['status'] == 'completed'
 
 
-def test_independent_duplicate_configs_and_extension_keep_separate_folders(tmp_path):
+def test_independent_duplicate_configs_keep_separate_folders(tmp_path):
     doc = workflow(2)
     doc['metadata']['gui']['planner']['replication']['pairing'] = 'independent'
     doc['metadata']['gui']['planner']['tabs'][1]['parameterOverrides'] = {}
@@ -91,13 +94,11 @@ def test_independent_duplicate_configs_and_extension_keep_separate_folders(tmp_p
     original = r.read_json(batch / 'manifest.json')['runs']
     assert len(original) == 4
     assert len({run['output_dir'] for run in original}) == 4
-    extended = r.add_replicates(batch, 2)['runs']
-    assert extended[:4] == original
-    assert len({run['seed'] for run in extended}) == 8
-    assert [run['output_dir'] for run in extended] == [f'Reference/replicate-{i:03d}' for i in range(1, 9)]
+    assert len({run['seed'] for run in original}) == 4
+    assert [run['output_dir'] for run in original] == [f'Reference/replicate-{i:03d}' for i in range(1, 5)]
 
 
-def test_legacy_hash_folders_remain_readable_and_extend_without_moving(tmp_path):
+def test_legacy_hash_folders_remain_readable(tmp_path):
     batch = r.create_batch([{'workflow': workflow(1)}], tmp_path)
     saved = r.read_json(batch / 'manifest.json')
     for config in saved['configurations']:
@@ -111,8 +112,19 @@ def test_legacy_hash_folders_remain_readable_and_extend_without_moving(tmp_path)
     expected = batch / first['configuration_id'] / first['id'] / 'attempt-001'
     assert (expected / 'status.json').is_file()
     assert r.batch_status(batch)['completed'] == 1
-    assert all('output_dir' not in run for run in r.add_replicates(batch, 1)['runs'])
     assert r.run_status(batch, first)['status'] == 'completed'
+
+
+def test_changing_replicates_requires_a_new_workflow_plan(tmp_path):
+    doc = workflow(1)
+    first = r.create_batch([{'workflow': doc}], tmp_path)
+    first_receipt = (first / 'manifest.json').read_bytes()
+    doc['metadata']['gui']['planner']['replication']['replicates'] = 2
+    second = r.create_batch([{'workflow': doc}], tmp_path)
+    assert r.read_json(first / 'manifest.json')['requested_runs'] == 2
+    assert r.read_json(second / 'manifest.json')['requested_runs'] == 4
+    assert (first / 'manifest.json').read_bytes() == first_receipt
+    assert not list(tmp_path.rglob('plan-*.json'))
 
 
 def test_duplicate_baseline_counts_once_and_biology_name_is_semantic():
@@ -128,8 +140,9 @@ def test_duplicate_baseline_counts_once_and_biology_name_is_semantic():
 def test_sensitivity_suite_deduplicates_baselines():
     docs = [{'workflow': r.read_json(p), 'source': str(p)} for p in sorted(SUITE.glob('p53_sa_*.json'))]
     planned = r.compile_plan(docs)
-    assert planned['requested_runs'] == 15
-    assert planned['unique_runs'] == 12
+    assert planned['requested_runs'] == 150
+    assert planned['unique_runs'] == 120
+    assert len({run['seed'] for run in planned['runs']}) == 10
 
 
 @pytest.mark.parametrize('patch', [
@@ -280,7 +293,7 @@ def test_independent_contrast_and_replay_mismatch_remain_visible(tmp_path):
 
 
 @pytest.mark.slow
-def test_microc_replay_and_extension_in_fresh_processes(tmp_path):
+def test_microc_replay_in_fresh_processes(tmp_path):
     source = SUITE / 'p53_sa_glucose_consumption.json'
     doc = r.read_json(source)
     planner = doc['metadata']['gui']['planner']
@@ -310,11 +323,4 @@ def test_microc_replay_and_extension_in_fresh_processes(tmp_path):
     assert trajectories
     for path in trajectories:
         assert path.read_bytes() == (second / path.relative_to(first)).read_bytes()
-    r.add_replicates(batch, 1)
-    assert r.execute_batch(batch) == 0
-    state = r.batch_status(batch)
-    assert state['completed'] == 2
-    assert len(state['runs'][0]['attempts']) == 2
-    assert state['runs'][1]['metrics'] != original['metrics']
-    assert state['runs'][1]['attempt_dir'] not in {original['attempt_dir'], replay['attempt_dir']}
     assert {str(p.relative_to(original_folder)): p.read_bytes() for p in original_folder.rglob('*') if p.is_file()} == original_files

@@ -1307,7 +1307,7 @@ def run_default_mode(args):
         print(f"   occ-run --sim {args.sim}")
 
 def _run_planner_arms(args, workflow_path):
-    """GUI and CLI use the same frozen plan and isolated replicate runner."""
+    """Expand the plan stored in the workflow and isolate every replicate."""
     import json
     from src.workflow.planner import planner_tabs
     from src.workflow.replication import REPO, create_batch, execute_batch
@@ -1326,7 +1326,7 @@ def _run_planner_arms(args, workflow_path):
             tab['enabled'] = tab in matches
     batch = create_batch([{'workflow': document, 'source': str(workflow_path.resolve())}],
                          getattr(args, 'gui_results_dir', None) or REPO / 'runs')
-    print(f"[PLANNER] Saved {batch / 'manifest.json'}", flush=True)
+    print(f"[PLANNER] Results folder: {batch}", flush=True)
     code = execute_batch(batch)
     if code:
         sys.exit(code)

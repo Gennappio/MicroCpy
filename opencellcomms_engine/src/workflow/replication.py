@@ -1,7 +1,9 @@
-"""Saved Planner batches shared by the GUI, CLI and scheduler workers.
+"""Execute workflow-owned Planner definitions from the GUI, CLI and scheduler.
 
 A configuration owns biological parameters. A replicate owns a seed. Attempts
-are retained independently, and never counted as additional observations.
+are retained independently, and never counted as additional observations. The
+workflow JSON is the only editable plan; batch metadata is an immutable record
+of what the runner resolved and executed.
 """
 import copy
 import contextlib
@@ -279,27 +281,11 @@ def _assign_run_folders(plan):
             run['output_dir'] = f"{folder}/replicate-{counts[config_id]:03d}"
 
 
-def run_directory(batch, run):
-    # Older batches retain their original paths and remain readable.
-    return Path(batch) / run.get('output_dir', f"{run['configuration_id']}/{run['id']}")
-
-
-def create_batch(documents, runs_dir, plan=None):
-    plan = copy.deepcopy(plan or compile_plan(documents))
-    names = {c['workflow'].get('name') or 'Experiment' for c in plan['configurations']}
-    plan['name'] = next(iter(names)) if len(names) == 1 else 'Experiments'
-    base = folder_name(plan['name']).replace('.', '_') + datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')
-    suffix = 1
-    while True:
-        batch_id = base if suffix == 1 else f'{base}_{suffix}'
-        batch = Path(runs_dir).resolve() / batch_id
-        try:
-            batch.mkdir(parents=True)
-            break
-        except FileExistsError:
-            suffix += 1
-    used = {'configurations', 'inputs', 'manifest.json', 'source.tar.gz', 'working-tree.patch'}
-    for config in plan["configurations"]:
+def _assign_configuration_folders(plan):
+    """Give every effective configuration one readable, collision-free folder."""
+    used = {'configurations', 'inputs', 'manifest.json', 'source.tar.gz',
+            'working-tree.patch'}
+    for config in plan['configurations']:
         base = folder_name(config['name'])
         if re.fullmatch(r'plan-\d+\.json', base, re.IGNORECASE):
             base = 'configuration_' + base
@@ -309,29 +295,56 @@ def create_batch(documents, runs_dir, plan=None):
             folder = f'{base}_{suffix}'
         used.add(folder.casefold())
         config['output_folder'] = folder
+    _assign_run_folders(plan)
+
+
+def _new_experiment_directory(runs_dir, name):
+    base = folder_name(name).replace('.', '_') + datetime.now().strftime('_%Y-%m-%d_%H-%M-%S')
+    suffix = 1
+    while True:
+        folder = base if suffix == 1 else f'{base}_{suffix}'
+        path = Path(runs_dir).resolve() / folder
+        try:
+            path.mkdir(parents=True)
+            return path
+        except FileExistsError:
+            suffix += 1
+
+
+def run_directory(batch, run):
+    # Older batches retain their original paths and remain readable.
+    return Path(batch) / run.get('output_dir', f"{run['configuration_id']}/{run['id']}")
+
+
+def create_batch(documents, runs_dir, plan=None):
+    plan = copy.deepcopy(plan or compile_plan(documents))
+    names = {c['workflow'].get('name') or 'Experiment' for c in plan['configurations']}
+    plan['name'] = next(iter(names)) if len(names) == 1 else 'Experiments'
+    batch = _new_experiment_directory(runs_dir, plan['name'])
+    batch_id = batch.name
+    _assign_configuration_folders(plan)
+    for config in plan["configurations"]:
+        folder = config['output_folder']
         frozen, inputs = _resolve_inputs(config.pop("workflow"), config["source"], batch)
         if set(inputs) != set(config['inputs']):
-            raise ValueError('Inputs changed while saving the plan; start again')
-        frozen.setdefault("metadata", {}).setdefault("gui", {})["planner"] = {"tabs": []}
+            raise ValueError('Inputs changed while saving the workflows; launch again')
         target = batch / "configurations" / (folder + ".json")
         write_json(target, frozen)
         config["workflow_file"] = str(target.relative_to(batch))
         config["workflow_hash"] = digest(frozen)
         config["inputs"] = inputs
-    _assign_run_folders(plan)
     source_hash = code_fingerprint()
     with tarfile.open(batch / "source.tar.gz", "w:gz") as archive:
         for path in code_files():
             archive.add(path, arcname=str(path.relative_to(REPO)))
     if source_hash != code_fingerprint():
-        raise ValueError('Source changed while saving the batch; prepare again')
+        raise ValueError('Source changed while saving the run; launch again')
     git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True)
     dirty = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=REPO, capture_output=True)
     (batch / "working-tree.patch").write_bytes(dirty.stdout)
     plan.update(batch_id=batch_id, created_at=now(), code_hash=source_hash,
                 git_revision=git.stdout.strip(), environment=environment())
     write_json(batch / "manifest.json", plan)
-    write_json(batch / "plan-001.json", plan)
     return batch
 
 
@@ -367,41 +380,8 @@ def batch_status(batch):
             "failed": sum(s["status"] in ("failed", "cancelled", "interrupted") or s.get("numerical_valid") is False for s in states)}
 
 
-def _append_replicates(batch, count):
-    """Append identities; retain the old plan revision and all old seed assignments."""
-    count = integer(count, "Additional replicates", maximum=10000)
-    path = Path(batch) / "manifest.json"
-    plan = read_json(path)
-    seen = {r["id"] for r in plan["runs"]}
-    for spec in plan["requests"]:
-        settings = spec["settings"]
-        end = spec["replicates"] + count
-        if end > 10000:
-            raise ValueError("At most 10000 replicates per configuration")
-        if settings["seedMode"] == "explicit" and end > len(settings["seeds"]):
-            raise ValueError("Explicit seed list exhausted; create a new batch with an extended list")
-        for replicate in range(spec["replicates"]+1, end+1):
-            seed = replicate_seed(settings, spec["tab_id"], replicate)
-            identity = digest([spec["configuration_id"], seed, RNG_SCHEME])[:32]
-            if identity not in seen:
-                plan["runs"].append({"id": identity, "configuration_id": spec["configuration_id"],
-                    "replicate": replicate, "seed": seed, "pairing": settings["pairing"],
-                    "pairing_group": settings["pairingGroup"]})
-                seen.add(identity)
-        spec["replicates"] = end
-    plan["requested_runs"] = sum(s["replicates"] for s in plan["requests"])
-    plan["unique_runs"] = len(plan["runs"])
-    if plan["unique_runs"] > 100000:
-        raise ValueError("A batch may contain at most 100000 runs")
-    _assign_run_folders(plan)
-    revision = len(list(Path(batch).glob("plan-*.json"))) + 1
-    write_json(Path(batch) / f"plan-{revision:03d}.json", plan)
-    write_json(path, plan)
-    return plan
-
-
 def execute_run(batch, run, manifest, replay=False):
-    """One fresh process per attempt; exclusive claim supports SLURM arrays."""
+    """Run one fresh process per attempt and prevent concurrent duplicates."""
     batch = Path(batch).resolve()
     parent = run_directory(batch, run)
     parent.mkdir(parents=True, exist_ok=True)
@@ -505,7 +485,7 @@ def execute_batch(batch, action="continue", run_id=None, index=None):
     selected = manifest["runs"]
     if index is not None:
         if index < 0 or index >= len(selected):
-            raise ValueError("Run index is outside the saved plan")
+            raise ValueError("Run index is outside the execution record")
         selected = [selected[index]]
     if run_id:
         selected = [r for r in selected if r["id"] == run_id]
@@ -608,8 +588,8 @@ def summarize_batch(batch, metric=None):
 
 @contextlib.contextmanager
 def batch_mutation_lock(batch):
-    """Serialize plan extension against workers on the same shared filesystem."""
-    lock = Path(batch) / '.plan-lock'
+    """Serialize replicate claims on the same shared filesystem."""
+    lock = Path(batch) / '.batch-lock'
     for _ in range(200):
         try:
             fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -617,21 +597,13 @@ def batch_mutation_lock(batch):
         except FileExistsError:
             time.sleep(0.05)
     else:
-        raise ValueError('The batch plan is locked. If a worker was killed while updating it, inspect .plan-lock before removing it.')
+        raise ValueError('The batch is locked. If a worker was killed, inspect .batch-lock before removing it.')
     with os.fdopen(fd, 'w') as stream:
         json.dump({'pid': os.getpid(), 'host': socket.gethostname()}, stream)
     try:
         yield
     finally:
         lock.unlink(missing_ok=True)
-
-
-def add_replicates(batch, count):
-    with batch_mutation_lock(batch):
-        state = batch_status(batch)
-        if any(a['status'] == 'running' for r in state['runs'] for a in r['attempts']):
-            raise ValueError('Cannot extend a batch while workers are running')
-        return _append_replicates(batch, count)
 
 
 def independent_difference(treatment, reference):

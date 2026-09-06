@@ -43,6 +43,16 @@ def test_generated_suite_invariants(tmp_path):
                  for p in sw.get("parameters", [])}
         assert doc["metadata"]["workflow_source_path"] == \
             f"{generator.SOURCE_DIR}/{path.name}"
+        planner = doc["metadata"]["gui"]["planner"]
+        assert planner["version"] == 2
+        assert planner["replication"] == {
+            "replicates": 10,
+            "seedMode": "generated",
+            "masterSeed": "42",
+            "pairing": "shared",
+            "pairingGroup": "default",
+            "seeds": [],
+        }
 
         # The inline intervals were removed, not shadowed.
         plots = doc["subworkflows"]["iteration_plots"]["functions"]

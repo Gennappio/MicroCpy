@@ -580,7 +580,7 @@ def planner_batch_action(batch_id):
             data = request.get_json() or {}
             action = data.get('action')
             run_id = data.get('run_id')
-            if action not in ('continue', 'retry', 'replay', 'add'):
+            if action not in ('continue', 'retry', 'replay'):
                 raise ValueError('Unknown batch action')
             state = module.batch_status(batch)
             if any(a['status'] == 'running' for r in state['runs'] for a in r['attempts']):
@@ -591,9 +591,6 @@ def planner_batch_action(batch_id):
                 raise ValueError('Unknown replicate identity')
             if state['code_hash'] != module.code_fingerprint():
                 raise ValueError('Model code changed. Restore the saved source or create a new batch.')
-            if action == 'add':
-                module.add_replicates(batch, data.get('replicates'))
-                action = 'continue'
             _start_planner(batch, action, run_id)
             return jsonify(status='started', batch_id=batch_id)
         except (ValueError, OSError, TypeError, KeyError) as exc:

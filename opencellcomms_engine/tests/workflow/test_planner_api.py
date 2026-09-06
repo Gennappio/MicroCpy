@@ -1,4 +1,4 @@
-"""Planner API persists complete plans; browser lifetime does not own the queue."""
+"""Planner API executes workflow-owned plans and keeps immutable run records."""
 import sys
 from pathlib import Path
 import pytest
@@ -35,20 +35,20 @@ def test_preview_and_submission_use_same_seeds_and_reload_can_read(client):
     assert [x['seed'] for x in status['runs']] == [x['seed'] for x in preview.get_json()['runs']]
     assert client.get('/api/planner/batches').get_json()['batches'][0]['unique_runs'] == 2
     assert (api.RUNS_DIR / batch_id / 'source.tar.gz').exists()
+    assert not list((api.RUNS_DIR / batch_id).glob('plan-*.json'))
     second = client.post('/api/planner/batches', json={'workflow': doc}).get_json()
     assert second['batch_id'] != batch_id
     assert (api.RUNS_DIR / batch_id / 'manifest.json').exists()
 
 
-def test_continue_append_replay_and_busy_guards(client, monkeypatch):
+def test_continue_replay_and_busy_guards(client, monkeypatch):
     created = client.post('/api/planner/batches', json={'workflow': document()}).get_json()
     url = '/api/planner/batches/' + created['batch_id']
     assert client.post(url + '/action', json={'action': 'replay'}).status_code == 400
     initial = client.get(url).get_json()['runs']
-    assert client.post(url + '/action', json={'action': 'add', 'replicates': 1}).status_code == 200
+    assert client.post(url + '/action', json={'action': 'add', 'replicates': 1}).status_code == 400
     after = client.get(url).get_json()['runs']
-    assert len(after) == 3
-    assert after[:2] == initial
+    assert after == initial
     monkeypatch.setattr(api, 'is_running', True)
     assert client.post(url + '/action', json={'action': 'continue'}).status_code == 409
     assert client.post('/api/planner/batches', json={'workflow': document()}).status_code == 409

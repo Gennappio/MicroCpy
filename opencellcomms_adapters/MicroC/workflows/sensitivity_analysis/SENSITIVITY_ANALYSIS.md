@@ -56,10 +56,13 @@ at 50 µm (`nx = size / 50`) because `DomainConfig` requires a square 1–100 µ
 grid, and keeps Cell Height at 15 µm so the biological grid (`size / 15` =
 80 / 100 / 120) is integral and the centre-relative seed lands on the centre.
 
-Choose the replicate count and seed settings in Planner. Different seeds provide
-stochastic replicates; replaying the same configuration and seed does not add an
-independent observation. See the [replication guide](../../../../docs/PLANNER_REPLICATION.md)
-for seeding, duplicate baselines, and saved output folders.
+The complete replication plan is stored in each workflow's
+`metadata.gui.planner` block: **10 replicates**, generated seeds with master seed
+**42**, and **shared pairing**. Different seeds provide stochastic replicates;
+replaying the same configuration and seed does not add an independent
+observation. Change these settings in Planner and save or export the workflow
+when designing a different experiment. See the [replication guide](../../../../docs/PLANNER_REPLICATION.md)
+for seeding, duplicate baselines and saved output folders.
 
 ## What every run records
 
@@ -120,11 +123,19 @@ bash run_microc_slurm.sh --install-only      # once on the cluster
 sbatch run_sensitivity_slurm.sh
 ```
 
-The job reads all five workflow files, saves the plan, and runs their enabled
-configurations and chosen replicates sequentially. Results stay in separate
-configuration/replicate/attempt folders. See the [replication guide](../../../../docs/PLANNER_REPLICATION.md#cli-and-slurm)
-for count/seed overrides, folder layout, continuing a saved job, and optional
-parallel arrays.
+The job reads the plan directly from all five workflow files and runs the
+enabled configurations and replicates sequentially. The 15 configurations × 10
+replicates request 150 runs. Four baseline tabs share one effective
+configuration and the same seeds, leaving **120 distinct executions**.
+Replicate and seed settings cannot be overridden on the command line; change
+Planner and save the workflow instead.
+
+Results stay in readable configuration/replicate/attempt folders. Each attempt
+contains the executed workflow copy and normal simulation outputs. An immutable
+execution record is generated automatically inside the results for provenance,
+safe retries and duplicate detection; it is output only and is never provided
+or edited as a plan. See the [replication guide](../../../../docs/PLANNER_REPLICATION.md#result-folders)
+for the folder layout.
 
 Quadrant plots and state checkpoints are drawn every 50 gene updates (the
 Plot Interval and Checkpoint Interval nodes on the `iteration_plots` canvas,
@@ -160,5 +171,6 @@ The generator bakes the baseline's `p53off` overrides with the engine's own
 `apply_overrides`, rewrites the two `../data/` paths for this subfolder, sets
 `metadata.workflow_source_path` to the repo-relative path (a Planner arm runs
 from a temp copy and recovers its directory from it), swaps the reporter, and
-writes the tabs. Levels and tab names live in its `AXES` table. Readability
+writes the Planner tabs and replication settings. Levels and tab names live in
+its `AXES` table. Readability
 rules for these files are the usual ones: `docs/READABILITY.md`.

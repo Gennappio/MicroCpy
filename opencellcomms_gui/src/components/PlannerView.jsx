@@ -8,7 +8,7 @@ import './PlannerView.css';
  * PlannerView - Multiple named parameter configurations (tabs).
  * Each tab stores only the parameter values edited in it (a sparse diff);
  * everything else follows the canvas base values.
- * Replicate identities and execution live in a saved backend batch.
+ * Tabs, replicate counts and seed settings are exported with the workflow.
  */
 const PlannerView = () => {
   const {
@@ -168,7 +168,7 @@ const PlannerView = () => {
           <label>Seed assignment <select value={plannerReplication.seedMode}
             onChange={(e) => updatePlannerReplication({ seedMode: e.target.value, ...(e.target.value === 'explicit' ? { pairing: 'shared' } : {}) })}>
             <option value="generated">From saved master seed</option><option value="explicit">Explicit seed list</option>
-            <option value="fresh">Generate and save fresh seeds</option>
+            <option value="fresh">Fresh seeds for this launch</option>
           </select></label>
           {plannerReplication.seedMode === 'generated' && <label>Master seed
             <input aria-label="Master seed" type="text" inputMode="numeric" value={plannerReplication.masterSeed}
@@ -201,7 +201,7 @@ const PlannerView = () => {
               Click <strong>+ New</strong> to create a parameter configuration.
               Each configuration stores only the values you change; everything else
               follows the canvas. Active configurations run sequentially when
-              you press Run in Results.
+              you press Run.
             </p>
           </div>
         ) : activeTab ? (

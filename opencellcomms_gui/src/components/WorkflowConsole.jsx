@@ -320,7 +320,7 @@ const WorkflowConsole = ({ workflowName }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to start batch');
         appendDisplayedLogs(workflowName, [{ type: 'info',
-          message: 'Planned configurations started. Each replicate has its own results folder; seeds and settings are saved automatically.',
+          message: 'Planned configurations started from this workflow. Each replicate has its own results folder.',
           timestamp: new Date().toLocaleTimeString() }]);
       }
 
