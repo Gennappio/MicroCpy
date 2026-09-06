@@ -51,10 +51,19 @@ def test_plain_submission_reads_only_workflows_and_honours_allocated_cpus(captur
     assert captured['threads'] == ['2', '2', '2']
 
 
+def test_single_workflow_submission_runs_that_file_alone(capture_python):
+    workflow = SUITE / 'p53_sa_oxygen_consumption.json'
+    result = launch([workflow], capture_python)
+    assert result.returncode == 0, result.stderr
+    captured = json.loads(result.stdout)
+    assert captured['args'] == [str(RUNNER), '--workflow', str(workflow),
+                                '--runs-dir', str(REPO / 'runs')]
+
+
 def test_launcher_rejects_plan_arguments(capture_python):
     result = launch(['--replicates', '2'], capture_python)
     assert result.returncode == 2
-    assert 'takes no arguments' in result.stderr
+    assert 'the plan itself comes from the workflow files' in result.stderr
     assert result.stdout == ''
 
 
@@ -77,12 +86,28 @@ def test_full_suite_plan_comes_from_workflows_and_has_separate_folders(tmp_path)
         'pairing': 'shared', 'pairingGroup': 'default', 'seeds': [],
     }, sort_keys=True)}
 
+    # The override-free baseline tab is enabled in one file only, so separate
+    # per-file jobs never repeat it: 12 requests, 120 runs, no duplicates.
+    baseline_tabs = {path.name: [tab['name'] for tab in
+                                 doc['workflow']['metadata']['gui']['planner']['tabs']
+                                 if not tab['parameterOverrides']]
+                     for path, doc in zip(paths, documents)}
+    enabled_baselines = {path.name: [tab['name'] for tab in
+                                     doc['workflow']['metadata']['gui']['planner']['tabs']
+                                     if not tab['parameterOverrides'] and tab['enabled']]
+                         for path, doc in zip(paths, documents)}
+    assert sum(map(len, baseline_tabs.values())) == 4
+    assert enabled_baselines['p53_sa_glucose_boundary.json'] == ['glc_bnd_5.0']
+    assert sum(map(len, enabled_baselines.values())) == 1
+    per_file = [replication.compile_plan([doc])['unique_runs'] for doc in documents]
+    assert sum(per_file) == 120
+
     plan = replication.compile_plan(documents)
     assert {Path(request['source']).name for request in plan['requests']} == \
         {path.name for path in paths}
-    assert len(plan['requests']) == 15
+    assert len(plan['requests']) == 12
     assert len(plan['configurations']) == 12
-    assert plan['requested_runs'] == 150
+    assert plan['requested_runs'] == 120
     assert plan['unique_runs'] == 120
     assert len({run['seed'] for run in plan['runs']}) == 10
 
@@ -128,3 +153,62 @@ def test_one_launcher_process_executes_every_workflow_replicate(tmp_path):
     for run in state['runs']:
         executed = replication.read_json(batch / run['attempt_dir'] / 'workflow.json')
         assert executed['metadata']['gui']['planner']['replication'] == replication_block
+
+
+def fabricate_completed_batch(path, runs_dir):
+    """Create a batch for one suite file and fake every replicate's outputs."""
+    documents = [{'workflow': replication.read_json(path), 'source': str(path)}]
+    batch = replication.create_batch(documents, runs_dir)
+    manifest = replication.read_json(batch / 'manifest.json')
+    for run in manifest['runs']:
+        config = next(c for c in manifest['configurations'] if c['id'] == run['configuration_id'])
+        attempt = replication.run_directory(batch, run) / 'attempt-1'
+        attempt.mkdir(parents=True)
+        workflow = replication.read_json(batch / config['workflow_file'])
+        workflow['metadata']['replicate'] = {**run, 'batch_id': manifest['batch_id']}
+        replication.write_json(attempt / 'workflow.json', workflow)
+        replication.write_json(attempt / 'execution.json',
+                               {'status': 'completed', 'numerical_valid': True, 'seed': run['seed']})
+        replication.write_json(attempt / 'status.json',
+                               {'status': 'completed', 'numerical_valid': True})
+        series = attempt / 'sensitivity_summary' / 'timeseries'
+        series.mkdir(parents=True)
+        (series / 'sensitivity_metrics_over_time.csv').write_text(
+            'iteration,tumor_radius_um,relative_tumor_size,viable_cells\n'
+            '1,276.6,0.369,1000\n2,280.0,0.373,1010\n')
+    return batch
+
+
+def test_collector_reports_the_single_baseline_on_every_axis(tmp_path):
+    runs = tmp_path / 'runs'
+    owner = fabricate_completed_batch(SUITE / 'p53_sa_glucose_boundary.json', runs)
+    fabricate_completed_batch(SUITE / 'p53_sa_oxygen_consumption.json', runs)
+    out = tmp_path / 'summary.csv'
+    result = subprocess.run([sys.executable, str(SUITE / 'collect_sensitivity_results.py'),
+                             '--runs', str(runs), '--out', str(out)],
+                            cwd=REPO, capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+    import csv
+    with out.open(newline='') as stream:
+        rows = list(csv.DictReader(stream))
+
+    manifest = replication.read_json(owner / 'manifest.json')
+    baseline = next(r['configuration_id'] for r in manifest['requests'] if r['name'] == 'glc_bnd_5.0')
+    baseline_ids = {r['id'] for r in manifest['runs'] if r['configuration_id'] == baseline}
+    assert len(baseline_ids) == 10
+
+    by_axis = {}
+    for row in rows:
+        by_axis.setdefault(row['axis'], []).append(row)
+    # 20 sweep rows + 10 baseline rows on the owning axis; 20 on oxygen plus the
+    # same 10 baseline runs; the baseline alone on the two axes without a job.
+    assert {axis: len(items) for axis, items in by_axis.items()} == {
+        'glucose_boundary': 30, 'oxygen_consumption': 30,
+        'glucose_consumption': 10, 'relative_tumor_size': 10}
+    assert len(rows) == len({(row['run_id'], row['axis']) for row in rows})
+    for axis, level in (('glucose_boundary', '5.0'), ('oxygen_consumption', '11'),
+                        ('glucose_consumption', '7'), ('relative_tumor_size', '0.369')):
+        levels = {row['level'] for row in by_axis[axis] if row['run_id'] in baseline_ids}
+        assert levels == {level}, (axis, levels)
+        assert {row['run_id'] for row in by_axis[axis] if row['level'] == level} == baseline_ids
+    assert 'propagation_steps' not in by_axis

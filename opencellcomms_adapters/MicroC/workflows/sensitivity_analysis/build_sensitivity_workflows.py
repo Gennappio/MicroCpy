@@ -18,8 +18,14 @@ One workflow per control variable, each a full copy of the baseline with:
   * the two ``../data/`` paths rewritten for this subfolder;
   * ``metadata.workflow_source_path`` set to the repo-relative path, so a
     Planner arm executed from a temp copy still resolves those paths;
-  * one enabled Planner tab per level, named uniquely across the suite
-    (GUI runs write to runs/<tab>/, CLI runs to runs/<file stem>_<tab>/).
+  * one Planner tab per level, named uniquely across the suite (GUI runs
+    write to runs/<tab>/, CLI runs to runs/<file stem>_<tab>/). The
+    override-free baseline tab is enabled only in BASELINE_OWNER and disabled
+    in the other files: with shared pairing, replicate r has the same seed in
+    every file, so running the baseline in each file would repeat the same
+    simulations. Launching the files as separate jobs therefore executes the
+    baseline once; collect_sensitivity_results.py copies its rows onto every
+    axis whose baseline level it is.
 
 Usage (from anywhere):
     python build_sensitivity_workflows.py                       # regenerate the suite in place
@@ -48,6 +54,8 @@ BASELINE = HERE.parent / "microc_p53_experiment.json"
 BAKED_TAB = "p53off"
 SOURCE_DIR = "opencellcomms_adapters/MicroC/workflows/sensitivity_analysis"
 SOLVER_SPACING_UM = 50  # size / nx of the baseline; kept constant across domain sizes
+# The one file whose override-free baseline tab is enabled (see the docstring).
+BASELINE_OWNER = "p53_sa_glucose_boundary"
 
 # The gene-step budget every arm covers, and the snapshot cadence, both in
 # single-gene updates per cell. Scheduler steps and plot/checkpoint intervals
@@ -398,8 +406,13 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
 
     label: Callable[[Any], str] = axis["label"]
     names = [f"{axis['tab_prefix']}_{label(v)}" for v in axis["levels"]]
-    if axis["baseline"] in axis["levels"]:
-        baseline_txt = f"the baseline level {axis['baseline']} carries no override"
+    owns_baseline = axis["file"] == BASELINE_OWNER
+    if axis["baseline"] in axis["levels"] and owns_baseline:
+        baseline_txt = (f"the baseline level {axis['baseline']} carries no override and its "
+                        f"tab is the suite's only enabled baseline")
+    elif axis["baseline"] in axis["levels"]:
+        baseline_txt = (f"the baseline level {axis['baseline']} carries no override; its tab "
+                        f"is disabled because {BASELINE_OWNER}.json runs the same seeds")
     else:
         baseline_txt = (f"the baseline value {axis['baseline']} is the canvas value and is run "
                         f"by the other suite files' baseline tabs")
@@ -436,7 +449,7 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
         tab_list.append({
             "id": f"sa-tab-{axis['file'][len('p53_sa_'):]}-{label(level)}",
             "name": name,
-            "enabled": True,
+            "enabled": level != axis["baseline"] or owns_baseline,
             "parameterOverrides": overrides,
         })
     doc["metadata"]["gui"]["planner"] = {

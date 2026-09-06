@@ -2,18 +2,24 @@
 #SBATCH --job-name="microc_p53_sa"
 #SBATCH --mem=80000
 #SBATCH --account=abbruzzese
-#SBATCH --partition=medium_gpunew
+#SBATCH --partition=long_gpunew
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --mail-type=END
 #SBATCH --mail-user=gennaro.abbruzzese@unibocconi.it
 #SBATCH --cpus-per-task=8
 
-# From the repository root, run the full suite in one SLURM job:
+# From the repository root, run one suite workflow per SLURM job (the jobs run
+# concurrently; each gets its own runs/<name>_<timestamp> folder):
+#   for f in opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_*.json; do
+#       sbatch run_sensitivity_slurm.sh "$f"
+#   done
+# or the full suite in one sequential job:
 #   sbatch run_sensitivity_slurm.sh
 # Planner tabs, replicate counts and seed settings all come from the five
-# workflow JSON files. Edit/export those workflows to change the plan. All runs
-# execute sequentially, with separate configuration/replicate/attempt folders.
+# workflow JSON files. Edit/export those workflows to change the plan. Within a
+# job, runs execute sequentially, with separate configuration/replicate/attempt
+# folders.
 # One-time environment setup: bash run_microc_slurm.sh --install-only
 # The result folder records execution provenance automatically; users never
 # prepare or edit a second plan file.
@@ -34,12 +40,15 @@ command -v "$PYTHON" >/dev/null 2>&1 || {
     echo "Set it up once with: bash run_microc_slurm.sh --install-only" >&2
     exit 1
 }
-[ "$#" -eq 0 ] || {
-    echo "This launcher reads its complete plan from the sensitivity workflow JSON files; it takes no arguments." >&2
+[ "$#" -le 1 ] || {
+    echo "Pass one suite workflow JSON to run it alone, or nothing to run the whole suite; the plan itself comes from the workflow files." >&2
     exit 2
 }
 [ -z "${SLURM_ARRAY_TASK_ID:-}" ] || {
     echo "Submit this as one job, without --array. Replication is already in the workflow plan." >&2
     exit 2
 }
+if [ "$#" -eq 1 ]; then
+    exec "$PYTHON" "$RUNNER" --workflow "$1" --runs-dir "$RUNS_DIR"
+fi
 exec "$PYTHON" "$RUNNER" --suite "$SUITE_DIR" --runs-dir "$RUNS_DIR"

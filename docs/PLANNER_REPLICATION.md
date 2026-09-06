@@ -35,21 +35,26 @@ Each of the five `p53_sa_*.json` workflows explicitly stores the same settings:
 - generated seeds with master seed `42`;
 - shared pairing.
 
-The suite contains 15 requested Planner configurations. Four baseline tabs have
-the same effective configuration, and shared pairing gives them the same seeds.
-That baseline is therefore reused, giving 120 distinct executions rather than
-150 (15 configurations × 10 replicates). A shared baseline must be counted only
-once when axes are combined.
+The suite contains 15 Planner configurations, 12 of them enabled. Four
+baseline tabs have the same effective configuration, and shared pairing gives
+them the same seeds, so the same ten simulations would be repeated if every
+one ran. Only the glucose-boundary file's baseline tab is enabled; the other
+three are present but disabled. The suite therefore executes 120 runs whether
+the files are submitted together or as separate jobs, and the baseline is
+counted only once when axes are combined.
 
 Submit the complete sensitivity analysis from the repository root with one
 command:
 
 ```bash
-sbatch run_sensitivity_slurm.sh
+sbatch run_sensitivity_slurm.sh path/to/p53_sa_oxygen_consumption.json   # one file per job
+sbatch run_sensitivity_slurm.sh                                           # the whole suite in one job
 ```
 
-The launcher reads the five workflow JSON files and runs their stored Planner
-definitions sequentially in one job. It has no command-line replicate or seed overrides.
+The launcher reads the stored Planner definition of the given workflow JSON
+file (or of all five suite files) and runs it sequentially in one job; submit
+one job per file to run the files concurrently. It has no command-line
+replicate or seed overrides.
 To change the experiment, change the Planner settings in the workflows and save
 or export them before submission.
 

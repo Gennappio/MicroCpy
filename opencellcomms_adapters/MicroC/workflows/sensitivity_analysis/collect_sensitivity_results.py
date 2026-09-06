@@ -6,6 +6,11 @@ the Planner overrides baked in) and the reporter's time series
 (runs/<label>/sensitivity_summary/timeseries/sensitivity_metrics_over_time.csv).
 A run belongs to the suite when its workflow_source_path names a p53_sa_* file.
 
+The suite's shared baseline (the override-free Planner tab) is executed once,
+whether the five files run as one batch or as separate jobs. Its rows are
+reported on every axis that has an override-free tab, with the same run_id,
+and a run is never listed twice for the same axis.
+
 Output: one row per run with the control-variable values read from the executed
 workflow, the first-iteration tumour radius / relative size, and every metric of
 the last recorded iteration. Sorted by axis, then level.
@@ -129,9 +134,23 @@ def collect_run(run_dir: Path, source_override=None) -> Optional[Dict[str, Any]]
     return row
 
 
+def _baseline_sources(suite_dir: Path) -> Dict[str, tuple]:
+    """file name -> (override-free tab id, resolved path) for suite files with a baseline tab."""
+    result: Dict[str, tuple] = {}
+    for path in sorted(suite_dir.glob(f"{SUITE_PREFIX}*.json")):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        tabs = ((doc.get("metadata") or {}).get("gui") or {}).get("planner", {}).get("tabs") or []
+        free = [t["id"] for t in tabs if t.get("id") and not t.get("parameterOverrides")]
+        if free:
+            result[path.name] = (free[0], str(path.resolve()))
+    return result
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--runs", type=Path, default=REPO_ROOT / "runs")
+    ap.add_argument("--suite", type=Path, default=HERE,
+                    help="folder of the p53_sa_*.json files (to spread the baseline over axes)")
     ap.add_argument("--out", type=Path, default=None,
                     help="output CSV (default: <runs>/sensitivity_summary.csv)")
     args = ap.parse_args(argv)
@@ -139,7 +158,9 @@ def main(argv=None) -> int:
 
     sys.path.insert(0, str(REPO_ROOT / 'opencellcomms_engine'))
     from src.workflow.replication import batch_status
+    baselines = _baseline_sources(args.suite)
     collected = []
+    listed = set()   # (run_id, axis): the same run is one observation per axis
     for directory in sorted(args.runs.iterdir()):
         if not directory.is_dir():
             continue
@@ -151,11 +172,21 @@ def main(argv=None) -> int:
                     continue
                 # Shared baselines appear on every requested axis, with the
                 # SAME run ID. They are never extra independent observations.
-                sources = {spec.get('source') for spec in batch['requests']
-                           if spec['configuration_id'] == run['configuration_id']}
+                specs = [spec for spec in batch['requests']
+                         if spec['configuration_id'] == run['configuration_id']]
+                sources = {spec.get('source') for spec in specs}
+                # The override-free baseline is enabled in one file only; report it
+                # on every axis whose baseline it is.
+                if any(baselines.get(Path(spec.get('source') or '').name, (None,))[0] == spec.get('tab_id')
+                       for spec in specs):
+                    sources.update(path for _, path in baselines.values())
                 for source in sorted(sources, key=str):
+                    key = (run['id'], Path(str(source)).stem)
+                    if key in listed:
+                        continue
                     row = collect_run(directory / run['attempt_dir'], source)
                     if row:
+                        listed.add(key)
                         collected.append(row)
         else:
             row = collect_run(directory)

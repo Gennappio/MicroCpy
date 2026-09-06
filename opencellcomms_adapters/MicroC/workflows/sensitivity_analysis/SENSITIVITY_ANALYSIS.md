@@ -35,10 +35,17 @@ captures lactate exchange for the sensitivity CSV before gene and fate updates.
 | `p53_sa_oxygen_consumption.json` | Oxygen Consumption Scale (`diffusion_step-param_oxygen_conversion_factor`) | 8.8 / **11** / 13.2 → `o2_cons_8.8`, `o2_cons_11.0`, `o2_cons_13.2` (±20 %) | glucose and lactate scales, supply, geometry |
 | `p53_sa_glucose_boundary.json` | Glucose Substance (JSON): `boundary_value` **and** `initial_value` (`glucose_init-param_substances`) | 4.5 / **5.0** / 5.5 mM → `glc_bnd_4.5`, `glc_bnd_5.0`, `glc_bnd_5.5` (±10 %) | diffusion coefficient, thresholds, scales, geometry |
 | `p53_sa_relative_tumor_size.json` | Size X / Size Y with Grid NX / NY (`envinit-Setup_simulation-param_domain_*`), same seed, 50 µm spacing kept | 1200 / **1500** / 1800 µm → `domain_1200`, `domain_1500`, `domain_1800`; initial `relative_tumor_size` = 276.6 / (size/2) = **0.461 / 0.369 / 0.307** | cell height (so the tumour is the same 276.6 µm colony), all consumption and supply values |
-| `p53_sa_propagation_steps.json` | Propagation Steps (`gene_update-param_propagation_steps`): single-gene updates per cell per scheduler step | 1 / 10 / 50 → `prop_1`, `prop_10`, `prop_50` (the baseline value 5 is run by the other files' baseline tabs); each tab also sets Simulation Steps to 10 000 / 1 000 / 200 and the plot and checkpoint intervals to 50 / 5 / 1 iterations, so every arm covers the same 10 000 gene updates and snapshots every 50 of them | every field, consumption and gate value; the gene-step budget and snapshot cadence |
+| `p53_sa_propagation_steps.json` | Propagation Steps (`gene_update-param_propagation_steps`): single-gene updates per cell per scheduler step | 1 / 10 / 50 → `prop_1`, `prop_10`, `prop_50` (the baseline value 5 is run by `glc_bnd_5.0`, the suite's baseline tab); each tab also sets Simulation Steps to 10 000 / 1 000 / 200 and the plot and checkpoint intervals to 50 / 5 / 1 iterations, so every arm covers the same 10 000 gene updates and snapshots every 50 of them | every field, consumption and gate value; the gene-step budget and snapshot cadence |
 
 The bold level is the baseline: its tab carries **no override** (the
-validator warns on redundant copies). Because the propagation sweep changes
+validator warns on redundant copies). Only `glc_bnd_5.0` in
+`p53_sa_glucose_boundary.json` is **enabled**; the baseline tabs of the other
+three files are present but disabled. With shared pairing, replicate *r* gets
+the same seed in every file, so an enabled baseline in each file would repeat
+the same ten simulations, not add observations. The one enabled tab runs the
+baseline once, and the collector reports it on every axis (below). To move the
+baseline to another file, change `BASELINE_OWNER` in the generator and
+regenerate. Because the propagation sweep changes
 how much gene-network time passes per scheduler step, run length and snapshot
 cadence are fixed in gene updates, not iterations: every arm runs
 10 000 single-gene updates per cell (scheduler steps = 10 000 / propagation
@@ -115,20 +122,24 @@ python run_workflow.py --workflow ../opencellcomms_adapters/MicroC/workflows/sen
 python run_workflow.py --workflow ../opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_glucose_boundary.json --planner-tab glc_bnd_4.5   # one arm
 ```
 
-For the **whole suite in one SLURM job**, use the single launcher below from
-the repository root after the one-time cluster environment setup:
+On the cluster, submit **one SLURM job per suite file** from the repository
+root after the one-time environment setup; the five jobs run concurrently and
+each writes its own `runs/<workflow name>_<timestamp>/` folder:
 
 ```bash
 bash run_microc_slurm.sh --install-only      # once on the cluster
-sbatch run_sensitivity_slurm.sh
+for f in opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_*.json; do
+    sbatch run_sensitivity_slurm.sh "$f"
+done
 ```
 
-The job reads the plan directly from all five workflow files and runs the
-enabled configurations and replicates sequentially. The 15 configurations × 10
-replicates request 150 runs. Four baseline tabs share one effective
-configuration and the same seeds, leaving **120 distinct executions**.
-Replicate and seed settings cannot be overridden on the command line; change
-Planner and save the workflow instead.
+`sbatch run_sensitivity_slurm.sh` with no argument still runs the whole suite
+in one job. Either way a job executes its runs sequentially, one process per
+replicate. Each job reads the plan from its workflow file: 12 enabled
+configurations × 10 replicates = **120 executions** in total (30 + 20 + 20 +
+30 + 20), with the baseline run once by the glucose-boundary job. Replicate and
+seed settings cannot be overridden on the command line; change Planner and
+save the workflow instead.
 
 Results stay in readable configuration/replicate/attempt folders. Each attempt
 contains the executed workflow copy and normal simulation outputs. An immutable
@@ -157,7 +168,10 @@ workflow (`glucose_conversion_factor`, `oxygen_conversion_factor`,
 `cell_height_um`, `propagation_steps`, `steps_planned`), `n_iterations`, the first-iteration
 `tumor_radius_um_initial` / `relative_tumor_size_initial`, and every metric
 of the last recorded iteration. The `level` column is the swept value of that
-run's axis.
+run's axis. The ten baseline runs appear once on each of the four axes that
+have a baseline level (same `run_id`, `level` 5.0 / 7 / 11 / 0.369); they are
+one set of observations, not four. The collector reads the suite files
+(`--suite`, default: this folder) to know which tab is the baseline.
 
 ## Regenerating
 

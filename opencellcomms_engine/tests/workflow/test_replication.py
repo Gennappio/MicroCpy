@@ -140,6 +140,13 @@ def test_duplicate_baseline_counts_once_and_biology_name_is_semantic():
 def test_sensitivity_suite_deduplicates_baselines():
     docs = [{'workflow': r.read_json(p), 'source': str(p)} for p in sorted(SUITE.glob('p53_sa_*.json'))]
     planned = r.compile_plan(docs)
+    # The suite files enable the baseline tab in one file only, so nothing is
+    # requested twice; the dedup still holds when every baseline tab is on.
+    assert planned['requested_runs'] == planned['unique_runs'] == 120
+    for doc in docs:
+        for tab in doc['workflow']['metadata']['gui']['planner']['tabs']:
+            tab['enabled'] = True
+    planned = r.compile_plan(docs)
     assert planned['requested_runs'] == 150
     assert planned['unique_runs'] == 120
     assert len({run['seed'] for run in planned['runs']}) == 10
