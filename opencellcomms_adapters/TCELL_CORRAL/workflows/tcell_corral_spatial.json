@@ -22,7 +22,18 @@
       "processing": { "behavior_subworkflows": [] },
       "main_is_synthesized": true,
       "user_functions": [],
-      "planner": { "tabs": [ { "id": "tab-wt", "name": "WT", "enabled": true, "parameterOverrides": {} } ] },
+      "planner": {
+        "version": 2,
+        "replication": {
+          "replicates": 1,
+          "seedMode": "generated",
+          "masterSeed": "42",
+          "pairing": "shared",
+          "pairingGroup": "default",
+          "seeds": []
+        },
+        "tabs": [ { "id": "tab-wt", "name": "WT", "enabled": true, "parameterOverrides": {} } ]
+      },
       "contract_enforcement": "warn"
     }
   },
