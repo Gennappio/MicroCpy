@@ -13,6 +13,8 @@ One workflow per control variable, each a full copy of the baseline with:
     iteration_plots canvas so a Planner tab can set them;
   * ``symbiosis_summary`` replaced by ``sensitivity_summary`` running
     ``record_sensitivity_metrics`` (``fate_summary`` is kept);
+  * Record Lactate Balance at the end of diffusion_step, capturing viable-cell
+    exchange before gene/fate updates for the sensitivity CSV;
   * the two ``../data/`` paths rewritten for this subfolder;
   * ``metadata.workflow_source_path`` set to the repo-relative path, so a
     Planner arm executed from a temp copy still resolves those paths;
@@ -244,6 +246,7 @@ def _sensitivity_summary() -> Dict[str, Any]:
             "MicroC: sensitivity_summary (per-iteration CSV of the sensitivity-analysis "
             "metrics: phenotype census and fractions, mitoATP/glycoATP counts and R_MG, "
             "ATP-gate pass fraction of viable cells, oxygen-region census and MSI, "
+            "lactate production/consumption/balance from the post-diffusion snapshot, "
             "whole-field Glucose/Oxygen minima, tumour radius and relative tumour size)"),
         "enabled": True,
         "deletable": True,
@@ -273,7 +276,11 @@ def _sensitivity_summary() -> Dict[str, Any]:
                 "as published by the gated proliferation node in fate_update; N_oxygenated / "
                 "N_hypoxic / F_hypoxic with hypoxic = Oxygen at the cell below the Hypoxia "
                 "Threshold node on the left; MSI_mct1 and MSI_mito (the metabolic symbiosis "
-                "index law of Record Metabolic Symbiosis); glucose_min_mM / oxygen_min_mM over "
+                "index law of Record Metabolic Symbiosis); lactate_production_mol_s, "
+                "lactate_consumption_mol_s and lactate_balance_mol_s from Record Lactate "
+                "Balance on diffusion_step (viable-cell totals before gene/fate updates; "
+                "balance = production - consumption, positive release / negative uptake; "
+                "blank without a valid snapshot this iteration); glucose_min_mM / oxygen_min_mM over "
                 "the whole solver field; tumor_radius_um = max distance of a cell (bio-grid index "
                 "x Cell Height) from the domain centre; domain_size_um; relative_tumor_size = "
                 "tumor_radius_um / (domain_size_um / 2)."),
@@ -339,6 +346,34 @@ def _replace_reporter(doc: Dict[str, Any]) -> None:
         for c in scheduler["execution_order"]]
 
 
+def _add_lactate_balance(doc: Dict[str, Any]) -> None:
+    # This phase still has the gene states and viability that supplied the solve.
+    diffusion = doc['subworkflows']['diffusion_step']
+    node_id = 'diffusion_step-record_lactate_balance'
+    diffusion['functions'].append({
+        'id': node_id,
+        'function_name': 'record_lactate_balance',
+        'function_file': '',
+        'parameters': {},
+        'enabled': True,
+        'position': {'x': 40, 'y': 1780},
+        'description': (
+            'Record Lactate Balance: viable-cell production minus consumption (mol/s), '
+            'positive release / negative uptake. Captures the metabolic rates after '
+            'diffusion, before gene/fate updates. Uses the metabolism node\'s rates '
+            'and weights; excludes Necrosis and Apoptosis. Missing rates or a '
+            'non-converged solve leave the values undefined. The sensitivity CSV '
+            'includes gross production and consumption alongside the balance.'),
+        'custom_name': 'Record Lactate Balance',
+        'step_count': 1,
+        'parameter_nodes': [],
+    })
+    diffusion['execution_order'].append(node_id)
+    diffusion['description'] += (
+        ' Record Lactate Balance captures viable-cell exchange at the end of these '
+        'solves, before gene/fate updates, for the sensitivity CSV.')
+
+
 def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
            steps: int = None) -> Dict[str, Any]:
     tabs = [t for t in planner_tabs(baseline) if t.get("name") == BAKED_TAB]
@@ -351,6 +386,7 @@ def derive(baseline: Dict[str, Any], axis: Dict[str, Any], file_stem: str,
         raise SystemExit(f"expected to rewrite 2 '../' paths (bnd_file, checkpoint), got {rewritten}")
 
     _replace_reporter(doc)
+    _add_lactate_balance(doc)
 
     # Run length and snapshot cadence on the gene-step clock of the baked arm.
     baked_propagation = int(_param_node(doc, PROPAGATION_NODE)["parameters"]["propagation_steps"])

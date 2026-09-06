@@ -292,6 +292,10 @@ def test_microc_replay_and_extension_in_fresh_processes(tmp_path):
     assert r.execute_batch(batch) == 0
     original = r.batch_status(batch)['runs'][0]
     assert original['metrics']
+    prefix = 'sensitivity_summary/timeseries/sensitivity_metrics_over_time.csv:'
+    lactate = {name: original['metrics'][prefix + 'lactate_' + name + '_mol_s']['value']
+               for name in ('production', 'consumption', 'balance')}
+    assert lactate['balance'] == lactate['production'] - lactate['consumption']
     original_folder = batch / original['attempt_dir']
     assert list(original_folder.glob('*/checkpoints/*.npz'))
     original_files = {str(p.relative_to(original_folder)): p.read_bytes() for p in original_folder.rglob('*') if p.is_file()}

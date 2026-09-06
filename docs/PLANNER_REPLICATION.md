@@ -4,6 +4,8 @@ A Planner tab is a parameter configuration. A replicate is one configuration wit
 
 ## Using Planner
 
+The GUI opens with an empty project. Use **Import Project** to open your workflow, and **Save Project** or **Export Project** to keep edits before closing or reloading the page. Saved project files include Planner configurations and replication settings.
+
 1. Set **Replicates per configuration**. Existing workflows start at one; the user chooses the required count.
 2. Choose a saved master seed, an explicit comma-separated list of positive integer seeds, or fresh randomness. Fresh randomness is resolved and saved before execution. Seeds remain strings in the browser to preserve integers larger than JavaScript's exact number range.
 3. Choose **Shared seeds** for paired comparisons or **Independent seed sets**. Set a different replicate count for an individual configuration if needed; clear that field to use the default.
@@ -91,7 +93,19 @@ The GUI, standard workflow CLI and scheduler workers use the same compiler and r
   --manifest runs/<batch-id>/manifest.json --status
 ```
 
-For SLURM, prebuild the environment with `bash run_microc_slurm.sh --install-only`, then prepare with `bash run_sensitivity_slurm.sh --prepare --replicates 10 --master-seed 42`. Submit the **printed array range and manifest path**, e.g. `sbatch --array=0-119%4 run_sensitivity_slurm.sh runs/<batch-id>/manifest.json`. `MICROC_THREADS` defaults to eight for preparation and workers; keep it consistent and request matching CPUs. No jobs are submitted automatically.
+For SLURM, set up the environment once on the cluster with `bash run_microc_slurm.sh --install-only`. Then, from the repository root, submit the full sensitivity suite using one file:
+
+```bash
+sbatch run_sensitivity_slurm.sh
+```
+
+This prepares one saved plan and runs all enabled configurations and their replicates **sequentially in one job**. It reads all five `p53_sa_*.json` files and uses the replicate counts and seeds saved in them. To choose another default count or master seed, append `--replicates <count>` or `--master-seed <seed>` with your chosen positive integers. Per-configuration count overrides still apply. The four identical baselines share runs when their seeds match: the default suite has 15 requested configurations but 12 distinct ones.
+
+Results use the readable, separate configuration/replicate/attempt folders described above. SLURM writes `microc_p53_sa_<jobid>.out` and `.err` in the submission directory, so no log directory needs preparing. These filename patterns follow the [SLURM sbatch reference](https://slurm.schedmd.com/sbatch.html#SECTION_FILENAME-PATTERN). The script uses the allocated CPU count for BLAS threads. Request enough wall time for the sequential suite using your cluster's normal `sbatch --time=...` option.
+
+To continue an interrupted job, pass its saved manifest instead of starting a new suite: `sbatch run_sensitivity_slurm.sh runs/<batch-folder>/manifest.json`. Completed valid replicates are skipped; unfinished ones restart with their saved seeds in new attempt folders. Keep the model and environment unchanged.
+
+Parallel arrays remain optional: prepare with `bash run_sensitivity_slurm.sh --prepare` (plus any chosen replicate/seed options), then submit the **printed array range and manifest path** with `sbatch --array=... run_sensitivity_slurm.sh runs/<batch-folder>/manifest.json`. Do not add `--array` to a fresh suite launch: each worker must use the same saved plan. Preparation uses `MICROC_THREADS` (eight by default); request the same CPU count for workers. No jobs are submitted automatically by either launcher.
 
 Each array index selects a saved run, and duplicate worker claims are rejected. After an interrupted local worker, Continue can recover its stale claim. If a remote scheduler worker is killed abruptly, confirm it has ended on the cluster before manually removing its `.claim` file; a remote PID cannot safely be declared dead from another host. A killed plan update can similarly leave a `.plan-lock` requiring inspection. Never clear active claims.
 
@@ -99,4 +113,4 @@ Continue/retry restarts a replicate from the beginning. Resuming a checkpoint mi
 
 ## Verification commands
 
-Run `npm run test:planner --prefix opencellcomms_gui` to verify store persistence and import/export. Engine tests are in `opencellcomms_engine/tests/workflow/test_replication.py` and `test_planner_api.py`. The slow MicroC replay test also checks that every original output file remains byte-identical after replaying and adding another replicate.
+Run `npm run test:planner --prefix opencellcomms_gui` to verify empty startup and project import/export. Engine tests are in `opencellcomms_engine/tests/workflow/test_replication.py` and `test_planner_api.py`. The slow MicroC replay test also checks that every original output file remains byte-identical after replaying and adding another replicate.

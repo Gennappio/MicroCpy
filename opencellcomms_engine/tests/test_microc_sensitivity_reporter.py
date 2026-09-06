@@ -25,6 +25,9 @@ from opencellcomms_adapters.MicroC.functions.reporting.record_metabolic_symbiosi
 from opencellcomms_adapters.MicroC.functions.reporting.record_sensitivity_metrics import (
     record_sensitivity_metrics,
 )
+from opencellcomms_adapters.MicroC.functions.reporting.record_lactate_balance import (
+    record_lactate_balance,
+)
 
 ATP_MAX = 1.5e-16
 
@@ -157,6 +160,93 @@ def test_one_row_per_iteration(tmp_path):
     record_sensitivity_metrics(BiologicalContext(ctx))
     assert [r["iteration"] for r in _rows(tmp_path)] == ["1", "2"]
     assert [r["gene_steps"] for r in _rows(tmp_path)] == ["5", "10"]
+
+
+@pytest.mark.parametrize('production, consumption', [
+    (4e-16, 1e-16), (1e-16, 4e-16), (2e-16, 2e-16), (0.0, 0.0),
+])
+def test_lactate_balance_uses_gross_rates_and_preserves_small_values(tmp_path, production, consumption):
+    # Growth-arrest rates are already weighted by metabolism: do not halve again.
+    cells = [_cell('viable', (50, 50), 'Growth_Arrest', metabolic={
+        'lactate_production': production, 'lactate_consumption': consumption}),
+        _cell('dead', (50, 51), 'Necrosis', metabolic={
+            'lactate_production': 100.0, 'lactate_consumption': 0.0}),
+        _cell('apoptotic', (50, 52), 'Apoptosis', metabolic={
+            'lactate_production': 0.0, 'lactate_consumption': 100.0})]
+    ctx = _context(tmp_path, cells=cells)
+    ctx['numerical_diagnostics'] = {'last_coupling': {'iteration': 1, 'converged': True}}
+    env = BiologicalContext(ctx)
+    record_lactate_balance(env)
+    # Fate update follows diffusion. The reporter must keep the earlier snapshot.
+    cells[0].state = cells[0].state.with_updates(phenotype='Necrosis', metabolic_state={})
+    record_sensitivity_metrics(env)
+    row = _rows(tmp_path)[0]
+    assert row['N_viable'] == '0'
+    assert float(row['lactate_production_mol_s']) == production
+    assert float(row['lactate_consumption_mol_s']) == consumption
+    assert float(row['lactate_balance_mol_s']) == production - consumption
+    ctx['loop_iteration'] = 2
+    record_sensitivity_metrics(env)  # No new capture: never reuse the previous row.
+    assert _rows(tmp_path)[1]['lactate_balance_mol_s'] == ''
+
+
+def test_lactate_balance_sums_viable_cells_and_empty_population_is_zero(tmp_path):
+    cells = [_cell('a', (50, 50), metabolic={
+        'lactate_production': 4e-16, 'lactate_consumption': 1e-16}),
+        _cell('b', (50, 51), metabolic={
+            'lactate_production': 2e-16, 'lactate_consumption': 3e-16})]
+    ctx = _context(tmp_path, cells=cells)
+    ctx['numerical_diagnostics'] = {'last_coupling': {'iteration': 1, 'converged': True}}
+    env = BiologicalContext(ctx)
+    record_lactate_balance(env)
+    saved = env.results.get('lactate_balance')
+    assert saved['lactate_production_mol_s'] == pytest.approx(6e-16, abs=1e-30)
+    assert saved['lactate_consumption_mol_s'] == pytest.approx(4e-16, abs=1e-30)
+    assert saved['lactate_balance_mol_s'] == pytest.approx(2e-16, abs=1e-30)
+    ctx['population'].state.cells = {}
+    record_lactate_balance(env)
+    assert env.results.get('lactate_balance')['lactate_balance_mol_s'] == 0.0
+
+
+@pytest.mark.parametrize('rates', [
+    {}, {'lactate_production': 1e-16},
+    {'lactate_production': float('nan'), 'lactate_consumption': 0.0},
+    {'lactate_production': 0.0, 'lactate_consumption': float('inf')},
+    {'lactate_production': -1e-16, 'lactate_consumption': 0.0},
+])
+def test_lactate_balance_missing_or_invalid_rates_are_blank(tmp_path, rates):
+    ctx = _context(tmp_path, cells=[_cell('cell', (50, 50), metabolic=rates)])
+    ctx['numerical_diagnostics'] = {'last_coupling': {'iteration': 1, 'converged': True}}
+    env = BiologicalContext(ctx)
+    record_lactate_balance(env)
+    record_sensitivity_metrics(env)
+    row = _rows(tmp_path)[0]
+    assert all(row[key] == '' for key in (
+        'lactate_production_mol_s', 'lactate_consumption_mol_s', 'lactate_balance_mol_s'))
+
+
+def test_lactate_balance_requires_this_iterations_converged_solve(tmp_path, monkeypatch):
+    import importlib
+    coupled = importlib.import_module('src.workflow.functions.diffusion.run_diffusion_solver_coupled')
+    ctx = _context(tmp_path, cells=[_cell('cell', (50, 50), metabolic={
+        'lactate_production': 3e-16, 'lactate_consumption': 1e-16})])
+    # A stationary field needs the solver's confirming third pass to converge.
+    monkeypatch.setattr(ctx['simulator'], 'update', lambda *args, **kwargs: None, raising=False)
+    monkeypatch.setattr(coupled, '_recalculate_metabolism', lambda *args, **kwargs: None)
+    monkeypatch.setattr(coupled, '_collect_reactions_from_cells', lambda *args, **kwargs: {})
+    env = BiologicalContext(ctx)
+    record_lactate_balance(env)  # No solve yet.
+    assert env.results.get('lactate_balance')['status'] != 'ok'
+    coupled._run_coupled(ctx, max_coupling_iterations=3, relaxation_factor=1.0)
+    record_lactate_balance(env)
+    assert env.results.get('lactate_balance')['status'] == 'ok'
+    ctx['loop_iteration'] = 2
+    record_lactate_balance(env)  # The earlier solve does not count.
+    assert env.results.get('lactate_balance')['status'] != 'ok'
+    coupled._run_coupled(ctx, max_coupling_iterations=1, relaxation_factor=1.0)
+    record_lactate_balance(env)
+    assert ctx['numerical_diagnostics']['last_coupling'] == {'iteration': 2, 'converged': False}
+    assert 'lactate_balance_mol_s' not in env.results.get('lactate_balance')
 
 
 def test_gene_clock_blank_without_a_published_step_count(tmp_path, capsys):

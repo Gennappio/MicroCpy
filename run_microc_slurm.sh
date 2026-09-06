@@ -18,11 +18,11 @@
 #   sbatch run_microc_slurm.sh p53on      # one named arm
 #   MICROC_EXTRA_ARGS=--no-observability sbatch run_microc_slurm.sh   # extra run_workflow.py flags
 #
-# run_sensitivity_slurm.sh submits the sensitivity suite as a job array and
-# delegates each arm here, so the install and run logic live in this file only.
+# run_sensitivity_slurm.sh runs the full sensitivity suite using the same venv.
+# This file supplies its one-time environment setup through --install-only.
 #
-# Each arm writes to runs/<workflow stem>_<arm>/, with a copy of the exact
-# workflow that produced it at the run root. Results are never mixed.
+# Planner runs retain separate configuration/replicate/attempt folders under
+# runs/, including the exact workflow and seed. Results are never mixed.
 #
 # NO GPU IS REQUESTED. MicroC solves diffusion with FiPy on top of
 # numpy/scipy; there is no CUDA path anywhere in the engine, so the template's

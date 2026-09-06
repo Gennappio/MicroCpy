@@ -1332,7 +1332,7 @@
       "input_parameters": []
     },
     "diffusion_step": {
-      "description": "MicroC diffusion (SPECIAL CASE): two collective solves advance all substance fields each step -- a Picard-coupled Michaelis-Menten solve of the metabolic group (Oxygen, Glucose, Lactate, H) and a single implicit solve of the growth factors (TGFA, FGF, HGF, GI). Each solve spans several substances at once, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors.",
+      "description": "MicroC diffusion (SPECIAL CASE): two collective solves advance all substance fields each step -- a Picard-coupled Michaelis-Menten solve of the metabolic group (Oxygen, Glucose, Lactate, H) and a single implicit solve of the growth factors (TGFA, FGF, HGF, GI). Each solve spans several substances at once, so no single substance owns it -- deliberately homed as a World behavior, not per-resource, which is why the resource_kinds intentionally carry empty behaviors. Record Lactate Balance captures viable-cell exchange at the end of these solves, before gene/fate updates, for the sensitivity CSV.",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -1548,6 +1548,21 @@
             ],
             "emits": []
           }
+        },
+        {
+          "id": "diffusion_step-record_lactate_balance",
+          "function_name": "record_lactate_balance",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 40,
+            "y": 1780
+          },
+          "description": "Record Lactate Balance: viable-cell production minus consumption (mol/s), positive release / negative uptake. Captures the metabolic rates after diffusion, before gene/fate updates. Uses the metabolism node's rates and weights; excludes Necrosis and Apoptosis. Missing rates or a non-converged solve leave the values undefined. The sensitivity CSV includes gross production and consumption alongside the balance.",
+          "custom_name": "Record Lactate Balance",
+          "step_count": 1,
+          "parameter_nodes": []
         }
       ],
       "subworkflow_calls": [],
@@ -1689,7 +1704,8 @@
         "diffusion_step-calculate_metabolism",
         "diffusion_step-run_diffusion_coupled",
         "diffusion_step-run_diffusion_metabolic",
-        "diffusion_step-run_growth_factor_solver"
+        "diffusion_step-run_growth_factor_solver",
+        "diffusion_step-record_lactate_balance"
       ],
       "input_parameters": []
     },
@@ -2511,7 +2527,7 @@
       "input_parameters": []
     },
     "sensitivity_summary": {
-      "description": "MicroC: sensitivity_summary (per-iteration CSV of the sensitivity-analysis metrics: phenotype census and fractions, mitoATP/glycoATP counts and R_MG, ATP-gate pass fraction of viable cells, oxygen-region census and MSI, whole-field Glucose/Oxygen minima, tumour radius and relative tumour size)",
+      "description": "MicroC: sensitivity_summary (per-iteration CSV of the sensitivity-analysis metrics: phenotype census and fractions, mitoATP/glycoATP counts and R_MG, ATP-gate pass fraction of viable cells, oxygen-region census and MSI, lactate production/consumption/balance from the post-diffusion snapshot, whole-field Glucose/Oxygen minima, tumour radius and relative tumour size)",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -2561,7 +2577,7 @@
             "x": 400,
             "y": 100
           },
-          "description": "One CSV row per iteration (timeseries/sensitivity_metrics_over_time.csv): N_total; N_viable (phenotype not Necrosis/Apoptosis); phenotype counts and fractions of N_total (Quiescent and Growth_Arrest separately; F_inactive = 1 - F_proliferating); N_mitoATP / N_glycoATP and R_MG = N_mitoATP/N_glycoATP; N_atp_ok / F_ATP = viable cells with atp_rate > atp_threshold1 x atp_rate_max, the Proliferation Gate's own law and value read from results['proliferation_gate'] as published by the gated proliferation node in fate_update; N_oxygenated / N_hypoxic / F_hypoxic with hypoxic = Oxygen at the cell below the Hypoxia Threshold node on the left; MSI_mct1 and MSI_mito (the metabolic symbiosis index law of Record Metabolic Symbiosis); glucose_min_mM / oxygen_min_mM over the whole solver field; tumor_radius_um = max distance of a cell (bio-grid index x Cell Height) from the domain centre; domain_size_um; relative_tumor_size = tumor_radius_um / (domain_size_um / 2).",
+          "description": "One CSV row per iteration (timeseries/sensitivity_metrics_over_time.csv): N_total; N_viable (phenotype not Necrosis/Apoptosis); phenotype counts and fractions of N_total (Quiescent and Growth_Arrest separately; F_inactive = 1 - F_proliferating); N_mitoATP / N_glycoATP and R_MG = N_mitoATP/N_glycoATP; N_atp_ok / F_ATP = viable cells with atp_rate > atp_threshold1 x atp_rate_max, the Proliferation Gate's own law and value read from results['proliferation_gate'] as published by the gated proliferation node in fate_update; N_oxygenated / N_hypoxic / F_hypoxic with hypoxic = Oxygen at the cell below the Hypoxia Threshold node on the left; MSI_mct1 and MSI_mito (the metabolic symbiosis index law of Record Metabolic Symbiosis); lactate_production_mol_s, lactate_consumption_mol_s and lactate_balance_mol_s from Record Lactate Balance on diffusion_step (viable-cell totals before gene/fate updates; balance = production - consumption, positive release / negative uptake; blank without a valid snapshot this iteration); glucose_min_mM / oxygen_min_mM over the whole solver field; tumor_radius_um = max distance of a cell (bio-grid index x Cell Height) from the domain centre; domain_size_um; relative_tumor_size = tumor_radius_um / (domain_size_um / 2).",
           "custom_name": "record_sensitivity_metrics",
           "step_count": 1,
           "parameter_nodes": [

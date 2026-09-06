@@ -97,8 +97,7 @@ function App() {
   // When main tab changes, switch to first available subworkflow of that kind
   // Stage switching is handled inside each tab view component.
 
-  // The project is restored from localStorage after a reload, so an explicit
-  // reset is the only way to get an empty canvas.
+  // Start another empty project during the current session.
   const handleNewWorkflow = () => {
     if (window.confirm('Start a new empty project?\n\nUnsaved changes to the current workflow will be lost.')) {
       clearWorkflow();

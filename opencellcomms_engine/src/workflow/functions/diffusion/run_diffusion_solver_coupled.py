@@ -263,6 +263,9 @@ def _run_coupled(
     solution_stationary = False
     diagnostics = context.setdefault("numerical_diagnostics", {})
     diagnostics["coupling_solves"] = diagnostics.get("coupling_solves", 0) + 1
+    # Reporting can distinguish this solve from stale rates or a failed solve.
+    last_coupling = {"iteration": context.get("loop_iteration"), "converged": False}
+    diagnostics["last_coupling"] = last_coupling
 
     for coupling_iter in range(max_coupling_iterations):
         # Step 1: Store old concentrations for the relaxation blend
@@ -314,6 +317,7 @@ def _run_coupled(
 
         if solution_change < coupling_tolerance:
             if solution_stationary:
+                last_coupling["converged"] = True
                 log_always(f"Converged after {coupling_iter + 1} iterations "
                            f"(unrelaxed solution self-consistent)",
                     prefix="[COUPLED]")
@@ -816,4 +820,3 @@ def _clamp_negative_concentrations(simulator, context: Dict[str, Any], verbose: 
                 simulator.fipy_variables[name].setValue(
                     field_to_fipy_order(substance_state.concentrations)
                 )
-

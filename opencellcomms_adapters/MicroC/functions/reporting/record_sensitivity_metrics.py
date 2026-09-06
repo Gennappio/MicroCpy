@@ -30,6 +30,12 @@ COLUMNS
                          oxygen-region census; F_hypoxic is a fraction of N_total
     hypoxia_threshold_mM the region threshold in effect (provenance)
     MSI_mct1, MSI_mito   metabolic symbiosis index, both readings (see below)
+    lactate_production_mol_s, lactate_consumption_mol_s, lactate_balance_mol_s
+                         viable-cell totals sampled after diffusion, before gene/
+                         fate updates, by Record Lactate Balance. Balance is
+                         production minus consumption; positive means release,
+                         negative means uptake. Blank without a valid snapshot
+                         from this iteration. These tiny rates are not rounded.
     glucose_min_mM, oxygen_min_mM
                          minimum of the whole solver field
     tumor_radius_um      distance from the domain centre to the farthest cell
@@ -61,6 +67,9 @@ LAWS AND THEIR OWNERS (docs/READABILITY.md R2)
     Gene clock    propagation_steps is read from results['gene_propagation'],
                   published by the Propagate Gene Networks node from its
                   Propagation Steps parameter (gene_propagation_record).
+    Lactate       the same-iteration results['lactate_balance'] snapshot from
+                  Record Lactate Balance; see that node for its definition and
+                  validity checks. Current post-fate cells are not re-summed.
 
 WHY raw_context FOR THE ITERATION NUMBER
     As in the sibling reporters: MicroC's scheduler does not advance the engine
@@ -105,7 +114,10 @@ _PHENOTYPE_COLUMNS = (
         "atp_rate > atp_threshold1 x atp_rate_max (atp_threshold1 read from "
         "results['proliferation_gate'] as published by Mark Proliferating Cells (ATP + "
         "cell cycle gated)), oxygen-region census and MSI (the laws of Record Metabolic "
-        "Symbiosis), whole-field Glucose and Oxygen minima, tumour radius = max distance "
+        "Symbiosis), lactate production, consumption and balance (mol/s) from Record "
+        "Lactate Balance's viable-cell snapshot after diffusion and before gene/fate "
+        "updates; positive balance means release, negative means uptake. Also records "
+        "whole-field Glucose and Oxygen minima, tumour radius = max distance "
         "of a cell (index x Cell Height) from the domain centre, and relative tumour "
         "size = radius / (domain size / 2)."
     ),
@@ -202,6 +214,9 @@ def record_sensitivity_metrics(
 
     glucose_min = _field_min(env, ctx, 'Glucose')
     oxygen_min = _field_min(env, ctx, 'Oxygen')
+    lactate = env.results.get('lactate_balance') or {}
+    if lactate.get('iteration') != iteration or lactate.get('status') != 'ok':
+        lactate = {}
 
     def frac(numerator: int, denominator: int) -> Any:
         return round(numerator / denominator, 6) if denominator else ""
@@ -235,6 +250,9 @@ def record_sensitivity_metrics(
         "hypoxia_threshold_mM": hypoxia_threshold,
         "MSI_mct1": round(msi['mct1'], 6),
         "MSI_mito": round(msi['mito'], 6),
+        "lactate_production_mol_s": lactate.get('lactate_production_mol_s', ''),
+        "lactate_consumption_mol_s": lactate.get('lactate_consumption_mol_s', ''),
+        "lactate_balance_mol_s": lactate.get('lactate_balance_mol_s', ''),
         "glucose_min_mM": glucose_min,
         "oxygen_min_mM": oxygen_min,
         "tumor_radius_um": round(radius_um, 3),
@@ -256,6 +274,7 @@ def record_sensitivity_metrics(
         f"mito={census.n_mito}, glyco={census.n_glyco}, R_MG={row['R_MG']} | "
         f"F_ATP={row['F_ATP']} | hypoxic={n_hypo} (F={row['F_hypoxic']}) | "
         f"MSI mct1={row['MSI_mct1']} mito={row['MSI_mito']} | "
+        f"lactate balance={row['lactate_balance_mol_s']} mol/s | "
         f"glc_min={glucose_min} O2_min={oxygen_min} | "
         f"r={row['tumor_radius_um']} um (rel={row['relative_tumor_size']})"
     )
@@ -318,6 +337,9 @@ def _announce_sources(env: BiologicalContext, ctx: Dict[str, Any],
         f"cell_height {cell_height_um:g} um (Setup Domain via config.domain); "
         f"{bounds('Glucose')}; {bounds('Oxygen')} (Substance (JSON) nodes via "
         "config.substances); viable = phenotype not in {Necrosis, Apoptosis}; "
+        "lactate production/consumption/balance (mol/s) from Record Lactate Balance "
+        "after diffusion, before gene/fate updates; balance = production - consumption "
+        "(positive release, negative uptake); blank if this iteration has no valid snapshot; "
         "tumor_radius = max |cell index x cell_height - domain centre|; "
         f"CSV -> {env.plots_dir / 'timeseries' / csv_filename}"
     )

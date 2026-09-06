@@ -52,6 +52,17 @@ def test_generated_suite_invariants(tmp_path):
         assert "interval" not in by_id[generator.CHECKPOINT_FUNCTION]["parameters"]
         assert generator.CHECKPOINT_INTERVAL_NODE in by_id[generator.CHECKPOINT_FUNCTION]["parameter_nodes"]
 
+        diffusion = doc['subworkflows']['diffusion_step']
+        snapshot = next(fn for fn in diffusion['functions'] if fn['function_name'] == 'record_lactate_balance')
+        assert snapshot['enabled'] is True
+        assert snapshot['custom_name'] == 'Record Lactate Balance'
+        assert diffusion['execution_order'][-1] == snapshot['id']
+        assert diffusion['execution_order'].index('diffusion_step-run_diffusion_metabolic') < \
+            diffusion['execution_order'].index(snapshot['id'])
+        scheduler = doc['subworkflows']['__scheduler__']['execution_order']
+        assert scheduler.index('sched-call-diffusion_step') < scheduler.index('sched-call-gene_update') < \
+            scheduler.index('sched-call-fate_update') < scheduler.index('sched-call-sensitivity_summary')
+
         tabs = doc["metadata"]["gui"]["planner"]["tabs"]
         assert len(tabs) == 3
         for tab in tabs:
