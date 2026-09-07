@@ -53,19 +53,27 @@ PHENOTYPES = [
     "Other",
 ]
 
+# Colour follows the entity, never its position in the legend: a phenotype or
+# gene keeps its hue whichever series happen to be drawn. Categorical slots are
+# ordered so adjacent hues stay distinct under colour-vision deficiency.
 COLORS = {
-    "Apoptosis": "#d62728",
-    "Growth_Arrest": "#ff7f0e",
-    "Proliferation": "#2ca02c",
-    "Necrosis": "#4d4d4d",
-    "Quiescent": "#7f7f7f",
-    "Other": "#c7c7c7",
-    "total_cells": "#1f77b4",
-    "glycoATP": "#e377c2",
-    "mitoATP": "#17becf",
+    "Quiescent": "#2a78d6",
+    "Proliferation": "#008300",
+    "Apoptosis": "#e34948",
+    "Growth_Arrest": "#eda100",
+    "Necrosis": "#4a3aa7",
+    "Other": "#898781",
+    "total_cells": "#52514e",
+    "glycoATP": "#eb6834",
+    "mitoATP": "#1baf7a",
 }
+# Fallback hues for extra plotted genes without a fixed colour above.
+EXTRA_GENE_COLORS = ["#e87ba4", "#4a3aa7", "#eda100", "#e34948"]
+
+INK, INK2, MUTED, GRID, AXIS = "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
 
 DEFAULT_METABOLIC_GENES = "glycoATP,mitoATP"
+DEFAULT_PLOT_GENES = "glycoATP,mitoATP"
 
 
 @register_function(
@@ -92,8 +100,17 @@ DEFAULT_METABOLIC_GENES = "glycoATP,mitoATP"
         {
             "name": "metabolic_genes",
             "type": "STRING",
-            "description": "Comma-separated gene names to track ON-cell counts over time (plotted with total cells)",
+            "description": "Comma-separated gene names to track ON-cell counts over time (CSV and log)",
             "default": DEFAULT_METABOLIC_GENES,
+        },
+        {
+            "name": "plot_genes",
+            "type": "STRING",
+            "description": (
+                "Comma-separated subset of metabolic_genes drawn in the plot with "
+                "total cells (the others stay CSV-only diagnostics)"
+            ),
+            "default": DEFAULT_PLOT_GENES,
         },
     ],
     inputs=["context"],
@@ -106,6 +123,7 @@ def record_gene_fate_counts(
     plot_filename: str = "gene_fate_counts_over_time.png",
     csv_filename: str = "gene_fate_counts_over_time.csv",
     metabolic_genes: str = DEFAULT_METABOLIC_GENES,
+    plot_genes: str = DEFAULT_PLOT_GENES,
     **kwargs,
 ) -> bool:
     ctx = env.raw_context
@@ -228,7 +246,12 @@ def record_gene_fate_counts(
     except (TypeError, ValueError):
         is_final = True
     if is_final:
-        _write_plot(output_dir / plot_filename, history, met_genes)
+        wanted = [g.strip() for g in plot_genes.split(",") if g.strip()]
+        plotted = [g for g in wanted if g in met_genes]
+        for g in wanted:
+            if g not in met_genes:
+                print(f"[FATE_SUMMARY] plot_genes '{g}' is not in metabolic_genes; not plotted")
+        _write_plot(output_dir / plot_filename, history, plotted)
     return True
 
 
@@ -258,7 +281,55 @@ def time_axis(history):
     return [row["iteration"] for row in history], ITERATION_AXIS_LABEL
 
 
+def _place_end_labels(ax, entries, x_end, y_top):
+    """Write each series name at its line's right end, nudged apart so labels
+    never overlap (entries: list of (y_end, text, colour))."""
+    if not entries:
+        return
+    min_gap = 0.045 * y_top
+    ordered = sorted(entries, key=lambda e: e[0])
+    ys = [e[0] for e in ordered]
+    for i in range(1, len(ys)):
+        ys[i] = max(ys[i], ys[i - 1] + min_gap)
+    overflow = ys[-1] - y_top
+    if overflow > 0:
+        ys = [y - overflow for y in ys]
+    for y, (_, text, colour) in zip(ys, ordered):
+        ax.annotate(
+            text,
+            xy=(x_end, y),
+            xytext=(6, 0),
+            textcoords="offset points",
+            color=colour,
+            fontsize=9,
+            fontweight="semibold",
+            va="center",
+            ha="left",
+            annotation_clip=False,
+        )
+
+
+def _style_axis(ax):
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(AXIS)
+        ax.spines[side].set_linewidth(0.8)
+    ax.tick_params(colors=MUTED, labelcolor=INK2, length=3, width=0.6)
+    ax.yaxis.grid(True, color=GRID, linewidth=0.6)
+    ax.set_axisbelow(True)
+    ax.margins(x=0)
+
+
 def _write_plot(path: Path, history, met_genes=None) -> None:
+    """Two panels sharing the time axis: marked phenotypes, then total cells
+    with the ON-cell count of each gene in ``met_genes``.
+
+    Publication style: no top/right spines, hairline grid, thin lines, no
+    markers, each series named directly at its right end instead of a legend
+    box. Phenotypes that stay at zero for the whole run are not drawn; a
+    footnote lists them so the omission is stated, not hidden.
+    """
     try:
         import matplotlib.pyplot as plt
     except ImportError:
@@ -267,51 +338,64 @@ def _write_plot(path: Path, history, met_genes=None) -> None:
 
     met_genes = met_genes or []
     x, xlabel = time_axis(history)
+    x_end = x[-1] if x else 0
 
-    fig, (ax_pheno, ax_pop) = plt.subplots(2, 1, figsize=(9, 8), sharex=True)
-
-    for name in PHENOTYPES:
-        ax_pheno.plot(
-            x,
-            [row[f"phenotype_{name}"] for row in history],
-            marker="o",
-            linewidth=2,
-            label=name,
-            color=COLORS.get(name),
+    rc = {
+        "font.size": 10,
+        "axes.titlesize": 11,
+        "axes.titleweight": "semibold",
+        "axes.titlecolor": INK,
+        "axes.labelcolor": INK2,
+        "figure.facecolor": "white",
+        "axes.facecolor": "white",
+    }
+    with plt.rc_context(rc):
+        fig, (ax_pheno, ax_pop) = plt.subplots(
+            2, 1, figsize=(7.2, 6.4), sharex=True, gridspec_kw={"hspace": 0.3}
         )
-    ax_pheno.set_ylabel("Cells")
-    ax_pheno.set_title("Actual Cell Phenotypes After Fate Gates")
-    ax_pheno.grid(True, alpha=0.3)
-    ax_pheno.legend(loc="upper right", fontsize=8)
 
-    # Panel 2: total population and metabolic-gene ON-cell counts on ONE shared
-    # axis — all are cell counts, so magnitudes compare honestly (a single axis
-    # avoids the dual-axis illusion of metabolic genes sitting above total cells).
-    ax_pop.plot(
-        x,
-        [row["total_cells"] for row in history],
-        marker="o",
-        linewidth=2,
-        label="total cells",
-        color=COLORS["total_cells"],
-    )
-    for i, name in enumerate(met_genes):
-        color = COLORS.get(name, f"C{i + 3}")
+        drawn, always_zero, labels = [], [], []
+        for name in PHENOTYPES:
+            ys = [row[f"phenotype_{name}"] for row in history]
+            if not any(ys):
+                always_zero.append(name.replace("_", " "))
+                continue
+            ax_pheno.plot(x, ys, linewidth=1.8, label=name, color=COLORS.get(name))
+            drawn.append(ys)
+            labels.append((ys[-1], name.replace("_", " "), COLORS.get(name)))
+        pheno_top = max((max(ys) for ys in drawn), default=1) * 1.1
+        ax_pheno.set_ylim(0, pheno_top)
+        ax_pheno.set_ylabel("Cells")
+        ax_pheno.set_title("Cell phenotypes after fate gates", loc="left")
+        _style_axis(ax_pheno)
+        _place_end_labels(ax_pheno, labels, x_end, pheno_top)
+
+        # Panel 2: total population and gene ON-cell counts on ONE shared axis
+        # (all are cell counts, so magnitudes compare honestly; no dual axis).
+        totals = [row["total_cells"] for row in history]
         ax_pop.plot(
-            x,
-            [row.get(f"gene_{name}", 0) for row in history],
-            marker="s",
-            linewidth=2,
-            label=f"{name} (ON)",
-            color=color,
+            x, totals, linewidth=1.4, linestyle=(0, (4, 2)),
+            label="total cells", color=COLORS["total_cells"],
         )
-    ax_pop.set_xlabel(xlabel)
-    ax_pop.set_ylabel("Cells")
-    ax_pop.set_ylim(bottom=0)
-    ax_pop.set_title("Population & Metabolic Genes (ON cells)")
-    ax_pop.grid(True, alpha=0.3)
-    ax_pop.legend(loc="upper left", fontsize=8)
+        labels = [(totals[-1], "Total cells", COLORS["total_cells"])]
+        pop_top = max(totals, default=1)
+        for i, name in enumerate(met_genes):
+            colour = COLORS.get(name, EXTRA_GENE_COLORS[i % len(EXTRA_GENE_COLORS)])
+            ys = [row.get(f"gene_{name}", 0) for row in history]
+            ax_pop.plot(x, ys, linewidth=1.8, label=f"{name} (ON)", color=colour)
+            labels.append((ys[-1], f"{name} ON", colour))
+            pop_top = max(pop_top, max(ys, default=0))
+        pop_top *= 1.1
+        ax_pop.set_ylim(0, pop_top)
+        ax_pop.set_xlabel(xlabel)
+        ax_pop.set_ylabel("Cells")
+        ax_pop.set_title("Population and metabolic genes (cells with gene ON)", loc="left")
+        _style_axis(ax_pop)
+        _place_end_labels(ax_pop, labels, x_end, pop_top)
 
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
+        if always_zero:
+            note = ", ".join(always_zero) + " phenotypes remain at 0 cells throughout."
+            fig.text(0.125, 0.01, note, fontsize=8, color=MUTED)
+
+        fig.savefig(path, dpi=300, bbox_inches="tight")
+        plt.close(fig)

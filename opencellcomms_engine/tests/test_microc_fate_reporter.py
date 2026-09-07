@@ -118,5 +118,5 @@ def test_plot_uses_actual_phenotype_not_necrosis_gene(tmp_path, monkeypatch):
     assert len(axes) == 2
     phenotype_lines = {line.get_label(): line for line in axes[0].get_lines()}
     assert list(phenotype_lines["Necrosis"].get_ydata()) == [0, 2]
-    assert axes[0].get_title() == "Actual Cell Phenotypes After Fate Gates"
+    assert axes[0].get_title(loc="left") == "Cell phenotypes after fate gates"
     assert all("Gene Outputs" not in axis.get_title() for axis in axes)
