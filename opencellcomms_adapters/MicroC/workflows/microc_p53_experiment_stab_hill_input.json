@@ -3042,7 +3042,8 @@
           "parameters": {
             "plot_filename": "gene_fate_counts_over_time.png",
             "csv_filename": "gene_fate_counts_over_time.csv",
-            "metabolic_genes": "p53,p38,glycoATP,mitoATP"
+            "metabolic_genes": "p53,p38,glycoATP,mitoATP",
+            "plot_genes": "glycoATP,mitoATP"
           },
           "enabled": true,
           "position": {
