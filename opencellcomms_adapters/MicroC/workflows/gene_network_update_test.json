@@ -40,6 +40,25 @@
           "iteration_plots"
         ]
       },
+      "planner": {
+        "version": 2,
+        "replication": {
+          "replicates": 1,
+          "seedMode": "generated",
+          "masterSeed": "42",
+          "pairing": "shared",
+          "pairingGroup": "default",
+          "seeds": []
+        },
+        "tabs": [
+          {
+            "id": "run-1",
+            "name": "Run 1",
+            "enabled": true,
+            "parameterOverrides": {}
+          }
+        ]
+      },
       "contract_enforcement": "warn"
     }
   },

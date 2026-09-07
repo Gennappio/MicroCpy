@@ -42,6 +42,15 @@
       },
       "contract_enforcement": "warn",
       "planner": {
+        "version": 2,
+        "replication": {
+          "replicates": 1,
+          "seedMode": "generated",
+          "masterSeed": "42",
+          "pairing": "shared",
+          "pairingGroup": "default",
+          "seeds": []
+        },
         "tabs": [
           {
             "id": "planner-tab-1782212844371-1",
