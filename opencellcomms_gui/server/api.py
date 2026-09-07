@@ -494,7 +494,8 @@ def _planner_batch(batch_id):
         raise PathPolicyError('Invalid batch ID')
     batch = _resolve_allowed_path(RUNS_DIR / batch_id, roots=(RUNS_DIR,),
                                   allow_absolute=True, must_exist=True)
-    _resolve_allowed_path(batch / 'manifest.json', roots=(RUNS_DIR,),
+    record = _planner_module().execution_record_path(batch)
+    _resolve_allowed_path(record, roots=(RUNS_DIR,),
                           allow_absolute=True, must_exist=True, require_file=True)
     return batch
 
@@ -515,8 +516,9 @@ def _start_planner(batch, action='continue', run_id=None):
     while not log_queue.empty():
         log_queue.get_nowait()
     is_running, last_run_status, last_exit_code = True, 'running', None
+    record = _planner_module().execution_record_path(batch)
     simulation_thread = threading.Thread(target=run_simulation_async,
-        args=(None,), kwargs={'batch_options': {'manifest': batch / 'manifest.json',
+        args=(None,), kwargs={'batch_options': {'manifest': record,
         'action': action, 'run_id': run_id}}, daemon=True)
     simulation_thread.start()
 
@@ -538,9 +540,13 @@ def planner_batches():
     module = _planner_module()
     if request.method == 'GET':
         batches = []
-        for path in sorted(RUNS_DIR.glob('*/manifest.json'), reverse=True):
+        directories = sorted((p for p in RUNS_DIR.iterdir() if p.is_dir()), reverse=True) \
+            if RUNS_DIR.is_dir() else []
+        for directory in directories:
             try:
-                batch = _planner_batch(path.parent.name)
+                if not module.execution_record_path(directory).is_file():
+                    continue
+                batch = _planner_batch(directory.name)
                 state = module.batch_status(batch)
                 batches.append({key: state[key] for key in
                     ('batch_id', 'created_at', 'unique_runs', 'completed', 'failed')})
@@ -590,7 +596,7 @@ def planner_batch_action(batch_id):
             if run_id and run_id not in {r['id'] for r in state['runs']}:
                 raise ValueError('Unknown replicate identity')
             if state['code_hash'] != module.code_fingerprint():
-                raise ValueError('Model code changed. Restore the saved source or create a new batch.')
+                raise ValueError('Model code changed. Return to the recorded code version or create a new batch.')
             _start_planner(batch, action, run_id)
             return jsonify(status='started', batch_id=batch_id)
         except (ValueError, OSError, TypeError, KeyError) as exc:
@@ -2090,16 +2096,19 @@ def list_results():
         if has_subdirs:
             for item in sorted(results_dir.iterdir()):
                 if item.is_dir() and not item.is_symlink() and not item.name.startswith('.'):
-                    if (item / 'manifest.json').is_file():
-                        replication = _planner_module()
+                    replication = _planner_module()
+                    if replication.execution_record_path(item).is_file():
                         state = replication.batch_status(item)
                         batch_name = replication.batch_display_name(state)
                         configs = {c['id']: c['name'] for c in state['configurations']}
                         for run in state['runs']:
                             for attempt in run['attempts']:
                                 attempt_dir = item / attempt['attempt_dir']
+                                original_dir = replication.run_directory(item, run)
+                                suffix = '' if attempt_dir == original_dir else \
+                                    f" / {attempt_dir.name.removeprefix(original_dir.name + '_')}"
                                 results.append({
-                                    'name': f"{batch_name} / {configs[run['configuration_id']]} / Replicate {run.get('output_index', run['replicate'])} / {attempt_dir.name}",
+                                    'name': f"{batch_name} / {configs[run['configuration_id']]} / Replicate {run.get('output_index', run['replicate'])}{suffix}",
                                     'timestamp': attempt.get('started_at', ''),
                                     'seed': run['seed'], 'status': attempt['status'],
                                     'numerical_valid': attempt.get('numerical_valid'),

@@ -157,14 +157,14 @@ def main(argv=None) -> int:
     out = args.out or (args.runs / "sensitivity_summary.csv")
 
     sys.path.insert(0, str(REPO_ROOT / 'opencellcomms_engine'))
-    from src.workflow.replication import batch_status
+    from src.workflow.replication import batch_status, execution_record_path
     baselines = _baseline_sources(args.suite)
     collected = []
     listed = set()   # (run_id, axis): the same run is one observation per axis
     for directory in sorted(args.runs.iterdir()):
         if not directory.is_dir():
             continue
-        if (directory / 'manifest.json').is_file():
+        if execution_record_path(directory).is_file():
             batch = batch_status(directory)
             for run in batch['runs']:
                 if run['status'] != 'completed' or run.get('numerical_valid') is not True:

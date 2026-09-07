@@ -41,14 +41,17 @@ def test_stable_identity_pairing_and_workflow_owned_plan(tmp_path):
     tabs[0]['name'] = 'Renamed tab'
     assert seeds(plan(doc)) == seeds(original)
     batch = r.create_batch([], tmp_path, original)
-    receipt = r.read_json(batch / 'manifest.json')
+    receipt = r.read_execution_record(batch)
     assert len(receipt['runs']) == 6
     assert not list(batch.glob('plan-*.json'))
     for config in receipt['configurations']:
         frozen = r.read_json(batch / config['workflow_file'])
         planned = next(item for item in original['configurations'] if item['id'] == config['id'])
         assert frozen['metadata']['gui']['planner'] == planned['workflow']['metadata']['gui']['planner']
-    assert (batch / 'source.tar.gz').is_file()
+    assert not (batch / 'manifest.json').exists()
+    assert not (batch / 'source.tar.gz').exists()
+    assert not (batch / 'working-tree.patch').exists()
+    assert r.execution_record_path(batch) == batch / '.opencellcomms/execution.json'
 
 
 def test_independent_seeds_use_persistent_ids():
@@ -72,17 +75,19 @@ def test_readable_folders_are_unique_and_do_not_change_seeds(tmp_path, monkeypat
     original = plan(doc)
     batch = r.create_batch([], tmp_path, original)
     assert batch.name == 'Test_2026-09-06_15-30-00'
-    saved = r.read_json(batch / 'manifest.json')
+    saved = r.read_execution_record(batch)
     assert seeds(saved) == seeds(original)
     assert [c['output_folder'] for c in saved['configurations']] == ['Dose_5.0', 'dose_5.0_2']
     assert saved['runs'][0]['output_dir'] == 'Dose_5.0/replicate-001'
     assert saved['runs'][1]['output_dir'] == 'Dose_5.0/replicate-002'
-    assert (batch / 'configurations/Dose_5.0.json').is_file()
+    assert (batch / '.opencellcomms/workflows/Dose_5.0.json').is_file()
     completed(batch, saved['runs'][0], 1, 7)
-    before = (batch / 'manifest.json').read_bytes()
+    assert (batch / 'Dose_5.0/replicate-001/status.json').is_file()
+    assert not list(batch.glob('*/replicate-*/attempt-*'))
+    before = r.execution_record_path(batch).read_bytes()
     second = r.create_batch([], tmp_path, original)
     assert second.name == batch.name + '_2'
-    assert (batch / 'manifest.json').read_bytes() == before
+    assert r.execution_record_path(batch).read_bytes() == before
     assert r.run_status(batch, saved['runs'][0])['status'] == 'completed'
 
 
@@ -91,7 +96,7 @@ def test_independent_duplicate_configs_keep_separate_folders(tmp_path):
     doc['metadata']['gui']['planner']['replication']['pairing'] = 'independent'
     doc['metadata']['gui']['planner']['tabs'][1]['parameterOverrides'] = {}
     batch = r.create_batch([{'workflow': doc}], tmp_path)
-    original = r.read_json(batch / 'manifest.json')['runs']
+    original = r.read_execution_record(batch)['runs']
     assert len(original) == 4
     assert len({run['output_dir'] for run in original}) == 4
     assert len({run['seed'] for run in original}) == 4
@@ -100,12 +105,13 @@ def test_independent_duplicate_configs_keep_separate_folders(tmp_path):
 
 def test_legacy_hash_folders_remain_readable(tmp_path):
     batch = r.create_batch([{'workflow': workflow(1)}], tmp_path)
-    saved = r.read_json(batch / 'manifest.json')
+    saved = r.read_execution_record(batch)
     for config in saved['configurations']:
         config.pop('output_folder')
     for run in saved['runs']:
         run.pop('output_dir')
         run.pop('output_index')
+    r.execution_record_path(batch).unlink()
     r.write_json(batch / 'manifest.json', saved)
     first = saved['runs'][0]
     completed(batch, first, 1, 7)
@@ -118,12 +124,12 @@ def test_legacy_hash_folders_remain_readable(tmp_path):
 def test_changing_replicates_requires_a_new_workflow_plan(tmp_path):
     doc = workflow(1)
     first = r.create_batch([{'workflow': doc}], tmp_path)
-    first_receipt = (first / 'manifest.json').read_bytes()
+    first_receipt = r.execution_record_path(first).read_bytes()
     doc['metadata']['gui']['planner']['replication']['replicates'] = 2
     second = r.create_batch([{'workflow': doc}], tmp_path)
-    assert r.read_json(first / 'manifest.json')['requested_runs'] == 2
-    assert r.read_json(second / 'manifest.json')['requested_runs'] == 4
-    assert (first / 'manifest.json').read_bytes() == first_receipt
+    assert r.read_execution_record(first)['requested_runs'] == 2
+    assert r.read_execution_record(second)['requested_runs'] == 4
+    assert r.execution_record_path(first).read_bytes() == first_receipt
     assert not list(tmp_path.rglob('plan-*.json'))
 
 
@@ -196,7 +202,7 @@ def test_frozen_inputs_and_workflow_are_immutable(tmp_path, monkeypatch):
     doc['subworkflows']['main']['parameters'].append({'id': 'input', 'parameters': {'file_path': str(source)}})
     monkeypatch.setattr(r, 'code_files', lambda: [])
     batch = r.create_batch([{'workflow': doc}], tmp_path / 'runs')
-    manifest = r.read_json(batch / 'manifest.json')
+    manifest = r.read_execution_record(batch)
     config = manifest['configurations'][0]
     frozen = r.read_json(batch / config['workflow_file'])
     path = Path(frozen['subworkflows']['main']['parameters'][-1]['parameters']['file_path'])
@@ -206,14 +212,18 @@ def test_frozen_inputs_and_workflow_are_immutable(tmp_path, monkeypatch):
 
 
 def completed(batch, run, attempt, value, valid=True, endpoint='20'):
-    folder = r.run_directory(batch, run) / f'attempt-{attempt:03d}'
+    parent = r.run_directory(batch, run)
+    if r.execution_record_path(batch).parent.name == r.INTERNAL_DIRECTORY:
+        folder = parent if attempt == 1 else parent.with_name(parent.name + f'_retry-{attempt:03d}')
+    else:
+        folder = parent / f'attempt-{attempt:03d}'
     r.write_json(folder / 'status.json', {'status': 'completed', 'numerical_valid': valid,
         'metrics': {'survival': {'value': value, 'endpoint': ['gene_steps', endpoint]}}})
 
 
 def test_summary_uses_replicates_not_attempts_and_pairs_matching_endpoints(tmp_path):
     batch = r.create_batch([{'workflow': workflow(3)}], tmp_path)
-    runs = r.read_json(batch / 'manifest.json')['runs']
+    runs = r.read_execution_record(batch)['runs']
     for i, run in enumerate(runs):
         completed(batch, run, 1, i+1)
     completed(batch, runs[0], 2, 1)  # Replay must not inflate n.
@@ -233,7 +243,7 @@ def test_summary_uses_replicates_not_attempts_and_pairs_matching_endpoints(tmp_p
 
 def test_single_replicate_has_no_ci_and_failures_not_pooled(tmp_path):
     batch = r.create_batch([{'workflow': workflow(1)}], tmp_path)
-    runs = r.read_json(batch / 'manifest.json')['runs']
+    runs = r.read_execution_record(batch)['runs']
     completed(batch, runs[0], 1, 7)
     completed(batch, runs[1], 1, 9, valid=False)
     result = r.summarize_batch(batch, 'survival')
@@ -244,7 +254,7 @@ def test_single_replicate_has_no_ci_and_failures_not_pooled(tmp_path):
 
 def test_continue_retry_and_replay_share_saved_identities(tmp_path, monkeypatch):
     batch = r.create_batch([{'workflow': workflow(1)}], tmp_path)
-    runs = r.read_json(batch / 'manifest.json')['runs']
+    runs = r.read_execution_record(batch)['runs']
     completed(batch, runs[0], 1, 7)
     calls = []
     monkeypatch.setattr(r, 'execute_run', lambda batch, run, manifest, **kwargs: calls.append(run['id']) or True)
@@ -284,7 +294,7 @@ def test_independent_contrast_and_replay_mismatch_remain_visible(tmp_path):
     doc = workflow(3)
     doc['metadata']['gui']['planner']['replication']['pairing'] = 'independent'
     batch = r.create_batch([{'workflow': doc}], tmp_path)
-    runs = r.read_json(batch / 'manifest.json')['runs']
+    runs = r.read_execution_record(batch)['runs']
     for i, run in enumerate(runs):
         completed(batch, run, 1, i+1)
     result = r.summarize_batch(batch, 'survival')['groups'][1]
@@ -292,7 +302,8 @@ def test_independent_contrast_and_replay_mismatch_remain_visible(tmp_path):
     assert result['independent_difference']['mean'] == 3
     assert result['independent_difference']['ci95'][0] < 3
     first = runs[0]
-    bad = r.run_directory(batch, first) / 'attempt-002/status.json'
+    parent = r.run_directory(batch, first)
+    bad = parent.with_name(parent.name + '_retry-002') / 'status.json'
     r.write_json(bad, {'status': 'completed', 'numerical_valid': True, 'replay_matches': False,
                       'metrics': {'survival': {'value': 999, 'endpoint': ['gene_steps', '20']}}})
     assert r.batch_status(batch)['replay_mismatches'] == 1

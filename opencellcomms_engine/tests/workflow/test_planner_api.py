@@ -34,11 +34,11 @@ def test_preview_and_submission_use_same_seeds_and_reload_can_read(client):
     status = client.get('/api/planner/batches/' + batch_id).get_json()
     assert [x['seed'] for x in status['runs']] == [x['seed'] for x in preview.get_json()['runs']]
     assert client.get('/api/planner/batches').get_json()['batches'][0]['unique_runs'] == 2
-    assert (api.RUNS_DIR / batch_id / 'source.tar.gz').exists()
+    assert not (api.RUNS_DIR / batch_id / 'source.tar.gz').exists()
     assert not list((api.RUNS_DIR / batch_id).glob('plan-*.json'))
     second = client.post('/api/planner/batches', json={'workflow': doc}).get_json()
     assert second['batch_id'] != batch_id
-    assert (api.RUNS_DIR / batch_id / 'manifest.json').exists()
+    assert r.execution_record_path(api.RUNS_DIR / batch_id).is_file()
 
 
 def test_continue_replay_and_busy_guards(client, monkeypatch):
@@ -70,15 +70,17 @@ def test_invalid_and_outside_paths_are_rejected(client, tmp_path):
 def test_export_and_results_keep_attempt_history(client):
     created = client.post('/api/planner/batches', json={'workflow': document()}).get_json()
     batch = api.RUNS_DIR / created['batch_id']
-    run = r.read_json(batch / 'manifest.json')['runs'][0]
+    run = r.read_execution_record(batch)['runs'][0]
     for i in (1, 2):
-        folder = r.run_directory(batch, run) / f'attempt-{i:03d}'
+        original = r.run_directory(batch, run)
+        folder = original if i == 1 else original.with_name(original.name + f'_retry-{i:03d}')
         r.write_json(folder / 'status.json', {'status': 'completed', 'numerical_valid': True})
     results = client.get('/api/results/list').get_json()['results']
     assert len(results) == 2
     assert results[0]['seed'] == run['seed']
     assert 'Planner API test' in results[0]['name']
-    assert '/ A / Replicate 1 / attempt-001' in results[0]['name']
+    assert '/ A / Replicate 1' in results[0]['name']
+    assert 'attempt-001' not in results[0]['name']
     assert run['id'] not in results[0]['name']
     download = client.get('/api/planner/batches/' + batch.name + '/export')
     assert download.status_code == 200
@@ -88,13 +90,14 @@ def test_export_and_results_keep_attempt_history(client):
 def test_old_results_show_workflow_names_instead_of_hashes(client):
     created = client.post('/api/planner/batches', json={'workflow': document()}).get_json()
     batch = api.RUNS_DIR / created['batch_id']
-    saved = r.read_json(batch / 'manifest.json')
+    saved = r.read_execution_record(batch)
     saved.pop('name')
     saved['configurations'][0]['source'] = '/workflows/glucose_boundary.json'
     saved['configurations'][0].pop('output_folder')
     for run in saved['runs']:
         run.pop('output_dir')
         run.pop('output_index')
+    r.execution_record_path(batch).unlink()
     r.write_json(batch / 'manifest.json', saved)
     batch = batch.rename(api.RUNS_DIR / '20260906T124930-4925defd')
     run = saved['runs'][0]

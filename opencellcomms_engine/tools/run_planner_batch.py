@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.workflow.replication import (REPO, compile_plan, create_batch,
-    execute_batch, read_json)
+from src.workflow.replication import (REPO, batch_directory_from_record,
+    compile_plan, create_batch, execute_batch, read_json)
 
 
 def main(argv=None):
@@ -25,7 +25,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.manifest:
-            batch = args.manifest.resolve().parent
+            batch = batch_directory_from_record(args.manifest)
         else:
             paths = args.workflow + (sorted(args.suite.glob('p53_sa_*.json')) if args.suite else [])
             if not paths:

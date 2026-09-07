@@ -112,7 +112,7 @@ def test_full_suite_plan_comes_from_workflows_and_has_separate_folders(tmp_path)
     assert len({run['seed'] for run in plan['runs']}) == 10
 
     batch = replication.create_batch(documents, tmp_path, plan)
-    receipt = replication.read_json(batch / 'manifest.json')
+    receipt = replication.read_execution_record(batch)
     assert len({run['output_dir'] for run in receipt['runs']}) == 120
     assert not list(batch.glob('plan-*.json'))
     for config in receipt['configurations']:
@@ -143,9 +143,10 @@ def test_one_launcher_process_executes_every_workflow_replicate(tmp_path):
     env = job_env(MICROC_SA_DIR=str(suite), MICROC_RUNS_DIR=str(runs))
     result = launch(env=env)
     assert result.returncode == 0, result.stdout + result.stderr
-    receipts = list(runs.glob('*/manifest.json'))
-    assert len(receipts) == 1
-    batch = receipts[0].parent
+    batches = [path for path in runs.iterdir()
+               if path.is_dir() and replication.execution_record_path(path).is_file()]
+    assert len(batches) == 1
+    batch = batches[0]
     state = replication.batch_status(batch)
     assert state['requested_runs'] == state['unique_runs'] == state['completed'] == 4
     assert len({run['attempt_dir'] for run in state['runs']}) == 4
@@ -159,10 +160,10 @@ def fabricate_completed_batch(path, runs_dir):
     """Create a batch for one suite file and fake every replicate's outputs."""
     documents = [{'workflow': replication.read_json(path), 'source': str(path)}]
     batch = replication.create_batch(documents, runs_dir)
-    manifest = replication.read_json(batch / 'manifest.json')
+    manifest = replication.read_execution_record(batch)
     for run in manifest['runs']:
         config = next(c for c in manifest['configurations'] if c['id'] == run['configuration_id'])
-        attempt = replication.run_directory(batch, run) / 'attempt-1'
+        attempt = replication.run_directory(batch, run)
         attempt.mkdir(parents=True)
         workflow = replication.read_json(batch / config['workflow_file'])
         workflow['metadata']['replicate'] = {**run, 'batch_id': manifest['batch_id']}
@@ -192,7 +193,7 @@ def test_collector_reports_the_single_baseline_on_every_axis(tmp_path):
     with out.open(newline='') as stream:
         rows = list(csv.DictReader(stream))
 
-    manifest = replication.read_json(owner / 'manifest.json')
+    manifest = replication.read_execution_record(owner)
     baseline = next(r['configuration_id'] for r in manifest['requests'] if r['name'] == 'glc_bnd_5.0')
     baseline_ids = {r['id'] for r in manifest['runs'] if r['configuration_id'] == baseline}
     assert len(baseline_ids) == 10

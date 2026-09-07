@@ -20,7 +20,6 @@ import shutil
 import socket
 import subprocess
 import sys
-import tarfile
 import time
 import uuid
 from datetime import datetime, timezone
@@ -32,6 +31,8 @@ from .randomness import RNG_SCHEME
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_REPLICATION = {"replicates": 1, "seedMode": "generated", "masterSeed": "42",
                        "pairing": "shared", "pairingGroup": "default", "seeds": []}
+INTERNAL_DIRECTORY = ".opencellcomms"
+EXECUTION_RECORD = "execution.json"
 
 
 def now():
@@ -283,8 +284,7 @@ def _assign_run_folders(plan):
 
 def _assign_configuration_folders(plan):
     """Give every effective configuration one readable, collision-free folder."""
-    used = {'configurations', 'inputs', 'manifest.json', 'source.tar.gz',
-            'working-tree.patch'}
+    used = {INTERNAL_DIRECTORY}
     for config in plan['configurations']:
         base = folder_name(config['name'])
         if re.fullmatch(r'plan-\d+\.json', base, re.IGNORECASE):
@@ -316,40 +316,64 @@ def run_directory(batch, run):
     return Path(batch) / run.get('output_dir', f"{run['configuration_id']}/{run['id']}")
 
 
+def execution_record_path(batch):
+    """Return the hidden execution record, or a legacy manifest when present."""
+    batch = Path(batch)
+    current = batch / INTERNAL_DIRECTORY / EXECUTION_RECORD
+    legacy = batch / "manifest.json"
+    return current if current.is_file() or not legacy.is_file() else legacy
+
+
+def internal_directory(batch):
+    """Internal storage for new batches; legacy batches kept theirs at the root."""
+    record = execution_record_path(batch)
+    return record.parent if record.name == EXECUTION_RECORD else Path(batch)
+
+
+def read_execution_record(batch):
+    return read_json(execution_record_path(batch))
+
+
+def batch_directory_from_record(record):
+    record = Path(record).resolve()
+    return record.parent.parent if record.parent.name == INTERNAL_DIRECTORY else record.parent
+
+
 def create_batch(documents, runs_dir, plan=None):
     plan = copy.deepcopy(plan or compile_plan(documents))
     names = {c['workflow'].get('name') or 'Experiment' for c in plan['configurations']}
     plan['name'] = next(iter(names)) if len(names) == 1 else 'Experiments'
     batch = _new_experiment_directory(runs_dir, plan['name'])
     batch_id = batch.name
+    internal = batch / INTERNAL_DIRECTORY
     _assign_configuration_folders(plan)
     for config in plan["configurations"]:
         folder = config['output_folder']
-        frozen, inputs = _resolve_inputs(config.pop("workflow"), config["source"], batch)
+        frozen, inputs = _resolve_inputs(config.pop("workflow"), config["source"], internal)
         if set(inputs) != set(config['inputs']):
             raise ValueError('Inputs changed while saving the workflows; launch again')
-        target = batch / "configurations" / (folder + ".json")
+        target = internal / "workflows" / (folder + ".json")
         write_json(target, frozen)
         config["workflow_file"] = str(target.relative_to(batch))
         config["workflow_hash"] = digest(frozen)
         config["inputs"] = inputs
     source_hash = code_fingerprint()
-    with tarfile.open(batch / "source.tar.gz", "w:gz") as archive:
-        for path in code_files():
-            archive.add(path, arcname=str(path.relative_to(REPO)))
     if source_hash != code_fingerprint():
         raise ValueError('Source changed while saving the run; launch again')
     git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True)
-    dirty = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=REPO, capture_output=True)
-    (batch / "working-tree.patch").write_bytes(dirty.stdout)
     plan.update(batch_id=batch_id, created_at=now(), code_hash=source_hash,
                 git_revision=git.stdout.strip(), environment=environment())
-    write_json(batch / "manifest.json", plan)
+    write_json(internal / EXECUTION_RECORD, plan)
     return batch
 
 
 def attempt_dirs(batch, run):
-    return sorted(run_directory(batch, run).glob("attempt-*"))
+    parent = run_directory(batch, run)
+    attempts = [parent] if (parent / "status.json").is_file() else []
+    attempts.extend(sorted(parent.glob("attempt-*")))  # legacy batches
+    attempts.extend(sorted(parent.glob("retry-*")))  # early development layout
+    attempts.extend(sorted(parent.parent.glob(parent.name + "_retry-*")))
+    return attempts
 
 
 def run_status(batch, run):
@@ -372,7 +396,7 @@ def run_status(batch, run):
 
 
 def batch_status(batch):
-    manifest = read_json(Path(batch) / "manifest.json")
+    manifest = read_execution_record(batch)
     states = [run_status(batch, r) for r in manifest["runs"]]
     return {**manifest, "runs": states,
             "replay_mismatches": sum(a.get("replay_matches") is False for s in states for a in s["attempts"]),
@@ -404,8 +428,15 @@ def execute_run(batch, run, manifest, replay=False):
         fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         with os.fdopen(fd, 'w') as stream:
             json.dump({'pid': os.getpid(), 'host': socket.gethostname()}, stream)
-        attempt = parent / f"attempt-{len(attempt_dirs(batch, run))+1:03d}"
-        attempt.mkdir()
+        attempts = attempt_dirs(batch, run)
+        if execution_record_path(batch).parent.name == INTERNAL_DIRECTORY and not attempts:
+            attempt = parent
+        else:
+            if execution_record_path(batch).parent.name == INTERNAL_DIRECTORY:
+                attempt = parent.with_name(parent.name + f"_retry-{len(attempts)+1:03d}")
+            else:
+                attempt = parent / f"attempt-{len(attempts)+1:03d}"
+            attempt.mkdir()
         state = {'status': 'running', 'started_at': now(), 'seed': run['seed'],
                  'pid': os.getpid(), 'host': socket.gethostname(), 'environment': environment()}
         write_json(attempt / 'status.json', state)
@@ -417,7 +448,7 @@ def execute_run(batch, run, manifest, replay=False):
         if digest(workflow) != config["workflow_hash"]:
             raise ValueError("Frozen configuration has been modified")
         for sha, info in config["inputs"].items():
-            frozen_input = batch / "inputs" / (sha + Path(info["name"]).suffix)
+            frozen_input = internal_directory(batch) / "inputs" / (sha + Path(info["name"]).suffix)
             if hashlib.sha256(frozen_input.read_bytes()).hexdigest() != sha:
                 raise ValueError(f"Frozen input has been modified: {info['name']}")
         # Frozen workflows are portable when the experiment directory moves.
@@ -429,7 +460,7 @@ def execute_run(batch, run, manifest, replay=False):
             if isinstance(value, list):
                 return [rebase(v) for v in value]
             if isinstance(value, str) and Path(value).name in input_names:
-                return str(batch / 'inputs' / Path(value).name)
+                return str(internal_directory(batch) / 'inputs' / Path(value).name)
             return value
         workflow = rebase(workflow)
         workflow["seed"] = int(run["seed"])
@@ -474,9 +505,9 @@ def execute_run(batch, run, manifest, replay=False):
 
 def execute_batch(batch, action="continue", run_id=None, index=None):
     batch = Path(batch).resolve()
-    manifest = read_json(batch / "manifest.json")
+    manifest = read_execution_record(batch)
     if manifest["code_hash"] != code_fingerprint():
-        raise ValueError("Model code changed since this batch was saved. Restore its source snapshot or create a new batch.")
+        raise ValueError("Model code changed since this batch was saved. Return to its recorded code version or create a new batch.")
     recorded, current = manifest['environment'], environment()
     if (recorded['python'].split()[0] != current['python'].split()[0]
             or recorded['packages'] != current['packages']
@@ -589,7 +620,7 @@ def summarize_batch(batch, metric=None):
 @contextlib.contextmanager
 def batch_mutation_lock(batch):
     """Serialize replicate claims on the same shared filesystem."""
-    lock = Path(batch) / '.batch-lock'
+    lock = internal_directory(batch) / '.batch-lock'
     for _ in range(200):
         try:
             fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)

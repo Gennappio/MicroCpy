@@ -66,32 +66,32 @@ bash run_microc_slurm.sh --install-only
 
 ## Result folders
 
-Each new execution gets readable, separate folders for configuration,
-replicate and attempt. For example:
+Each new execution gets readable, separate folders for configuration and
+replicate. For example:
 
 ```text
 runs/glucose_boundary_2026-09-06_15-30-00/
   glc_bnd_5.0/
     replicate-001/
-      attempt-001/
-        workflow.json
-        run.log
-        status.json
-        ... normal simulation outputs ...
+      workflow.json
+      run.log
+      status.json
+      ... normal simulation outputs ...
     replicate-002/
-      attempt-001/
-        workflow.json
-        ...
+      workflow.json
+      ...
 ```
 
-A retry creates `attempt-002` and leaves the first attempt intact. A name
-collision gets a simple `_2`, `_3`, … suffix. The attempt folder contains the
-executed workflow copy and the normal logs, CSVs and plots.
+A retry creates a sibling such as `replicate-001_retry-002` and leaves the
+first result intact. This extra folder appears only when a retry is actually
+run. A name collision gets a simple `_2`, `_3`, … suffix. Each replicate
+folder contains the executed workflow copy and the normal logs, CSVs and plots.
 
-The runner also writes an immutable execution record inside the results for
-provenance, retry safety and duplicate detection. It is generated
-automatically from the workflows and is output only: users never provide, edit
-or import it as a plan. It is not a second editable plan.
+The runner keeps frozen inputs and a small execution record in the hidden
+`.opencellcomms` folder. They support safe execution and retries; they are not
+another plan. The editable plan remains entirely in the workflow JSON. New
+runs no longer create `manifest.json`, `source.tar.gz` or
+`working-tree.patch` at the experiment root.
 
 ## Seed coverage in MicroC
 
