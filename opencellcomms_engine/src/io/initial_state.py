@@ -960,3 +960,67 @@ class InitialStateManager:
                   f"current ({current_domain.size_x.meters:.6f}, {current_domain.size_y.meters:.6f}) m")
         
         print("[OK] Domain compatibility validated")
+
+
+def write_seed_csv(cells, file_path: Union[str, Path], config,
+                   description: str = "") -> Path:
+    """Write cells as a seed CSV that ``load_initial_state_from_csv`` (the
+    ``read_checkpoint`` node) reloads as the starting population of another
+    simulation. This is the exact inverse of that reader, kept next to it so
+    the two cannot drift:
+
+    - coordinates are CENTRE-RELATIVE: x_rel = x_grid - bio_grid_x // 2, the
+      shift the reader undoes at load time (so the header carries
+      ``origin=center`` and the seed survives a Cell Height change);
+    - one ``gene_<name>`` column per gene in the union of all cells' gene
+      states, written ``true``/``false`` (a cell lacking a gene writes
+      ``false``);
+    - ``phenotype`` and ``age`` columns; the reader keeps the phenotype and
+      ignores ``age`` for this (simple) format.
+
+    Metabolic state and substance fields are deliberately not written: the
+    metabolism is recomputed from gene states and the fields are re-solved by
+    the diffusion node, so a reload only needs positions, phenotypes and
+    genes. The domain (size and Cell Height) of the reloading workflow must
+    match the values recorded in the header.
+    """
+    file_path = Path(file_path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    dom = config.domain
+    cell_size_um = float(dom.cell_height.micrometers)
+    size_x_um = float(dom.size_x.micrometers)
+    size_y_um = float(dom.size_y.micrometers)
+    is_3d = int(getattr(dom, 'dimensions', 2) or 2) == 3
+    offsets = [int(size_x_um / cell_size_um) // 2, int(size_y_um / cell_size_um) // 2]
+    if is_3d:
+        offsets.append(int(float(dom.size_z.micrometers) / cell_size_um) // 2)
+
+    cell_list = list(cells)
+    gene_names: List[str] = sorted({
+        name for cell in cell_list
+        for name in (getattr(cell.state, 'gene_states', {}) or {}).keys()
+    })
+
+    coord_cols = ['x', 'y', 'z'] if is_3d else ['x', 'y']
+    fieldnames = coord_cols + ['phenotype', 'age'] + [f'gene_{g}' for g in gene_names]
+
+    desc = description.replace('"', "'")
+    with open(file_path, 'w', newline='', encoding='utf-8') as f:
+        f.write(f'# origin=center, cell_size_um={cell_size_um}, '
+                f'domain_size_um={size_x_um}, description="{desc}"\n')
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for cell in cell_list:
+            state = cell.state
+            genes = getattr(state, 'gene_states', {}) or {}
+            row: Dict[str, Any] = {
+                col: int(round(float(state.position[i]))) - offsets[i]
+                for i, col in enumerate(coord_cols)
+            }
+            row['phenotype'] = str(state.phenotype)
+            row['age'] = float(getattr(state, 'age', 0.0) or 0.0)
+            for g in gene_names:
+                row[f'gene_{g}'] = 'true' if genes.get(g, False) else 'false'
+            writer.writerow(row)
+    return file_path

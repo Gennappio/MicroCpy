@@ -11,11 +11,13 @@ from .save_checkpoint import (
     save_full_checkpoint,
 )
 from .save_state_checkpoint import save_state_checkpoint
+from .save_seed_checkpoint import save_seed_checkpoint
 
 __all__ = [
     'save_gene_network_checkpoint',
     'save_substance_checkpoint',
     'save_full_checkpoint',
     'save_state_checkpoint',
+    'save_seed_checkpoint',
 ]
 
