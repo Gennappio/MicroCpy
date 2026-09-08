@@ -1473,7 +1473,8 @@
           },
           "description": "Mark cells as necrotic based on user-defined conditions",
           "parameter_nodes": [
-            "fate_update-param_necrosis_params"
+            "fate_update-param_necrosis_params",
+            "fate_update-param_require_gene"
           ],
           "contract": {
             "participants": [
@@ -1597,6 +1598,17 @@
           ],
           "position": {
             "x": 100,
+            "y": 400
+          }
+        },
+        {
+          "id": "fate_update-param_require_gene",
+          "label": "Necrosis gene gate (require_gene)",
+          "parameters": {
+            "require_gene": false
+          },
+          "position": {
+            "x": -240,
             "y": 400
           }
         },

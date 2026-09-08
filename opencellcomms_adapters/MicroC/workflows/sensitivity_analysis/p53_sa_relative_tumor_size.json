@@ -2109,7 +2109,8 @@
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
-            "fate_update-param_necrosis_params"
+            "fate_update-param_necrosis_params",
+            "fate_update-param_require_gene"
           ],
           "contract": {
             "participants": [
@@ -2260,16 +2261,22 @@
               "key": "require_both",
               "valueType": "bool",
               "value": true
-            },
-            {
-              "key": "require_gene",
-              "valueType": "bool",
-              "value": true
             }
           ],
           "target_param": "necrosis_params",
           "position": {
             "x": -257,
+            "y": 240
+          }
+        },
+        {
+          "id": "fate_update-param_require_gene",
+          "label": "Necrosis gene gate (require_gene)",
+          "parameters": {
+            "require_gene": true
+          },
+          "position": {
+            "x": -597,
             "y": 240
           }
         },

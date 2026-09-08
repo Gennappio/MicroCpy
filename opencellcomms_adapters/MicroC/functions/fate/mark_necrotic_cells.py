@@ -11,22 +11,25 @@ The thresholds are published to results['necrosis_thresholds'] so the
 plotting nodes can draw them as isolines on the substance heatmaps.
 
 USAGE:
-The 'necrosis_params' dictionary can contain any parameters the user needs.
-Example configuration:
+The 'necrosis_params' dictionary holds the environmental thresholds:
 
    {
        "oxygen_threshold": 0.022,
        "glucose_threshold": 0.23,
-       "require_both": true,
-       "require_gene": true
+       "require_both": true
    }
+
+The gene gate is a separate, canvas-visible BOOL slot on this node
+(`require_gene`), never a key inside the dict (R1.6: a mode switch buried
+in a dict entry is hidden biology). A dict that still carries
+"require_gene" is rejected with a message pointing to the slot.
 
 NETLOGO REFERENCE (microC_Metabolic_Symbiosis.nlogo3d): necrosis is
 double-gated. The gene network's Necrosis fate node firing calls
 -FATE-NECROSIS-20, which then applies the environmental gate
 (O2 < the-necrosis-threshold AND Glucose < the-necrosis-threshold-g,
 slider defaults 0.011 / 3.9) before committing my-fate = "Necrosis".
-Set "require_gene": true to reproduce that double gate; false (default)
+Set require_gene = true to reproduce that double gate; false (default)
 keeps the environment-only behavior.
 """
 
@@ -38,18 +41,32 @@ from src.biology.context import BiologicalContext
 @register_function(
     requires=['population', 'simulator'],
     display_name="Mark Necrotic Cells",
-    description="Mark cells as necrotic based on user-defined conditions in necrosis_params",
+    description="Mark cells as necrotic when local Oxygen and Glucose fall below "
+                "the necrosis thresholds. The require_gene slot switches on the "
+                "NetLogo double gate: the gene network's Necrosis node must be ON "
+                "before the environmental check is applied.",
     category="INTERCELLULAR",
     parameters=[
         {
             "name": "necrosis_params",
             "type": "DICT",
-            "description": "Dictionary of necrosis parameters (e.g., thresholds, mode, conditions)",
+            "description": "Environmental necrosis thresholds: oxygen_threshold, "
+                           "glucose_threshold (mM) and require_both (AND vs OR).",
             "default": {
                 "oxygen_threshold": 0.022,
                 "glucose_threshold": 0.23,
                 "require_both": True
             }
+        },
+        {
+            "name": "require_gene",
+            "type": "BOOL",
+            "description": "Gene gate (NetLogo double gate). ON: a cell is checked "
+                           "against the thresholds only while its Necrosis gene node "
+                           "is ON, so death is delayed by gene-network propagation. "
+                           "OFF: environment-only, every cell below the thresholds "
+                           "dies the step it crosses them.",
+            "default": False
         },
     ],
     inputs=["context"],
@@ -59,13 +76,19 @@ from src.biology.context import BiologicalContext
 def mark_necrotic_cells(
     env: BiologicalContext,
     necrosis_params: Dict[str, Any] = None,
+    require_gene: bool = False,
     **kwargs
 ) -> None:
     params = necrosis_params or {}
+    if 'require_gene' in params:
+        raise ValueError(
+            "mark_necrotic_cells: 'require_gene' inside necrosis_params is no "
+            "longer read (R1.6: a mode switch must be visible on the canvas). "
+            "Remove it from the Necrosis Parameters dict and set the node's own "
+            "'require_gene' parameter slot instead.")
     oxygen_threshold = params.get('oxygen_threshold', 0.022)
     glucose_threshold = params.get('glucose_threshold', 0.23)
     require_both = params.get('require_both', True)
-    require_gene = params.get('require_gene', False)
     if isinstance(require_gene, str):
         require_gene = require_gene.strip().lower() in ('true', '1', 'yes')
 
@@ -106,11 +129,15 @@ def mark_necrotic_cells(
         condition_str = "AND" if require_both else "OR"
         total = len(env.cells)
         print(f"[NECROSIS] Cell count: {total} (marked {newly_necrotic}, already {already_necrotic})")
+        gate_str = ("gene gate ON: Necrosis node must be ON, then "
+                    if require_gene else "environment-only: ")
         if newly_necrotic > 0:
             print(f"[NECROSIS] Marked {newly_necrotic} cells as necrotic "
-                  f"(O2 < {oxygen_threshold} {condition_str} Glc < {glucose_threshold})")
+                  f"({gate_str}O2 < {oxygen_threshold} {condition_str} "
+                  f"Glc < {glucose_threshold})")
         env.results.record_change('necrosis', {
             'newly_marked': newly_necrotic,
             'already_necrotic': already_necrotic,
             'params': params,
+            'require_gene': require_gene,
         })
