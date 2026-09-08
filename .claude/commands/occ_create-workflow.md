@@ -47,10 +47,10 @@ Present the inventory and the proposed mapping for confirmation.
    step `forager_step`.
 2. **Resource kinds** — for each, its **init** canvas and **behavior** canvas(es)
    (e.g. `sugar` → `sugar_init`, `sugar_growback`). Resources are optional.
-3. **Space** — tile grid (a `__space__` canvas running `setup_space`, the
-   NetLogo/Sugarscape world) or a continuous diffusion domain / none (`space:
-   {subworkflow: null}`, the MicroC shape where the domain is built in an
-   environment init).
+3. **World** — the `__world__` canvas (`metadata.gui.world.subworkflow`): a tile
+   grid (`setup_space`, the NetLogo/Sugarscape world) or a continuous diffusion
+   domain (`setup_simulation` + `setup_domain`, the MicroC shape). Both canonical
+   workflows name this canvas `__world__`.
 4. **Cross-object & processing behaviors** — once-per-step `coupling`,
    `reconciliation`, and in-loop `reporting` canvases (e.g. `world_step`,
    `gene_update`), plus post-loop `reporting` (e.g. `final_snapshot`). **Every one
@@ -66,8 +66,9 @@ plugin's `behaviors/<name>.subworkflow.json` and copy the object under its
 `"subworkflow"` key in as `subworkflows.<name>`; keep its `contract`). Then add the
 synthesized orchestration canvases:
 
-- **`__space__`** (only if tile grid): a `setup_space` node (size_x, size_y,
-  tile_size, topology, seed) and optionally `plot_space`. `deletable: false`.
+- **`__world__`**: for a tile grid, a `setup_space` node (size_x, size_y,
+  tile_size, topology, seed) and optionally `plot_space`; for a diffusion domain,
+  `setup_simulation` + `setup_domain` (+ population/associations setup).
 - **`<kind>_init`** canvases: the agent/resource setup behaviors (placement,
   resource creation + seeding). Phase `initialization`.
 - **`__init_sequence__`**: `subworkflow_calls` in dependency order — **space →
@@ -120,30 +121,29 @@ no tab, invisible to the scientist. This is the rule in CLAUDE.md
                      "behavior_subworkflows": ["<kind>_step", "world_step"] } ],
   "resource_kinds": [ { "name": "<res>", "init_subworkflow": "<res>_init",
                         "behavior_subworkflows": ["<res>_growback"] } ],
-  "space": { "subworkflow": "__space__" },          // or { "subworkflow": null }
-  "environment": { "init_subworkflow": null, "behavior_subworkflows": [] },
+  "world": { "subworkflow": "__world__",
+             "behavior_subworkflows": ["world_step"] },   // world setup canvas + lattice-only behaviors
   "init_sequence": { "subworkflow": "__init_sequence__" },
   "scheduler": { "subworkflow": "__scheduler__" },
   "processing": { "behavior_subworkflows": ["final_snapshot"] },
   "main_is_synthesized": true,
   "user_functions": [],
   "contract_enforcement": "warn",
-  "processes": {
-    "agent_behaviors": ["<kind>_step"], "resource_behaviors": ["<res>_growback"],
-    "couplings": [], "reconciliation": ["world_step"], "reporting": ["final_snapshot"]
-  },
   "planner": { "tabs": [ { "id": "tab-baseline", "name": "baseline",
                            "enabled": true, "parameterOverrides": {} } ] }
 }
 ```
 
-`processes` classifies every behavior canvas by **phase** (a coupling is still a
-coupling); this is orthogonal to the **tab ownership** above (which object's tab it
-appears under), and both must be filled. Keep `processes` consistent with the
-scheduler order and the contracts. The reference workflows `sugarscape.json` /
-`microc.json` now home every behavior under an owning `agent_kinds` /
-`resource_kinds` / `world` / `processing` category (no `environment` block) — mirror
-them directly. Set the top-level
+**Use only these `metadata.gui` keys**: `agent_kinds`, `resource_kinds`, `world`,
+`scheduler`, `processing`, `init_sequence`, `function_libraries`, `user_functions`,
+`main_is_synthesized`, `contract_enforcement`, `planner` (and `subworkflow_kinds`).
+The GUI loader (`opencellcomms_gui/src/store/slices/workflowIOSlice.js`,
+`ALLOWED_GUI_KEYS`) refuses to open a workflow carrying any other key — `processes`,
+`space` and `environment` all trigger "metadata.gui keys the current taxonomy does
+not support". The behavior phase is carried by each canvas's `contract`, not by a
+`processes` block. The reference workflows `sugarscape.json` / `microc.json` home
+every behavior under an owning `agent_kinds` / `resource_kinds` / `world` /
+`processing` category (no `environment` block) — mirror them directly. Set the top-level
 workflow `"version": "2.0"`,
 `"name"`, `"description"`, `"kernel"` (e.g. `"biophysics"`), and
 `metadata.author` / `metadata.created`.
@@ -177,11 +177,10 @@ workflow `"version": "2.0"`,
   resources/space at placement).
 - Include a reconciliation canvas whenever behaviors emit intents — otherwise
   moves/eats/births/deaths are queued but never committed.
-- Keep `metadata.gui.processes`, the scheduler order, and the canvas contracts in
-  agreement.
+- Keep the canvas contracts (each behavior's `phase`) and the scheduler order in
+  agreement; do not add a `metadata.gui.processes` block (the GUI rejects it).
 - **Never leave a behavior in `environment.behavior_subworkflows`** (no Environment
   tab → orphan). Own every in-loop behavior under an agent/resource kind; send
   post-loop behaviors to `processing`. Every name in `__scheduler__` must trace to
   one of those categories.
-- Mark `main`, `__space__`, `__init_sequence__`, `__scheduler__` as
-  `"deletable": false`.
+- Mark `main`, `__init_sequence__`, `__scheduler__` as `"deletable": false`.
