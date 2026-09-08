@@ -35,6 +35,7 @@ def test_preview_and_submission_use_same_seeds_and_reload_can_read(client):
     assert [x['seed'] for x in status['runs']] == [x['seed'] for x in preview.get_json()['runs']]
     assert client.get('/api/planner/batches').get_json()['batches'][0]['unique_runs'] == 2
     assert not (api.RUNS_DIR / batch_id / 'source.tar.gz').exists()
+    assert (api.RUNS_DIR / batch_id / '.opencellcomms/source.tar.gz').is_file()
     assert not list((api.RUNS_DIR / batch_id).glob('plan-*.json'))
     second = client.post('/api/planner/batches', json={'workflow': doc}).get_json()
     assert second['batch_id'] != batch_id

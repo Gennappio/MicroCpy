@@ -20,6 +20,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tarfile
 import time
 import uuid
 from datetime import datetime, timezone
@@ -358,6 +359,9 @@ def create_batch(documents, runs_dir, plan=None):
         config["workflow_hash"] = digest(frozen)
         config["inputs"] = inputs
     source_hash = code_fingerprint()
+    with tarfile.open(internal / "source.tar.gz", "w:gz") as archive:
+        for path in code_files():
+            archive.add(path, arcname=str(path.relative_to(REPO)))
     if source_hash != code_fingerprint():
         raise ValueError('Source changed while saving the run; launch again')
     git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True)

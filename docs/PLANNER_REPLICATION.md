@@ -87,11 +87,13 @@ first result intact. This extra folder appears only when a retry is actually
 run. A name collision gets a simple `_2`, `_3`, … suffix. Each replicate
 folder contains the executed workflow copy and the normal logs, CSVs and plots.
 
-The runner keeps frozen inputs and a small execution record in the hidden
-`.opencellcomms` folder. They support safe execution and retries; they are not
-another plan. The editable plan remains entirely in the workflow JSON. New
-runs no longer create `manifest.json`, `source.tar.gz` or
-`working-tree.patch` at the experiment root.
+The runner keeps frozen inputs, a source-code archive and a small execution
+record in the hidden `.opencellcomms` folder. They support reproducibility,
+safe execution and retries; they are not another plan. The editable plan
+remains entirely in the workflow JSON. New runs do not create `manifest.json`,
+`source.tar.gz` or `working-tree.patch` at the experiment root. The source
+archive is saved as `.opencellcomms/source.tar.gz`; a separate patch is not
+needed because the archive contains the relevant source files directly.
 
 ## Seed coverage in MicroC
 

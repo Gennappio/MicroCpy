@@ -2,6 +2,7 @@
 import copy
 import json
 import random
+import tarfile
 from pathlib import Path
 
 import numpy as np
@@ -52,6 +53,10 @@ def test_stable_identity_pairing_and_workflow_owned_plan(tmp_path):
     assert not (batch / 'source.tar.gz').exists()
     assert not (batch / 'working-tree.patch').exists()
     assert r.execution_record_path(batch) == batch / '.opencellcomms/execution.json'
+    archive_path = batch / '.opencellcomms/source.tar.gz'
+    assert archive_path.is_file()
+    with tarfile.open(archive_path) as archive:
+        assert 'opencellcomms_engine/src/workflow/replication.py' in archive.getnames()
 
 
 def test_independent_seeds_use_persistent_ids():
