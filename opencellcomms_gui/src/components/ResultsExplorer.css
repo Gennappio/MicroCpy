@@ -86,6 +86,53 @@
   border-radius: 12px;
 }
 
+.results-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-badge.status-running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge.status-cancelled,
+.status-badge.status-interrupted {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.trash-btn {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.trash-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.delete-btn:hover {
+  background: #b91c1c;
+  color: white;
+}
+
 .result-plots {
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;

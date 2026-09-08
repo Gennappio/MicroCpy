@@ -58,6 +58,7 @@ simulation_thread = None
 log_queue = queue.Queue()
 is_running = False
 last_run_status = "idle"
+active_run_dir = None  # runs/<label> of the run in progress; refused by /api/results/trash
 last_exit_code = None
 simulation_launch_lock = threading.Lock()
 
@@ -463,6 +464,8 @@ def run_simulation():
 
     # Hand the engine this run's output dir so GUI and CLI agree on the location.
     gui_results_dir_for_run = str(run_dir)
+    global active_run_dir
+    active_run_dir = run_dir
 
     # Start simulation in background thread
     is_running = True
@@ -2109,6 +2112,7 @@ def list_results():
                                     f" / {attempt_dir.name.removeprefix(original_dir.name + '_')}"
                                 results.append({
                                     'name': f"{batch_name} / {configs[run['configuration_id']]} / Replicate {run.get('output_index', run['replicate'])}{suffix}",
+                                    'run_dir': item.name,
                                     'timestamp': attempt.get('started_at', ''),
                                     'seed': run['seed'], 'status': attempt['status'],
                                     'numerical_valid': attempt.get('numerical_valid'),
@@ -2120,6 +2124,7 @@ def list_results():
                         timestamp = item.name if item.name[:8].isdigit() else ''
                         results.append({
                             'name': item.name,
+                            'run_dir': item.name,
                             'timestamp': timestamp,
                             'plots': plots
                         })
@@ -2151,6 +2156,100 @@ def list_results():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+TRASH_DIR = RUNS_DIR / '.trash'  # dot-prefixed: list_results skips it
+
+
+def _run_dir_is_running(run_dir):
+    """True if a simulation is still writing into run_dir."""
+    if is_running and active_run_dir is not None and Path(active_run_dir).resolve() == run_dir:
+        return True
+    replication = _planner_module()
+    if replication.execution_record_path(run_dir).is_file():
+        state = replication.batch_status(run_dir)
+        return any(
+            attempt['status'] == 'running'
+            for run in state['runs'] for attempt in run['attempts']
+        )
+    return False
+
+
+def _removable_run_dir(name):
+    """Resolve runs/<name> for trash/delete, or return an (error json, code) pair."""
+    if not name or name.startswith('.') or Path(name).name != name:
+        return None, (jsonify({'success': False, 'error': 'Invalid run directory'}), 400)
+    try:
+        run_dir = _resolve_allowed_path(
+            RUNS_DIR / name, roots=(RUNS_DIR,), must_exist=True, allow_absolute=True)
+    except (PathPolicyError, FileNotFoundError) as e:
+        return None, (jsonify({'success': False, 'error': str(e)}), 400)
+    if run_dir == RUNS_DIR.resolve() or run_dir.is_symlink() or not run_dir.is_dir():
+        return None, (jsonify({'success': False, 'error': 'Not a run directory'}), 400)
+    if _run_dir_is_running(run_dir):
+        return None, (jsonify({'success': False,
+                               'error': 'This run is still in progress; stop it first'}), 409)
+    return run_dir, None
+
+
+@app.route('/api/results/trash', methods=['POST'])
+def trash_result():
+    """Move runs/<run_dir> to runs/.trash/ so it leaves the Results panel.
+
+    Nothing is deleted until /api/results/empty_trash. A run whose
+    simulation is still in progress is refused.
+    """
+    data = request.get_json(silent=True) or {}
+    name = str(data.get('run_dir', ''))
+    run_dir, err = _removable_run_dir(name)
+    if err:
+        return err
+    TRASH_DIR.mkdir(exist_ok=True)
+    target = TRASH_DIR / name
+    suffix = 1
+    while target.exists():
+        suffix += 1
+        target = TRASH_DIR / f'{name}_{suffix}'
+    shutil.move(str(run_dir), str(target))
+    return jsonify({'success': True, 'trashed': target.name})
+
+
+@app.route('/api/results/delete', methods=['POST'])
+def delete_result():
+    """Permanently delete runs/<run_dir>, skipping the trash."""
+    data = request.get_json(silent=True) or {}
+    name = str(data.get('run_dir', ''))
+    run_dir, err = _removable_run_dir(name)
+    if err:
+        return err
+    shutil.rmtree(run_dir)
+    return jsonify({'success': True, 'deleted': name})
+
+
+@app.route('/api/results/trash', methods=['GET'])
+def list_trash():
+    """Names of the run folders waiting in runs/.trash/."""
+    if not TRASH_DIR.is_dir():
+        return jsonify({'success': True, 'items': []})
+    items = sorted(p.name for p in TRASH_DIR.iterdir() if p.is_dir() and not p.is_symlink())
+    return jsonify({'success': True, 'items': items})
+
+
+@app.route('/api/results/empty_trash', methods=['POST'])
+def empty_trash():
+    """Permanently delete everything in runs/.trash/."""
+    if not TRASH_DIR.is_dir():
+        return jsonify({'success': True, 'deleted': 0})
+    if TRASH_DIR.is_symlink():
+        return jsonify({'success': False, 'error': 'Trash may not be a symlink'}), 400
+    deleted = 0
+    for item in TRASH_DIR.iterdir():
+        if item.is_dir() and not item.is_symlink():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+        deleted += 1
+    return jsonify({'success': True, 'deleted': deleted})
 
 
 @app.route('/api/results/plot/<path:plot_path>', methods=['GET'])

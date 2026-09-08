@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Box, FolderOpen, Image, RefreshCw, ChevronDown, ChevronRight, Trash2, X } from 'lucide-react';
 import WorkflowConsole from './WorkflowConsole';
 import { API_BASE_URL } from '../apiConfig';
 import './ResultsExplorer.css';
@@ -15,6 +15,7 @@ function ResultsExplorer() {
   // React render, flooding the backend with connections until the browser
   // exhausts local ports (net::ERR_ADDRESS_INVALID).
   const [imageVersion, setImageVersion] = useState(() => Date.now());
+  const [trashCount, setTrashCount] = useState(0);
 
   useEffect(() => {
     loadResults();
@@ -27,6 +28,12 @@ function ResultsExplorer() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/results/list`);
       const data = await res.json();
+      try {
+        const trash = await (await fetch(`${API_BASE_URL}/api/results/trash`)).json();
+        setTrashCount(trash.success ? trash.items.length : 0);
+      } catch {
+        setTrashCount(0);
+      }
       
       if (data.success) {
         setResults(data.results);
@@ -47,6 +54,61 @@ function ResultsExplorer() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // One card = one attempt, but the unit on disk is the whole runs/<run_dir>
+  // folder (a Planner batch). Trashing a card takes its siblings with it.
+  const removeRun = async (runDir, permanent) => {
+    const siblings = results.filter(r => r.run_dir === runDir).length;
+    const what = siblings > 1
+      ? `the run folder "${runDir}" and all ${siblings} results in it`
+      : `the run folder "${runDir}"`;
+    const question = permanent
+      ? `Permanently delete ${what}?\n\nThis removes the folder from disk and cannot be undone.`
+      : `Move ${what} to the trash?\n\nNothing is deleted until you empty the trash.`;
+    if (!window.confirm(question)) return;
+    const endpoint = permanent ? 'delete' : 'trash';
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/results/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_dir: runDir }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || `Failed to ${endpoint} run`);
+        return;
+      }
+      if (selectedPlot && results.find(r => r.run_dir === runDir && r.plots.some(pl => pl.path === selectedPlot.path))) {
+        setSelectedPlot(null);
+      }
+      await loadResults();
+    } catch (err) {
+      setError(`Failed to ${endpoint} run: ${err.message}`);
+    }
+  };
+
+  const emptyTrash = async () => {
+    if (!window.confirm(`Permanently delete ${trashCount} trashed run folder(s)? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/results/empty_trash`, { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || 'Failed to empty trash');
+        return;
+      }
+      setTrashCount(0);
+    } catch (err) {
+      setError(`Failed to empty trash: ${err.message}`);
+    }
+  };
+
+  // Planner attempts carry a status; anything but a valid completion is flagged.
+  const statusBadge = (result) => {
+    if (!result.status) return null;
+    if (result.status === 'completed' && result.numerical_valid !== false) return null;
+    const label = result.status === 'completed' ? 'invalid' : result.status;
+    return <span className={`status-badge status-${label}`}>{label}</span>;
   };
 
   const toggleExpanded = (resultName) => {
@@ -115,10 +177,18 @@ function ResultsExplorer() {
             <FolderOpen size={20} />
             Simulation Results
           </h2>
-          <button className="btn btn-sm btn-secondary" onClick={loadResults} disabled={loading}>
-            <RefreshCw size={14} className={loading ? 'spinning' : ''} />
-            Refresh
-          </button>
+          <div className="results-header-actions">
+            {trashCount > 0 && (
+              <button className="btn btn-sm btn-secondary" onClick={emptyTrash} title="Permanently delete trashed runs">
+                <Trash2 size={14} />
+                Empty trash ({trashCount})
+              </button>
+            )}
+            <button className="btn btn-sm btn-secondary" onClick={loadResults} disabled={loading}>
+              <RefreshCw size={14} className={loading ? 'spinning' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -154,7 +224,26 @@ function ResultsExplorer() {
                       <div className="result-name">{result.name}</div>
                       <div className="result-meta">{formatTimestamp(result.timestamp)}</div>
                     </div>
+                    {statusBadge(result)}
                     <span className="plot-count">{result.plots.length} plots</span>
+                    {result.run_dir && (
+                      <>
+                        <button
+                          className="trash-btn"
+                          title={`Move run folder "${result.run_dir}" to trash`}
+                          onClick={(e) => { e.stopPropagation(); removeRun(result.run_dir, false); }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          className="trash-btn delete-btn"
+                          title={`Delete run folder "${result.run_dir}" from disk now`}
+                          onClick={(e) => { e.stopPropagation(); removeRun(result.run_dir, true); }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                   
                   {isExpanded && (
