@@ -21,6 +21,8 @@ from pathlib import Path
 from src.workflow.decorators import register_function
 from src.interfaces.base import IConfig
 from src.biology.context import BiologicalContext
+from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import (
+    jayatilake_cell_color, fate_fill_cell_color, FATE_FILL_LEGEND)
 
 
 def _to_bool(val) -> bool:
@@ -64,7 +66,39 @@ HEATMAP_DISPLAY_FLAGS = [
      "description": "Draw the 'Simulation Details' text box (grid, domain, "
                     "min/max/mean, cell count) on each heatmap. Off = no box.",
      "default": True},
+    {"name": "cell_size_percent", "type": "FLOAT",
+     "description": "Drawn size of each cell marker as a percentage of the "
+                    "biological cell diameter (Cell Height). 100 = true size. "
+                    "Display only.",
+     "default": 100.0, "min_value": 1.0, "max_value": 100.0},
+    {"name": "cell_color_mode", "type": "STRING",
+     "description": "How each cell is coloured. interior_border: interior = "
+                    "metabolic mode, border = phenotype, two legends (classic). "
+                    "fill: one solid disc, no border: black Necrosis, green "
+                    "glycoATP, blue mitoATP, violet both, gray no pathway; the "
+                    "show_metabolism_colors / show_fate_colors switches do not "
+                    "apply.",
+     "default": "interior_border", "options": ["interior_border", "fill"]},
+    {"name": "cell_border_width", "type": "FLOAT",
+     "description": "Width of each cell marker's phenotype-coloured border, in "
+                    "points. 2 = the classic look. Display only.",
+     "default": 2.0, "min_value": 0.0, "max_value": 10.0},
+    {"name": "show_grid_lines", "type": "BOOL",
+     "description": "Draw the white solver-mesh lines (one per FiPy cell "
+                    "boundary) over each heatmap. Off = field and cells only; "
+                    "useful on fine grids where the mesh hides everything.",
+     "default": True},
 ]
+
+
+def select_cell_colorer(cell_color_mode: str):
+    """(colour function, fill legend) for a cell_color_mode value. Shared by
+    the iteration and summary plot nodes so both apply the same two laws."""
+    if cell_color_mode == "fill":
+        return fate_fill_cell_color, FATE_FILL_LEGEND
+    if cell_color_mode == "interior_border":
+        return jayatilake_cell_color, None
+    raise ValueError(f"cell_color_mode must be 'interior_border' or 'fill', got {cell_color_mode!r}")
 
 
 @register_function(
@@ -111,6 +145,10 @@ def generate_iteration_plots(
     show_isolines: bool = True,
     show_legends: bool = True,
     show_info_box: bool = True,
+    cell_size_percent: float = 100.0,
+    cell_color_mode: str = "interior_border",
+    cell_border_width: float = 2.0,
+    show_grid_lines: bool = True,
     clean_directory: bool = False,
     plot_interval: int = 1,
     plot_name_suffix: str = "",
@@ -238,19 +276,23 @@ def generate_iteration_plots(
 
     # --- generate plots using the *same* AutoPlotter as FINAL plots -------
     try:
-        from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
         # Necrosis thresholds published by mark_necrotic_cells → dashed isolines
         # on the Oxygen/Glucose heatmaps.
         extra_isolines = {substance: [(value, 'Necrosis')]
                           for substance, value in results.get('necrosis_thresholds', {}).items()}
-        plotter = AutoPlotter(config, output_path, cell_color_fn=jayatilake_cell_color,
+        color_fn, fill_legend = select_cell_colorer(cell_color_mode)
+        plotter = AutoPlotter(config, output_path, cell_color_fn=color_fn,
+                              cell_color_mode=cell_color_mode, fill_legend=fill_legend,
                               extra_isolines=extra_isolines,
                               show_cells=show_cells,
                               show_metabolism_colors=show_metabolism_colors,
                               show_fate_colors=show_fate_colors,
                               show_legends=show_legends,
                               show_isolines=show_isolines,
-                              show_info_box=show_info_box)
+                              show_info_box=show_info_box,
+                              cell_size_percent=float(cell_size_percent),
+                              cell_border_width=float(cell_border_width),
+                              show_grid_lines=_to_bool(show_grid_lines))
 
         generated_plots = plotter.generate_all_plots(
             results, simulator, population,

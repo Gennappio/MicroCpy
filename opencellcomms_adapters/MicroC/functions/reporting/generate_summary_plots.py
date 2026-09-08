@@ -21,7 +21,7 @@ from src.biology.context import BiologicalContext
 # Shared definition of the heatmap display switches (same set, same meaning,
 # on both AutoPlotter-based plot nodes).
 from opencellcomms_adapters.MicroC.functions.reporting.generate_iteration_plots import (
-    HEATMAP_DISPLAY_FLAGS)
+    HEATMAP_DISPLAY_FLAGS, select_cell_colorer)
 
 
 def _to_bool(val) -> bool:
@@ -104,13 +104,14 @@ def _generate_plots_to_directory(
 
     # Create plotter with the specified output directory and this plugin's
     # explicit cell colourer (metabolic interior / phenotype border).
-    from opencellcomms_adapters.MicroC.functions.reporting.cell_colors import jayatilake_cell_color
     # Necrosis thresholds published by mark_necrotic_cells → dashed isolines
     # on the Oxygen/Glucose heatmaps.
     extra_isolines = {substance: [(value, 'Necrosis')]
                       for substance, value in results.get('necrosis_thresholds', {}).items()}
-    plotter = AutoPlotter(config, output_dir, cell_color_fn=jayatilake_cell_color,
-                          extra_isolines=extra_isolines, **(display_flags or {}))
+    flags = dict(display_flags or {})
+    color_fn, fill_legend = select_cell_colorer(flags.get('cell_color_mode', 'interior_border'))
+    plotter = AutoPlotter(config, output_dir, cell_color_fn=color_fn, fill_legend=fill_legend,
+                          extra_isolines=extra_isolines, **flags)
 
     # Generate all plots with marker and substance filter
     generated_plots = plotter.generate_all_plots(
@@ -159,6 +160,10 @@ def generate_summary_plots(
     show_isolines: bool = True,
     show_legends: bool = True,
     show_info_box: bool = True,
+    cell_size_percent: float = 100.0,
+    cell_color_mode: str = "interior_border",
+    cell_border_width: float = 2.0,
+    show_grid_lines: bool = True,
     clean_directory: bool = False,
     add_timestamp: bool = False,
     **kwargs
@@ -190,9 +195,13 @@ def generate_summary_plots(
         'show_isolines': _to_bool(show_isolines),
         'show_legends': _to_bool(show_legends),
         'show_info_box': _to_bool(show_info_box),
+        'show_grid_lines': _to_bool(show_grid_lines),
     }
     hidden = [name.replace('show_', '').replace('_', ' ')
               for name, shown in display_flags.items() if not shown]
+    display_flags['cell_size_percent'] = float(cell_size_percent)
+    display_flags['cell_border_width'] = float(cell_border_width)
+    display_flags['cell_color_mode'] = cell_color_mode
 
     marker_info     = f" with marker '{marker}'" if marker else ""
     timestamp_info  = " with timestamp" if add_timestamp else ""

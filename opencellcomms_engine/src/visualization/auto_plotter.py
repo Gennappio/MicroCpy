@@ -39,7 +39,10 @@ class AutoPlotter:
     def __init__(self, config, plots_dir: Path, cell_color_fn=None, extra_isolines=None,
                  show_cells: bool = True, show_metabolism_colors: bool = True,
                  show_fate_colors: bool = True, show_legends: bool = True,
-                 show_isolines: bool = True, show_info_box: bool = True):
+                 show_isolines: bool = True, show_info_box: bool = True,
+                 cell_size_percent: float = 100.0, show_grid_lines: bool = True,
+                 cell_border_width: float = 2.0, cell_color_mode: str = "interior_border",
+                 fill_legend: Optional[Dict[str, str]] = None):
         self.config = config
         self.plots_dir = Path(plots_dir)
         # Optional explicit per-cell colourer: callable(cell=, gene_states=, config=)
@@ -57,6 +60,26 @@ class AutoPlotter:
         # legend is drawn only for a colouring actually in effect, so it never
         # describes a hidden layer.
         self.show_cells = show_cells
+        # Drawn size of each cell marker as a percentage of the biological cell
+        # diameter (Cell Height): 100 = true size. The border (phenotype colour)
+        # has its own width in points, cell_border_width, so a small marker can
+        # still carry a readable outline. Display only: positions and the
+        # model are untouched.
+        self.cell_size_percent = float(cell_size_percent)
+        self.cell_border_width = float(cell_border_width)
+        # How a cell's two colours are drawn. "interior_border": interior =
+        # the colourer's first colour (metabolic mode), border = its second
+        # (phenotype), two legends. "fill": one solid disc in the colourer's
+        # first colour and no border; fill_legend maps each colour to the
+        # label of its single "Cells" legend (e.g. black -> Necrosis).
+        if cell_color_mode not in ("interior_border", "fill"):
+            raise ValueError(f"cell_color_mode must be 'interior_border' or 'fill', got {cell_color_mode!r}")
+        self.cell_color_mode = cell_color_mode
+        self.fill_legend = dict(fill_legend or {})
+        # The white solver-mesh overlay (one line per FiPy cell boundary). On a
+        # fine grid it covers the field and the cell markers, so it can be
+        # switched off; the field and cells are unchanged.
+        self.show_grid_lines = show_grid_lines
         self.show_metabolism_colors = show_metabolism_colors
         self.show_fate_colors = show_fate_colors
         self.show_legends = show_legends
@@ -93,6 +116,15 @@ class AutoPlotter:
         
         print(f"📊 Plots will be saved to: {self.plots_dir}")
     
+    def _marker_radius(self, cell_diameter: float) -> float:
+        """Drawn radius of a cell marker: half the biological diameter scaled by
+        cell_size_percent."""
+        return cell_diameter / 2 * self.cell_size_percent / 100.0
+
+    def _marker_linewidth(self) -> float:
+        """Border width of a cell marker, in points (cell_border_width)."""
+        return self.cell_border_width
+
     def plot_substance_heatmap(self, substance_name: str, concentrations: np.ndarray,
                               cell_positions: List[Tuple[int, int]], time_point: float,
                               config_name: str = "unknown", population=None, title_suffix: str = "",
@@ -308,6 +340,16 @@ class AutoPlotter:
                     border_color = phenotype_color_map.get(phenotype, 'gray')
                     interior_color = 'lightgray'
 
+                if self.cell_color_mode == "fill":
+                    # One solid disc, no border; the colourer's first colour
+                    # already folds fate and metabolism together.
+                    label = self.fill_legend.get(interior_color, interior_color)
+                    cell_colors_used[f"Fill: {label}"] = interior_color
+                    ax.add_patch(patches.Circle(
+                        (phys_x, phys_y), self._marker_radius(cell_diameter),
+                        facecolor=interior_color, edgecolor='none', alpha=0.9, linewidth=0))
+                    continue
+
                 # Disabled colourings collapse to the neutral colours, so the
                 # flag removes the encoding without removing the cells, and its
                 # legend entries are skipped so the legend stays truthful.
@@ -341,9 +383,9 @@ class AutoPlotter:
                     cell_colors_used[f"Border: {phenotype_state}"] = border_color
 
                 # Draw cell with interior and border colors
-                circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
+                circle = patches.Circle((phys_x, phys_y), self._marker_radius(cell_diameter),
                                       facecolor=interior_color, edgecolor=border_color,
-                                      alpha=0.8, linewidth=2, fill=True)
+                                      alpha=0.8, linewidth=self._marker_linewidth(), fill=True)
                 ax.add_patch(circle)
 
         elif cell_positions and self.show_cells:
@@ -353,8 +395,8 @@ class AutoPlotter:
             for x, y in cell_positions:
                 phys_x = (x + 0.5) * biological_cell_spacing
                 phys_y = (y + 0.5) * biological_cell_spacing
-                circle = patches.Circle((phys_x, phys_y), cell_diameter/2,
-                                      color='red', alpha=0.7, linewidth=2, fill=False)
+                circle = patches.Circle((phys_x, phys_y), self._marker_radius(cell_diameter),
+                                      color='red', alpha=0.7, linewidth=self._marker_linewidth(), fill=False)
                 ax.add_patch(circle)
                 cell_colors_used['Cell'] = 'red'
 
@@ -393,11 +435,11 @@ class AutoPlotter:
         y_grid = np.linspace(0, domain_y, ny + 1)
 
         # Add vertical grid lines
-        for x in x_grid:
+        for x in (x_grid if self.show_grid_lines else ()):
             ax.axvline(x, color='white', alpha=0.5, linewidth=0.5)
 
         # Add horizontal grid lines
-        for y in y_grid:
+        for y in (y_grid if self.show_grid_lines else ()):
             ax.axhline(y, color='white', alpha=0.5, linewidth=0.5)
 
         # Add coordinate grid (lighter)
@@ -410,6 +452,21 @@ class AutoPlotter:
             # Separate interior and border legend items
             interior_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Interior:')}
             border_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Border:')}
+            fill_items = {k: v for k, v in cell_colors_used.items() if k.startswith('Fill:')}
+
+            # Fill mode: one legend, solid swatches, the labels the plugin supplied
+            if fill_items:
+                fill_elements = [Patch(facecolor=color, label=state.replace('Fill: ', ''),
+                                       edgecolor='none')
+                                 for state, color in sorted(fill_items.items())]
+                fill_legend = ax.legend(handles=fill_elements, loc='upper left',
+                                        bbox_to_anchor=(0, 1),
+                                        title='● Cells', fontsize=9,
+                                        title_fontsize=10, frameon=True, fancybox=True,
+                                        shadow=True, facecolor='white', edgecolor='black',
+                                        framealpha=0.9)
+                fill_legend.get_title().set_fontweight('bold')
+                ax.add_artist(fill_legend)
 
             # Create interior legend (metabolic states)
             if interior_items:
