@@ -115,6 +115,17 @@ toward a corner. Files carry `origin=center` in their header comment; a seed
 without it is read the same way but logs a warning, since a pre-2026-09
 corner-origin file needs half the biological grid subtracted from every index.
 
+Every `data/initial_cells_*.csv` spheroid has its **centre of mass exactly on
+the domain centre** (`data/regenerate_seeds.py` rebuilds them all with
+`tools/csv_cell_generator.py`, which packs cells in antipodal pairs). Exactness
+depends on grid parity: the domain centre is a *cell centre* on an odd
+biological grid (1500 µm / 20 µm = 75 → seed centroid `0`) and a *cell corner*
+on an even one (3000 µm / 20 µm = 150 → seed centroid `-0.5`), so a
+`_center_1500` seed is exact at Cell Height 20 but sits half a cell off at
+Cell Height 15 or 30 (100 or 50 cells: even). The loader prints the colony's
+centre of mass (`[SEED] colony centre of mass at (...) um from the domain
+centre`) on every load, so the offset in effect is never hidden.
+
 ### BND filename
 
 The gene model lives at `data/jaya.bnd`. Both `workflows/microc.json` and

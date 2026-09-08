@@ -1,4 +1,17 @@
-"""Coordinate mapping between the biological cell grid and the solver mesh.
+"""Coordinate mapping between the biological cell grid and the solver mesh,
+and the centred coordinate frame used by seed files and every figure.
+
+TWO FRAMES
+    internal  corner-origin: the solver mesh spans [0, size] along each axis
+              and bio-grid index i covers [i*h, (i+1)*h) with h = cell_height.
+              Everything the engine computes with lives here.
+    centred   0 at the domain centre, axes from -size/2 to +size/2. Seed CSV
+              files store cell coordinates in this frame (in cell units, the
+              ``origin=center`` header) and every plot draws in it, so the
+              domain reads as -750..+750 um and a centred colony has its
+              centre of mass at (0, 0). ``centred_um`` / ``cell_centre_um``
+              are the single law for the conversion: the centre of bio cell
+              index i is (i + 0.5) * h - size / 2.
 
 Cells live on the biological lattice (spacing = ``domain.cell_height``);
 substance fields live on the FiPy solver mesh (``nx × ny`` or
@@ -37,3 +50,30 @@ def cell_to_solver_index(config, position) -> Tuple[int, ...]:
         return (gx, gy, gz)
 
     return (gx, gy)
+
+
+def centred_um(index: float, cell_um: float, size_um: float) -> float:
+    """Centred physical coordinate (um) of the centre of bio-grid cell ``index``
+    along an axis of length ``size_um``: (index + 0.5) * cell_um - size_um / 2."""
+    return (float(index) + 0.5) * cell_um - size_um / 2.0
+
+
+def domain_half_sizes_um(config) -> Tuple[float, ...]:
+    """Half the domain size per axis in um: the centred frame runs from
+    -half to +half. (size_x/2, size_y/2) in 2D, plus size_z/2 in 3D."""
+    dom = config.domain
+    halves = [dom.size_x.micrometers / 2.0, dom.size_y.micrometers / 2.0]
+    if getattr(dom, 'dimensions', 2) == 3 and getattr(dom, 'size_z', None) is not None:
+        halves.append(dom.size_z.micrometers / 2.0)
+    return tuple(halves)
+
+
+def cell_centre_um(config, position) -> Tuple[float, ...]:
+    """Centred physical coordinates (um) of a cell at bio-grid ``position``,
+    one value per axis of the position (2D or 3D)."""
+    dom = config.domain
+    cell_um = dom.cell_height.micrometers
+    sizes = [dom.size_x.micrometers, dom.size_y.micrometers]
+    if len(position) > 2:
+        sizes.append(dom.size_z.micrometers)
+    return tuple(centred_um(position[i], cell_um, sizes[i]) for i in range(min(len(position), len(sizes))))

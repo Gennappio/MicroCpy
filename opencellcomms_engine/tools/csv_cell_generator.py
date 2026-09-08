@@ -44,54 +44,126 @@ def parse_bnd_file(bnd_file_path: str) -> Set[str]:
         return set()
 
 
-def generate_spheroid_pattern(center_x: int, center_y: int, cell_count: int, max_radius: int = 10) -> List[Tuple[int, int]]:
-    """Generate cells in a spheroid (circular) pattern"""
-    positions = []
-    radius = 1
-    cells_placed = 0
-    
-    while cells_placed < cell_count and radius <= max_radius:
-        for x in range(max(0, center_x - radius), center_x + radius + 1):
-            for y in range(max(0, center_y - radius), center_y + radius + 1):
-                if cells_placed >= cell_count:
-                    break
-                
-                # Check if position is within circular distance
-                distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-                if distance <= radius:
-                    positions.append((x, y))
-                    cells_placed += 1
-            if cells_placed >= cell_count:
-                break
-        radius += 1
-    
-    return positions[:cell_count]
+def _symmetric_ball(cell_count: int, centre: Tuple[float, ...]) -> List[Tuple[int, ...]]:
+    """Lattice points packed as tightly as possible around ``centre`` whose
+    centre of mass is EXACTLY ``centre`` (2D or 3D).
 
+    ``centre`` components are all integers (the centre is a cell centre: the
+    ODD-grid case) or all half-integers (the centre is a cell corner: the
+    EVEN-grid case). The set is built from antipodal pairs (p, 2c - p), which
+    keep the centre of mass on c whatever the fill; within a partially used
+    shell the pairs are spread evenly in angle so the rim stays round.
 
-def generate_spheroid_pattern_3d(center_x: int, center_y: int, center_z: int,
-                                 cell_count: int, max_radius: int = None) -> List[Tuple[int, int, int]]:
-    """Generate cells in a true Euclidean ball around the center.
-
-    Same algorithm as generate_initial_cells._sphere_positions (the modern 3D
-    seeding path): over-estimate the radius from the sphere volume, enumerate
-    the surrounding cube, sort by distance to the center, take the N closest.
+    Parity: on a cell centre the count is 1 (the centre cell) + 2 * pairs, so
+    an EVEN count is completed with one zero-sum triple of rim points
+    (p + q + r = 3c), the smallest such triple by radius; on a cell corner
+    every point has a partner, so the count must be even (an odd count can
+    never have its centre of mass on a corner).
     """
-    radius = int(np.ceil((3.0 * cell_count / (4.0 * np.pi)) ** (1.0 / 3.0))) + 2
-    if max_radius is not None:
-        radius = min(radius, max_radius)
+    import itertools
+    c = tuple(float(v) for v in centre)
+    dims = len(c)
+    on_cell_centre = all(abs(v - round(v)) < 1e-9 for v in c)
+    on_cell_corner = all(abs(abs(v - round(v)) - 0.5) < 1e-9 for v in c)
+    if not (on_cell_centre or on_cell_corner):
+        raise ValueError(f"centre {centre} must be all-integer (cell centre) or all-half-integer (cell corner)")
+    if on_cell_corner and cell_count % 2:
+        raise ValueError(f"{cell_count} cells cannot have their centre of mass on a cell corner "
+                         f"(even grid): use an even count")
+    if dims == 2:
+        radius = int(np.ceil(np.sqrt(cell_count / np.pi))) + 3
+    else:
+        radius = int(np.ceil((3.0 * cell_count / (4.0 * np.pi)) ** (1.0 / 3.0))) + 3
 
-    candidates = []
-    for x in range(center_x - radius, center_x + radius + 1):
-        for y in range(center_y - radius, center_y + radius + 1):
-            for z in range(center_z - radius, center_z + radius + 1):
-                if x < 0 or y < 0 or z < 0:
-                    continue
-                d = np.sqrt((x - center_x) ** 2 + (y - center_y) ** 2 + (z - center_z) ** 2)
-                if d <= radius:
-                    candidates.append((d, (x, y, z)))
+    def r2(p):
+        return sum((p[i] - c[i]) ** 2 for i in range(dims))
 
-    candidates.sort(key=lambda item: (item[0], item[1]))
-    return [pos for _, pos in candidates[:cell_count]]
+    def mirror(p):
+        return tuple(int(round(2 * c[i] - p[i])) for i in range(dims))
+
+    ranges = [range(int(np.floor(c[i] - radius)), int(np.ceil(c[i] + radius)) + 1) for i in range(dims)]
+    points = [p for p in itertools.product(*ranges) if r2(p) <= radius * radius]
+
+    selected: List[Tuple[int, ...]] = []
+    if on_cell_centre:
+        origin = tuple(int(round(v)) for v in c)
+        selected.append(origin)
+    need = cell_count - len(selected)
+    triple_needed = need % 2 == 1
+    pairs_needed = (need - 3) // 2 if triple_needed else need // 2
+
+    # Antipodal pairs, grouped by shell (squared radius), each shell's pairs
+    # sorted by the angle of their representative so a partial shell can be
+    # filled with evenly spread pairs.
+    def angle_key(p):
+        d = [p[i] - c[i] for i in range(dims)]
+        return (np.arctan2(d[1], d[0]),) + tuple(d[2:])
+
+    pairs = {}
+    for p in points:
+        q = mirror(p)
+        if q == p:
+            continue  # the centre cell itself
+        rep = max(p, q)
+        pairs[rep] = (round(r2(p), 6), rep, q)
+    shells: Dict[float, List[Tuple]] = {}
+    for radius2, rep, q in pairs.values():
+        shells.setdefault(radius2, []).append((rep, q))
+    for radius2 in sorted(shells):
+        if pairs_needed == 0:
+            break
+        shell = sorted(shells[radius2], key=lambda pq: angle_key(pq[0]))
+        if len(shell) <= pairs_needed:
+            chosen = shell
+        else:
+            chosen = [shell[int(j * len(shell) / pairs_needed)] for j in range(pairs_needed)]
+        for rep, q in chosen:
+            selected.extend([rep, q])
+        pairs_needed -= len(chosen)
+    if pairs_needed:
+        raise RuntimeError("search radius too small for the requested count")
+
+    if triple_needed:
+        taken = set(selected)
+        target = tuple(int(round(3 * v)) for v in c)
+        remaining = sorted((p for p in points if p not in taken), key=lambda p: (round(r2(p), 6), p))
+        best = None
+        for window in (96, 192, 384, len(remaining)):
+            pool = remaining[:window]
+            pool_set = set(pool)
+            for a, b in itertools.combinations(pool, 2):
+                d = tuple(target[i] - a[i] - b[i] for i in range(dims))
+                if d in pool_set and d > b:  # a < b < d: each triple once
+                    score = (max(r2(a), r2(b), r2(d)), r2(a) + r2(b) + r2(d), a, b, d)
+                    if best is None or score < best:
+                        best = score
+            if best is not None:
+                break
+        if best is None:
+            raise RuntimeError("no zero-sum rim triple found")
+        selected.extend(best[2:])
+
+    assert len(selected) == cell_count
+    total = [sum(p[i] for p in selected) for i in range(dims)]
+    assert all(abs(total[i] - cell_count * c[i]) < 1e-9 for i in range(dims)), "centre of mass is off"
+    return selected
+
+
+def symmetry_centre(domain_size: int) -> float:
+    """The exact domain centre in bio-grid units: a cell centre (integer) on an
+    odd grid, a cell corner (half-integer) on an even grid."""
+    return domain_size / 2.0 - 0.5 if domain_size % 2 == 0 else float(domain_size // 2)
+
+
+def generate_spheroid_pattern(center_x: float, center_y: float, cell_count: int) -> List[Tuple[int, int]]:
+    """Cells packed in a circle whose centre of mass is exactly (center_x, center_y)."""
+    return [tuple(p) for p in _symmetric_ball(cell_count, (center_x, center_y))]
+
+
+def generate_spheroid_pattern_3d(center_x: float, center_y: float, center_z: float,
+                                 cell_count: int) -> List[Tuple[int, int, int]]:
+    """Cells packed in a ball whose centre of mass is exactly the given centre."""
+    return [tuple(p) for p in _symmetric_ball(cell_count, (center_x, center_y, center_z))]
 
 
 def generate_grid_pattern(grid_width: int, grid_height: int, start_x: int = 0, start_y: int = 0) -> List[Tuple[int, int]]:
@@ -227,9 +299,9 @@ def main():
     parser.add_argument('--domain_size', '-d', type=int, default=25, help='Domain size in grid units')
     parser.add_argument('--cell_size_um', type=float, default=20.0, help='Cell size in micrometers')
     parser.add_argument('--domain_size_um', type=float, default=500.0, help='Domain size in micrometers')
-    parser.add_argument('--center_x', type=int, help='Center X coordinate (auto-calculated if not specified)')
-    parser.add_argument('--center_y', type=int, help='Center Y coordinate (auto-calculated if not specified)')
-    parser.add_argument('--center_z', type=int, help='Center Z coordinate (3D only; auto-calculated if not specified)')
+    parser.add_argument('--center_x', type=float, help='Center X (grid units; integer = cell centre, half-integer = cell corner; default: the exact domain centre)')
+    parser.add_argument('--center_y', type=float, help='Center Y (grid units; default: the exact domain centre)')
+    parser.add_argument('--center_z', type=float, help='Center Z (3D only; default: the exact domain centre)')
     parser.add_argument('--dimensions', type=int, choices=[2, 3], default=2,
                        help='2 for a flat seed (x,y), 3 for a Euclidean-ball spheroid with a z column')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducible results')
@@ -242,16 +314,20 @@ def main():
     
     # Generate positions based on pattern
     if args.pattern == 'spheroid':
-        center_x = args.center_x if args.center_x is not None else args.domain_size // 2
-        center_y = args.center_y if args.center_y is not None else args.domain_size // 2
+        # The exact domain centre: a cell centre on an odd grid, a cell corner
+        # on an even one. The colony's centre of mass lands on it exactly.
+        auto_centre = symmetry_centre(args.domain_size)
+        center_x = args.center_x if args.center_x is not None else auto_centre
+        center_y = args.center_y if args.center_y is not None else auto_centre
         if args.dimensions == 3:
-            center_z = args.center_z if args.center_z is not None else args.domain_size // 2
-            positions = generate_spheroid_pattern_3d(center_x, center_y, center_z,
-                                                     args.count, args.domain_size // 2)
-            description = f"3D spheroid pattern with {len(positions)} cells"
+            center_z = args.center_z if args.center_z is not None else auto_centre
+            positions = generate_spheroid_pattern_3d(center_x, center_y, center_z, args.count)
+            description = (f"3D spheroid pattern with {len(positions)} cells "
+                           f"(centre of mass exactly at the domain centre)")
         else:
-            positions = generate_spheroid_pattern(center_x, center_y, args.count, args.domain_size // 2)
-            description = f"Spheroid pattern with {len(positions)} cells"
+            positions = generate_spheroid_pattern(center_x, center_y, args.count)
+            description = (f"Spheroid pattern with {len(positions)} cells "
+                           f"(centre of mass exactly at the domain centre)")
         
     elif args.pattern == 'grid':
         grid_parts = args.grid_size.split('x')

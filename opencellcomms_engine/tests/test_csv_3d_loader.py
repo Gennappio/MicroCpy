@@ -110,7 +110,7 @@ def test_generator_and_loader_agree_on_the_centre(tmp_path):
                                     recenter_positions, write_csv_file)
 
     grid = 8  # the 160 um / 20 um domain of _config()
-    absolute = generate_spheroid_pattern(grid // 2, grid // 2, 9, grid // 2)
+    absolute = generate_spheroid_pattern(grid // 2, grid // 2, 9)
     seed = tmp_path / "roundtrip.csv"
     write_csv_file(assign_phenotypes_and_genes(
         recenter_positions(absolute, (grid // 2,) * 2), 'spheroid'), seed)
@@ -129,3 +129,21 @@ def test_generator_3d_ball_shape(tmp_path):
     rmax = max(math.dist(p, (18, 18, 18)) for p in pos)
     analytic = (3 * 500 / (4 * math.pi)) ** (1 / 3)
     assert rmax <= analytic + 1.5
+    # The packing is exactly centred: its centre of mass is the requested centre
+    assert all(sum(p[i] for p in pos) == 18 * 500 for i in range(3))
+
+
+def test_generator_centre_of_mass_is_exact_for_both_grid_parities():
+    """A seed's centre of mass must sit on the domain centre: a cell centre
+    (integer) on an odd grid, a cell corner (half-integer) on an even grid."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from csv_cell_generator import generate_spheroid_pattern, symmetry_centre
+    assert symmetry_centre(75) == 37.0 and symmetry_centre(150) == 74.5
+    for grid, count in ((75, 1000), (75, 999), (150, 1000), (75, 100)):
+        c = symmetry_centre(grid)
+        pos = generate_spheroid_pattern(c, c, count)
+        assert len(pos) == count == len(set(pos))
+        assert all(abs(sum(p[i] for p in pos) - count * c) < 1e-9 for i in range(2))
+    import pytest
+    with pytest.raises(ValueError):
+        generate_spheroid_pattern(74.5, 74.5, 999)  # odd count on a cell corner

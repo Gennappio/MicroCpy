@@ -639,6 +639,25 @@ class InitialStateManager:
                 'tq_wait_time': 0.0  # Default wait time
             })
 
+        # Where the colony's centre of mass landed, in centred coordinates
+        # (0 = domain centre). Exactness depends on the seed's symmetry
+        # matching the grid parity: a seed symmetric about a cell centre
+        # (centroid 0) is exact on an odd bio-grid, one symmetric about a
+        # cell corner (centroid -0.5) on an even bio-grid; the other pairing
+        # carries an inherent half-cell offset, which this line makes visible.
+        from ..core.coords import cell_centre_um
+        centred = [cell_centre_um(self.config, d['position']) for d in cell_init_data]
+        com = [sum(c[i] for c in centred) / len(centred) for i in range(len(centred[0]))]
+        grid = [bio_grid_x, bio_grid_y] + ([bio_grid_z] if is_3d else [])
+        print(f"[SEED] colony centre of mass at ({', '.join(f'{v:+.2f}' for v in com)}) um "
+              f"from the domain centre (bio-grid {'x'.join(str(g) for g in grid)}, "
+              f"cell {cell_size_um:g} um)")
+        if any(abs(v) > 1e-6 for v in com):
+            parity = 'odd' if grid[0] % 2 else 'even'
+            print(f"[SEED] not exactly centred: on an {parity} bio-grid a centred colony needs a "
+                  f"seed symmetric about a cell {'centre' if parity == 'odd' else 'corner'} "
+                  f"(csv_cell_generator.py --domain_size {grid[0]} builds one)")
+
         print(f"[OK] Successfully loaded {len(cell_init_data)} cells from CSV file")
         print(f"[OK] Using biological cell size: {cell_size_um:.2f} um (from YAML config)")
 
