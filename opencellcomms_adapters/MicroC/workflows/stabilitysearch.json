@@ -1,0 +1,1397 @@
+{
+  "version": "2.0",
+  "name": "MicroC stability search",
+  "description": "Glucose-loop stability search on the standard 500-cell spheroid (radius ~253 um, ~9 % of the 75 x 75 bio-grid) centred in a 1500 um square domain, Glucose the only substance (fixed 5 mM boundary, fine 10 um solver grid), no gene network and no proliferation: each cell is glycoATP ON when its local glucose exceeds the 4 mM Glucose_supply threshold and a quiescent non-consumer otherwise (zero-delay relay). Each scheduler step a disc centred on the domain grows by 5 % of the side (75 um) and every cell inside becomes necrotic for good (zero metabolism, never removed), so the consuming population shrinks from the centre outward. Every iteration writes a seed checkpoint (iteration_plots/seeds/seed_ITER_NNNNNN.csv) that Read Checkpoint reloads as the starting population of another run at that fixed necrotic radius, plus the replot state checkpoint and the Glucose heatmap.",
+  "kernel": "biophysics",
+  "metadata": {
+    "author": "MicroC stability search",
+    "created": "2026-09-08",
+    "workflow_source_path": "stabilitysearch.json",
+    "gui": {
+      "function_libraries": [],
+      "agent_kinds": [
+        {
+          "name": "tumor_cell",
+          "create_subworkflow": "tumor_cell_create",
+          "behavior_subworkflows": [
+            "necrosis_disc",
+            "glucose_gate",
+            "fate_summary"
+          ]
+        }
+      ],
+      "resource_kinds": [
+        {
+          "name": "Glucose",
+          "init_subworkflow": "glucose_init",
+          "behavior_subworkflows": [
+            "diffusion_step"
+          ]
+        }
+      ],
+      "world": {
+        "subworkflow": "__world__",
+        "behavior_subworkflows": [
+          "iteration_plots"
+        ]
+      },
+      "init_sequence": {
+        "subworkflow": "__init_sequence__"
+      },
+      "scheduler": {
+        "subworkflow": "__scheduler__"
+      },
+      "processing": {
+        "behavior_subworkflows": []
+      },
+      "main_is_synthesized": true,
+      "user_functions": [],
+      "contract_enforcement": "warn",
+      "planner": {
+        "version": 2,
+        "replication": {
+          "replicates": 1,
+          "seedMode": "generated",
+          "masterSeed": "42",
+          "pairing": "shared",
+          "pairingGroup": "default",
+          "seeds": []
+        },
+        "tabs": [
+          {
+            "id": "planner-tab-baseline",
+            "name": "baseline",
+            "enabled": true,
+            "parameterOverrides": {}
+          }
+        ]
+      }
+    }
+  },
+  "subworkflows": {
+    "__world__": {
+      "description": "Stability search: __world__ (simulation, a 1500 um square domain with a fine 10 um glucose solver grid (150x150) and a 20 um bio-grid (75x75 = 5625 sites, so the 500-cell spheroid covers ~9 % of it), the empty population with NO gene network, the Glucose -> Glucose_supply association that owns the 4 mM threshold, and the metabolism constants)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "world"
+        },
+        "reads": [
+          "simulation.parameters"
+        ],
+        "writes": [
+          "simulation.config",
+          "world.self",
+          "agent.collection",
+          "resource.collection",
+          "associations"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-__world__",
+        "type": "controller",
+        "label": "WORLD",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "__world__-setup_sim",
+          "function_name": "setup_simulation",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Initialize simulation infrastructure",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "__world__-param_sim_name",
+            "__world__-param_sim_dt",
+            "__world__-param_sim_output_dir"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "simulation.config",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "__world__-setup_domain",
+          "function_name": "setup_domain",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "2D 1500 x 1500 um domain; 150 x 150 solver grid (10 um, the fine glucose grid); Cell Height 20 um -> 75 x 75 bio-grid",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "__world__-param_domain_dimensions",
+            "__world__-param_domain_size_x",
+            "__world__-param_domain_size_y",
+            "__world__-param_domain_nx",
+            "__world__-param_domain_ny",
+            "__world__-param_domain_cell_height",
+            "__world__-param_domain_verbose"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "world.self",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "__world__-setup_pop",
+          "function_name": "setup_population",
+          "function_file": "",
+          "parameters": {
+            "enable_gene_network": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Empty population on the bio-grid. Gene network DISABLED: this protocol has no Boolean network; glycoATP is set directly by the Glucose Gate node",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "agent.collection",
+              "gene_networks"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "__world__-setup_associations",
+          "function_name": "setup_associations",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 460
+          },
+          "description": "Owner of the Glucose_supply threshold (4 mM): read by the Glucose Gate node and drawn as the isoline on the glucose heatmaps",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "__world__-param_associations"
+          ],
+          "contract": {
+            "reads": [
+              "simulation.parameters"
+            ],
+            "writes": [
+              "associations",
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "__world__-set_metabolism",
+          "function_name": "set_metabolism_parameters",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 580
+          },
+          "description": "Michaelis-Menten metabolism constants used by Calculate Cell Metabolism (glycolytic glucose draw = oxygen_vmax/6 * max_atp/2 * Glc/(KG+Glc))",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "__world__-param_metabolism"
+          ],
+          "contract": {
+            "owner": {
+              "type": "world"
+            },
+            "reads": [
+              "simulation.config"
+            ],
+            "writes": [
+              "simulation.config"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "__world__-param_sim_name",
+          "type": "parameterNode",
+          "label": "Simulation Name",
+          "parameters": {
+            "name": "Stability Search"
+          },
+          "position": {
+            "x": 100,
+            "y": 40
+          }
+        },
+        {
+          "id": "__world__-param_sim_dt",
+          "type": "parameterNode",
+          "label": "Time Step (dt)",
+          "parameters": {
+            "dt": "0.01"
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "__world__-param_sim_output_dir",
+          "type": "parameterNode",
+          "label": "Output Directory",
+          "parameters": {
+            "output_dir": "results"
+          },
+          "position": {
+            "x": 100,
+            "y": 160
+          }
+        },
+        {
+          "id": "__world__-param_domain_dimensions",
+          "type": "parameterNode",
+          "label": "Dimensions",
+          "parameters": {
+            "dimensions": 2
+          },
+          "position": {
+            "x": 100,
+            "y": 220
+          }
+        },
+        {
+          "id": "__world__-param_domain_size_x",
+          "type": "parameterNode",
+          "label": "Size X (μm)",
+          "parameters": {
+            "size_x": "1500"
+          },
+          "position": {
+            "x": 100,
+            "y": 280
+          }
+        },
+        {
+          "id": "__world__-param_domain_size_y",
+          "type": "parameterNode",
+          "label": "Size Y (μm)",
+          "parameters": {
+            "size_y": "1500"
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        },
+        {
+          "id": "__world__-param_domain_nx",
+          "type": "parameterNode",
+          "label": "Grid NX",
+          "parameters": {
+            "nx": "150"
+          },
+          "position": {
+            "x": 100,
+            "y": 400
+          }
+        },
+        {
+          "id": "__world__-param_domain_ny",
+          "type": "parameterNode",
+          "label": "Grid NY",
+          "parameters": {
+            "ny": "150"
+          },
+          "position": {
+            "x": 100,
+            "y": 460
+          }
+        },
+        {
+          "id": "__world__-param_domain_cell_height",
+          "type": "parameterNode",
+          "label": "Cell Height (μm)",
+          "parameters": {
+            "cell_height": 20
+          },
+          "position": {
+            "x": 100,
+            "y": 520
+          }
+        },
+        {
+          "id": "__world__-param_domain_verbose",
+          "type": "parameterNode",
+          "label": "verbose",
+          "parameters": {
+            "verbose": "false"
+          },
+          "position": {
+            "x": 100,
+            "y": 580
+          }
+        },
+        {
+          "id": "__world__-param_associations",
+          "type": "dictParameterNode",
+          "label": "Associations (Dict)",
+          "entries": [
+            {
+              "key": "Glucose",
+              "valueType": "dict",
+              "value": {
+                "gene_input": "Glucose_supply",
+                "threshold": 4.0
+              }
+            }
+          ],
+          "target_param": "associations",
+          "position": {
+            "x": 100,
+            "y": 640
+          }
+        },
+        {
+          "id": "__world__-param_metabolism",
+          "type": "dictParameterNode",
+          "label": "Metabolism Parameters",
+          "entries": [
+            {
+              "key": "oxygen_vmax",
+              "valueType": "float",
+              "value": 3e-17
+            },
+            {
+              "key": "KO2",
+              "valueType": "float",
+              "value": 0.005
+            },
+            {
+              "key": "KG",
+              "valueType": "float",
+              "value": 0.5
+            },
+            {
+              "key": "KL",
+              "valueType": "float",
+              "value": 1.0
+            },
+            {
+              "key": "max_atp",
+              "valueType": "float",
+              "value": 30.0
+            },
+            {
+              "key": "glyco_oxygen_ratio",
+              "valueType": "float",
+              "value": 0.5
+            },
+            {
+              "key": "proton_coefficient",
+              "valueType": "float",
+              "value": 0.001
+            }
+          ],
+          "target_param": "metabolism_parameters",
+          "position": {
+            "x": 100,
+            "y": 760
+          }
+        }
+      ],
+      "execution_order": [
+        "__world__-setup_sim",
+        "__world__-setup_domain",
+        "__world__-setup_pop",
+        "__world__-setup_associations",
+        "__world__-set_metabolism"
+      ],
+      "input_parameters": []
+    },
+    "glucose_init": {
+      "description": "Glucose resource - the only substance simulated. Fixed 5 mM boundary and 5 mM initial field, D = 6.7e-11 m2/s. Consumption comes from the cells' metabolism (diffusion_step), so no uptake/production rate is declared here.",
+      "enabled": true,
+      "deletable": true,
+      "controller": {
+        "id": "controller-glucose_init",
+        "type": "controller",
+        "label": "GLUCOSE INIT",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "glucose_init-setup",
+          "function_name": "setup_substances",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 150
+          },
+          "description": "Configure the Glucose substance",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "glucose_init-param_substances"
+          ]
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "glucose_init-param_substances",
+          "type": "listParameterNode",
+          "label": "Substance (JSON)",
+          "listType": "string",
+          "items": [
+            "{\"name\":\"Glucose\",\"diffusion_coeff\":6.70e-11,\"initial_value\":5.0,\"boundary_value\":5.0,\"boundary_type\":\"fixed\",\"unit\":\"mM\"}"
+          ],
+          "target_param": "substances",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "execution_order": [
+        "glucose_init-setup"
+      ],
+      "input_parameters": []
+    },
+    "tumor_cell_create": {
+      "description": "tumor_cell creation: the standard 500-cell spheroid (radius ~253 um, ~9 % of the 75 x 75 bio-grid) at the domain centre, every cell Quiescent with glycoATP ON and mitoATP OFF, then wrapped into the ABM population. No gene network is built.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "checkpoint",
+          "simulation.config",
+          "agent.collection"
+        ],
+        "writes": [
+          "agent.collection",
+          "agent.self.gene_states"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-tumor_cell_create",
+        "type": "controller",
+        "label": "TUMOR CELL CREATE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "tumor_cell_create-read_checkpoint",
+          "function_name": "read_checkpoint",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Load the 500-cell spheroid seed (same positions as initial_cells_500_center_1500.csv, all Quiescent / glycoATP ON). To restart from another run, point this at one of its seeds/seed_ITER_NNNNNN.csv files (same domain size and Cell Height).",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "tumor_cell_create-param_checkpoint_file"
+          ],
+          "contract": {
+            "reads": [
+              "checkpoint",
+              "agent.collection"
+            ],
+            "writes": [
+              "agent.collection",
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "tumor_cell_create-build_abm",
+          "function_name": "build_tumor_cell_abm_population",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Wrap the cells into the ABM population so the scheduler's per-agent asks bind env.cell",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "simulation.config"
+            ],
+            "writes": [
+              "abm_population"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "tumor_cell_create-param_checkpoint_file",
+          "type": "parameterNode",
+          "label": "Checkpoint File",
+          "parameters": {
+            "file_path": "../data/initial_cells_500_center_1500_glyco.csv"
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "tumor_cell_create-read_checkpoint",
+        "tumor_cell_create-build_abm"
+      ],
+      "input_parameters": []
+    },
+    "diffusion_step": {
+      "description": "Glucose step: per-cell Michaelis-Menten metabolism (glycoATP cells draw glucose) re-evaluated inside a Picard-coupled steady-state solve of the Glucose field. Only Glucose is solved; the metabolism's oxygen/lactate/proton terms have no field to act on in this protocol.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "resource",
+          "kind": "Glucose"
+        },
+        "participants": [
+          {
+            "type": "agent",
+            "kind": "tumor_cell"
+          },
+          {
+            "type": "resource",
+            "kind": "Glucose"
+          },
+          {
+            "type": "world"
+          }
+        ],
+        "reads": [
+          "agent.collection",
+          "resource.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.config"
+        ],
+        "writes": [
+          "resource.fields",
+          "simulation.results"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-diffusion_step",
+        "type": "controller",
+        "label": "DIFFUSION STEP",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "diffusion_step-calculate_metabolism",
+          "function_name": "calculate_cell_metabolism",
+          "function_file": "",
+          "parameters": {
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Per-cell glucose consumption from the glycoATP gene (necrotic cells: zero)",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "resource.fields"
+            ],
+            "writes": [
+              "agent.collection"
+            ],
+            "emits": []
+          }
+        },
+        {
+          "id": "diffusion_step-run_diffusion_metabolic",
+          "function_name": "run_diffusion_solver_metabolic",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Steady-state Picard solve of the Glucose field with the cell sinks",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "diffusion_step-param_metabolic_substances",
+            "diffusion_step-param_max_coupling_iterations",
+            "diffusion_step-param_coupling_tolerance",
+            "diffusion_step-param_relaxation_factor",
+            "diffusion_step-param_glucose_conversion_factor"
+          ],
+          "contract": {
+            "participants": [
+              {
+                "type": "agent",
+                "kind": "tumor_cell"
+              },
+              {
+                "type": "resource",
+                "kind": "Glucose"
+              },
+              {
+                "type": "world"
+              }
+            ],
+            "reads": [
+              "agent.collection",
+              "resource.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.config"
+            ],
+            "writes": [
+              "resource.fields",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "diffusion_step-param_metabolic_substances",
+          "type": "parameterNode",
+          "label": "Metabolic Substances",
+          "parameters": {
+            "substances": "Glucose"
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "id": "diffusion_step-param_max_coupling_iterations",
+          "type": "parameterNode",
+          "label": "Max Coupling Iterations",
+          "parameters": {
+            "max_coupling_iterations": "100"
+          },
+          "position": {
+            "x": 100,
+            "y": 160
+          }
+        },
+        {
+          "id": "diffusion_step-param_coupling_tolerance",
+          "type": "parameterNode",
+          "label": "Coupling Tolerance",
+          "parameters": {
+            "coupling_tolerance": 0.0001
+          },
+          "position": {
+            "x": 100,
+            "y": 220
+          }
+        },
+        {
+          "id": "diffusion_step-param_relaxation_factor",
+          "type": "parameterNode",
+          "label": "Relaxation Factor (α)",
+          "parameters": {
+            "relaxation_factor": "0.1"
+          },
+          "position": {
+            "x": 100,
+            "y": 280
+          }
+        },
+        {
+          "id": "diffusion_step-param_glucose_conversion_factor",
+          "type": "parameterNode",
+          "label": "Glucose Consumption Scale",
+          "parameters": {
+            "glucose_conversion_factor": "20"
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
+      "execution_order": [
+        "diffusion_step-calculate_metabolism",
+        "diffusion_step-run_diffusion_metabolic"
+      ],
+      "input_parameters": []
+    },
+    "necrosis_disc": {
+      "description": "Necrotic disc growing from the centre: radius = 5 % of the domain side (75 um) x scheduler step; every living cell inside is marked Necrosis (never removed, ATP genes OFF, zero metabolism). The 253 um spheroid is fully necrotic by step 4. Runs once per step (collective), before the glucose solve.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.collection",
+          "simulation.config"
+        ],
+        "writes": [
+          "agent.self.phenotype",
+          "agent.self.gene_states",
+          "simulation.results"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-necrosis_disc",
+        "type": "controller",
+        "label": "NECROSIS DISC",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "necrosis_disc-mark",
+          "function_name": "mark_necrotic_growing_circle",
+          "function_file": "",
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "radius(step) = Radius Step Fraction x 1500 um x step; cells inside -> Necrosis",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [
+            "necrosis_disc-param_radius_step_fraction"
+          ],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "simulation.config"
+            ],
+            "writes": [
+              "agent.self.phenotype",
+              "agent.self.gene_states",
+              "simulation.results"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [
+        {
+          "id": "necrosis_disc-param_radius_step_fraction",
+          "type": "parameterNode",
+          "label": "Radius Step Fraction (of domain side)",
+          "parameters": {
+            "radius_step_fraction": 0.05
+          },
+          "position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "execution_order": [
+        "necrosis_disc-mark"
+      ],
+      "input_parameters": []
+    },
+    "glucose_gate": {
+      "description": "Per-agent glucose gate (zero-delay relay): glycoATP = local Glucose > the 4 mM Glucose_supply threshold owned by the Associations table; mitoATP OFF. Below threshold the cell is a quiescent non-consumer. Necrotic cells are skipped. No proliferation node.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.self.gene_states",
+          "resource.fields",
+          "associations"
+        ],
+        "writes": [
+          "agent.self.gene_states"
+        ],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-glucose_gate",
+        "type": "controller",
+        "label": "GLUCOSE GATE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "glucose_gate-switch",
+          "function_name": "switch_glycoatp_by_glucose_threshold",
+          "function_file": "",
+          "parameters": {
+            "verbose": false
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "glycoATP = Glucose > threshold (Associations table); mitoATP = OFF",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.self.gene_states",
+              "resource.fields",
+              "associations"
+            ],
+            "writes": [
+              "agent.self.gene_states"
+            ],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "glucose_gate-switch"
+      ],
+      "input_parameters": []
+    },
+    "fate_summary": {
+      "description": "Per-iteration census: cells by phenotype (Quiescent / Necrosis) and glycoATP / mitoATP ON counts, CSV + plot (gene_fate_counts_over_time)",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "owner": {
+          "type": "agent",
+          "kind": "tumor_cell"
+        },
+        "reads": [
+          "agent.collection",
+          "agent.self.gene_states",
+          "gene_networks"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-fate_summary",
+        "type": "controller",
+        "label": "FATE SUMMARY",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "fate_summary-record_counts",
+          "function_name": "record_gene_fate_counts",
+          "function_file": "",
+          "parameters": {
+            "plot_filename": "gene_fate_counts_over_time.png",
+            "csv_filename": "gene_fate_counts_over_time.csv",
+            "metabolic_genes": "glycoATP,mitoATP",
+            "plot_genes": "glycoATP,mitoATP"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Record phenotype and glycoATP/mitoATP counts for this iteration",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "owner": {
+              "type": "agent",
+              "kind": "tumor_cell"
+            },
+            "reads": [
+              "agent.collection",
+              "agent.self.gene_states",
+              "gene_networks"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "fate_summary-record_counts"
+      ],
+      "input_parameters": []
+    },
+    "iteration_plots": {
+      "description": "Per-iteration record: Glucose heatmap with the 4 mM isoline and the cells, the replot state checkpoint (JSON + NPZ, all kept), and the SEED checkpoint (seeds/seed_ITER_NNNNNN.csv) that Read Checkpoint reloads as the starting population of another simulation.",
+      "enabled": true,
+      "deletable": true,
+      "contract": {
+        "reads": [
+          "agent.collection",
+          "resource.fields",
+          "world.self",
+          "simulation.results",
+          "simulation.config"
+        ],
+        "writes": [],
+        "emits": []
+      },
+      "controller": {
+        "id": "controller-iteration_plots",
+        "type": "controller",
+        "label": "ITERATION PLOTS",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [
+        {
+          "id": "iteration_plots-gen_loop_plots",
+          "function_name": "generate_iteration_plots",
+          "function_file": "",
+          "parameters": {
+            "substances_to_plot": "Glucose",
+            "plot_interval": "1",
+            "show_cells": true,
+            "show_metabolism_colors": true,
+            "show_fate_colors": true,
+            "show_isolines": true,
+            "show_legends": true,
+            "show_info_box": true
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "Glucose heatmap with the Glucose_supply isoline and the cells",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        },
+        {
+          "id": "iteration_plots-save_state_checkpoint",
+          "function_name": "save_state_checkpoint",
+          "function_file": "",
+          "parameters": {
+            "interval": "1",
+            "max_checkpoints": "0"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "Replot checkpoint (fields + cells), every iteration, none pruned",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "resource.fields",
+              "world.self",
+              "simulation.results"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        },
+        {
+          "id": "iteration_plots-save_seed_checkpoint",
+          "function_name": "save_seed_checkpoint",
+          "function_file": "",
+          "parameters": {
+            "interval": "1",
+            "subdir": "seeds"
+          },
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "Reusable seed: positions, phenotypes and gene states in Read Checkpoint's CSV format, every iteration",
+          "custom_name": "",
+          "step_count": 1,
+          "parameter_nodes": [],
+          "contract": {
+            "reads": [
+              "agent.collection",
+              "simulation.config"
+            ],
+            "writes": [],
+            "emits": []
+          }
+        }
+      ],
+      "subworkflow_calls": [],
+      "parameters": [],
+      "execution_order": [
+        "iteration_plots-gen_loop_plots",
+        "iteration_plots-save_state_checkpoint",
+        "iteration_plots-save_seed_checkpoint"
+      ],
+      "input_parameters": []
+    },
+    "__scheduler__": {
+      "description": "Stability search loop: grow the necrotic disc -> solve Glucose with the current consumers -> glucose gate per cell -> census -> plots + checkpoints. 5 steps at 5 % per step: the disc (75 um per step) covers the 253 um spheroid by step 4.",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__scheduler__",
+        "type": "controller",
+        "label": "SCHEDULER",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "parameter_nodes": [
+          "steps_param-__scheduler__"
+        ],
+        "number_of_steps": 5
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "sched-call-necrosis_disc",
+          "type": "subworkflow_call",
+          "subworkflow_name": "necrosis_disc",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 120
+          },
+          "description": "necrosis_disc (collective, once per step)",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-diffusion_step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "diffusion_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 230
+          },
+          "description": "diffusion_step",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-glucose_gate",
+          "type": "subworkflow_call",
+          "subworkflow_name": "glucose_gate",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 340
+          },
+          "description": "glucose_gate (per agent)",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent",
+            "kind": "tumor_cell",
+            "order": "random"
+          }
+        },
+        {
+          "id": "sched-call-fate_summary",
+          "type": "subworkflow_call",
+          "subworkflow_name": "fate_summary",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 450
+          },
+          "description": "fate_summary (census; record_gene_fate_counts is collective, so the executor runs it once)",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent",
+            "kind": "tumor_cell",
+            "order": "random"
+          }
+        },
+        {
+          "id": "sched-call-iteration_plots",
+          "type": "subworkflow_call",
+          "subworkflow_name": "iteration_plots",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 560
+          },
+          "description": "iteration_plots + checkpoints",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [
+        {
+          "id": "steps_param-__scheduler__",
+          "type": "parameterNode",
+          "label": "Simulation Steps",
+          "parameters": {
+            "steps": 5
+          },
+          "position": {
+            "x": 100,
+            "y": 340
+          }
+        }
+      ],
+      "execution_order": [
+        "sched-call-necrosis_disc",
+        "sched-call-diffusion_step",
+        "sched-call-glucose_gate",
+        "sched-call-fate_summary",
+        "sched-call-iteration_plots"
+      ],
+      "input_parameters": []
+    },
+    "__init_sequence__": {
+      "description": "Initialization order — world init + resource init + agent creation",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-__init_sequence__",
+        "type": "controller",
+        "label": "INIT SEQUENCE",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "init-call-__world__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__world__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 100
+          },
+          "description": "__world__",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-glucose_init",
+          "type": "subworkflow_call",
+          "subworkflow_name": "glucose_init",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 160
+          },
+          "description": "glucose_init",
+          "parameter_nodes": []
+        },
+        {
+          "id": "init-call-tumor_cell_create",
+          "type": "subworkflow_call",
+          "subworkflow_name": "tumor_cell_create",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 220
+          },
+          "description": "tumor_cell_create",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "init-call-__world__",
+        "init-call-glucose_init",
+        "init-call-tumor_cell_create"
+      ],
+      "input_parameters": []
+    },
+    "main": {
+      "description": "Synthesized main workflow (do not edit — managed by ABM structure)",
+      "enabled": true,
+      "deletable": false,
+      "controller": {
+        "id": "controller-main",
+        "type": "controller",
+        "label": "MAIN",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "number_of_steps": 1
+      },
+      "functions": [],
+      "subworkflow_calls": [
+        {
+          "id": "main-call-__init_sequence__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__init_sequence__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 200
+          },
+          "description": "Initialization sequence",
+          "parameter_nodes": []
+        },
+        {
+          "id": "main-call-__scheduler__",
+          "type": "subworkflow_call",
+          "subworkflow_name": "__scheduler__",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
+            "y": 320
+          },
+          "description": "Main simulation loop",
+          "parameter_nodes": []
+        }
+      ],
+      "parameters": [],
+      "execution_order": [
+        "main-call-__init_sequence__",
+        "main-call-__scheduler__"
+      ],
+      "input_parameters": []
+    }
+  }
+}

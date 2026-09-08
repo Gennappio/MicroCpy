@@ -18,6 +18,7 @@ import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_netwo
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_single_gene  # noqa: F401,E501
 import opencellcomms_adapters.MicroC.functions.gene_network.propagate_gene_networks_maboss  # noqa: F401,E501
 import opencellcomms_adapters.MicroC.functions.gene_network.fix_gene_nodes  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.gene_network.switch_glycoatp_by_glucose_threshold  # noqa: F401,E501
 
 # Metabolism
 import opencellcomms_adapters.MicroC.functions.metabolism.set_metabolism_parameters  # noqa: F401,E501
@@ -31,6 +32,7 @@ import opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells  # 
 import opencellcomms_adapters.MicroC.functions.fate.mark_proliferating_cells_gated  # noqa: F401,E501
 import opencellcomms_adapters.MicroC.functions.fate.advance_cell_age  # noqa: F401
 import opencellcomms_adapters.MicroC.functions.fate.remove_necrotic_cells  # noqa: F401
+import opencellcomms_adapters.MicroC.functions.fate.mark_necrotic_growing_circle  # noqa: F401
 
 # Reporting plots
 import opencellcomms_adapters.MicroC.functions.reporting.generate_iteration_plots  # noqa: F401
