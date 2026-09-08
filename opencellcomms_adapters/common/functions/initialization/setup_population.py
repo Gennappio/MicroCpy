@@ -73,7 +73,20 @@ def setup_population(
         if enable_gene_network:
             gene_network = BooleanNetwork(config=config)
         else:
-            gene_network = None
+            # Disabled = an EMPTY network, not None: CellPopulation substitutes
+            # BooleanNetwork()'s built-in toy network for None, which would give
+            # every cell phantom Apoptosis/Necrosis/Growth_Arrest nodes (all ON)
+            # in its gene_states, census and seed files. With an empty
+            # template each cell carries only the gene states its seed file
+            # declares (e.g. glycoATP/mitoATP set directly by a gate node).
+            gene_network = BooleanNetwork(config=config)
+            gene_network.nodes.clear()
+            gene_network.input_nodes.clear()
+            gene_network.output_nodes.clear()
+            gene_network.fixed_nodes.clear()
+            log(context, "Gene network disabled: cells get an empty network and keep "
+                         "only the gene states loaded from the seed file",
+                prefix="[+]", node_verbose=verbose)
         
         context['gene_network'] = gene_network
 
