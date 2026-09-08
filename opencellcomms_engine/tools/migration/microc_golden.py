@@ -72,6 +72,19 @@ def run_microc(seed: int = 123, n_steps: int = 3) -> Dict[str, Any]:
     for call in workflow.subworkflows["main"].subworkflow_calls:
         if call.subworkflow_name == "__scheduler__":
             call.iterations = int(n_steps)
+    # The executor takes the loop count from the scheduler's own "Simulation
+    # Steps" parameter node (then its controller) before the call's
+    # iterations, so pin all three or the run would do the workflow's full
+    # step count instead of n_steps.
+    sched = workflow.subworkflows["__scheduler__"]
+    if sched.controller is not None:
+        for node_id in list(getattr(sched.controller, "parameter_nodes", None) or []):
+            for param in sched.parameters:
+                if param.id == node_id:
+                    for key in ("steps", "step_count", "numberOfSteps"):
+                        if key in param.parameters:
+                            param.parameters[key] = int(n_steps)
+        sched.controller.number_of_steps = int(n_steps)
 
     executor = WorkflowExecutor(workflow, workflow_file=str(WF), observability_enabled=False)
     context: Dict[str, Any] = {"workflow_file": str(WF.absolute())}
