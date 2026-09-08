@@ -12,6 +12,10 @@ from src.workflow import replication
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / 'run_sensitivity_slurm.sh'
+NEW_ARMS_SCRIPT = REPO / 'run_sensitivity_new_arms_slurm.sh'
+NEW_ARMS = {'p53_sa_oxygen_consumption.json': 'o2_cons_6.6',
+            'p53_sa_glucose_boundary.json': 'glc_bnd_6.0',
+            'p53_sa_relative_tumor_size.json': 'domain_900'}
 RUNNER = REPO / 'opencellcomms_engine/tools/run_planner_batch.py'
 SUITE = REPO / 'opencellcomms_adapters/MicroC/workflows/sensitivity_analysis'
 
@@ -25,8 +29,8 @@ def job_env(**overrides):
     return env
 
 
-def launch(args=(), env=None):
-    return subprocess.run(['bash', str(SCRIPT), *map(str, args)], cwd=REPO,
+def launch(args=(), env=None, script=SCRIPT):
+    return subprocess.run(['bash', str(script), *map(str, args)], cwd=REPO,
                           env=env or job_env(), capture_output=True, text=True,
                           timeout=90)
 
@@ -73,6 +77,41 @@ def test_launcher_rejects_arrays(capture_python):
     assert result.returncode == 2
     assert 'without --array' in result.stderr
     assert result.stdout == ''
+
+
+def test_new_arms_launcher_runs_only_the_replacement_tabs(capture_python):
+    result = launch(env=capture_python, script=NEW_ARMS_SCRIPT)
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line)['args'] for line in result.stdout.splitlines()]
+    assert calls == [[str(RUNNER), '--workflow', str(SUITE / name), '--tab', tab,
+                      '--runs-dir', str(REPO / 'runs')] for name, tab in NEW_ARMS.items()]
+
+    workflow = SUITE / 'p53_sa_glucose_boundary.json'
+    result = launch([workflow], capture_python, script=NEW_ARMS_SCRIPT)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)['args'] == [
+        str(RUNNER), '--workflow', str(workflow), '--tab', 'glc_bnd_6.0',
+        '--runs-dir', str(REPO / 'runs')]
+
+    result = launch([SUITE / 'p53_sa_propagation_steps.json'], capture_python, script=NEW_ARMS_SCRIPT)
+    assert result.returncode == 2
+    assert 'has no new arm' in result.stderr
+    assert result.stdout == ''
+
+
+def test_tab_filter_keeps_a_subset_of_the_stored_plan_with_the_same_seeds():
+    paths = sorted(SUITE.glob('p53_sa_*.json'))
+    documents = [{'workflow': replication.read_json(path), 'source': str(path)}
+                 for path in paths]
+    full = replication.compile_plan(documents)
+    subset = replication.compile_plan(documents, tab_names=list(NEW_ARMS.values()))
+    assert [r['name'] for r in subset['requests']] == ['glc_bnd_6.0', 'o2_cons_6.6', 'domain_900']
+    assert subset['requested_runs'] == subset['unique_runs'] == 30
+    assert {r['seed'] for r in subset['runs']} == {r['seed'] for r in full['runs']}
+    assert {c['id'] for c in subset['configurations']} <= {c['id'] for c in full['configurations']}
+    assert {r['id'] for r in subset['runs']} <= {r['id'] for r in full['runs']}
+    with pytest.raises(ValueError, match='o2_cons_13.2'):
+        replication.compile_plan(documents, tab_names=['o2_cons_6.6', 'o2_cons_13.2'])
 
 
 def test_full_suite_plan_comes_from_workflows_and_has_separate_folders(tmp_path):

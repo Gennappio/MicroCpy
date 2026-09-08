@@ -169,10 +169,16 @@ def _resolve_inputs(document, source, destination=None):
     return visit(copy.deepcopy(document)), files
 
 
-def compile_plan(documents, fresh_seed=None):
-    """Pure plan expansion; no simulation and no output mutation."""
+def compile_plan(documents, fresh_seed=None, tab_names=None):
+    """Pure plan expansion; no simulation and no output mutation.
+
+    ``tab_names`` keeps only the enabled Planner tabs with those names (a
+    subset of the stored plan, e.g. the arms added after a first campaign);
+    every name must match an enabled tab in some document.
+    """
     runs, configurations, requests, seen = [], {}, [], {}
     fresh_seed = str(fresh_seed or secrets.randbits(128) or 1)
+    unmatched = set(tab_names or [])
     for entry in documents:
         workflow = entry["workflow"]
         source = entry.get("source", "")
@@ -180,6 +186,9 @@ def compile_plan(documents, fresh_seed=None):
         if settings["seedMode"] == "fresh":
             settings = {**settings, "seedMode": "generated", "masterSeed": fresh_seed}
         tabs = enabled_tabs(workflow)
+        if tab_names is not None:
+            tabs = [t for t in tabs if t.get("name") in tab_names]
+            unmatched.difference_update(t.get("name") for t in tabs)
         if not tabs and planner_tabs(workflow):
             continue
         if not tabs:
@@ -222,6 +231,8 @@ def compile_plan(documents, fresh_seed=None):
                 runs.append(run)
     if sum(c.get('role') == 'reference' for c in configurations.values()) > 1:
         raise ValueError('A batch supports one distinct reference configuration')
+    if unmatched:
+        raise ValueError(f"No enabled Planner tab named: {', '.join(sorted(unmatched))}")
     if not runs:
         raise ValueError("Enable at least one Planner configuration")
     if len(runs) > 100000:

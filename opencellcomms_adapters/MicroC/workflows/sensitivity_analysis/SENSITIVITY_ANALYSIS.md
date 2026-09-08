@@ -134,7 +134,28 @@ done
 ```
 
 `sbatch run_sensitivity_slurm.sh` with no argument still runs the whole suite
-in one job. Either way a job executes its runs sequentially, one process per
+in one job.
+
+The oxygen-consumption, glucose-boundary and tumour-size sweeps were mirrored
+to their stable side after a first campaign (`o2_cons_13.2`, `glc_bnd_4.5` and
+`domain_1800` were numerically unstable and are not part of the suite any
+more). Only their replacements `o2_cons_6.6`, `glc_bnd_6.0` and `domain_900`
+still have to run; `run_sensitivity_new_arms_slurm.sh` lists exactly those
+(file, tab) pairs and submits nothing else, so the arms that already ran are
+not repeated:
+
+```bash
+for f in oxygen_consumption glucose_boundary relative_tumor_size; do
+    sbatch run_sensitivity_new_arms_slurm.sh "opencellcomms_adapters/MicroC/workflows/sensitivity_analysis/p53_sa_$f.json"
+done
+sbatch run_sensitivity_new_arms_slurm.sh      # or the three new arms sequentially in one job
+```
+
+It calls the batch runner with `--tab <name>`, which keeps only the named
+enabled Planner tab of the stored plan (replicates, seeds and pairing
+unchanged, so replicate *r* has the same seed as in the first campaign). The
+result folders of the unstable arms stay under `runs/` and the collector still
+tabulates them; drop their rows (levels 13.2, 4.5 and 0.307) before analysis. Either way a job executes its runs sequentially, one process per
 replicate. Each job reads the plan from its workflow file: 12 enabled
 configurations × 10 replicates = **120 executions** in total (30 + 20 + 20 +
 30 + 20), with the baseline run once by the glucose-boundary job. Replicate and

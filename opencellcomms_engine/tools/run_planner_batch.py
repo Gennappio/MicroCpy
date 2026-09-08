@@ -15,6 +15,9 @@ def main(argv=None):
     parser.add_argument('--workflow', type=Path, action='append', default=[])
     parser.add_argument('--suite', type=Path,
                         help='Run all p53_sa_*.json workflows together (deduplicates baselines)')
+    parser.add_argument('--tab', action='append', default=[], metavar='NAME',
+                        help='Run only the enabled Planner tab(s) with this name '
+                             '(repeatable); a subset of the stored plan, not a change to it')
     parser.add_argument('--runs-dir', type=Path, default=REPO / 'runs')
     # The GUI uses these hidden options to continue an already-created result
     # folder. Scientists define and change plans only in workflow JSON files.
@@ -34,7 +37,7 @@ def main(argv=None):
             for path in paths:
                 doc = read_json(path)
                 documents.append({'workflow': doc, 'source': str(path.resolve())})
-            plan = compile_plan(documents)
+            plan = compile_plan(documents, tab_names=args.tab or None)
             batch = create_batch(documents, args.runs_dir, plan)
             print(f'[PLANNER] Results folder: {batch}', flush=True)
             print(f'[PLANNER] {plan["unique_runs"]} unique runs ({plan["requested_runs"]} requested)', flush=True)

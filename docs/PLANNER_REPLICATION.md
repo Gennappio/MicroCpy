@@ -51,6 +51,10 @@ sbatch run_sensitivity_slurm.sh path/to/p53_sa_oxygen_consumption.json   # one f
 sbatch run_sensitivity_slurm.sh                                           # the whole suite in one job
 ```
 
+To run a subset of a stored plan (for instance arms added after a first
+campaign) pass `--tab <name>` to `opencellcomms_engine/tools/run_planner_batch.py`;
+`run_sensitivity_new_arms_slurm.sh` does this for the suite's replacement arms.
+
 The launcher reads the stored Planner definition of the given workflow JSON
 file (or of all five suite files) and runs it sequentially in one job; submit
 one job per file to run the files concurrently. It has no command-line
