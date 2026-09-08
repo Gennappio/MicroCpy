@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "name": "MicroC stability search",
-  "description": "Glucose-loop stability search on the standard 500-cell spheroid (radius ~253 um, ~9 % of the 75 x 75 bio-grid) centred in a 1500 um square domain, Glucose the only substance (fixed 5 mM boundary, fine 10 um solver grid), no gene network and no proliferation: each cell is glycoATP ON when its local glucose exceeds the 4 mM Glucose_supply threshold and a quiescent non-consumer otherwise (zero-delay relay). Each scheduler step a disc centred on the domain grows by 5 % of the side (75 um) and every cell inside becomes necrotic for good (zero metabolism, never removed), so the consuming population shrinks from the centre outward. Every iteration writes a seed checkpoint (iteration_plots/seeds/seed_ITER_NNNNNN.csv) that Read Checkpoint reloads as the starting population of another run at that fixed necrotic radius, plus the replot state checkpoint and the Glucose heatmap.",
+  "description": "Glucose-loop stability search on the standard 1000-cell spheroid (radius ~361 um, ~18 % of the 75 x 75 bio-grid) centred in a 1500 um square domain, Glucose the only substance (fixed 5 mM boundary, fine 10 um solver grid), no gene network and no proliferation: each cell is glycoATP ON when its local glucose exceeds the 4 mM Glucose_supply threshold and a quiescent non-consumer otherwise (zero-delay relay). A disc of 400 um diameter centred on the domain (fixed, growth fraction 0) makes every cell inside necrotic for good (zero metabolism, never removed), so the run is a time series of the glucose relay at one necrotic radius. Every iteration writes a seed checkpoint (iteration_plots/seeds/seed_ITER_NNNNNN.csv) that Read Checkpoint reloads as the starting population of another run at that fixed necrotic radius, plus the replot state checkpoint and the Glucose heatmap.",
   "kernel": "biophysics",
   "metadata": {
     "author": "MicroC stability search",
@@ -62,7 +62,106 @@
             "id": "planner-tab-baseline",
             "name": "baseline",
             "enabled": true,
-            "parameterOverrides": {}
+            "parameterOverrides": {
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "8.8"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": "10"
+                }
+              }
+            },
+            "role": "configuration",
+            "replicationOverride": null
+          },
+          {
+            "id": "planner-tab-1788897649428-4",
+            "name": "baseline (copy)",
+            "enabled": true,
+            "parameterOverrides": {
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "8.7"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": "10"
+                }
+              }
+            },
+            "role": "configuration",
+            "replicationOverride": null
+          },
+          {
+            "id": "planner-tab-1788897648244-3",
+            "name": "baseline (copy)",
+            "enabled": true,
+            "parameterOverrides": {
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "8.6"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": "10"
+                }
+              }
+            },
+            "role": "configuration",
+            "replicationOverride": null
+          },
+          {
+            "id": "planner-tab-1788897647827-2",
+            "name": "baseline (copy)",
+            "enabled": true,
+            "parameterOverrides": {
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "8.5"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": "10"
+                }
+              }
+            },
+            "role": "configuration",
+            "replicationOverride": null
+          },
+          {
+            "id": "planner-tab-1788897647270-1",
+            "name": "baseline (copy)",
+            "enabled": true,
+            "parameterOverrides": {
+              "diffusion_step-param_glucose_conversion_factor": {
+                "label": "Glucose Consumption Scale",
+                "parameters": {
+                  "glucose_conversion_factor": "8.4"
+                }
+              },
+              "steps_param-__scheduler__": {
+                "label": "Simulation Steps",
+                "parameters": {
+                  "steps": "10"
+                }
+              }
+            },
+            "role": "configuration",
+            "replicationOverride": null
           }
         ]
       }
@@ -70,7 +169,7 @@
   },
   "subworkflows": {
     "__world__": {
-      "description": "Stability search: __world__ (simulation, a 1500 um square domain with a fine 10 um glucose solver grid (150x150) and a 20 um bio-grid (75x75 = 5625 sites, so the 500-cell spheroid covers ~9 % of it), the empty population with NO gene network, the Glucose -> Glucose_supply association that owns the 4 mM threshold, and the metabolism constants)",
+      "description": "Stability search: __world__ (simulation, a 1500 um square domain with a fine 10 um glucose solver grid (150x150) and a 20 um bio-grid (75x75 = 5625 sites, so the 1000-cell spheroid covers ~18 % of it), the empty population with NO gene network, the Glucose -> Glucose_supply association that owns the 4 mM threshold, and the metabolism constants)",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -251,7 +350,6 @@
       "parameters": [
         {
           "id": "__world__-param_sim_name",
-          "type": "parameterNode",
           "label": "Simulation Name",
           "parameters": {
             "name": "Stability Search"
@@ -263,7 +361,6 @@
         },
         {
           "id": "__world__-param_sim_dt",
-          "type": "parameterNode",
           "label": "Time Step (dt)",
           "parameters": {
             "dt": "0.01"
@@ -275,7 +372,6 @@
         },
         {
           "id": "__world__-param_sim_output_dir",
-          "type": "parameterNode",
           "label": "Output Directory",
           "parameters": {
             "output_dir": "results"
@@ -287,7 +383,6 @@
         },
         {
           "id": "__world__-param_domain_dimensions",
-          "type": "parameterNode",
           "label": "Dimensions",
           "parameters": {
             "dimensions": 2
@@ -299,7 +394,6 @@
         },
         {
           "id": "__world__-param_domain_size_x",
-          "type": "parameterNode",
           "label": "Size X (μm)",
           "parameters": {
             "size_x": "1500"
@@ -311,7 +405,6 @@
         },
         {
           "id": "__world__-param_domain_size_y",
-          "type": "parameterNode",
           "label": "Size Y (μm)",
           "parameters": {
             "size_y": "1500"
@@ -323,7 +416,6 @@
         },
         {
           "id": "__world__-param_domain_nx",
-          "type": "parameterNode",
           "label": "Grid NX",
           "parameters": {
             "nx": "150"
@@ -335,7 +427,6 @@
         },
         {
           "id": "__world__-param_domain_ny",
-          "type": "parameterNode",
           "label": "Grid NY",
           "parameters": {
             "ny": "150"
@@ -347,7 +438,6 @@
         },
         {
           "id": "__world__-param_domain_cell_height",
-          "type": "parameterNode",
           "label": "Cell Height (μm)",
           "parameters": {
             "cell_height": 20
@@ -359,7 +449,6 @@
         },
         {
           "id": "__world__-param_domain_verbose",
-          "type": "parameterNode",
           "label": "verbose",
           "parameters": {
             "verbose": "false"
@@ -379,7 +468,7 @@
               "valueType": "dict",
               "value": {
                 "gene_input": "Glucose_supply",
-                "threshold": 4.0
+                "threshold": 4
               }
             }
           ],
@@ -412,12 +501,12 @@
             {
               "key": "KL",
               "valueType": "float",
-              "value": 1.0
+              "value": 1
             },
             {
               "key": "max_atp",
               "valueType": "float",
-              "value": 30.0
+              "value": 30
             },
             {
               "key": "glyco_oxygen_ratio",
@@ -502,7 +591,7 @@
       "input_parameters": []
     },
     "tumor_cell_create": {
-      "description": "tumor_cell creation: the standard 500-cell spheroid (radius ~253 um, ~9 % of the 75 x 75 bio-grid) at the domain centre, every cell Quiescent with glycoATP ON and mitoATP OFF, then wrapped into the ABM population. No gene network is built.",
+      "description": "tumor_cell creation: the standard 1000-cell spheroid (radius ~361 um, ~18 % of the 75 x 75 bio-grid) at the domain centre, every cell Quiescent with glycoATP ON and mitoATP OFF, then wrapped into the ABM population. No gene network is built.",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -542,7 +631,7 @@
             "x": 400,
             "y": 100
           },
-          "description": "Load the 500-cell spheroid seed (same positions as initial_cells_500_center_1500.csv, all Quiescent / glycoATP ON). To restart from another run, point this at one of its seeds/seed_ITER_NNNNNN.csv files (same domain size and Cell Height).",
+          "description": "Load the 1000-cell spheroid seed (same positions as initial_cells_1000_center_1500.csv, all Quiescent / glycoATP ON). To restart from another run, point this at one of its seeds/seed_ITER_NNNNNN.csv files (same domain size and Cell Height).",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
@@ -590,10 +679,9 @@
       "parameters": [
         {
           "id": "tumor_cell_create-param_checkpoint_file",
-          "type": "parameterNode",
           "label": "Checkpoint File",
           "parameters": {
-            "file_path": "../data/initial_cells_500_center_1500_glyco.csv"
+            "file_path": "../data/initial_cells_1000_center_1500_glyco.csv"
           },
           "position": {
             "x": 100,
@@ -738,7 +826,6 @@
       "parameters": [
         {
           "id": "diffusion_step-param_metabolic_substances",
-          "type": "parameterNode",
           "label": "Metabolic Substances",
           "parameters": {
             "substances": "Glucose"
@@ -750,7 +837,6 @@
         },
         {
           "id": "diffusion_step-param_max_coupling_iterations",
-          "type": "parameterNode",
           "label": "Max Coupling Iterations",
           "parameters": {
             "max_coupling_iterations": "100"
@@ -762,7 +848,6 @@
         },
         {
           "id": "diffusion_step-param_coupling_tolerance",
-          "type": "parameterNode",
           "label": "Coupling Tolerance",
           "parameters": {
             "coupling_tolerance": 0.0001
@@ -774,7 +859,6 @@
         },
         {
           "id": "diffusion_step-param_relaxation_factor",
-          "type": "parameterNode",
           "label": "Relaxation Factor (α)",
           "parameters": {
             "relaxation_factor": "0.1"
@@ -786,7 +870,6 @@
         },
         {
           "id": "diffusion_step-param_glucose_conversion_factor",
-          "type": "parameterNode",
           "label": "Glucose Consumption Scale",
           "parameters": {
             "glucose_conversion_factor": "20"
@@ -804,7 +887,7 @@
       "input_parameters": []
     },
     "necrosis_disc": {
-      "description": "Necrotic disc growing from the centre: radius = 5 % of the domain side (75 um) x scheduler step; every living cell inside is marked Necrosis (never removed, ATP genes OFF, zero metabolism). The 253 um spheroid is fully necrotic by step 4. Runs once per step (collective), before the glucose solve.",
+      "description": "Necrotic disc fixed at the centre: diameter 400 um, no growth (Radius Step Fraction 0); every living cell inside is marked Necrosis at step 1 (never removed, ATP genes OFF, zero metabolism) and the necrotic set stays the same for the whole run, so the loop is a time series at one necrotic radius. Runs once per step (collective).",
       "enabled": true,
       "deletable": true,
       "contract": {
@@ -844,10 +927,11 @@
             "x": 400,
             "y": 100
           },
-          "description": "radius(step) = Radius Step Fraction x 1500 um x step; cells inside -> Necrosis",
+          "description": "radius = 400/2 um + Radius Step Fraction (0) x 1500 um x step = 200 um, fixed; cells inside -> Necrosis",
           "custom_name": "",
           "step_count": 1,
           "parameter_nodes": [
+            "necrosis_disc-param_initial_diameter_um",
             "necrosis_disc-param_radius_step_fraction"
           ],
           "contract": {
@@ -871,15 +955,25 @@
       "subworkflow_calls": [],
       "parameters": [
         {
-          "id": "necrosis_disc-param_radius_step_fraction",
-          "type": "parameterNode",
-          "label": "Radius Step Fraction (of domain side)",
+          "id": "necrosis_disc-param_initial_diameter_um",
+          "label": "Necrotic Disc Diameter (μm)",
           "parameters": {
-            "radius_step_fraction": 0.05
+            "initial_diameter_um": 400
           },
           "position": {
             "x": 100,
             "y": 100
+          }
+        },
+        {
+          "id": "necrosis_disc-param_radius_step_fraction",
+          "label": "Radius Step Fraction (of domain side)",
+          "parameters": {
+            "radius_step_fraction": 0
+          },
+          "position": {
+            "x": 100,
+            "y": 160
           }
         }
       ],
@@ -1065,15 +1159,18 @@
             "show_fate_colors": true,
             "show_isolines": true,
             "show_legends": true,
-            "show_info_box": true
+            "show_info_box": true,
+            "cell_size_percent": 40,
+            "cell_color_mode": "fill",
+            "show_grid_lines": false
           },
           "enabled": true,
           "position": {
             "x": 400,
             "y": 100
           },
-          "description": "Glucose heatmap with the Glucose_supply isoline and the cells",
-          "custom_name": "",
+          "description": "Glucose heatmap with the Glucose_supply isoline; cells drawn at 10 % of their size as solid discs (black Necrosis, green glycoATP, gray quiescent, no border) with the solver-mesh overlay hidden",
+          "custom_name": "generate_iteration_plots",
           "step_count": 1,
           "parameter_nodes": [],
           "contract": {
@@ -1152,7 +1249,7 @@
       "input_parameters": []
     },
     "__scheduler__": {
-      "description": "Stability search loop: grow the necrotic disc -> solve Glucose with the current consumers -> glucose gate per cell -> census -> plots + checkpoints. 5 steps at 5 % per step: the disc (75 um per step) covers the 253 um spheroid by step 4.",
+      "description": "Stability search loop: necrotic disc (fixed, 400 um diameter) -> glucose gate per cell on the field solved at the end of the previous step -> census -> plots + checkpoints (field and gene states consistent) -> solve Glucose LAST with the new consumers. 50 steps at a fixed necrotic radius: the time series of the glucose relay. Step 1's gate reads the uniform initial field.",
       "enabled": true,
       "deletable": false,
       "controller": {
@@ -1165,8 +1262,7 @@
         },
         "parameter_nodes": [
           "steps_param-__scheduler__"
-        ],
-        "number_of_steps": 5
+        ]
       },
       "functions": [],
       "subworkflow_calls": [
@@ -1182,21 +1278,12 @@
             "y": 120
           },
           "description": "necrosis_disc (collective, once per step)",
-          "parameter_nodes": []
-        },
-        {
-          "id": "sched-call-diffusion_step",
-          "type": "subworkflow_call",
-          "subworkflow_name": "diffusion_step",
-          "iterations": 1,
-          "parameters": {},
-          "enabled": true,
-          "position": {
-            "x": 400,
-            "y": 230
-          },
-          "description": "diffusion_step",
-          "parameter_nodes": []
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "agent",
+            "kind": "tumor_cell",
+            "order": "random"
+          }
         },
         {
           "id": "sched-call-glucose_gate",
@@ -1207,9 +1294,9 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 340
+            "y": 230
           },
-          "description": "glucose_gate (per agent)",
+          "description": "glucose_gate (per agent) reads the field solved at the end of the previous step",
           "parameter_nodes": [],
           "for_each": {
             "type": "agent",
@@ -1226,7 +1313,7 @@
           "enabled": true,
           "position": {
             "x": 400,
-            "y": 450
+            "y": 340
           },
           "description": "fate_summary (census; record_gene_fate_counts is collective, so the executor runs it once)",
           "parameter_nodes": [],
@@ -1245,19 +1332,36 @@
           "enabled": true,
           "position": {
             "x": 400,
+            "y": 450
+          },
+          "description": "iteration_plots + checkpoints: snapshot of the field the gate just read and the states it decided",
+          "parameter_nodes": []
+        },
+        {
+          "id": "sched-call-diffusion_step",
+          "type": "subworkflow_call",
+          "subworkflow_name": "diffusion_step",
+          "iterations": 1,
+          "parameters": {},
+          "enabled": true,
+          "position": {
+            "x": 400,
             "y": 560
           },
-          "description": "iteration_plots + checkpoints",
-          "parameter_nodes": []
+          "description": "diffusion_step LAST: re-solve the Glucose field with the new gene states, ready for the next gate",
+          "parameter_nodes": [],
+          "for_each": {
+            "type": "resource",
+            "kind": "Glucose"
+          }
         }
       ],
       "parameters": [
         {
           "id": "steps_param-__scheduler__",
-          "type": "parameterNode",
           "label": "Simulation Steps",
           "parameters": {
-            "steps": 5
+            "steps": 50
           },
           "position": {
             "x": 100,
@@ -1267,10 +1371,10 @@
       ],
       "execution_order": [
         "sched-call-necrosis_disc",
-        "sched-call-diffusion_step",
         "sched-call-glucose_gate",
         "sched-call-fate_summary",
-        "sched-call-iteration_plots"
+        "sched-call-iteration_plots",
+        "sched-call-diffusion_step"
       ],
       "input_parameters": []
     },

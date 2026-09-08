@@ -11,14 +11,16 @@ consuming cells only. Their genes are frozen from then on: the glucose gate
 skips necrotic cells.
 
 THE RULE
-    radius(iteration) = radius_step_fraction * domain side (size_x) * iteration
+    radius(iteration) = initial_diameter_um / 2
+                        + radius_step_fraction * domain side (size_x) * iteration
 
-    iteration is the 1-based scheduler loop counter, so the disc has radius
-    5 % of the side after the first step, 10 % after the second, ... and covers
-    the whole square (corner at 70.7 % of the side) after 15 steps at the
-    default 0.05. A cell is inside when the distance from its centre
-    ((index + 0.5) * Cell Height on every axis) to the domain centre is
-    <= radius.
+    iteration is the 1-based scheduler loop counter. With initial_diameter_um
+    = 0 and the default fraction 0.05 the disc has radius 5 % of the side
+    after the first step, 10 % after the second, ... With
+    radius_step_fraction = 0 the disc is FIXED at initial_diameter_um for the
+    whole run (a time series at one necrotic radius). A cell is inside when
+    the distance from its centre ((index + 0.5) * Cell Height on every axis)
+    to the domain centre is <= radius.
 
 WHY
     Each step removes a ring of consumers, so the per-step seed checkpoints
@@ -38,19 +40,28 @@ from src.biology.context import BiologicalContext
 
 @register_function(
     requires=['population'],
-    display_name="Necrotic Disc Growing From Centre",
-    description="Each scheduler step a disc centred on the domain grows by "
-                "radius_step_fraction of the domain side (radius = fraction x "
-                "side x iteration); every living cell inside it is marked "
+    display_name="Necrotic Disc At Centre (fixed or growing)",
+    description="A disc centred on the domain, radius = initial_diameter_um/2 "
+                "+ radius_step_fraction x domain side x scheduler step (fraction "
+                "0 = fixed disc); every living cell inside it is marked "
                 "Necrosis, its glycoATP/mitoATP switched OFF, and it is never "
                 "removed.",
     category="INTERCELLULAR",
     parameters=[
         {
+            "name": "initial_diameter_um",
+            "type": "FLOAT",
+            "description": "Diameter of the necrotic disc before any growth, in um "
+                           "(0 = starts from a point).",
+            "default": 0.0,
+            "min_value": 0.0,
+        },
+        {
             "name": "radius_step_fraction",
             "type": "FLOAT",
             "description": "Disc radius growth per scheduler step, as a fraction "
-                           "of the domain side (0.05 = 5 % of the side per step).",
+                           "of the domain side (0.05 = 5 % of the side per step; "
+                           "0 = the disc stays at initial_diameter_um).",
             "default": 0.05,
             "min_value": 0.0,
             "max_value": 1.0,
@@ -64,9 +75,11 @@ from src.biology.context import BiologicalContext
 )
 def mark_necrotic_growing_circle(
     env: BiologicalContext,
+    initial_diameter_um: float = 0.0,
     radius_step_fraction: float = 0.05,
     **kwargs
 ) -> bool:
+    initial_diameter_um = float(initial_diameter_um)
     radius_step_fraction = float(radius_step_fraction)
     # Scheduler loop counter (1-based). env.step is the engine clock, which the
     # workflow scheduler does not advance — same convention as the reporters.
@@ -78,7 +91,7 @@ def mark_necrotic_growing_circle(
         sides.append(float(dom.size_z.micrometers))
     cell_um = float(dom.cell_height.micrometers)
     centre = [s / 2.0 for s in sides]
-    radius_um = radius_step_fraction * sides[0] * iteration
+    radius_um = initial_diameter_um / 2.0 + radius_step_fraction * sides[0] * iteration
 
     newly = 0
     already = 0
@@ -101,12 +114,14 @@ def mark_necrotic_growing_circle(
     env.results.store('necrosis_disc', {
         'iteration': iteration,
         'radius_um': radius_um,
-        'radius_fraction_of_side': radius_step_fraction * iteration,
+        'initial_diameter_um': initial_diameter_um,
+        'radius_step_fraction': radius_step_fraction,
         'newly_necrotic': newly,
         'necrotic_total': already + newly,
         'living': total - already - newly,
     })
-    print(f"[NECROSIS-DISC] iteration {iteration}: radius = {radius_step_fraction} x "
-          f"{sides[0]:g} um x {iteration} = {radius_um:g} um; marked {newly} cells "
+    print(f"[NECROSIS-DISC] iteration {iteration}: radius = {initial_diameter_um:g}/2 + "
+          f"{radius_step_fraction} x {sides[0]:g} um x {iteration} = {radius_um:g} um; "
+          f"marked {newly} cells "
           f"(necrotic {already + newly}/{total}, living {total - already - newly})")
     return True
