@@ -38,6 +38,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 from src.workflow.decorators import register_function
+from src.core.coords import centred_um
 from src.biology.context import BiologicalContext
 from src.core.coords import cell_to_solver_index
 
@@ -220,9 +221,10 @@ def _instanced_spheres(centers, radius: float, template):
 
 
 def _domain_wireframe(sx: float, sy: float, sz: float):
-    """The 12 box edges of [0,sx]x[0,sy]x[0,sz] as one None-separated
-    polyline (x, y, z) for a Scatter3d lines trace."""
-    corners = [(x, y, z) for x in (0.0, sx) for y in (0.0, sy) for z in (0.0, sz)]
+    """The 12 box edges of the centred domain [-sx/2,sx/2]x[-sy/2,sy/2]x
+    [-sz/2,sz/2] as one None-separated polyline (x, y, z) for a Scatter3d
+    lines trace."""
+    corners = [(x, y, z) for x in (-sx / 2, sx / 2) for y in (-sy / 2, sy / 2) for z in (-sz / 2, sz / 2)]
     xs, ys, zs = [], [], []
     for ai, a in enumerate(corners):
         for b in corners[ai + 1:]:
@@ -257,8 +259,11 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
     sx, sy, sz = (dom.size_x.micrometers, dom.size_y.micrometers,
                   dom.size_z.micrometers)
 
+    sizes = (sx, sy, sz)
+
     def phys(p, i):
-        return (float(p[i]) + 0.5) * cell_um if len(p) > i else 0.5 * cell_um
+        # Centred frame: 0 = domain centre (src/core/coords.py)
+        return centred_um(p[i] if len(p) > i else 0, cell_um, sizes[i])
 
     # --- cells, grouped per category so the legend is the colour key -------
     groups: Dict[Tuple[str, str], list] = {}
@@ -309,9 +314,9 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         if arr.ndim != 3:
             continue
         nz, ny, nx = arr.shape
-        xs = (np.arange(nx) + 0.5) * (sx / nx)
-        ys = (np.arange(ny) + 0.5) * (sy / ny)
-        zs = (np.arange(nz) + 0.5) * (sz / nz)
+        xs = (np.arange(nx) + 0.5) * (sx / nx) - sx / 2
+        ys = (np.arange(ny) + 0.5) * (sy / ny) - sy / 2
+        zs = (np.arange(nz) + 0.5) * (sz / nz) - sz / 2
         Z, Y, X = np.meshgrid(zs, ys, xs, indexing='ij')
         color = specs.get(name, {}).get('color', 'gray')
         for iso_value, iso_label in isolines.get(name, []):
@@ -352,9 +357,9 @@ def write_viewer_html(config, fields: Dict[str, Any], specs: Dict[str, Dict[str,
         title=f"MicroC 3D at t = {time_point:.3f} {title_suffix}",
         scene=dict(
             # Fixed domain box, never autoranged to the occupied region.
-            xaxis=dict(title='X (um)', range=[0, sx]),
-            yaxis=dict(title='Y (um)', range=[0, sy]),
-            zaxis=dict(title='Z (um)', range=[0, sz]),
+            xaxis=dict(title='X (um, 0 = centre)', range=[-sx / 2, sx / 2]),
+            yaxis=dict(title='Y (um, 0 = centre)', range=[-sy / 2, sy / 2]),
+            zaxis=dict(title='Z (um, 0 = centre)', range=[-sz / 2, sz / 2]),
             aspectmode='manual',
             aspectratio=dict(x=sx / max_size, y=sy / max_size, z=sz / max_size),
         ),

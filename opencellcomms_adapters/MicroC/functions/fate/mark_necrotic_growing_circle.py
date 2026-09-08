@@ -19,8 +19,8 @@ THE RULE
     after the first step, 10 % after the second, ... With
     radius_step_fraction = 0 the disc is FIXED at initial_diameter_um for the
     whole run (a time series at one necrotic radius). A cell is inside when
-    the distance from its centre ((index + 0.5) * Cell Height on every axis)
-    to the domain centre is <= radius.
+    its centre, in the centred frame of src/core/coords.py (0 = domain
+    centre), lies within radius of the origin.
 
 WHY
     Each step removes a ring of consumers, so the per-step seed checkpoints
@@ -36,6 +36,7 @@ COLLECTIVE
 
 from src.workflow.decorators import register_function
 from src.biology.context import BiologicalContext
+from src.core.coords import cell_centre_um
 
 
 @register_function(
@@ -89,8 +90,6 @@ def mark_necrotic_growing_circle(
     sides = [float(dom.size_x.micrometers), float(dom.size_y.micrometers)]
     if int(getattr(dom, 'dimensions', 2) or 2) == 3:
         sides.append(float(dom.size_z.micrometers))
-    cell_um = float(dom.cell_height.micrometers)
-    centre = [s / 2.0 for s in sides]
     radius_um = initial_diameter_um / 2.0 + radius_step_fraction * sides[0] * iteration
 
     newly = 0
@@ -99,9 +98,7 @@ def mark_necrotic_growing_circle(
         if cell.is_necrotic:
             already += 1
             continue
-        d2 = 0.0
-        for axis, index in enumerate(cell.position[:len(sides)]):
-            d2 += ((float(index) + 0.5) * cell_um - centre[axis]) ** 2
+        d2 = sum(c * c for c in cell_centre_um(env.config, cell.position))
         if d2 <= radius_um * radius_um:
             cell.mark_necrotic()
             genes = cell.gene_states

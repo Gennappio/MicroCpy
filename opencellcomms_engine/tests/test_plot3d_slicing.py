@@ -175,9 +175,10 @@ def test_viewer_html_smoke(tmp_path):
     assert (tmp_path / "viewer3d" / "plotly.min.js").exists()
     # cells are true-size instanced spheres, not scatter markers
     assert '"mesh3d"' in text
-    # fixed domain box: manual aspect, axes pinned to [0, 750] um
+    # fixed domain box: manual aspect, axes pinned to the centred frame
+    # [-375, 375] um (0 = domain centre, see src/core/coords.py)
     assert re.search(r'"aspectmode"\s*:\s*"manual"', text)
-    assert re.search(r'"range"\s*:\s*\[0(\.0)?,\s*750(\.0)?\]', text)
+    assert re.search(r'"range"\s*:\s*\[-375(\.0)?,\s*375(\.0)?\]', text)
     # every configured threshold is a legend entry; uncrossed ones say so
     assert "Oxygen threshold: 0.022" in text
     assert "Oxygen Necrosis: 0.5 (not crossed)" in text

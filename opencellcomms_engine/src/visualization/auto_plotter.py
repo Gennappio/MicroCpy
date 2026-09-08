@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
+from src.core.coords import cell_centre_um, domain_half_sizes_um
 
 # Set matplotlib style for publication quality
 plt.style.use('default')
@@ -125,6 +126,23 @@ class AutoPlotter:
         """Border width of a cell marker, in points (cell_border_width)."""
         return self.cell_border_width
 
+    def _frame(self):
+        """Centred display frame (xmin, xmax, ymin, ymax) in um: 0 is the
+        domain centre, the axes run from -size/2 to +size/2 (see
+        src/core/coords.py)."""
+        half_x, half_y = domain_half_sizes_um(self.config)[:2]
+        return -half_x, half_x, -half_y, half_y
+
+    @staticmethod
+    def _symmetric_ticks(half: float) -> np.ndarray:
+        """Tick positions symmetric about 0 that include both domain edges:
+        the largest 'nice' step dividing the half-size into 2..6 intervals."""
+        for step in sorted({m * 10.0 ** k for k in range(-1, 6) for m in (1, 2, 2.5, 5)}, reverse=True):
+            n = half / step
+            if abs(n - round(n)) < 1e-9 and 2 <= round(n) <= 6:
+                return np.arange(-half, half + step / 2, step)
+        return np.linspace(-half, half, 5)
+
     def plot_substance_heatmap(self, substance_name: str, concentrations: np.ndarray,
                               cell_positions: List[Tuple[int, int]], time_point: float,
                               config_name: str = "unknown", population=None, title_suffix: str = "",
@@ -176,9 +194,9 @@ class AutoPlotter:
             print(f"   Plot vmin: {vmin:.8f}")
             print(f"   Plot vmax: {vmax:.8f}")
 
+        xmin, xmax, ymin, ymax = self._frame()
         im = ax.imshow(plot_data, cmap='viridis', origin='lower',
-                      extent=[0, self.config.domain.size_x.value,
-                             0, self.config.domain.size_y.value],
+                      extent=[xmin, xmax, ymin, ymax],
                       vmin=vmin, vmax=vmax)
 
         # Add threshold isoline if this substance has a gene network association
@@ -187,8 +205,8 @@ class AutoPlotter:
         extra_isolines = self.extra_isolines.get(substance_name, []) if self.show_isolines else []
         if threshold_value is not None or extra_isolines:
             # Create coordinate grids for contour
-            x_coords = np.linspace(0, self.config.domain.size_x.value, plot_data.shape[1])
-            y_coords = np.linspace(0, self.config.domain.size_y.value, plot_data.shape[0])
+            x_coords = np.linspace(xmin, xmax, plot_data.shape[1])
+            y_coords = np.linspace(ymin, ymax, plot_data.shape[0])
             X, Y = np.meshgrid(x_coords, y_coords)
 
         if threshold_value is not None:
@@ -250,9 +268,8 @@ class AutoPlotter:
                 else:  # 3D position - project to 2D (use x, y coordinates)
                     x, y, z = position
 
-                # Cell positions are on biological grid, convert using biological spacing
-                phys_x = (x + 0.5) * biological_cell_spacing
-                phys_y = (y + 0.5) * biological_cell_spacing
+                # Cell centre in the centred frame (0 = domain centre)
+                phys_x, phys_y = cell_centre_um(self.config, (x, y))
 
                 # Get cell color from custom function if available
                 interior_color = 'lightgray'  # default interior
@@ -393,8 +410,7 @@ class AutoPlotter:
             cell_diameter = self.config.domain.cell_height.value  # Biological cell diameter
             biological_cell_spacing = self.config.domain.cell_height.value  # Use biological spacing, not FiPy spacing
             for x, y in cell_positions:
-                phys_x = (x + 0.5) * biological_cell_spacing
-                phys_y = (y + 0.5) * biological_cell_spacing
+                phys_x, phys_y = cell_centre_um(self.config, (x, y))
                 circle = patches.Circle((phys_x, phys_y), self._marker_radius(cell_diameter),
                                       color='red', alpha=0.7, linewidth=self._marker_linewidth(), fill=False)
                 ax.add_patch(circle)
@@ -421,9 +437,13 @@ class AutoPlotter:
 
         ax.set_title(detailed_title, fontsize=11, pad=20)
 
-        # Formatting
-        ax.set_xlabel(f'X Position ({self.config.domain.size_x.unit})')
-        ax.set_ylabel(f'Y Position ({self.config.domain.size_y.unit})')
+        # Formatting: centred axes, 0 at the domain centre, ticks on both edges
+        ax.set_xlabel(f'X Position ({self.config.domain.size_x.unit}, 0 = domain centre)')
+        ax.set_ylabel(f'Y Position ({self.config.domain.size_y.unit}, 0 = domain centre)')
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_xticks(self._symmetric_ticks(xmax))
+        ax.set_yticks(self._symmetric_ticks(ymax))
 
         # Add FiPy mesh grid
         nx, ny = self.config.domain.nx, self.config.domain.ny
@@ -431,8 +451,8 @@ class AutoPlotter:
         domain_y = self.config.domain.size_y.micrometers
 
         # Create grid lines at FiPy mesh boundaries
-        x_grid = np.linspace(0, domain_x, nx + 1)
-        y_grid = np.linspace(0, domain_y, ny + 1)
+        x_grid = np.linspace(xmin, xmax, nx + 1)
+        y_grid = np.linspace(ymin, ymax, ny + 1)
 
         # Add vertical grid lines
         for x in (x_grid if self.show_grid_lines else ()):
@@ -513,7 +533,7 @@ class AutoPlotter:
                         f'• FiPy Grid: {nx}×{ny} cells\n'
                         f'• Grid Spacing: {grid_spacing:.1f} μm\n'
                         f'• Cell Diameter: {cell_diameter:.1f} μm\n'
-                        f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm\n'
+                        f'• Domain: {domain_x:.0f}×{domain_y:.0f} μm ({xmin:g} to {xmax:g})\n'
                         f'• Min: {vmin:.6f} mM\n'
                         f'• Max: {vmax:.6f} mM\n'
                         f'• Mean: {concentrations.mean():.6f} mM\n'

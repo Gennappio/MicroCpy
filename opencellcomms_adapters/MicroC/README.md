@@ -124,7 +124,9 @@ on an even one (3000 µm / 20 µm = 150 → seed centroid `-0.5`), so a
 `_center_1500` seed is exact at Cell Height 20 but sits half a cell off at
 Cell Height 15 or 30 (100 or 50 cells: even). The loader prints the colony's
 centre of mass (`[SEED] colony centre of mass at (...) um from the domain
-centre`) on every load, so the offset in effect is never hidden.
+centre`) on every load, so the offset in effect is never hidden. Plots use the
+same centred frame: axes run from `-size/2` to `+size/2` with `0` at the
+domain centre (`opencellcomms_engine/src/core/coords.py`).
 
 ### BND filename
 

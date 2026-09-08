@@ -48,6 +48,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 from src.workflow.decorators import register_function
+from src.core.coords import centred_um
 from src.biology.context import BiologicalContext
 
 
@@ -225,8 +226,8 @@ def _draw_atp_gate_quadrant(ax, payload, bounds, legend_pos, size_x, size_y,
         elif float(arr.max()) < threshold:
             status = 'nowhere ✗'
         else:
-            xs = np.linspace(0, size_x, arr.shape[1])
-            ys = np.linspace(0, size_y, arr.shape[0])
+            xs = np.linspace(-size_x / 2.0, size_x / 2.0, arr.shape[1])
+            ys = np.linspace(-size_y / 2.0, size_y / 2.0, arr.shape[0])
             X, Y = np.meshgrid(xs, ys)
             cs = ax.contour(X, Y, arr, levels=[threshold], colors=[color],
                             linewidths=2.5, linestyles=style, zorder=5)
@@ -282,14 +283,18 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     else:
         size_x = config.domain.size_x.value
         size_y = config.domain.size_y.value
-    mid_x, mid_y = size_x / 2.0, size_y / 2.0
+    # Centred frame: 0 is the domain centre, axes run -size/2 .. +size/2
+    # (src/core/coords.py), so the quadrant dividers sit on the axes.
+    xmin, xmax = -size_x / 2.0, size_x / 2.0
+    ymin, ymax = -size_y / 2.0, size_y / 2.0
+    mid_x, mid_y = 0.0, 0.0
 
     # (x0, y0, x1, y1) of each quadrant, in dict-entry order TL, TR, BL, BR
     quadrant_bounds = [
-        (0.0, mid_y, mid_x, size_y),
-        (mid_x, mid_y, size_x, size_y),
-        (0.0, 0.0, mid_x, mid_y),
-        (mid_x, 0.0, size_x, mid_y),
+        (xmin, mid_y, mid_x, ymax),
+        (mid_x, mid_y, xmax, ymax),
+        (xmin, ymin, mid_x, mid_y),
+        (mid_x, ymin, xmax, mid_y),
     ]
     # Where each quadrant's legend sits (axes fraction): pushed toward the
     # outer corner so the tumour at the centre stays unobstructed.
@@ -299,8 +304,8 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
     ]
 
     fig, ax = plt.subplots(figsize=(11, 11))
-    ax.set_xlim(0, size_x)
-    ax.set_ylim(0, size_y)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
     ax.set_aspect('equal')
 
     substance_names = list(specs.keys())
@@ -330,13 +335,13 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         clip_rect = patches.Rectangle((x0, y0), x1 - x0, y1 - y0,
                                       transform=ax.transData)
         im = ax.imshow(concentrations, cmap=cmap, origin='lower',
-                       extent=[0, size_x, 0, size_y], vmin=vmin, vmax=vmax)
+                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
         im.set_clip_path(clip_rect)
 
         # Threshold isolines for THIS substance, clipped to its quadrant and
         # labelled with the substance name.
-        x_coords = np.linspace(0, size_x, concentrations.shape[1])
-        y_coords = np.linspace(0, size_y, concentrations.shape[0])
+        x_coords = np.linspace(xmin, xmax, concentrations.shape[1])
+        y_coords = np.linspace(ymin, ymax, concentrations.shape[0])
         X, Y = np.meshgrid(x_coords, y_coords)
         for iso_value, iso_label in isolines.get(name, []):
             style = '--' if 'Necrosis' in iso_label else '-'
@@ -407,7 +412,10 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
                       for entry in cell_data]
     for position, phenotype, cell in draw_items:
         x, y = position[0], position[1]
-        phys_x, phys_y = (x + 0.5) * spacing, (y + 0.5) * spacing
+        # Cell centre in the centred frame of THIS plane (the slice caller's
+        # plane axes may not be x, y, so the plane sizes are used directly).
+        phys_x = centred_um(x, spacing, size_x)
+        phys_y = centred_um(y, spacing, size_y)
 
         interior_color, border_color = 'lightgray', _PHENOTYPE_BORDER_COLORS.get(phenotype, 'gray')
         if cell_color_fn and cell is not None:
@@ -445,11 +453,11 @@ def render_quadrant_plot(config, fields: Dict[str, Any], specs: Dict[str, Dict[s
         spine.set_color('black')
 
     if axis_labels is not None:
-        ax.set_xlabel(axis_labels[0])
-        ax.set_ylabel(axis_labels[1])
+        ax.set_xlabel(f'{axis_labels[0]} (0 = domain centre)')
+        ax.set_ylabel(f'{axis_labels[1]} (0 = domain centre)')
     else:
-        ax.set_xlabel(f'X Position ({config.domain.size_x.unit})')
-        ax.set_ylabel(f'Y Position ({config.domain.size_y.unit})')
+        ax.set_xlabel(f'X Position ({config.domain.size_x.unit}, 0 = domain centre)')
+        ax.set_ylabel(f'Y Position ({config.domain.size_y.unit}, 0 = domain centre)')
     display_names = ['ATP gate' if n == ATP_GATE_KEY else n for n in substance_names]
     ax.set_title(f'{" / ".join(display_names)} at t = {time_point:.3f} {title_suffix}',
                  fontsize=13, pad=12)
