@@ -32,9 +32,9 @@ captures lactate exchange for the sensitivity CSV before gene and fate updates.
 | Workflow | Control variable (owning parameter node) | Levels → Planner tabs | Held fixed |
 |---|---|---|---|
 | `p53_sa_glucose_consumption.json` | Glucose Consumption Scale (`diffusion_step-param_glucose_conversion_factor`) | 5.6 / **7** / 8.4 → `glc_cons_5.6`, `glc_cons_7.0`, `glc_cons_8.4` (±20 %) | oxygen and lactate scales, glucose supply, geometry |
-| `p53_sa_oxygen_consumption.json` | Oxygen Consumption Scale (`diffusion_step-param_oxygen_conversion_factor`) | 8.8 / **11** / 13.2 → `o2_cons_8.8`, `o2_cons_11.0`, `o2_cons_13.2` (±20 %) | glucose and lactate scales, supply, geometry |
-| `p53_sa_glucose_boundary.json` | Glucose Substance (JSON): `boundary_value` **and** `initial_value` (`glucose_init-param_substances`) | 4.5 / **5.0** / 5.5 mM → `glc_bnd_4.5`, `glc_bnd_5.0`, `glc_bnd_5.5` (±10 %) | diffusion coefficient, thresholds, scales, geometry |
-| `p53_sa_relative_tumor_size.json` | Size X / Size Y with Grid NX / NY (`envinit-Setup_simulation-param_domain_*`), same seed, 50 µm spacing kept | 1200 / **1500** / 1800 µm → `domain_1200`, `domain_1500`, `domain_1800`; initial `relative_tumor_size` = 276.6 / (size/2) = **0.461 / 0.369 / 0.307** | cell height (so the tumour is the same 276.6 µm colony), all consumption and supply values |
+| `p53_sa_oxygen_consumption.json` | Oxygen Consumption Scale (`diffusion_step-param_oxygen_conversion_factor`) | 6.6 / 8.8 / **11** → `o2_cons_6.6`, `o2_cons_8.8`, `o2_cons_11.0` (−40 %, −20 %; 13.2 was numerically unstable, so the sweep runs on the low side) | glucose and lactate scales, supply, geometry |
+| `p53_sa_glucose_boundary.json` | Glucose Substance (JSON): `boundary_value` **and** `initial_value` (`glucose_init-param_substances`) | **5.0** / 5.5 / 6.0 mM → `glc_bnd_5.0`, `glc_bnd_5.5`, `glc_bnd_6.0` (+10 %, +20 %; 4.5 mM was numerically unstable, so the sweep runs on the high side) | diffusion coefficient, thresholds, scales, geometry |
+| `p53_sa_relative_tumor_size.json` | Size X / Size Y with Grid NX / NY (`envinit-Setup_simulation-param_domain_*`), same seed, 50 µm spacing kept | 900 / 1200 / **1500** µm → `domain_900`, `domain_1200`, `domain_1500` (1800 µm was numerically unstable, so the sweep runs on the small side); initial `relative_tumor_size` = 276.6 / (size/2) = **0.615 / 0.461 / 0.369** | cell height (so the tumour is the same 276.6 µm colony), all consumption and supply values |
 | `p53_sa_propagation_steps.json` | Propagation Steps (`gene_update-param_propagation_steps`): single-gene updates per cell per scheduler step | 1 / 10 / 50 → `prop_1`, `prop_10`, `prop_50` (the baseline value 5 is run by `glc_bnd_5.0`, the suite's baseline tab); each tab also sets Simulation Steps to 10 000 / 1 000 / 200 and the plot and checkpoint intervals to 50 / 5 / 1 iterations, so every arm covers the same 10 000 gene updates and snapshots every 50 of them | every field, consumption and gate value; the gene-step budget and snapshot cadence |
 
 The bold level is the baseline: its tab carries **no override** (the
@@ -61,7 +61,7 @@ did; the metabolic solve is a steady-state Picard iteration, so the initial
 value only seeds the first solve. The geometry sweep keeps the solver spacing
 at 50 µm (`nx = size / 50`) because `DomainConfig` requires a square 1–100 µm
 grid, and keeps Cell Height at 15 µm so the biological grid (`size / 15` =
-80 / 100 / 120) is integral and the centre-relative seed lands on the centre.
+60 / 80 / 100) is integral and the centre-relative seed lands on the centre.
 
 The complete replication plan is stored in each workflow's
 `metadata.gui.planner` block: **10 replicates**, generated seeds with master seed

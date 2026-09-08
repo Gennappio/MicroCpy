@@ -152,7 +152,8 @@ AXES: List[Dict[str, Any]] = [
         "file": "p53_sa_oxygen_consumption",
         "title": "oxygen consumption scale",
         "tab_prefix": "o2_cons",
-        "levels": [8.8, 11.0, 13.2], "baseline": 11.0,
+        # 13.2 (+20 %) was numerically unstable: the sweep runs on the low side.
+        "levels": [6.6, 8.8, 11.0], "baseline": 11.0,
         "label": lambda v: f"{v:.1f}",
         "overrides": lambda v, doc: _scalar(
             "diffusion_step-param_oxygen_conversion_factor", "Oxygen Consumption Scale",
@@ -162,7 +163,8 @@ AXES: List[Dict[str, Any]] = [
         "file": "p53_sa_glucose_boundary",
         "title": "glucose boundary concentration (mM)",
         "tab_prefix": "glc_bnd",
-        "levels": [4.5, 5.0, 5.5], "baseline": 5.0,
+        # 4.5 mM (-10 %) was numerically unstable: the sweep runs on the high side.
+        "levels": [5.0, 5.5, 6.0], "baseline": 5.0,
         "label": lambda v: f"{v:.1f}",
         "overrides": _glucose_items,
     },
@@ -170,7 +172,8 @@ AXES: List[Dict[str, Any]] = [
         "file": "p53_sa_relative_tumor_size",
         "title": "relative tumour size (domain size, same seed)",
         "tab_prefix": "domain",
-        "levels": [1200, 1500, 1800], "baseline": 1500,
+        # 1800 um was numerically unstable: the sweep runs on the small side.
+        "levels": [900, 1200, 1500], "baseline": 1500,
         "label": lambda v: str(v),
         "overrides": _domain,
     },
